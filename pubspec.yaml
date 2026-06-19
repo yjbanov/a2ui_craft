@@ -1,0 +1,22 @@
+# Root of the A2UI Craft pub workspace (monorepo).
+#
+# This is not a publishable package. It exists to tie together all of the
+# member packages under `packages/` so that a single `dart pub get` resolves
+# them with a shared lockfile, and so shared dev tooling versions stay in sync.
+#
+# See https://dart.dev/tools/pub/workspaces for how Dart workspaces work.
+name: _a2ui_craft_workspace
+publish_to: none
+
+environment:
+  sdk: ^3.6.0
+
+# Every package in the workspace. New packages should be added here.
+workspace:
+  - packages/a2ui_craft
+  - packages/a2ui_craft_cli
+
+# Dev dependencies declared here are shared by all workspace members.
+dev_dependencies:
+  lints: ^4.0.0
+  test: ^1.25.0

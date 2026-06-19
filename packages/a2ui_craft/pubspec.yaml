@@ -1,0 +1,21 @@
+name: a2ui_craft
+description: >-
+  The A2UI Craft compiler: lexer, parser, semantic analysis, and code
+  generation that compiles A2UI Craft templates into A2UI Transport JSON.
+  Pure Dart with no Flutter dependency, so it can run on the server or in
+  command-line tools.
+version: 0.0.1
+publish_to: none
+
+environment:
+  sdk: ^3.6.0
+
+resolution: workspace
+
+# Keep this package dependency-light. The compiler core should remain a pure
+# Dart library so it can be embedded anywhere (CLI, build steps, servers).
+dependencies:
+
+dev_dependencies:
+  lints: ^4.0.0
+  test: ^1.25.0

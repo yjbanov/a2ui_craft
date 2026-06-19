@@ -1,0 +1,19 @@
+# Dart / pub
+.dart_tool/
+.packages
+build/
+pubspec.lock
+
+# Coverage
+coverage/
+
+# Compiled CLI executables
+*.exe
+/bin/craft
+/dist/
+
+# Editor / OS
+.idea/
+.vscode/
+*.iml
+.DS_Store

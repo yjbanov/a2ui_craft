@@ -169,13 +169,21 @@ a2ui-craft/
 ├── DESIGN.md                     # this document (source of truth)
 ├── README.md
 ├── AGENTS.md                     # agent-agnostic guidance (build/test, pointers)
+├── LICENSE                       # BSD-3-Clause (forked from RFW)
+├── VENDORED.md                   # provenance of vendored RFW code
 ├── pubspec.yaml                  # Dart pub workspace root
+├── tool/check.sh                 # one entrypoint: resolve + format + analyze + test
+├── .github/workflows/ci.yml      # CI: runs tool/check.sh
 ├── skills/                       # project skills (adapter-authoring guidance)
 └── packages/
     ├── a2ui_craft/               # core: vendored RFW formats + DynamicContent
+    ├── a2ui_craft_testing/       # shared parity-test fixtures (not published)
     ├── a2ui_craft_flutter/       # Flutter adapter (runtime + core comps + test)
-    └── a2ui_craft_jaspr/         # Jaspr adapter (runtime + core comps + example)
+    └── a2ui_craft_jaspr/         # Jaspr adapter (runtime + core comps + example + test)
 ```
+
+Run `tool/check.sh` to verify the whole workspace (format, analyze, and tests for
+every package) — it is exactly what CI runs.
 
 Because one member (`a2ui_craft_flutter`) depends on the Flutter SDK, the whole
 workspace is resolved with **`flutter pub get`** (Flutter's bundled Dart also runs
@@ -191,6 +199,9 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
 - [x] Flutter adapter: runtime + minimal core components + widget test proving
       parse → render → event → reactive update.
 - [x] Project skills governing adapter evolution.
+- [x] Dev harness: shared parity-test fixture (`a2ui_craft_testing`) rendered
+      identically by both adapters; single `tool/check.sh` entrypoint; CI;
+      `LICENSE` + `VENDORED.md` provenance.
 - [ ] **H2:** design the real cross-platform core component/type library (NOT yet
       started — deliberately deferred until the harness is solid).
 - [ ] Prove the state-model axis with a third, non-Flutter-like framework.

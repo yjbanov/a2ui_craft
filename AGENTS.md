@@ -32,22 +32,26 @@ flutter pub get                # resolve the entire workspace
 
 ## Build & test
 
-Run these before considering a change complete:
+Before considering a change complete, run the single workspace check (this is
+exactly what CI runs — resolve, format-check, analyze, and test every package):
+
+```bash
+./tool/check.sh
+```
+
+Individual commands, if you need them:
 
 ```bash
 dart test packages/a2ui_craft                 # core engine (pure Dart)
-flutter test packages/a2ui_craft_flutter      # Flutter adapter
-# Jaspr adapter: ensure the example still builds/serves
-cd packages/a2ui_craft_jaspr/example && jaspr serve
+dart test packages/a2ui_craft_jaspr           # Jaspr adapter parity test
+flutter test packages/a2ui_craft_flutter      # Flutter adapter parity test
+cd packages/a2ui_craft_jaspr/example && jaspr serve   # run the Jaspr example
 ```
 
-Analyze before committing:
-
-```bash
-(cd packages/a2ui_craft && dart analyze)
-(cd packages/a2ui_craft_jaspr && dart analyze)
-(cd packages/a2ui_craft_flutter && flutter analyze)
-```
+Adapters share a parity-test fixture in `packages/a2ui_craft_testing`
+(`CounterScenario`): each adapter renders the *same* template and asserts the
+*same* behavior, so they cannot silently diverge. When you change an adapter,
+the parity tests must still pass; extend the fixture if you add shared behavior.
 
 ## Code style
 

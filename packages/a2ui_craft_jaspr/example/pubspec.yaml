@@ -8,11 +8,9 @@ environment:
 resolution: workspace
 
 dependencies:
+  a2ui_craft: ^0.0.1
+  a2ui_craft_jaspr: ^0.0.1
   jaspr: any
-  a2ui_craft:
-    path: ../../a2ui_craft
-  a2ui_craft_jaspr:
-    path: ../
 
 dev_dependencies:
   lints: ^4.0.0

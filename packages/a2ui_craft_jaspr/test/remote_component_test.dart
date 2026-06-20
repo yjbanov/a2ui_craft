@@ -3,17 +3,17 @@
 // found in the LICENSE file.
 
 import 'package:a2ui_craft/a2ui_craft.dart';
-import 'package:a2ui_craft_flutter/a2ui_craft_flutter.dart';
+import 'package:a2ui_craft_jaspr/a2ui_craft_jaspr.dart';
 import 'package:a2ui_craft_testing/a2ui_craft_testing.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:jaspr_test/jaspr_test.dart';
 
 // Parity test: renders the shared CounterScenario template (identical across all
-// adapters) and asserts the same behavior the Jaspr adapter asserts —
-// parse → render → event → reactive data update.
+// adapters) and asserts the same behavior the Flutter adapter asserts —
+// parse → render → event → reactive data update. Whereas the Flutter adapter
+// produces widgets, this one produces HTML DOM via Jaspr.
 void main() {
-  testWidgets('renders the shared scenario and reacts to events/data',
-      (WidgetTester tester) async {
+  testComponents('renders the shared scenario and reacts to events/data',
+      (ComponentTester tester) async {
     final Runtime runtime = Runtime()
       ..update(CounterScenario.coreLibrary, createCoreComponents())
       ..update(CounterScenario.mainLibrary, CounterScenario.library());
@@ -30,25 +30,23 @@ void main() {
       }
     }
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: RemoteComponent(
-          runtime: runtime,
-          component: CounterScenario.rootComponent,
-          data: data,
-          onEvent: onEvent,
-        ),
+    tester.pumpComponent(
+      RemoteComponent(
+        runtime: runtime,
+        component: CounterScenario.rootComponent,
+        data: data,
+        onEvent: onEvent,
       ),
     );
 
-    expect(find.text(CounterScenario.greetingInitial), findsOneWidget);
-    expect(find.text(CounterScenario.buttonLabel), findsOneWidget);
+    expect(find.text(CounterScenario.greetingInitial), findsOneComponent);
+    expect(find.text(CounterScenario.buttonLabel), findsOneComponent);
 
-    await tester.tap(find.text(CounterScenario.buttonLabel));
-    await tester.pump();
+    // The Button core component renders as a <button>; click it.
+    await tester.click(find.tag('button'));
 
     expect(count, 1);
-    expect(find.text(CounterScenario.greetingAfter(1)), findsOneWidget);
+    expect(find.text(CounterScenario.greetingAfter(1)), findsOneComponent);
     expect(find.text(CounterScenario.greetingInitial), findsNothing);
   });
 }

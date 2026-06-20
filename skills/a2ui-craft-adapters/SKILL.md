@@ -69,13 +69,13 @@ belongs in the core.
 3. Keep each runtime behaviorally identical; the only legitimate per-adapter
    runtime differences are node type, lifecycle host, and leaf rendering.
 4. Add or extend a **parity test**: the same template must produce equivalent
-   results on every adapter. The Flutter adapter's
-   `test/remote_component_test.dart` (parse → render → event → reactive update)
-   is the reference shape.
-5. Verify:
-   - `flutter test packages/a2ui_craft_flutter`
-   - `dart test packages/a2ui_craft`
-   - the Jaspr adapter still builds/serves (`packages/a2ui_craft_jaspr/example`)
+   results on every adapter. The shared fixture lives in
+   `packages/a2ui_craft_testing` (`CounterScenario`) and is rendered by each
+   adapter's `test/remote_component_test.dart` (parse → render → event →
+   reactive update). Add shared behavior to the fixture, not to one adapter's
+   test.
+5. Verify with the single workspace check (resolve + format + analyze + test all
+   packages): `./tool/check.sh`.
 6. If you cannot satisfy a MUST invariant to make a framework work, **stop**. That
    is a real design gap. Surface it; if it points at A2UI Transport or RFW
    itself, write it up rather than quietly forking behavior.

@@ -1,0 +1,24 @@
+# Continuous integration: run the full workspace check on every push and PR.
+#
+# This is intentionally thin — it installs the Flutter SDK and delegates to
+# tool/check.sh, so CI and local runs verify exactly the same things.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Run workspace checks
+        run: ./tool/check.sh

@@ -47,18 +47,21 @@ packages too). One member package depends on Flutter, so the whole workspace is
 resolved with `flutter pub get`.
 
 ```bash
-# Resolve every package in the workspace.
-flutter pub get
+# Verify the whole workspace (resolve + format + analyze + test). This is what
+# CI runs.
+./tool/check.sh
 
-# Flutter adapter: run the widget test (parse → render → event → reactive update).
-flutter test packages/a2ui_craft_flutter
-
-# Core engine tests (pure Dart).
-dart test packages/a2ui_craft
-
-# Jaspr adapter: serve the example web app.
-cd packages/a2ui_craft_jaspr/example && jaspr serve
+# Or, individual pieces:
+flutter pub get                                  # resolve every package
+flutter test packages/a2ui_craft_flutter         # Flutter adapter parity test
+dart test packages/a2ui_craft_jaspr              # Jaspr adapter parity test
+dart test packages/a2ui_craft                    # core engine tests
+cd packages/a2ui_craft_jaspr/example && jaspr serve   # run the Jaspr example
 ```
+
+Both adapters render a shared template fixture (`packages/a2ui_craft_testing`)
+and assert identical behavior, so "the same template renders the same on every
+framework" is a continuously tested invariant, not just a claim.
 
 ## Status
 

@@ -1,0 +1,18 @@
+name: a2ui_craft_testing
+description: >-
+  Shared test fixtures for A2UI Craft adapter parity tests. Provides the
+  canonical template + scenario that every framework adapter renders, so the
+  adapters are proven to behave identically. Test-only; not published.
+version: 0.0.1
+publish_to: none
+
+environment:
+  sdk: ^3.6.0
+
+resolution: workspace
+
+dependencies:
+  a2ui_craft: ^0.0.1
+
+dev_dependencies:
+  lints: ^4.0.0

@@ -205,8 +205,8 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
       `LICENSE` + `VENDORED.md` provenance.
 - [ ] **H2:** design the real cross-platform core component/type library (NOT yet
       started — deliberately deferred until the harness is solid).
-- [ ] Prove the state-model axis with a third, non-Flutter-like framework.
 - [ ] A2UI integration: map an A2UI catalog + data model onto the engine.
+- [ ] Prove the state-model axis with a third, non-Flutter-like framework.
 - [ ] Consider upstream RFW restructuring so the formats layer need not be
       vendored.
 

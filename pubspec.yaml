@@ -18,6 +18,7 @@ workspace:
   - packages/a2ui_craft_jaspr
   - packages/a2ui_craft_jaspr/example
   - packages/a2ui_craft_flutter
+  - tool/testing
 
 # Dev dependencies declared here are shared by all workspace members.
 dev_dependencies:

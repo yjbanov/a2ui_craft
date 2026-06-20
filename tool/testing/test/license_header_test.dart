@@ -29,7 +29,7 @@ void main() {
 
     for (final File file in _dartFiles(root)) {
       var content = file.readAsStringSync().replaceAll('\r\n', '\n');
-      if (content.startsWith('﻿')) {
+      if (content.isNotEmpty && content.codeUnitAt(0) == 0xFEFF) {
         content = content.substring(1); // strip UTF-8 BOM
       }
       if (!content.startsWith(_licenseHeader)) {
@@ -52,16 +52,19 @@ Directory _findWorkspaceRoot() {
   final RegExp workspaceKey = RegExp(r'^workspace:', multiLine: true);
   var dir = Directory.current.absolute;
   while (true) {
-    final File pubspec =
-        File('${dir.path}${Platform.pathSeparator}pubspec.yaml');
+    final File pubspec = File(
+      '${dir.path}${Platform.pathSeparator}pubspec.yaml',
+    );
     if (pubspec.existsSync() &&
         workspaceKey.hasMatch(pubspec.readAsStringSync())) {
       return dir;
     }
     final Directory parent = dir.parent;
     if (parent.path == dir.path) {
-      fail('Could not locate the workspace root (a pubspec.yaml with a '
-          '"workspace:" section) starting from ${Directory.current.path}.');
+      fail(
+        'Could not locate the workspace root (a pubspec.yaml with a '
+        '"workspace:" section) starting from ${Directory.current.path}.',
+      );
     }
     dir = parent;
   }

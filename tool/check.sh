@@ -29,6 +29,12 @@ step "Analyze: a2ui_craft_jaspr"
 step "Analyze: a2ui_craft_flutter"
 (cd packages/a2ui_craft_flutter && flutter analyze)
 
+step "Analyze: tool/testing (repo-wide checks)"
+(cd tool/testing && dart analyze)
+
+step "Test: tool/testing (repo-wide checks, e.g. license headers)"
+(cd tool/testing && dart test)
+
 step "Test: a2ui_craft (core)"
 (cd packages/a2ui_craft && dart test)
 

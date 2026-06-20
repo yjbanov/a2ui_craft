@@ -173,6 +173,7 @@ a2ui-craft/
 ├── VENDORED.md                   # provenance of vendored RFW code
 ├── pubspec.yaml                  # Dart pub workspace root
 ├── tool/check.sh                 # one entrypoint: resolve + format + analyze + test
+├── tool/testing/                 # repo-wide checks (e.g. license headers); not published
 ├── .github/workflows/ci.yml      # CI: runs tool/check.sh
 ├── skills/                       # project skills (adapter-authoring guidance)
 └── packages/

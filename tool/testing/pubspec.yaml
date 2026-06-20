@@ -1,0 +1,17 @@
+name: testing
+description: >-
+  Repository-wide checks (not published). Self-contained tests that validate the
+  repository as a whole — e.g. that every Dart file carries the license header.
+  These intentionally live outside the publishable packages, which must stay
+  self-contained and runnable in environments without the repo's file system
+  (web, mobile, downloaded-from-pub sources).
+publish_to: none
+
+environment:
+  sdk: ^3.6.0
+
+resolution: workspace
+
+dev_dependencies:
+  lints: ^4.0.0
+  test: ^1.25.0

@@ -1,0 +1,17 @@
+name: a2ui_craft_jaspr
+description: Jaspr bindings for A2UI Craft (Remote Flutter Widgets format)
+publish_to: none
+
+environment:
+  sdk: ^3.6.0
+
+resolution: workspace
+
+dependencies:
+  jaspr: any
+  a2ui_craft:
+    path: ../a2ui_craft
+
+dev_dependencies:
+  jaspr_test: ^0.16.0
+  lints: ^4.0.0

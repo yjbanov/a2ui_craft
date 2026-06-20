@@ -1,14 +1,16 @@
-/// A2UI Craft: a human-authored templating language that compiles to A2UI
-/// Transport JSON.
-///
-/// This library is the public API surface of the compiler. It is pure Dart and
-/// has no Flutter dependency, so it can run on servers and in command-line
-/// tools.
-library;
+// Copyright 2013 The Flutter Authors
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 
-export 'src/compiler.dart';
-export 'src/diagnostic.dart';
-export 'src/lexer.dart' show Lexer;
-export 'src/source.dart';
-export 'src/token.dart';
-export 'src/version.dart';
+/// # A2UI Craft (Framework-Agnostic Core)
+///
+/// This library provides the core parsing, data modeling, and AST components
+/// for A2UI Craft, based on the Remote Flutter Widgets (RFW) format.
+///
+/// It exposes no framework-specific bindings.
+library a2ui_craft;
+
+export 'src/binary.dart';
+export 'src/content.dart';
+export 'src/model.dart';
+export 'src/text.dart';

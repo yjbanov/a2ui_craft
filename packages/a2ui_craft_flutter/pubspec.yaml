@@ -1,0 +1,19 @@
+name: a2ui_craft_flutter
+description: Flutter bindings for A2UI Craft (Remote Flutter Widgets format).
+publish_to: none
+
+environment:
+  sdk: ^3.6.0
+
+resolution: workspace
+
+dependencies:
+  a2ui_craft:
+    path: ../a2ui_craft
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  lints: ^4.0.0

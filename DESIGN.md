@@ -1,278 +1,210 @@
 # A2UI Craft — Design
 
-> **Status: draft / initial outline.** This document captures the starting
-> design for A2UI Craft. It will evolve as the language and compiler are built.
-> Where the document describes syntax, treat it as a proposal to be refined, not
-> a frozen specification.
+> **Status:** active. This document is the source of truth for the project's
+> direction. Code and skills should defer to it; when reality and this document
+> disagree, fix one of them deliberately.
 
-## 1. Overview
+## 1. What A2UI Craft is
 
-A2UI is a protocol for agents to drive user interfaces. It is layered:
+A2UI Craft is a **framework-agnostic, client-side templating engine**. It takes
+declarative UI templates written in the **RFW (Remote Flutter Widgets) text
+format** and renders them with a target UI framework (Flutter, Jaspr, …),
+binding the template to a reactive data model.
 
-| Layer | Audience | Optimized for |
-| --- | --- | --- |
-| **A2UI Transport** | Clients/renderers | A precise, validated JSON wire format. The "machine code" of A2UI. |
-| **A2UI Express** | LLMs (token stream) | Token efficiency, generation latency, and accuracy. Compiled on-the-fly to Transport by an agent SDK. |
-| **A2UI Craft** | Humans & coding agents | Readability, maintainability, expressivity, and trust for **predefined, reviewed** UI. |
+It is *not* a new language and *not* an ahead-of-time compiler to a wire format.
+We adopt RFW's existing language and runtime essentially as-is, and generalize
+the runtime so it is no longer tied to Flutter.
 
-**A2UI Transport** is the JSON protocol that defines how UI is encoded between
-the agent and the client (`createSurface`, `updateComponents`,
-`updateDataModel`, `deleteSurface`, `action`/`actionResponse`, a component
-catalog, a data model with JSON-Pointer bindings, and registered functions).
-See the A2UI specification (`v0.10`) for details.
+## 2. Why this shape (and why not the earlier AOT-to-A2UI idea)
 
-**A2UI Express** is the inference-time language LLMs emit; an agent SDK compiles
-it to Transport as tokens stream in. Its constraints pull toward brevity and
-model-friendliness.
+The project briefly explored a new language ("Craft") that would AOT-compile
+straight into [A2UI](https://github.com/google/A2UI) Transport (JSON) messages.
+That doesn't work, for a fundamental reason:
 
-**A2UI Craft** (this project) serves the *other* major use case: UI that is
-**authored and vetted ahead of time** — written by humans or coding agents,
-code-reviewed, version-controlled, linted, and tested like any other source
-code (Dart, C++, JavaScript…). This is how A2UI achieves predictability, trust,
-and expressivity that Express deliberately cannot.
+- A **template** is a pure function `(data, state) → UI`. It describes what the
+  UI should look like for the current inputs; it ignores prior UI state.
+- **A2UI Transport** is an *imperative* protocol over a *stateful* surface
+  (`updateComponents` presupposes a prior tree to mutate). Turning a template
+  into Transport requires evaluating it with concrete data *and* diffing against
+  the previously produced tree — i.e. **reconciliation** — which a compiler
+  cannot do, because neither the data nor the prior tree exist at compile time.
 
-A2UI Craft is an **ahead-of-time compiled** language: it has a real compiler
-(not just an interpreter) that produces A2UI Transport. It must be able to
-express **everything** A2UI Transport can express, and it may add higher-level
-features as long as each one **desugars** into Transport during compilation.
+So a template needs a **runtime engine** that owns state and reconciliation.
+Two places that engine could live:
 
-## 2. Goals and non-goals
+- **Server-side**: re-introduces a network round-trip for every local
+  interaction and forces the server to hold per-client UI state. Against A2UI's
+  grain.
+- **Client-side**: local interactivity stays local; the engine renders templates
+  using whatever framework the client is built on. **This is the approach we
+  take, and it is exactly what RFW already is.**
 
-### Goals
+### How this relates to A2UI
 
-- **Capable** — can express the full feature set of A2UI Transport.
-- **Readable** — a human can read a Craft file and understand the resulting UI.
-- **Maintainable** — supports abstraction, reuse, and splitting code across files.
-- **Bug-resistant** — strong compile-time checks: undefined components, bad
-  references, cyclic imports, type/shape mismatches against the catalog, etc.,
-  are caught before anything is shipped.
-- **Toolable** — a clean, well-specified grammar and a reusable compiler library
-  so an ecosystem (editors, linters, formatters, language servers) can grow.
-- **Distributable** — the compiler is written in Dart and ships as an
-  AOT-compiled standalone executable (plus an embeddable library).
+A2UI is already renderer-agnostic — it composes UI out of **catalog** items and
+doesn't care how a renderer implements them. A2UI Craft slots in cleanly:
 
-### Non-goals
+> The agent (e.g. an A2UI Python SDK app talking to an LLM) speaks A2UI against a
+> plain catalog of components. It does **not** know templates exist. When it says
+> `updateComponents … component="WeatherCard"`, the client picks a template
+> named `WeatherCard` and renders it with its framework. There can be several
+> client implementations — e.g. Flutter on mobile, Jaspr on web — all honoring
+> the same catalog. A2UI's per-surface data model becomes the engine's
+> `DynamicContent`.
 
-- **Not** optimized for LLM token streams — that is A2UI Express's job. Craft
-  optimizes for human comprehension and review.
-- **Not** a general-purpose programming language. It is a UI templating language
-  with compile-time evaluation, not a runtime with arbitrary computation.
-- **Not** a renderer. Craft produces Transport JSON; existing A2UI clients render
-  it.
+In other words: **A2UI Craft templates are an implementation of an A2UI
+catalog**, as opposed to wrapping native widgets one-for-one.
 
-## 3. Influences
+## 3. The hypotheses we are proving
 
-The surface syntax is inspired by **Remote Flutter Widgets (RFW)** — a C-style /
-Dart-style, curly-brace language (`packages/rfw`). Familiar RFW ideas we adopt
-or adapt:
+1. **H1 — RFW generalizes across rendering engines.** The RFW language and
+   runtime, despite the "F", are not Flutter-specific. We prove this by making
+   the *same* template + runtime drive two genuinely different rendering engines.
+   - **Current scope: Flutter + Jaspr, Dart-only.** Jaspr is chosen because it is
+     Dart (so we test the *factoring*, not a *rewrite*) yet renders to the HTML
+     DOM — a different rendering engine from Flutter's canvas/`RenderObject`.
+   - Known limitation we are *accepting for now*: Flutter and Jaspr share a
+     similar *reactive/state* programming model (`build` + `setState`), so this
+     pair stresses the **rendering-engine** axis well but the **state-model** axis
+     weakly. We judge that low-risk because templates only need to turn
+     A2UI-supplied data into UI; they don't author novel interaction models.
+     Proving the state-model axis fully (SwiftUI, Jetpack Compose, React) is
+     future work, not part of the current milestone.
 
-- A widget/component is written as a **nested tree** of constructor-like calls
-  (`Column(children: [ Text(text: "Hi") ])`), which reads far better than the
-  flat adjacency list Transport uses.
-- Named **arguments** in parentheses, map literals `{ ... }`, list literals
-  `[ ... ]`.
-- A `...for x in <list>: <body>` **spread/loop** construct inside child lists.
-- Reusable, parameterized **component declarations** (RFW's `widget`).
-- Data references via a dotted path root (RFW uses `data.foo.bar`; we map this to
-  A2UI's JSON Pointer `/foo/bar`).
-- C-style line (`//`) and block (`/* */`) comments.
+2. **H2 — a single cross-platform core component/type library exists** that is
+   expressive enough for A2UI use cases and maps cleanly onto every framework.
+   This is where rendering-engine differences bite hardest (Flutter's explicit
+   layout/animation vs. the HTML DOM's hard split between markup and blackbox
+   CSS layout/animation). **H2 work has not started** — see §7. The current core
+   component sets are intentionally minimal harness fixtures, not the real
+   library.
 
-Key difference from RFW: A2UI Craft targets **A2UI Transport**, not Flutter's
-binary RFW format. The component catalog, data-binding model, events, and
-functions are A2UI's, and the compiler emits A2UI envelope messages.
+A2UI Craft is deliberately a **least-common-denominator** engine. The hunch is
+that this denominator is still quite expressive and covers many A2UI use cases.
+When a developer needs deeper, framework-specific capabilities, the escape hatch
+is to **drop down to the raw framework** (per-framework, but that's an advanced
+case).
 
-## 4. What the language must map onto (A2UI Transport)
+## 4. Architecture
 
-The compiler's job is to lower friendly Craft constructs into Transport. The
-core mapping:
-
-| A2UI Craft construct | A2UI Transport output |
-| --- | --- |
-| `surface Name { ... }` | `createSurface` (+ `updateComponents`, `updateDataModel`) |
-| Nested component tree | Flat `components` adjacency list with generated `id`s and `child`/`children` refs |
-| `Text(text: "Hi")` | `{ "id": "...", "component": "Text", "text": "Hi" }` |
-| `data.user.name` (path ref) | `{ "path": "/user/name" }` (a `Dynamic*` binding) |
-| Relative ref inside a loop | Relative JSON Pointer (e.g. `name`) resolved in the child scope |
-| `"Hi ${data.user.name}!"` (interpolated string) | `formatString` `FunctionCall` |
-| `formatCurrency(value: ..., ...)` | `{ "call": "formatCurrency", "args": {...}, "returnType": ... }` |
-| `...for item in data.items: Card(...)` | `ChildList` **template** form `{ "path": "/items", "componentId": "..." }` |
-| `onPress: event "name" { ctx }` | `action.event` `{ "name": ..., "context": {...} }` |
-| `onPress: openUrl(url: ...)` | `action.functionCall` |
-| `checks: [ required(...) ... ]` | component `checks` array |
-| `theme { primaryColor: ... }` | `createSurface.theme` |
-| `data { ... }` | initial `dataModel` |
-
-### 4.1 Two kinds of "dynamic", kept distinct
-
-A2UI has two distinct dynamic mechanisms, and Craft must keep them separate:
-
-1. **Compile-time reuse** — `component` declarations (below) are **expanded
-   (inlined)** by the compiler. Transport has no notion of reusable widget
-   definitions, so these vanish at compile time, producing concrete components.
-2. **Run-time data-driven lists** — when a child list iterates over a **data
-   model array**, it must compile to A2UI's `ChildList` **object template**
-   (`{ path, componentId }`) so the client stays reactive as the data changes.
-   A `...for` over a data path lowers to this; a `...for` over a *compile-time*
-   list is unrolled at compile time instead.
-
-### 4.2 Adjacency-list flattening & id allocation
-
-The author writes a tree; the compiler flattens it. Every component needs a
-stable `id`. Rules (initial proposal):
-
-- Exactly one component must become `id: "root"` (the `root:` of a `surface`).
-- Authors may pin an explicit id: `Text#title(text: ...)` → `id: "title"`.
-- Otherwise the compiler generates deterministic, stable ids (e.g. derived from
-  the path in the tree) so that re-compiling the same source is reproducible and
-  diff-friendly.
-
-## 5. Language sketch
-
-> Illustrative only — see `examples/product_card.craft`. Subject to change.
-
-```craft
-import "core";          // import another Craft file (see §6)
-
-// A reusable, parameterized component. Inlined at compile time.
-component Stars(rating) = Text(text: data.stars, variant: "body");
-
-surface ProductCard {
-  catalog: "https://a2ui.org/specification/v0_10/catalogs/basic/catalog.json";
-  sendDataModel: true;
-
-  data {                // initial data model
-    name: "Headphones",
-    price: 199.99,
-    reviewCount: 2847,
-  }
-
-  root: Card(
-    child: Column(children: [
-      Text(text: data.name, variant: "h3"),
-      Text(
-        text: "(${formatNumber(value: data.reviewCount)} ${pluralize(value: data.reviewCount, one: "review", other: "reviews")})",
-        variant: "caption",
-      ),
-      Text(text: formatCurrency(value: data.price, currency: "USD"), variant: "h2"),
-      Button(
-        variant: "primary",
-        child: Text(text: "Add to Cart"),
-        onPress: event "addToCart" {},
-      ),
-    ]),
-  );
-}
+```
+┌─────────────────────────────────────────────────────────────┐
+│ a2ui_craft  (core, pure Dart, NO UI-framework dependency)     │
+│   parsing + AST + binary format (vendored RFW formats layer)  │
+│   DynamicContent (reactive data model)                        │
+└─────────────────────────────────────────────────────────────┘
+        ▲                                   ▲
+        │ depends on                        │ depends on
+┌───────────────────────┐         ┌───────────────────────────┐
+│ a2ui_craft_flutter     │         │ a2ui_craft_jaspr           │
+│  Runtime → Flutter      │         │  Runtime → Jaspr           │
+│  Widget; core comps as  │         │  Component; core comps as  │
+│  Flutter widgets        │         │  DOM (div/flexbox)         │
+└───────────────────────┘         └───────────────────────────┘
 ```
 
-### 5.1 Lexical structure (implemented)
+- **Core (`a2ui_craft`)** is the **vendored RFW *formats* layer** (`binary`,
+  `model`, `text`) plus `content` (the `DynamicContent` reactive model). It is
+  pure Dart with zero UI-framework dependency. We **vendor** rather than depend
+  on `package:rfw` because RFW's `pubspec.yaml` pulls in Flutter even though its
+  `formats.dart` library does not — so there is no Flutter-free way to consume it
+  today. (A future upstream restructuring could remove the need to vendor.)
 
-The lexer (`packages/a2ui_craft/lib/src/lexer.dart`) already recognizes the
-intended lexical grammar:
+- **Adapters (`a2ui_craft_flutter`, `a2ui_craft_jaspr`)** each contain their own
+  copy of the **runtime** (`Runtime`, `DataSource`, the curried-node machinery)
+  plus a minimal core-component library. Each runtime is a near-verbatim port of
+  RFW's runtime; the unavoidable reason it cannot be shared as-is is that RFW's
+  runtime is parameterized by the framework's *node type* (Flutter `Widget` vs.
+  Jaspr `Component`), and Dart cannot abstract over that cheaply. So the runtime
+  is duplicated per framework **by design**, and kept behaviorally identical.
 
-- **Comments:** `// line` and `/* block */` (non-nested).
-- **Identifiers:** `[A-Za-z_][A-Za-z0-9_]*`.
-- **Numbers:** integers (decimal, optional leading `-`), hex (`0xFF`), and
-  doubles (with `.` fraction and/or `e`/`E` exponent). Int vs. double is
-  distinguished syntactically, matching Transport's number model.
-- **Strings:** single- or double-quoted, with `\b \f \n \r \t \" \' \/ \\` and
-  `\uXXXX` escapes. (String **interpolation** is a parser/lowering concern, not
-  lexical, in this first cut.)
-- **Punctuation:** `{ } ( ) [ ] : ; , . =` and the `...` spread token.
+## 5. Adapter invariants — what MUST NOT deviate, and what MAY
 
-## 6. Module system
+This section is the contract that keeps the adapters honest. It is mirrored by
+the project skill that governs adapter work.
 
-- A program may be split across multiple `.craft` files.
-- `import "path";` brings another file's declarations into scope.
-- **Cyclic imports are forbidden**, and the compiler **must enforce** this:
-  building the module dependency graph and rejecting any cycle with a clear
-  diagnostic naming the cycle.
-- Resolution order: lex/parse each file, build the import graph, topologically
-  sort, then analyze. Imports are resolved relative to the importing file's URI.
+### MUST be identical across every adapter (no deviation)
 
-## 7. Compile-time features
+1. **Template language & semantics.** Adapters consume the RFW text/binary format
+   unchanged. No adapter may add, remove, or reinterpret language features (data
+   binding, `...for` loops, `switch`, `state`, `event`, args). Parsing lives in
+   the core, not in adapters.
+2. **Public API surface & names.** Every adapter exposes the same names with the
+   same shapes:
+   - `Runtime` (with `update(LibraryName, WidgetLibrary)` and
+     `build(context, FullyQualifiedWidgetName, DynamicContent, RemoteEventHandler)`),
+   - `RemoteComponent` (fields: `runtime`, `component`, `data`, `onEvent`),
+   - `LocalComponentLibrary` / `LocalComponentBuilder`,
+   - `DataSource` (with `v<T>`, `child`, `childList`, `voidHandler`, `handler<T>`),
+   - `RemoteEventHandler`, `createCoreComponents()`.
+   We use **component-centric** names everywhere (not Flutter's "Widget"
+   vocabulary), so client code reads identically regardless of framework.
+3. **Runtime behavior.** Reconciliation, data-path subscription, scope/relative
+   path resolution, loop/switch expansion, local `state`, and event dispatch must
+   behave identically. A template that works on one adapter must work on all.
+4. **The core component contract.** For any component in the shared core library
+   (`Text`, `Row`, `Column`, `Button`, …), the *name*, its *argument names*, and
+   its *observable behavior* are identical across adapters.
 
-These are the "may add its own features, so long as they desugar" powers:
+### MAY deviate (framework latitude)
 
-- **Constants:** `const PRIMARY = "#00BFFF";` — compile-time values usable in
-  templates.
-- **External config:** a config file (e.g. JSON/YAML) fed to the compiler
-  alongside the sources, exposing values (feature flags, environment names,
-  brand colors) for **compile-time** evaluation. Modeled today as
-  `CompileOptions.config` (`packages/a2ui_craft/lib/src/compiler.dart`).
-- **Compile-time conditionals / expressions:** e.g. selecting components or
-  values based on config, fully evaluated away before codegen so the emitted
-  Transport contains no trace of them.
+1. **Node type produced.** Flutter builds `Widget`s; Jaspr builds `Component`s.
+2. **How a core component is realized.** `Row` → a Flutter `Row` vs. a
+   `<div style="display:flex">`. `Button` → a `GestureDetector` vs. a `<button>`.
+   The *mapping* is the adapter's job; the *contract* (name/args/behavior) is not.
+3. **Framework lifecycle integration.** `StatefulWidget`/`State`/`setState` vs.
+   Jaspr's equivalents; how `RemoteComponent` hosts the built node.
+4. **Styling/layout mechanics** that are inherent to the rendering engine, as
+   long as the observable result honors the component contract.
 
-Compile-time evaluation is deliberately limited and total (no unbounded
-computation) to preserve predictability.
+If you find yourself wanting to deviate on something in the MUST list to make a
+framework work, that is a signal of a real design gap — surface it (and, if it
+points at A2UI Transport or RFW itself, write it up) rather than quietly forking
+behavior.
 
-## 8. Compiler architecture
-
-The compiler is a conventional multi-stage AOT pipeline. Stage 1 exists today;
-later stages are stubs tracked here.
-
-1. **Lex** — source text → tokens. *(implemented)*
-2. **Parse** — tokens → AST.
-3. **Resolve imports** — build the module graph; reject cycles.
-4. **Analyze** — name/reference resolution; validate components and arguments
-   against the catalog; type/shape checks; two-way-binding rules.
-5. **Evaluate** — fold constants, apply config, resolve compile-time conditionals.
-6. **Lower** — expand `component` definitions; flatten the tree to the
-   adjacency-list model; allocate ids; convert path refs, interpolations, loops,
-   events, and function calls to their Transport forms.
-7. **Emit** — serialize the ordered A2UI Transport envelope messages to
-   JSON / JSONL.
-
-Diagnostics (`packages/a2ui_craft/lib/src/diagnostic.dart`) are
-location-anchored (`SourceSpan`) and accumulated so the compiler can report many
-problems at once rather than failing on the first.
-
-### Design principles for the compiler
-
-- **Pure-Dart core.** `a2ui_craft` has no Flutter dependency, so it runs on
-  servers and in CLIs.
-- **Library first, CLI second.** All real logic lives in the library; the
-  `craft` CLI is a thin front-end. This lets editors/linters/LSP reuse the core.
-- **Deterministic output.** The same input (sources + config) always produces
-  byte-identical Transport, for reviewable, diffable builds.
-- **Fail loudly, honestly.** Unimplemented stages throw rather than silently
-  emitting empty output.
-
-## 9. Repository layout
+## 6. Repository layout
 
 ```
 a2ui-craft/
-├── DESIGN.md                 # this document
+├── DESIGN.md                     # this document (source of truth)
 ├── README.md
-├── pubspec.yaml              # Dart pub *workspace* root (ties packages together)
-├── analysis_options.yaml     # shared lints
-├── examples/                 # illustrative .craft sources
+├── AGENTS.md                     # agent-agnostic guidance (build/test, pointers)
+├── pubspec.yaml                  # Dart pub workspace root
+├── skills/                       # project skills (adapter-authoring guidance)
 └── packages/
-    ├── a2ui_craft/           # the compiler core library (pure Dart)
-    │   ├── lib/a2ui_craft.dart
-    │   └── lib/src/{source,diagnostic,token,lexer,compiler,version}.dart
-    └── a2ui_craft_cli/       # the `craft` executable (AOT-compilable)
-        └── bin/craft.dart
+    ├── a2ui_craft/               # core: vendored RFW formats + DynamicContent
+    ├── a2ui_craft_flutter/       # Flutter adapter (runtime + core comps + test)
+    └── a2ui_craft_jaspr/         # Jaspr adapter (runtime + core comps + example)
 ```
 
-The project is structured as a **multi-package Dart workspace** from the start
-because it is expected to grow (e.g. a language server, a formatter, a catalog
-schema package, build-system integrations). New packages go under `packages/`
-and are added to the `workspace:` list in the root `pubspec.yaml`.
+Because one member (`a2ui_craft_flutter`) depends on the Flutter SDK, the whole
+workspace is resolved with **`flutter pub get`** (Flutter's bundled Dart also runs
+the pure-Dart and Jaspr packages fine). The *core* package itself remains
+Flutter-free; only the workspace resolution involves the Flutter SDK.
 
-## 10. Open questions / future work
+## 7. Status & roadmap
 
-- **Id allocation strategy** — fully implicit vs. explicit `#id` pins; how to
-  guarantee stability across edits.
-- **Catalog awareness** — should the compiler load a catalog schema to validate
-  component names, property types, and function signatures? (Strongly desirable
-  for bug-resistance.)
-- **Source extension** — `.craft` is the working choice.
-- **Streaming semantics** — how authors express multiple `updateComponents` /
-  `updateDataModel` messages, partial/progressive surfaces, and `deleteSurface`.
-- **String interpolation grammar** — exact rules and how it maps to nested
-  `formatString` expressions.
-- **State & local interactivity** — Transport models interactivity via the data
-  model + actions; decide how much, if any, RFW-style local `state` Craft should
-  expose, and how it lowers.
-- **Formatter & language server** — likely future packages in this workspace.
+- [x] Pivot to client-side templating engine; drop the AOT-to-Transport idea.
+- [x] Core = vendored, Flutter-free RFW formats layer + `DynamicContent`.
+- [x] Jaspr adapter: runtime + minimal core components (`Text/Row/Column/Button`)
+      + counter example.
+- [x] Flutter adapter: runtime + minimal core components + widget test proving
+      parse → render → event → reactive update.
+- [x] Project skills governing adapter evolution.
+- [ ] **H2:** design the real cross-platform core component/type library (NOT yet
+      started — deliberately deferred until the harness is solid).
+- [ ] Prove the state-model axis with a third, non-Flutter-like framework.
+- [ ] A2UI integration: map an A2UI catalog + data model onto the engine.
+- [ ] Consider upstream RFW restructuring so the formats layer need not be
+      vendored.
+
+## 8. Open questions
+
+- **Core component vocabulary (H2):** what is the least-common-denominator set,
+  and how are layout/animation differences reconciled between Flutter and the
+  DOM?
+- **Type model:** the equivalent of RFW's `argument_decoders` is intensely
+  Flutter-specific and is explicitly *not* part of the core; H2 must define a
+  framework-neutral type/style model that each adapter maps down.
+- **Template packaging & the A2UI catalog binding:** how templates are named,
+  bundled, and matched to A2UI `component` references.

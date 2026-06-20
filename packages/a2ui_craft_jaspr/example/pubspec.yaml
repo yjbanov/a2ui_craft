@@ -1,0 +1,18 @@
+name: a2ui_craft_jaspr_example
+description: An example of using A2UI Craft with Jaspr
+publish_to: none
+
+environment:
+  sdk: ^3.6.0
+
+resolution: workspace
+
+dependencies:
+  jaspr: any
+  a2ui_craft:
+    path: ../../a2ui_craft
+  a2ui_craft_jaspr:
+    path: ../
+
+dev_dependencies:
+  lints: ^4.0.0

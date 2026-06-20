@@ -7,9 +7,15 @@ pubspec.lock
 # Coverage
 coverage/
 
-# Compiled CLI executables
+# Jaspr / web build output
+.jaspr_web/
+**/web/main.dart.js
+**/web/main.dart.js.deps
+**/web/main.dart.js.map
+**/web/main.clients.dart
+
+# Compiled executables
 *.exe
-/bin/craft
 /dist/
 
 # Editor / OS

@@ -1,118 +1,68 @@
 # A2UI Craft
 
-**A2UI Craft** is a templating language for authoring [A2UI](https://github.com/google/A2UI)
-user interfaces. It is a human-friendly, C-style (Dart-style) language that
-**compiles ahead-of-time to A2UI Transport** — the JSON protocol A2UI clients
-render.
+**A2UI Craft** is a framework-agnostic, **client-side templating engine**. It
+renders declarative UI templates — written in the [Remote Flutter Widgets
+(RFW)](https://pub.dev/packages/rfw) text format — using whatever UI framework
+the client is built on (currently **Flutter** and **Jaspr**), binding them to a
+reactive data model.
 
-> ⚠️ **Early stage.** The language design is taking shape in
-> [`DESIGN.md`](DESIGN.md). The compiler currently implements lexing; parsing
-> and code generation are next. Syntax shown below is a proposal and may change.
+The guiding hypothesis: *RFW's language and runtime are not actually
+Flutter-specific, and one engine can drive many rendering engines.* See
+[`DESIGN.md`](DESIGN.md) for the full rationale, scope, and architecture — it is
+the source of truth for the project.
 
-## Why A2UI Craft?
-
-A2UI has three complementary languages:
-
-- **A2UI Transport** — the validated JSON wire format between agent and client.
-- **A2UI Express** — a terse language LLMs emit and an agent SDK compiles to
-  Transport on the fly, optimized for token efficiency and generation accuracy.
-- **A2UI Craft** (this project) — for **predefined UI authored and reviewed
-  ahead of time** by humans and coding agents. It optimizes for readability,
-  maintainability, expressivity, and trust — things you get from source code
-  that is version-controlled, code-reviewed, linted, and tested.
-
-Where A2UI Express trades expressivity for brevity, A2UI Craft does the
-opposite: it is meant to be **read, understood, maintained, and tooled**.
-
-## What it looks like
-
-```craft
-import "core";
-
-surface ProductCard {
-  catalog: "https://a2ui.org/specification/v0_10/catalogs/basic/catalog.json";
-
-  data {
-    name: "Wireless Headphones Pro",
-    price: 199.99,
-  }
-
-  root: Card(
-    child: Column(children: [
-      Text(text: data.name, variant: "h3"),
-      Text(text: formatCurrency(value: data.price, currency: "USD"), variant: "h2"),
-      Button(
-        variant: "primary",
-        child: Text(text: "Add to Cart"),
-        onPress: event "addToCart" {},
-      ),
-    ]),
-  );
-}
-```
-
-The author writes a **nested tree**; the compiler flattens it into A2UI
-Transport's flat adjacency-list of components, allocates ids, and lowers data
-references, string interpolation, loops, events, and function calls into their
-Transport forms. See [`examples/`](examples/) and [`DESIGN.md`](DESIGN.md).
-
-## Project layout
-
-This is a [Dart pub workspace](https://dart.dev/tools/pub/workspaces) (monorepo).
+## Architecture at a glance
 
 ```
-packages/
-  a2ui_craft/       # the compiler core library (pure Dart, no Flutter dependency)
-  a2ui_craft_cli/   # the `craft` command-line compiler (AOT-compilable)
-examples/           # illustrative .craft sources
-DESIGN.md           # language & compiler design
+a2ui_craft           core engine — pure Dart, NO UI-framework dependency
+  ├─ a2ui_craft_flutter   renders templates as Flutter widgets
+  └─ a2ui_craft_jaspr     renders templates as HTML DOM (via Jaspr)
 ```
 
-Why Dart? The compiler can be distributed as a single **AOT-compiled native
-executable**, while also being embeddable as a pure-Dart library (for editors,
-linters, language servers, and build steps).
+- **`a2ui_craft`** — parsing, AST, binary format, and the reactive
+  `DynamicContent` model (the RFW *formats* layer, vendored to stay Flutter-free).
+- **`a2ui_craft_flutter` / `a2ui_craft_jaspr`** — *adapters*. Each carries a copy
+  of the RFW runtime specialized to its framework's node type, plus a minimal
+  library of core components (`Text`, `Row`, `Column`, `Button`).
+
+Every adapter exposes the **same component-centric API** (`Runtime`,
+`RemoteComponent`, `LocalComponentLibrary`, `createCoreComponents`, …) so client
+code reads identically across frameworks. What each adapter may and may not
+change is specified in [`DESIGN.md` §5](DESIGN.md) and enforced by the project
+skills in [`skills/`](skills).
+
+## Why not compile templates to A2UI Transport directly?
+
+Templates are *declarative* (`data → UI`); A2UI Transport is an *imperative*
+protocol that mutates a live, stateful UI. Bridging the two requires evaluating
+the template against data and reconciling it against the previous tree — a
+*runtime* concern, not something an ahead-of-time compiler can do. So A2UI Craft
+is a client-side engine, and A2UI simply treats its templates as an
+implementation of an A2UI **catalog**. (Full reasoning in [`DESIGN.md` §2](DESIGN.md).)
 
 ## Getting started
 
-Requires the Dart SDK (3.6+).
+Requires the **Flutter SDK** (its bundled Dart runs the pure-Dart and Jaspr
+packages too). One member package depends on Flutter, so the whole workspace is
+resolved with `flutter pub get`.
 
 ```bash
-# Resolve all workspace packages with a shared lockfile.
-dart pub get
+# Resolve every package in the workspace.
+flutter pub get
 
-# Run the test suites.
-(cd packages/a2ui_craft && dart test)
-(cd packages/a2ui_craft_cli && dart test)
+# Flutter adapter: run the widget test (parse → render → event → reactive update).
+flutter test packages/a2ui_craft_flutter
 
-# Run the CLI from source.
-dart run packages/a2ui_craft_cli/bin/craft.dart --version
+# Core engine tests (pure Dart).
+dart test packages/a2ui_craft
 
-# Build a standalone native executable.
-dart compile exe packages/a2ui_craft_cli/bin/craft.dart -o craft
-./craft --help
+# Jaspr adapter: serve the example web app.
+cd packages/a2ui_craft_jaspr/example && jaspr serve
 ```
 
-> Today the compiler lexes input and then reports that parsing/codegen are not
-> implemented yet. That is expected — see the roadmap in `DESIGN.md`.
+## Status
 
-## Status & roadmap
-
-Implemented:
-
-- [x] Multi-package Dart workspace scaffolding
-- [x] Lexer (comments, identifiers, int/double/hex numbers, strings, punctuation)
-- [x] Diagnostics with source spans
-- [x] `craft` CLI skeleton (AOT-compilable)
-
-Next (tracked in [`DESIGN.md`](DESIGN.md)):
-
-- [ ] Parser & AST
-- [ ] Import resolution with cycle detection
-- [ ] Semantic analysis / catalog validation
-- [ ] Compile-time evaluation (constants, config, conditionals)
-- [ ] Lowering to the adjacency-list model
-- [ ] A2UI Transport JSON/JSONL code generation
-
-## License
-
-To be determined.
+The harness is in place: a Flutter-free core plus two working adapters proving
+the same template renders on Flutter and on the DOM. The next major effort is
+**H2** — designing the real cross-platform core component/type library — which is
+deliberately not started until the harness is solid. See [`DESIGN.md` §7](DESIGN.md).

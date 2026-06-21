@@ -123,6 +123,11 @@ case).
 This section is the contract that keeps the adapters honest. It is mirrored by
 the project skill that governs adapter work.
 
+The goal is **behavioral identity, not pixel identity** — like Flutter's Material
+vs. Cupertino, the same contract can look different per framework. "Behavior"
+means: the same template renders the same content, the same data bindings update
+the same way, and the same interactions dispatch the same events.
+
 ### MUST be identical across every adapter (no deviation)
 
 1. **Template language & semantics.** Adapters consume the RFW text/binary format
@@ -161,6 +166,23 @@ If you find yourself wanting to deviate on something in the MUST list to make a
 framework work, that is a signal of a real design gap — surface it (and, if it
 points at A2UI Transport or RFW itself, write it up) rather than quietly forking
 behavior.
+
+### How the contract is enforced
+
+Two mechanisms in `packages/a2ui_craft_testing` turn the contract above into
+automated checks:
+
+- **Catalog manifest (`coreCatalog`)** — the canonical set of core component
+  names. Each adapter has a contract test asserting its
+  `createCoreComponents().widgets.keys` equals `coreCatalog`, so no adapter
+  silently gains or drops a component.
+- **Conformance suite (`runCoreComponentConformance`)** — a single,
+  framework-neutral behavioral spec. Each adapter runs it against its own
+  renderer through a small `CraftTester` abstraction (behavioral probes:
+  "is this text visible?", "did activating this control fire its event?" —
+  never pixels). A template that behaves differently on one framework fails its
+  conformance run. Adding/altering a core component means extending the manifest
+  and the suite, not writing per-adapter tests.
 
 ## 6. Repository layout
 
@@ -203,8 +225,12 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
 - [x] Dev harness: shared parity-test fixture (`a2ui_craft_testing`) rendered
       identically by both adapters; single `tool/check.sh` entrypoint; CI;
       `LICENSE` + `VENDORED.md` provenance.
-- [ ] **H2:** design the real cross-platform core component/type library (NOT yet
-      started — deliberately deferred until the harness is solid).
+- [~] **H2:** the cross-platform core component/type library. **Started:** the
+      component contract (`coreCatalog`) and the cross-framework behavioral
+      conformance harness (`runCoreComponentConformance` + `CraftTester`) are in
+      place, validated on the seed components. **Next:** the framework-neutral
+      type/style model (the `argument_decoders` replacement) and growing the
+      component set.
 - [ ] A2UI integration: map an A2UI catalog + data model onto the engine.
 - [ ] Prove the state-model axis with a third, non-Flutter-like framework.
 - [ ] Consider upstream RFW restructuring so the formats layer need not be

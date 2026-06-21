@@ -68,12 +68,18 @@ belongs in the core.
    names, and behavior identical. Do not let the adapters drift.
 3. Keep each runtime behaviorally identical; the only legitimate per-adapter
    runtime differences are node type, lifecycle host, and leaf rendering.
-4. Add or extend a **parity test**: the same template must produce equivalent
-   results on every adapter. The shared fixture lives in
-   `packages/a2ui_craft_testing` (`CounterScenario`) and is rendered by each
-   adapter's `test/remote_component_test.dart` (parse → render → event →
-   reactive update). Add shared behavior to the fixture, not to one adapter's
-   test.
+4. Adding or changing a **core component** is governed by
+   `packages/a2ui_craft_testing`:
+   - Update the catalog manifest (`coreCatalog`) — the canonical set of component
+     names every adapter must implement. A per-adapter contract test
+     (`test/catalog_contract_test.dart`) asserts each adapter implements exactly
+     it.
+   - Add behavior to the shared conformance suite (`runCoreComponentConformance`,
+     driven through the framework-neutral `CraftTester`), **not** to one adapter's
+     test. Each adapter runs the same suite via `test/conformance_test.dart`.
+   - Behavioral identity is the bar, not pixel identity (Material vs. Cupertino).
+     To make a control activatable cross-framework, give it a `key` arg (located
+     uniformly via `find.byKey`) — `jaspr_test` does not bubble events.
 5. Verify with the single workspace check (resolve + format + analyze + test all
    packages): `./tool/check.sh`.
 6. If you cannot satisfy a MUST invariant to make a framework work, **stop**. That

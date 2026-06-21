@@ -43,15 +43,18 @@ Individual commands, if you need them:
 
 ```bash
 dart test packages/a2ui_craft                 # core engine (pure Dart)
-dart test packages/a2ui_craft_jaspr           # Jaspr adapter parity test
-flutter test packages/a2ui_craft_flutter      # Flutter adapter parity test
+dart test packages/a2ui_craft_jaspr           # Jaspr adapter conformance + contract
+flutter test packages/a2ui_craft_flutter      # Flutter adapter conformance + contract
 cd packages/a2ui_craft_jaspr/example && jaspr serve   # run the Jaspr example
 ```
 
-Adapters share a parity-test fixture in `packages/a2ui_craft_testing`
-(`CounterScenario`): each adapter renders the *same* template and asserts the
-*same* behavior, so they cannot silently diverge. When you change an adapter,
-the parity tests must still pass; extend the fixture if you add shared behavior.
+Cross-framework behavior is verified by `packages/a2ui_craft_testing`: a
+framework-neutral **conformance suite** (`runCoreComponentConformance`) that each
+adapter runs against its own renderer through a `CraftTester`, plus a **catalog
+contract** (`coreCatalog`) pinning the component set. Behavioral identity is the
+bar, not pixel identity. When you add or change a core component, extend the
+shared catalog + conformance suite — not a single adapter's test (see
+[`DESIGN.md` §5](DESIGN.md) and the `a2ui-craft-adapters` skill).
 
 ## Code style
 

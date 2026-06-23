@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 import 'package:a2ui_craft/a2ui_craft.dart';
+import 'package:a2ui_craft_bridge/a2ui_craft_bridge.dart';
 import 'package:test/test.dart';
 
 /// Framework-neutral signature for an event dispatched by a rendered component.
@@ -22,11 +23,13 @@ typedef CraftEventHandler = void Function(String name, DynamicMap arguments);
 /// "is this text visible?", "did activating this control fire its event?".
 /// Behavioral identity across frameworks is the goal; pixel identity is not.
 abstract interface class CraftTester {
-  /// Parses [template] (registered as the `main` library, with the core
-  /// component library available as `core`), binds it to [data], and renders
-  /// its `root` component, routing events to [onEvent].
-  Future<void> mount(
-    String template, {
+  /// Renders [main]'s `root` component (with the core component library
+  /// available as `core`), bound to [data], routing events to [onEvent].
+  ///
+  /// This is the primitive; [CraftTesterQueries.mount] is a convenience that
+  /// parses an RFW template into a library first.
+  Future<void> mountLibrary(
+    RemoteWidgetLibrary main, {
     DynamicContent? data,
     CraftEventHandler? onEvent,
   });
@@ -42,10 +45,21 @@ abstract interface class CraftTester {
   Future<void> activate(String key);
 }
 
-/// Convenience queries layered on the minimal [CraftTester] surface.
+/// Convenience queries and entry points layered on the minimal [CraftTester]
+/// surface.
 extension CraftTesterQueries on CraftTester {
   /// Whether any displayed text node equals [text].
   bool hasText(String text) => textCount(text) > 0;
+
+  /// Parses [template] as the `main` library and renders its `root` component.
+  Future<void> mount(
+    String template, {
+    DynamicContent? data,
+    CraftEventHandler? onEvent,
+  }) {
+    return mountLibrary(parseLibraryFile(template),
+        data: data, onEvent: onEvent);
+  }
 }
 
 /// Registers conformance test cases with a framework's test runner.
@@ -152,3 +166,103 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
     },
   );
 }
+
+/// The shared behavioral specification for rendering an **A2UI surface**
+/// end-to-end: A2UI Transport messages → `A2uiSurface` → the engine.
+///
+/// Proves the same A2UI surface behaves identically on every framework. Like
+/// [runCoreComponentConformance], every adapter runs this against its own
+/// renderer.
+void runA2uiConformance(CraftConformanceDriver driver) {
+  driver.defineTest(
+    'A2UI surface renders text, bindings, a list, and dispatches events',
+    (CraftTester tester) async {
+      final A2uiSurface surface = A2uiSurface()..apply(_a2uiCounterSurface());
+      final List<String> dispatched = <String>[];
+      await tester.mountLibrary(
+        surface.library,
+        data: surface.data,
+        onEvent: (String name, DynamicMap arguments) => dispatched.add(name),
+      );
+
+      // Literal, absolute data binding, list items, and the button label.
+      expect(tester.hasText('Hello'), isTrue);
+      expect(tester.hasText('Ada'), isTrue);
+      expect(tester.hasText('a'), isTrue);
+      expect(tester.hasText('b'), isTrue);
+      expect(tester.hasText('Go'), isTrue);
+
+      // The Button is located by its A2UI id (carried through as the key).
+      expect(dispatched, isEmpty);
+      await tester.activate('btn');
+      expect(dispatched, <String>['go']);
+
+      // An updateDataModel message re-renders the bound text.
+      surface.apply(<String, Object?>{
+        'updateDataModel': <String, Object?>{'path': '/name', 'value': 'Grace'},
+      });
+      await tester.pump();
+      expect(tester.hasText('Ada'), isFalse);
+      expect(tester.hasText('Grace'), isTrue);
+    },
+  );
+}
+
+Map<String, Object?> _a2uiCounterSurface() => <String, Object?>{
+      'createSurface': <String, Object?>{
+        'surfaceId': 'conformance',
+        'components': <Object?>[
+          <String, Object?>{
+            'id': 'root',
+            'component': 'Column',
+            'children': <Object?>['title', 'greeting', 'list', 'btn'],
+          },
+          <String, Object?>{
+            'id': 'title',
+            'component': 'Text',
+            'text': 'Hello'
+          },
+          <String, Object?>{
+            'id': 'greeting',
+            'component': 'Text',
+            'text': <String, Object?>{'path': '/name'},
+          },
+          <String, Object?>{
+            'id': 'list',
+            'component': 'Column',
+            'children': <String, Object?>{
+              'path': '/items',
+              'componentId': 'itemTmpl',
+            },
+          },
+          <String, Object?>{
+            'id': 'itemTmpl',
+            'component': 'Text',
+            'text': <String, Object?>{'path': 'label'},
+          },
+          <String, Object?>{
+            'id': 'btn',
+            'component': 'Button',
+            'child': 'btnLabel',
+            'action': <String, Object?>{
+              'event': <String, Object?>{
+                'name': 'go',
+                'context': <String, Object?>{}
+              },
+            },
+          },
+          <String, Object?>{
+            'id': 'btnLabel',
+            'component': 'Text',
+            'text': 'Go'
+          },
+        ],
+        'dataModel': <String, Object?>{
+          'name': 'Ada',
+          'items': <Object?>[
+            <String, Object?>{'label': 'a'},
+            <String, Object?>{'label': 'b'},
+          ],
+        },
+      },
+    };

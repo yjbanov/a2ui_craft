@@ -55,6 +55,17 @@ doesn't care how a renderer implements them. A2UI Craft slots in cleanly:
 In other words: **A2UI Craft templates are an implementation of an A2UI
 catalog**, as opposed to wrapping native widgets one-for-one.
 
+The vetted vocabulary (primitive widgets and higher-level templates) is
+**predefined by the client** and registered once; an A2UI message only
+**composes** it. How that composition is rendered — and how it stays correct
+under A2UI's id-addressed, incremental updates — is the subject of §6.
+
+> The first implementation in `a2ui_craft_bridge` took a shortcut: it translated
+> each surface into a synthesized `RemoteWidgetLibrary` (`widget root = …`) and
+> rendered that. It works, but it conflates "compose predefined widgets" with
+> "define a library," and it re-synthesizes/re-renders the whole tree on every
+> update. §6 describes the architecture we are moving to instead.
+
 ## 3. The hypotheses we are proving
 
 1. **H1 — RFW generalizes across rendering engines.** The RFW language and
@@ -75,9 +86,10 @@ catalog**, as opposed to wrapping native widgets one-for-one.
    expressive enough for A2UI use cases and maps cleanly onto every framework.
    This is where rendering-engine differences bite hardest (Flutter's explicit
    layout/animation vs. the HTML DOM's hard split between markup and blackbox
-   CSS layout/animation). **H2 work has not started** — see §7. The current core
-   component sets are intentionally minimal harness fixtures, not the real
-   library.
+   CSS layout/animation). H2 has started — the component contract and conformance
+   harness (§8) — but the cross-platform type/style model is still ahead. The
+   current core component sets are intentionally minimal harness fixtures, not the
+   real library.
 
 A2UI Craft is deliberately a **least-common-denominator** engine. The hunch is
 that this denominator is still quite expressive and covers many A2UI use cases.
@@ -184,7 +196,127 @@ automated checks:
   conformance run. Adding/altering a core component means extending the manifest
   and the suite, not writing per-adapter tests.
 
-## 6. Repository layout
+## 6. Rendering A2UI surfaces: composition, identity, and partial updates
+
+This section defines how an A2UI surface is rendered, and the two small, additive
+extensions to the RFW runtime it requires. It supersedes the "translate to a
+library" shortcut noted in §2.
+
+### The model: a predefined catalog that the message composes
+
+Two things are **predefined by the client and registered once**:
+
+- a `LocalWidgetLibrary` of primitive widgets (the native building blocks), and
+- optionally a `RemoteWidgetLibrary` of vetted higher-level templates (e.g.
+  `WeatherCard`) that may expose **slots** (`args.child` / `args.children`).
+
+An A2UI message **never defines widgets**. It carries a *composition*: a flat,
+id-referenced adjacency list of component *instances* that reference predefined
+names and bind data. Rendering a component means looking it up in the predefined
+catalog and composing it — A2UI's own "catalog of components" model.
+
+Widgets and data live in two separate worlds in RFW, and this separation is
+load-bearing:
+
+- the **template/args world** holds widgets (nested `ConstructorCall`s, `args.*`
+  projection, builders);
+- the **data world** (`DynamicContent`) holds only plain values
+  (`int/double/bool/String`, maps, lists).
+
+We verified that data cannot carry widgets: `DataSource.child`/`childList` only
+accept already-built widget nodes, a `data.x` reference resolves to a plain
+value, and `DynamicContent` asserts its leaves are scalars. So a
+dynamically-shaped A2UI tree **must** be expressed in the template/args world,
+not smuggled through data. This is the trust boundary that stops runtime data
+from injecting UI — and it's why the composition must be built as widget nodes at
+render time.
+
+### The adapter tree: host widgets are the retained A2UI component tree
+
+Each A2UI component is rendered by a host wrapper widget, `A2uiToRfwAdapter`,
+**keyed by the A2UI component id**. The adapter:
+
+- renders its own component via `Runtime.buildNode` (below), and
+- passes each child as a nested `A2uiToRfwAdapter` injected into the component's
+  `child` / `children` slot.
+
+So the **host framework's widget tree _is_ the A2UI component tree** — one keyed
+adapter per id. The engine renders one component at a time (including a vetted
+multi-node template with its slots). The rule: **structure _between_ components is
+the adapters' job; structure _within_ a component (template internals) is RFW's.**
+A predefined template's internals are never A2UI-addressable, which is exactly the
+property we want for vetted components.
+
+### Identity & reconciliation: why positional matching is not enough
+
+Host frameworks reconcile children by `runtimeType` + `key`; with no key they
+match **positionally**. RFW today attaches **no key** to its widget wrapper
+(`_Widget`), so RFW subtrees reconcile purely by position. That is correct for
+**in-place leaf updates** (same shape) but wrong for **insert / remove /
+reorder**: shifting a child by one slot makes a sibling's element-held state (a
+checkbox value, in-progress text input, scroll offset, animation) reconcile onto
+the wrong widget, or get dropped.
+
+A2UI components have **stable ids** and updates are **id-addressed**, with
+reordering expected. So reconciliation must be **keyed by the A2UI id**, not by
+position.
+
+We adopt Flutter's own idiom for preserving identity through wrapper widgets.
+`SliverChildBuilderDelegate.build` wraps each list child in decorators yet keeps
+identity by **lifting the child's key onto the outermost wrapper** —
+`KeyedSubtree(key: _SaltedValueKey(child.key), child: …)` — so the key sits at the
+reconciliation position despite the wrappers. We do the same: RFW's `_Widget`
+becomes the keyed wrapper, lifting a reserved `key` argument (set to the A2UI id,
+salted to stay `GlobalKey`-safe) so host reconciliation matches RFW subtrees by
+A2UI id.
+
+### Partial updates
+
+State lives in two places, and each kind of update touches only what it must:
+
+- **`updateDataModel`** writes to `DynamicContent`; RFW's existing path-keyed
+  subscriptions rebuild only the bound nodes. No structural work.
+- **`updateComponents`** is routed **per id**: the surface holds, per component
+  id, a listenable of the latest component definition; only the addressed
+  `A2uiToRfwAdapter` rebuilds, re-rendering from that node down. No whole-tree
+  re-synthesis, no re-currying of unaffected nodes.
+
+Localizing updates to the affected subtree (plus keyed reconciliation keeping
+sibling/descendant state intact) is the main reason for the adapter tree.
+
+### Two additive deviations from RFW (candidates to upstream)
+
+Both are small, additive, and behavior-preserving for existing RFW usage. Each
+will be recorded in `VENDORED.md` when implemented in the vendored runtimes, and
+each is a good candidate to propose to upstream RFW.
+
+1. **`Runtime.buildNode(context, composition, data, handler, {scope})`** — render
+   an ad-hoc composition (a `ConstructorCall` whose slot arguments may be
+   already-built host widgets) against the registered libraries, resolving names
+   via `scope`. *Why A2UI needs it:* the structure is decided at runtime, and RFW
+   otherwise renders only **named** declarations and **forbids recursive
+   templates** — so there is no way to render a runtime-built tree without
+   synthesizing a throwaway library per message.
+2. **Keyed `_Widget`** — honor a reserved `key` argument, lifted (salted) onto the
+   `_Widget` wrapper. *Why A2UI needs it:* id-addressed updates with reordering
+   require identity-based reconciliation. It also independently improves RFW for
+   any dynamic-list UI, so it has merit beyond A2UI.
+
+These replace the earlier idea of a "transparent injection" that bypassed the
+wrapper: lifting the key onto the wrapper is the idiomatic Flutter approach and
+solves both the standalone-RFW and A2UI cases with one mechanism.
+
+### Lists and scope (the delicate part)
+
+A2UI `ChildList` templates (data-driven lists) create a child data scope:
+relative bindings resolve against each item. With the adapter tree, RFW's loop
+machinery does **not** span the adapter boundary, so the **list adapter** iterates
+the data array itself, spawns one keyed item adapter per item (keyed by item
+identity, à la `KeyedSubtree.wrap(child, index)`), and hands each a **scoped** view
+of the data so relative bindings resolve. This is the most delicate piece; it is
+designed and built as its own step, after the static-children path is proven.
+
+## 7. Repository layout
 
 ```
 a2ui-craft/
@@ -200,7 +332,8 @@ a2ui-craft/
 ├── skills/                       # project skills (adapter-authoring guidance)
 └── packages/
     ├── a2ui_craft/               # core: vendored RFW formats + DynamicContent
-    ├── a2ui_craft_testing/       # shared parity-test fixtures (not published)
+    ├── a2ui_craft_bridge/        # A2UI Transport → engine (framework-neutral)
+    ├── a2ui_craft_testing/       # shared conformance suite + catalog (not published)
     ├── a2ui_craft_flutter/       # Flutter adapter (runtime + core comps + test)
     └── a2ui_craft_jaspr/         # Jaspr adapter (runtime + core comps + example + test)
 ```
@@ -213,7 +346,7 @@ workspace is resolved with **`flutter pub get`** (Flutter's bundled Dart also ru
 the pure-Dart and Jaspr packages fine). The *core* package itself remains
 Flutter-free; only the workspace resolution involves the Flutter SDK.
 
-## 7. Status & roadmap
+## 8. Status & roadmap
 
 - [x] Pivot to client-side templating engine; drop the AOT-to-Transport idea.
 - [x] Core = vendored, Flutter-free RFW formats layer + `DynamicContent`.
@@ -231,12 +364,24 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
       place, validated on the seed components. **Next:** the framework-neutral
       type/style model (the `argument_decoders` replacement) and growing the
       component set.
-- [ ] A2UI integration: map an A2UI catalog + data model onto the engine.
+- [~] A2UI integration: render an A2UI catalog + data model with the engine
+      (§6). **Done (interim):** `a2ui_craft_bridge` renders `createSurface`/
+      `updateComponents`/`updateDataModel` for the seed catalog (Text/Row/Column/
+      Button) incl. data bindings, `ChildList` templates, and events; verified on
+      both adapters via `runA2uiConformance` and the Jaspr example — but via the
+      "synthesize a library" shortcut (§2). **Next:** rework to the §6
+      architecture — the `buildNode` + keyed-`_Widget` runtime extensions and the
+      `A2uiToRfwAdapter` tree for localized, identity-correct updates — then
+      data-driven list scoping, then functions/`formatString`, more components,
+      two-way-binding inputs, `deleteSurface`, theme.
+- [ ] Two RFW runtime extensions (both vendored adapters): `Runtime.buildNode`
+      and keyed `_Widget` (salted key-lift). Record in `VENDORED.md`; propose
+      upstream.
 - [ ] Prove the state-model axis with a third, non-Flutter-like framework.
 - [ ] Consider upstream RFW restructuring so the formats layer need not be
       vendored.
 
-## 8. Open questions
+## 9. Open questions
 
 - **Core component vocabulary (H2):** what is the least-common-denominator set,
   and how are layout/animation differences reconciled between Flutter and the
@@ -244,5 +389,8 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
 - **Type model:** the equivalent of RFW's `argument_decoders` is intensely
   Flutter-specific and is explicitly *not* part of the core; H2 must define a
   framework-neutral type/style model that each adapter maps down.
-- **Template packaging & the A2UI catalog binding:** how templates are named,
-  bundled, and matched to A2UI `component` references.
+- **Template packaging & richer A2UI catalog binding:** the basic binding
+  exists (`a2ui_craft_bridge` maps A2UI `component` types to core components by
+  name). Still open: named higher-level templates (e.g. a `WeatherCard` template
+  resolving an A2UI `component="WeatherCard"`), and how such templates are
+  authored, bundled, and versioned alongside a catalog.

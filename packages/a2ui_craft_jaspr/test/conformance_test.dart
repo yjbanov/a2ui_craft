@@ -17,14 +17,14 @@ class _JasprCraftTester implements CraftTester {
   final ComponentTester _tester;
 
   @override
-  Future<void> mount(
-    String template, {
+  Future<void> mountLibrary(
+    RemoteWidgetLibrary main, {
     DynamicContent? data,
     CraftEventHandler? onEvent,
   }) async {
     final Runtime runtime = Runtime()
       ..update(const LibraryName(<String>['core']), createCoreComponents())
-      ..update(const LibraryName(<String>['main']), parseLibraryFile(template));
+      ..update(const LibraryName(<String>['main']), main);
 
     _tester.pumpComponent(
       RemoteComponent(
@@ -68,4 +68,5 @@ class _JasprConformanceDriver implements CraftConformanceDriver {
 
 void main() {
   runCoreComponentConformance(_JasprConformanceDriver());
+  runA2uiConformance(_JasprConformanceDriver());
 }

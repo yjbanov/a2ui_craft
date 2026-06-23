@@ -17,14 +17,14 @@ class _FlutterCraftTester implements CraftTester {
   final WidgetTester _tester;
 
   @override
-  Future<void> mount(
-    String template, {
+  Future<void> mountLibrary(
+    RemoteWidgetLibrary main, {
     DynamicContent? data,
     CraftEventHandler? onEvent,
   }) async {
     final Runtime runtime = Runtime()
       ..update(const LibraryName(<String>['core']), createCoreComponents())
-      ..update(const LibraryName(<String>['main']), parseLibraryFile(template));
+      ..update(const LibraryName(<String>['main']), main);
 
     await _tester.pumpWidget(
       Directionality(
@@ -70,4 +70,5 @@ class _FlutterConformanceDriver implements CraftConformanceDriver {
 
 void main() {
   runCoreComponentConformance(_FlutterConformanceDriver());
+  runA2uiConformance(_FlutterConformanceDriver());
 }

@@ -14,6 +14,7 @@ environment:
 # Every package in the workspace. New packages should be added here.
 workspace:
   - packages/a2ui_craft
+  - packages/a2ui_craft_bridge
   - packages/a2ui_craft_testing
   - packages/a2ui_craft_jaspr
   - packages/a2ui_craft_jaspr/example

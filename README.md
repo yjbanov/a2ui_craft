@@ -66,6 +66,7 @@ framework" is a continuously tested invariant, not just a claim.
 ## Status
 
 The harness is in place: a Flutter-free core plus two working adapters proving
-the same template renders on Flutter and on the DOM. The next major effort is
-**H2** — designing the real cross-platform core component/type library — which is
-deliberately not started until the harness is solid. See [`DESIGN.md` §7](DESIGN.md).
+the same template renders on Flutter and on the DOM, with a cross-framework
+behavioral conformance suite. A2UI integration and the cross-platform component
+library (**H2**) are both underway. See [`DESIGN.md` §8](DESIGN.md) for status
+and [`§6`](DESIGN.md) for the A2UI rendering architecture.

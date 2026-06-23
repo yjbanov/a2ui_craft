@@ -13,6 +13,8 @@ resolution: workspace
 
 dependencies:
   a2ui_craft: ^0.0.1
+  # The A2UI conformance suite builds surfaces via the bridge.
+  a2ui_craft_bridge: ^0.0.1
   # `test` is a regular dependency because the conformance suite (library code)
   # calls `expect`; adapters consume the suite inside their own test runners.
   test: ^1.25.0

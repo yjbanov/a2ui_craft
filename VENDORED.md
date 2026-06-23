@@ -44,6 +44,13 @@ abstract cheaply, so each adapter vendors its own copy of
    adapter uses Jaspr's `Component`.
 4. **Minor lint fixes** kept identical across adapters (e.g. `assert(library ==
    null)`).
+5. **Keyed `_Widget` (A2UI Craft extension #1).** `_CurriedWidget.build` lifts a
+   reserved literal `key` argument onto the `_Widget` reconciliation unit (via
+   `_liftKey`), so a keyed remote-widget subtree reconciles by identity rather
+   than position. This is additive and behavior-preserving for existing RFW usage
+   (widgets without a `key` arg are unaffected). It is needed for A2UI's
+   id-addressed, reorderable updates and independently improves RFW for dynamic
+   lists — a candidate to propose upstream. Rationale and design: `DESIGN.md` §6.
 
 `RemoteComponent` (from RFW's `remote_widget.dart`) is reimplemented per adapter
 with the unified API (`RemoteComponent`, field `component`) rather than RFW's
@@ -58,5 +65,6 @@ with the unified API (`RemoteComponent`, field `component`) rather than RFW's
 
 When pulling a newer `rfw`: re-copy the core files and re-apply the single
 `content.dart` change; re-copy `runtime.dart` per adapter and re-apply
-modifications 1–4 above. The parity tests (`a2ui_craft_testing` +
-`packages/*/test`) are the safety net that the runtimes still behave identically.
+modifications 1–5 above. The parity/conformance tests (`a2ui_craft_testing` +
+`packages/*/test`, including the keyed-reconciliation tests) are the safety net
+that the runtimes still behave identically.

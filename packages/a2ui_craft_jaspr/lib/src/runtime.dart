@@ -1066,6 +1066,10 @@ abstract class _CurriedWidget extends BlobNode {
     List<_WidgetState> states,
   ) {
     return _Widget(
+      // Lift a reserved literal `key` argument onto the reconciliation unit so
+      // host reconciliation matches this subtree by identity (e.g. an A2UI id),
+      // not by position. See DESIGN.md §6.
+      key: _liftKey(arguments['key']),
       curriedWidget: this,
       data: data,
       widgetBuilderScope: DynamicContent(widgetBuilderScope),
@@ -1193,8 +1197,22 @@ class _CurriedSwitch extends _CurriedWidget {
   String toString() => '${super.toString()} = $root';
 }
 
+/// Lifts a reserved, literal `key` argument to a host [Key] so a remote widget
+/// subtree reconciles by identity rather than position. Non-literal values (such
+/// as references, which only occur inside loops) yield null. See DESIGN.md §6.
+Key? _liftKey(Object? value) {
+  return switch (value) {
+    final String v => ValueKey<String>(v),
+    final int v => ValueKey<int>(v),
+    final double v => ValueKey<double>(v),
+    final bool v => ValueKey<bool>(v),
+    _ => null,
+  };
+}
+
 class _Widget extends StatefulComponent {
   const _Widget({
+    super.key,
     required this.curriedWidget,
     required this.data,
     required this.widgetBuilderScope,

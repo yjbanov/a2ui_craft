@@ -4,7 +4,7 @@
 
 import 'package:a2ui_craft_jaspr/a2ui_craft_jaspr.dart';
 import 'package:a2ui_craft_testing/a2ui_craft_testing.dart';
-import 'package:test/test.dart';
+import 'package:jaspr_test/jaspr_test.dart';
 
 void main() {
   test('implements exactly the core catalog (no more, no less)', () {

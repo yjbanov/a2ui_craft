@@ -266,9 +266,11 @@ We adopt Flutter's own idiom for preserving identity through wrapper widgets.
 identity by **lifting the child's key onto the outermost wrapper** —
 `KeyedSubtree(key: _SaltedValueKey(child.key), child: …)` — so the key sits at the
 reconciliation position despite the wrappers. We do the same: RFW's `_Widget`
-becomes the keyed wrapper, lifting a reserved `key` argument (set to the A2UI id,
-salted to stay `GlobalKey`-safe) so host reconciliation matches RFW subtrees by
-A2UI id.
+becomes the keyed wrapper, lifting a reserved `key` argument (set to the A2UI id)
+as a typed `ValueKey` so host reconciliation matches RFW subtrees by A2UI id.
+(Salting à la `_SaltedValueKey` — to stay `GlobalKey`-safe when a key value is
+itself a `Key` — is deferred; current keys are scalar ids and the inner child is
+unkeyed, so there is nothing to collide with.)
 
 ### Partial updates
 
@@ -297,10 +299,11 @@ each is a good candidate to propose to upstream RFW.
    otherwise renders only **named** declarations and **forbids recursive
    templates** — so there is no way to render a runtime-built tree without
    synthesizing a throwaway library per message.
-2. **Keyed `_Widget`** — honor a reserved `key` argument, lifted (salted) onto the
-   `_Widget` wrapper. *Why A2UI needs it:* id-addressed updates with reordering
-   require identity-based reconciliation. It also independently improves RFW for
-   any dynamic-list UI, so it has merit beyond A2UI.
+2. **Keyed `_Widget`** *(done — M1)* — honor a reserved literal `key` argument,
+   lifted onto the `_Widget` wrapper as a typed `ValueKey`. *Why A2UI needs it:*
+   id-addressed updates with reordering require identity-based reconciliation. It
+   also independently improves RFW for any dynamic-list UI, so it has merit beyond
+   A2UI.
 
 These replace the earlier idea of a "transparent injection" that bypassed the
 wrapper: lifting the key onto the wrapper is the idiomatic Flutter approach and
@@ -365,18 +368,23 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
       type/style model (the `argument_decoders` replacement) and growing the
       component set.
 - [~] A2UI integration: render an A2UI catalog + data model with the engine
-      (§6). **Done (interim):** `a2ui_craft_bridge` renders `createSurface`/
-      `updateComponents`/`updateDataModel` for the seed catalog (Text/Row/Column/
-      Button) incl. data bindings, `ChildList` templates, and events; verified on
-      both adapters via `runA2uiConformance` and the Jaspr example — but via the
-      "synthesize a library" shortcut (§2). **Next:** rework to the §6
-      architecture — the `buildNode` + keyed-`_Widget` runtime extensions and the
-      `A2uiToRfwAdapter` tree for localized, identity-correct updates — then
-      data-driven list scoping, then functions/`formatString`, more components,
-      two-way-binding inputs, `deleteSurface`, theme.
-- [ ] Two RFW runtime extensions (both vendored adapters): `Runtime.buildNode`
-      and keyed `_Widget` (salted key-lift). Record in `VENDORED.md`; propose
-      upstream.
+      (§6). **Done (interim):** `a2ui_craft_bridge` renders the seed catalog
+      (Text/Row/Column/Button) incl. data bindings, `ChildList` templates, and
+      events — verified on both adapters via `runA2uiConformance` and the Jaspr
+      example, but via the "synthesize a library" shortcut (§2). **Rework to the
+      §6 architecture, built bottom-up (interim bridge stays green until M3):**
+  - [x] **M1** — keyed `_Widget` (literal `key` lifted onto the wrapper) on both
+        runtimes, with a reorder-reconciliation test. The linchpin; independently
+        improves RFW.
+  - [ ] **M2** — `Runtime.buildNode` (render an ad-hoc composition + inject host
+        widgets as slot args) on both runtimes.
+  - [ ] **M3** — `A2uiToRfwAdapter` + per-id listenable surface (static children);
+        switch the demo/conformance over and retire the shortcut.
+  - [ ] **M4** — data-driven lists: list adapter + scoped data views.
+  - [ ] **Then** — functions/`formatString`, more components, two-way-binding
+        inputs, `deleteSurface`, theme.
+        (M1 & M2 are vendored-RFW divergences: record in `VENDORED.md`; propose
+        upstream.)
 - [ ] Prove the state-model axis with a third, non-Flutter-like framework.
 - [ ] Consider upstream RFW restructuring so the formats layer need not be
       vendored.

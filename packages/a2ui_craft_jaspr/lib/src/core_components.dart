@@ -14,21 +14,23 @@ import 'runtime.dart';
 /// both frameworks. The shared behavioral contract is verified by the
 /// conformance suite in `package:a2ui_craft_testing`, and the set of names is
 /// pinned by its `coreCatalog`.
+///
+/// Note: the reserved `key` argument is handled by the runtime, which lifts it
+/// onto the reconciliation unit (`_Widget`) — see DESIGN.md §6 — so these
+/// builders do not read or apply it themselves.
 LocalComponentLibrary createCoreComponents() {
   return LocalComponentLibrary(<String, LocalComponentBuilder>{
     'Text': (BuildContext context, DataSource source) {
-      return Text(source.v<String>(['text']) ?? '', key: _key(source));
+      return Text(source.v<String>(['text']) ?? '');
     },
     'Row': (BuildContext context, DataSource source) {
       return div(
-        key: _key(source),
         styles: Styles.flexbox(direction: FlexDirection.row),
         source.childList(['children']),
       );
     },
     'Column': (BuildContext context, DataSource source) {
       return div(
-        key: _key(source),
         styles: Styles.flexbox(direction: FlexDirection.column),
         source.childList(['children']),
       );
@@ -36,7 +38,6 @@ LocalComponentLibrary createCoreComponents() {
     'Button': (BuildContext context, DataSource source) {
       final onPressed = source.voidHandler(['onPressed']);
       return button(
-        key: _key(source),
         onClick: onPressed == null ? null : () => onPressed(),
         [
           source.child(['child'])
@@ -44,11 +45,4 @@ LocalComponentLibrary createCoreComponents() {
       );
     },
   });
-}
-
-/// Reads the optional `key` argument shared by all core components and maps it
-/// to a framework key, enabling stable, framework-neutral test location.
-Key? _key(DataSource source) {
-  final String? key = source.v<String>(['key']);
-  return key == null ? null : ValueKey<String>(key);
 }

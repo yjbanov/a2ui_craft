@@ -15,21 +15,23 @@ import 'runtime.dart';
 /// suite in `package:a2ui_craft_testing`, and the set of names is pinned by its
 /// `coreCatalog`. This set is intentionally small: the real, cross-platform core
 /// component/type library is a separate, in-progress effort (see DESIGN.md).
+///
+/// Note: the reserved `key` argument is handled by the runtime, which lifts it
+/// onto the reconciliation unit (`_Widget`) — see DESIGN.md §6 — so these
+/// builders do not read or apply it themselves.
 LocalComponentLibrary createCoreComponents() {
   return LocalComponentLibrary(<String, LocalComponentBuilder>{
     'Text': (BuildContext context, DataSource source) {
-      return Text(source.v<String>(['text']) ?? '', key: _key(source));
+      return Text(source.v<String>(['text']) ?? '');
     },
     'Row': (BuildContext context, DataSource source) {
       return Row(
-        key: _key(source),
         mainAxisSize: MainAxisSize.min,
         children: source.childList(['children']),
       );
     },
     'Column': (BuildContext context, DataSource source) {
       return Column(
-        key: _key(source),
         mainAxisSize: MainAxisSize.min,
         children: source.childList(['children']),
       );
@@ -37,17 +39,9 @@ LocalComponentLibrary createCoreComponents() {
     'Button': (BuildContext context, DataSource source) {
       final VoidCallback? onPressed = source.voidHandler(['onPressed']);
       return GestureDetector(
-        key: _key(source),
         onTap: onPressed,
         child: source.child(['child']),
       );
     },
   });
-}
-
-/// Reads the optional `key` argument shared by all core components and maps it
-/// to a framework key, enabling stable, framework-neutral test location.
-Key? _key(DataSource source) {
-  final String? key = source.v<String>(['key']);
-  return key == null ? null : ValueKey<String>(key);
 }

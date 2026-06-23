@@ -288,15 +288,15 @@ sibling/descendant state intact) is the main reason for the adapter tree.
 
 ### Two additive deviations from RFW (candidates to upstream)
 
-Both are small, additive, and behavior-preserving for existing RFW usage. Each
-will be recorded in `VENDORED.md` when implemented in the vendored runtimes, and
-each is a good candidate to propose to upstream RFW.
+Both are small, additive, and behavior-preserving for existing RFW usage. Each is
+recorded in `VENDORED.md` (extensions #6 and #5) and is a good candidate to
+propose to upstream RFW.
 
-1. **`Runtime.buildNode(context, composition, data, handler, {scope})`** — render
-   an ad-hoc composition (a `ConstructorCall` whose slot arguments may be
-   already-built host widgets) against the registered libraries, resolving names
-   via `scope`. *Why A2UI needs it:* the structure is decided at runtime, and RFW
-   otherwise renders only **named** declarations and **forbids recursive
+1. **`Runtime.buildNode(context, composition, data, handler, {scope})`** *(done —
+   M2)* — render an ad-hoc composition (a `ConstructorCall` whose slot arguments
+   may be already-built host widgets) against the registered libraries, resolving
+   names via `scope`. *Why A2UI needs it:* the structure is decided at runtime,
+   and RFW otherwise renders only **named** declarations and **forbids recursive
    templates** — so there is no way to render a runtime-built tree without
    synthesizing a throwaway library per message.
 2. **Keyed `_Widget`** *(done — M1)* — honor a reserved literal `key` argument,
@@ -376,8 +376,8 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
   - [x] **M1** — keyed `_Widget` (literal `key` lifted onto the wrapper) on both
         runtimes, with a reorder-reconciliation test. The linchpin; independently
         improves RFW.
-  - [ ] **M2** — `Runtime.buildNode` (render an ad-hoc composition + inject host
-        widgets as slot args) on both runtimes.
+  - [x] **M2** — `Runtime.buildNode` (render an ad-hoc composition + inject host
+        widgets as slot args, transparently) on both runtimes.
   - [ ] **M3** — `A2uiToRfwAdapter` + per-id listenable surface (static children);
         switch the demo/conformance over and retire the shortcut.
   - [ ] **M4** — data-driven lists: list adapter + scoped data views.

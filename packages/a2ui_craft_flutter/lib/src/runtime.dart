@@ -334,6 +334,38 @@ class Runtime extends ChangeNotifier {
         .build(context, data, remoteEventTarget, const <_WidgetState>[]);
   }
 
+  /// Builds an ad-hoc [composition] against the registered libraries, without it
+  /// being a named [WidgetDeclaration].
+  ///
+  /// Like [build], but instead of looking up a declaration by name it curries the
+  /// provided [composition] directly. Widget names inside [composition] are
+  /// resolved against [scope] (a registered library and its imports). Slot
+  /// arguments may contain already-built host widgets, which are injected as-is
+  /// (see `_CurriedHostWidget`).
+  ///
+  /// This is the entry point for runtime-composed UIs (e.g. an A2UI surface),
+  /// where the structure is decided at runtime rather than declared ahead of
+  /// time. See DESIGN.md §6.
+  Widget buildNode(
+    BuildContext context,
+    ConstructorCall composition,
+    DynamicContent data,
+    RemoteEventHandler remoteEventTarget, {
+    required LibraryName scope,
+  }) {
+    _checkForImportLoops(scope);
+    final _CurriedWidget curried = _bindArguments(
+      FullyQualifiedWidgetName(scope, '<buildNode>'),
+      composition,
+      const <String, Object?>{},
+      const <String, Object?>{},
+      -1,
+      <FullyQualifiedWidgetName>{},
+    ) as _CurriedWidget;
+    return curried
+        .build(context, data, remoteEventTarget, const <_WidgetState>[]);
+  }
+
   /// Returns the [BlobNode] that most closely corresponds to a given [BuildContext].
   ///
   /// If the `context` is not a remote widget and has no ancestor remote widget,
@@ -541,6 +573,11 @@ class Runtime extends ChangeNotifier {
     int stateDepth,
     Set<FullyQualifiedWidgetName> usedWidgets,
   ) {
+    if (node is Widget) {
+      // An already-built host widget injected via [buildNode] (e.g. a child
+      // adapter). Wrap it so child/childList accept it; it is rendered as-is.
+      return _CurriedHostWidget(node);
+    }
     if (node is ConstructorCall) {
       final subArguments = _bindArguments(
         context,
@@ -1123,6 +1160,56 @@ class _CurriedLocalWidget extends _CurriedWidget {
     _WidgetBuilderArgResolverCallback widgetBuilderArgResolver,
   ) {
     return child(context, source);
+  }
+}
+
+/// Synthetic name used for host widgets injected via [Runtime.buildNode].
+const FullyQualifiedWidgetName _hostWidgetName = FullyQualifiedWidgetName(
+  LibraryName(<String>['<host>']),
+  '<host>',
+);
+
+/// Wraps an already-built host [Widget] injected via [Runtime.buildNode] (e.g. a
+/// child adapter) so that `child`/`childList` accept it.
+///
+/// Its [build] returns the host widget **directly** — with no [_Widget] wrapper —
+/// so the host widget sits at the reconciliation position and keeps its own key.
+/// This is the transparent-injection half of the keyed-reconciliation story (the
+/// other half is the lifted `_Widget.key` for RFW-curried widgets). See
+/// DESIGN.md §6.
+class _CurriedHostWidget extends _CurriedWidget {
+  _CurriedHostWidget(this.hostWidget)
+      : super(
+          _hostWidgetName,
+          const <String, Object?>{},
+          const <String, Object?>{},
+          null,
+        );
+
+  final Widget hostWidget;
+
+  @override
+  Widget build(
+    BuildContext context,
+    DynamicContent data,
+    RemoteEventHandler remoteEventTarget,
+    List<_WidgetState> states,
+  ) {
+    return hostWidget;
+  }
+
+  @override
+  Widget buildChild(
+    BuildContext context,
+    DataSource source,
+    DynamicContent data,
+    RemoteEventHandler remoteEventTarget,
+    List<_WidgetState> states,
+    _StateResolverCallback stateResolver,
+    _DataResolverCallback dataResolver,
+    _WidgetBuilderArgResolverCallback widgetBuilderArgResolver,
+  ) {
+    return hostWidget;
   }
 }
 

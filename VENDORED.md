@@ -51,6 +51,16 @@ abstract cheaply, so each adapter vendors its own copy of
    (widgets without a `key` arg are unaffected). It is needed for A2UI's
    id-addressed, reorderable updates and independently improves RFW for dynamic
    lists — a candidate to propose upstream. Rationale and design: `DESIGN.md` §6.
+6. **`Runtime.buildNode` + host-widget injection (A2UI Craft extension #2).**
+   `Runtime.buildNode` renders an ad-hoc `ConstructorCall` against the registered
+   libraries (resolving names via a `scope` library), reusing the existing
+   currying path — no synthesized library required. `_bindArguments` wraps any
+   already-built host widget found in the argument tree as a `_CurriedHostWidget`,
+   whose `build` returns the host widget **directly** (no `_Widget` wrapper) so an
+   injected widget keeps its own key at the reconciliation position. Additive (no
+   effect on existing RFW usage, which never passes host widgets as args). Needed
+   to render runtime-composed A2UI surfaces; upstream candidate. Design:
+   `DESIGN.md` §6.
 
 `RemoteComponent` (from RFW's `remote_widget.dart`) is reimplemented per adapter
 with the unified API (`RemoteComponent`, field `component`) rather than RFW's
@@ -65,6 +75,6 @@ with the unified API (`RemoteComponent`, field `component`) rather than RFW's
 
 When pulling a newer `rfw`: re-copy the core files and re-apply the single
 `content.dart` change; re-copy `runtime.dart` per adapter and re-apply
-modifications 1–5 above. The parity/conformance tests (`a2ui_craft_testing` +
-`packages/*/test`, including the keyed-reconciliation tests) are the safety net
-that the runtimes still behave identically.
+modifications 1–6 above. The parity/conformance tests (`a2ui_craft_testing` +
+`packages/*/test`, including the keyed-reconciliation and buildNode tests) are the
+safety net that the runtimes still behave identically.

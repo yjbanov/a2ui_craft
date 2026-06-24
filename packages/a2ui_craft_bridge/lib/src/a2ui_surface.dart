@@ -10,21 +10,43 @@ import 'package:a2ui_craft/a2ui_craft.dart';
 /// A2UI Transport delivers a **flat, id-referenced adjacency list** of component
 /// instances plus a data model, via stateful messages. The engine renders
 /// **nested** RFW templates bound to a [DynamicContent]. This class bridges the
-/// two: it accumulates messages with [apply], then exposes a synthesized
-/// [library] (one `widget root = …` nesting the components per their child /
-/// children references) and a [data] model. The framework adapters render it
-/// with no A2UI-specific code — the core component library *is* the catalog.
+/// two: it accumulates messages with [apply], then exposes each component's
+/// evaluated definition as a per-id [SurfaceListenable] via
+/// [componentDefinition], plus a [data] model. Framework adapters
+/// (`A2uiToRfwAdapter`) subscribe to a single id and render its definition with
+/// [Runtime.buildNode]; child slots are themselves host adapters injected via
+/// [adapterBuilder]. The core component library *is* the catalog — there is no
+/// A2UI-specific rendering code.
 ///
-/// Each A2UI component `id` is carried through as the core component's `key`, so
-/// tests can locate a control by its A2UI id.
+/// Each adapter keys itself by its A2UI component `id`, so a control can be
+/// located (and its identity preserved across reorders) by that id.
 ///
 /// Supported envelopes: `createSurface`, `updateComponents`, `updateDataModel`.
 /// Supported components: the seed catalog (`Text`, `Row`, `Column`, `Button`).
 /// Functions/`formatString`, `checks`, `theme`, `deleteSurface`, and richer
 /// catalogs are intentionally out of scope for this slice.
 class A2uiSurface {
+  /// Creates an A2UI surface.
+  ///
+  /// The [adapterBuilder] is a framework-provided callback that wraps an A2UI
+  /// component ID in a framework-specific host component (e.g. Flutter `Widget`
+  /// or Jaspr `Component`).
+  A2uiSurface({required this.adapterBuilder});
+
+  /// The factory for creating host adapter components for child slots.
+  final Object Function(String id) adapterBuilder;
+
+  // Known limitation: these two maps grow monotonically — entries are never
+  // pruned when a component is dropped (e.g. a container's children are
+  // replaced), so a long-lived surface that churns component ids retains them
+  // unboundedly. Listeners themselves are cleaned up (adapters remove theirs on
+  // dispose); it is the cached per-id definitions that linger. This is fixed by
+  // component-removal/`deleteSurface` semantics (prune both maps on removal) —
+  // tracked in DESIGN.md §8 ("Then"), out of scope for the current slice.
   final Map<String, Map<String, Object?>> _components =
       <String, Map<String, Object?>>{};
+  final Map<String, SurfaceListenable<ConstructorCall?>> _componentListenables =
+      <String, SurfaceListenable<ConstructorCall?>>{};
   final Map<String, Object?> _model = <String, Object?>{};
   final DynamicContent _data = DynamicContent();
 
@@ -50,24 +72,19 @@ class A2uiSurface {
     }
   }
 
-  /// The synthesized RFW library exposing the surface's `root` widget.
+  /// Returns a listenable for the evaluated [ConstructorCall] definition of the
+  /// component with the given [id].
   ///
-  /// Register this under a library name (e.g. `main`) and render its `root`
-  /// component via the adapter's `Runtime`/`RemoteComponent`.
-  RemoteWidgetLibrary get library {
-    final Map<String, Object?>? root = _components['root'];
-    if (root == null) {
-      throw StateError(
-        'A2UI surface has no component with id "root" yet; nothing to render.',
-      );
-    }
-    return RemoteWidgetLibrary(
-      const <Import>[
-        Import(LibraryName(<String>['core']))
-      ],
-      <WidgetDeclaration>[
-        WidgetDeclaration('root', null, _buildComponent(root, inLoop: false)),
-      ],
+  /// Host adapters (`A2uiToRfwAdapter`) use this to subscribe to updates for
+  /// their specific component.
+  SurfaceListenable<ConstructorCall?> componentDefinition(String id) {
+    return _componentListenables.putIfAbsent(
+      id,
+      () => SurfaceListenable<ConstructorCall?>(
+        _components.containsKey(id)
+            ? _buildComponent(_components[id]!, inLoop: false)
+            : null,
+      ),
     );
   }
 
@@ -77,7 +94,13 @@ class A2uiSurface {
     if (components is List<Object?>) {
       for (final Object? component in components) {
         if (component is Map<String, Object?>) {
-          _components[component['id'] as String] = component;
+          final String id = component['id'] as String;
+          _components[id] = component;
+          // Notify the specific listener if it exists.
+          if (_componentListenables.containsKey(id)) {
+            _componentListenables[id]!.value =
+                _buildComponent(component, inLoop: false);
+          }
         }
       }
     }
@@ -157,25 +180,21 @@ class A2uiSurface {
         }
     }
 
-    // Carry the A2UI id through as the core component's key, so controls can be
-    // located by their A2UI id. Skipped inside loops: a template instantiates
-    // many times, so its id is not unique among siblings.
-    final Object? id = component['id'];
-    if (id is String && !inLoop) {
-      args['key'] = id;
-    }
     return ConstructorCall(type, args);
   }
 
-  ConstructorCall _buildById(String id, {required bool inLoop}) {
-    final Map<String, Object?>? component = _components[id];
-    if (component == null) {
-      // Unresolved reference: render an empty container rather than crash.
-      return const ConstructorCall('Column', <String, Object?>{
-        'children': <Object?>[],
-      });
+  Object _buildById(String id, {required bool inLoop}) {
+    if (inLoop) {
+      final Map<String, Object?>? component = _components[id];
+      if (component == null) {
+        return const ConstructorCall('Column', <String, Object?>{
+          'children': <Object?>[],
+        });
+      }
+      return _buildComponent(component, inLoop: inLoop);
     }
-    return _buildComponent(component, inLoop: inLoop);
+    // Inject the host adapter component.
+    return adapterBuilder(id);
   }
 
   /// Translates a `children` value: either a static array of component ids, or
@@ -241,4 +260,39 @@ class A2uiSurface {
   static List<String> _relParts(String path) {
     return path.split('/').where((String s) => s.isNotEmpty).toList();
   }
+}
+
+/// A simple framework-neutral value listenable.
+///
+/// Used by [A2uiSurface] to expose component definition updates to host
+/// adapters without taking a UI-framework dependency.
+class SurfaceListenable<T> {
+  /// Creates a listenable with the initial [value].
+  SurfaceListenable(this._value);
+
+  T _value;
+
+  /// The current value.
+  T get value => _value;
+
+  /// Updates the value and notifies listeners if it changed.
+  set value(T newValue) {
+    // We intentionally don't do `_value == newValue` because ConstructorCall
+    // doesn't have deep equality, and we want to rebuild on updates anyway.
+    _value = newValue;
+    // Iterate over a copy so a listener that adds/removes a listener while
+    // being notified (e.g. an adapter disposing during the rebuild it triggers)
+    // can't concurrently modify the list mid-iteration.
+    for (final void Function() listener in _listeners.toList()) {
+      listener();
+    }
+  }
+
+  final List<void Function()> _listeners = <void Function()>[];
+
+  /// Subscribes to updates.
+  void addListener(void Function() listener) => _listeners.add(listener);
+
+  /// Unsubscribes from updates.
+  void removeListener(void Function() listener) => _listeners.remove(listener);
 }

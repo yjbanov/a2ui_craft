@@ -62,9 +62,11 @@ under A2UI's id-addressed, incremental updates — is the subject of §6.
 
 > The first implementation in `a2ui_craft_bridge` took a shortcut: it translated
 > each surface into a synthesized `RemoteWidgetLibrary` (`widget root = …`) and
-> rendered that. It works, but it conflates "compose predefined widgets" with
-> "define a library," and it re-synthesizes/re-renders the whole tree on every
-> update. §6 describes the architecture we are moving to instead.
+> rendered that. It worked, but it conflated "compose predefined widgets" with
+> "define a library," and it re-synthesized/re-rendered the whole tree on every
+> update. That shortcut has been replaced by the §6 architecture (per-id host
+> adapters + `Runtime.buildNode`), which composes the predefined catalog directly
+> and updates each component in place.
 
 ## 3. The hypotheses we are proving
 
@@ -368,21 +370,31 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
       type/style model (the `argument_decoders` replacement) and growing the
       component set.
 - [~] A2UI integration: render an A2UI catalog + data model with the engine
-      (§6). **Done (interim):** `a2ui_craft_bridge` renders the seed catalog
+      (§6). **Done:** `a2ui_craft_bridge` renders the seed catalog
       (Text/Row/Column/Button) incl. data bindings, `ChildList` templates, and
       events — verified on both adapters via `runA2uiConformance` and the Jaspr
-      example, but via the "synthesize a library" shortcut (§2). **Rework to the
-      §6 architecture, built bottom-up (interim bridge stays green until M3):**
+      example. The "synthesize a library" shortcut (§2) is retired; rendering now
+      follows the §6 architecture (per-id host adapters + `Runtime.buildNode`),
+      built bottom-up:
   - [x] **M1** — keyed `_Widget` (literal `key` lifted onto the wrapper) on both
         runtimes, with a reorder-reconciliation test. The linchpin; independently
         improves RFW.
   - [x] **M2** — `Runtime.buildNode` (render an ad-hoc composition + inject host
         widgets as slot args, transparently) on both runtimes.
-  - [ ] **M3** — `A2uiToRfwAdapter` + per-id listenable surface (static children);
-        switch the demo/conformance over and retire the shortcut.
+  - [x] **M3** — `A2uiToRfwAdapter` + per-id listenable surface (static children);
+        demo/conformance switched over and the shortcut retired. Covered by
+        per-id partial-update isolation, child replace/removal, forward-reference,
+        and custom-catalog reorder-identity tests.
   - [ ] **M4** — data-driven lists: list adapter + scoped data views.
   - [ ] **Then** — functions/`formatString`, more components, two-way-binding
-        inputs, `deleteSurface`, theme.
+        inputs, `deleteSurface`, theme. `deleteSurface`/component-removal also
+        closes a known limitation: `A2uiSurface._components` and
+        `_componentListenables` currently grow monotonically — entries are never
+        pruned when a component is dropped (e.g. children replaced), so a
+        long-lived surface that churns component ids retains them unboundedly.
+        Listeners themselves are cleaned up by adapters on dispose; it is the
+        cached per-id definitions that linger. Fix = prune both maps on removal
+        (explicit message and/or a reachability sweep after `updateComponents`).
         (M1 & M2 are vendored-RFW divergences: record in `VENDORED.md`; propose
         upstream.)
 - [ ] Prove the state-model axis with a third, non-Flutter-like framework.

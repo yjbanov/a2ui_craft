@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 import 'package:a2ui_craft/a2ui_craft.dart';
+import 'package:a2ui_craft_bridge/a2ui_craft_bridge.dart';
 import 'package:a2ui_craft_flutter/a2ui_craft_flutter.dart';
 import 'package:a2ui_craft_testing/a2ui_craft_testing.dart';
 import 'package:flutter/widgets.dart';
@@ -16,21 +17,22 @@ class _FlutterCraftTester implements CraftTester {
 
   final WidgetTester _tester;
 
+  final Runtime _runtime = Runtime()
+    ..update(const LibraryName(<String>['core']), createCoreComponents());
+
   @override
   Future<void> mountLibrary(
     RemoteWidgetLibrary main, {
     DynamicContent? data,
     CraftEventHandler? onEvent,
   }) async {
-    final Runtime runtime = Runtime()
-      ..update(const LibraryName(<String>['core']), createCoreComponents())
-      ..update(const LibraryName(<String>['main']), main);
+    _runtime.update(const LibraryName(<String>['main']), main);
 
     await _tester.pumpWidget(
       Directionality(
         textDirection: TextDirection.ltr,
         child: RemoteComponent(
-          runtime: runtime,
+          runtime: _runtime,
           component: const FullyQualifiedWidgetName(
             LibraryName(<String>['main']),
             'root',
@@ -38,6 +40,30 @@ class _FlutterCraftTester implements CraftTester {
           data: data ?? DynamicContent(),
           onEvent: onEvent,
         ),
+      ),
+    );
+  }
+
+  @override
+  Object buildAdapter(
+    A2uiSurface surface,
+    String id, [
+    CraftEventHandler? onEvent,
+  ]) {
+    return A2uiToRfwAdapter(
+      id: id,
+      surface: surface,
+      runtime: _runtime,
+      onEvent: onEvent,
+    );
+  }
+
+  @override
+  Future<void> mountComponent(Object component) async {
+    await _tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: component as Widget,
       ),
     );
   }

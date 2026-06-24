@@ -355,6 +355,7 @@ class Runtime extends ChangeNotifier {
     RemoteEventHandler remoteEventTarget, {
     required LibraryName scope,
   }) {
+    // TODO(yjbanov): isn't it expensive to check for loops for every node build? Maybe we should cache the result of this check for each library.
     _checkForImportLoops(scope);
     final _CurriedWidget curried = _bindArguments(
       FullyQualifiedWidgetName(scope, '<buildNode>'),

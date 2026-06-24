@@ -3,9 +3,10 @@
 // found in the LICENSE file.
 
 import 'package:a2ui_craft/a2ui_craft.dart';
+import 'package:a2ui_craft_bridge/a2ui_craft_bridge.dart';
 import 'package:a2ui_craft_jaspr/a2ui_craft_jaspr.dart';
 import 'package:a2ui_craft_testing/a2ui_craft_testing.dart';
-import 'package:jaspr/jaspr.dart' show Key, ValueKey;
+import 'package:jaspr/jaspr.dart' show Component, Key, ValueKey;
 import 'package:jaspr_test/jaspr_test.dart';
 
 /// Jaspr implementation of the shared [CraftTester], wrapping a
@@ -16,19 +17,20 @@ class _JasprCraftTester implements CraftTester {
 
   final ComponentTester _tester;
 
+  final Runtime _runtime = Runtime()
+    ..update(const LibraryName(<String>['core']), createCoreComponents());
+
   @override
   Future<void> mountLibrary(
     RemoteWidgetLibrary main, {
     DynamicContent? data,
     CraftEventHandler? onEvent,
   }) async {
-    final Runtime runtime = Runtime()
-      ..update(const LibraryName(<String>['core']), createCoreComponents())
-      ..update(const LibraryName(<String>['main']), main);
+    _runtime.update(const LibraryName(<String>['main']), main);
 
     _tester.pumpComponent(
       RemoteComponent(
-        runtime: runtime,
+        runtime: _runtime,
         component: const FullyQualifiedWidgetName(
           LibraryName(<String>['main']),
           'root',
@@ -37,6 +39,26 @@ class _JasprCraftTester implements CraftTester {
         onEvent: onEvent,
       ),
     );
+    await _tester.pump();
+  }
+
+  @override
+  Object buildAdapter(
+    A2uiSurface surface,
+    String id, [
+    CraftEventHandler? onEvent,
+  ]) {
+    return A2uiToRfwAdapter(
+      id: id,
+      surface: surface,
+      runtime: _runtime,
+      onEvent: onEvent,
+    );
+  }
+
+  @override
+  Future<void> mountComponent(Object component) async {
+    _tester.pumpComponent(component as Component);
     await _tester.pump();
   }
 

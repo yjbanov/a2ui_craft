@@ -68,35 +68,43 @@ Map<String, Object?> _createSurface() => <String, Object?>{
     };
 
 void main() {
-  test('translates an A2UI surface into an RFW library', () {
-    final A2uiSurface surface = A2uiSurface()..apply(_createSurface());
-    final RemoteWidgetLibrary library = surface.library;
+  test('translates an A2UI surface into component listenables', () {
+    int notifications = 0;
+    final A2uiSurface surface = A2uiSurface(
+      adapterBuilder: (String id) => 'adapter:$id',
+    );
+    final SurfaceListenable<ConstructorCall?> rootListenable =
+        surface.componentDefinition('root');
+    rootListenable.addListener(() => notifications++);
 
-    expect(library.imports.single.name.parts, <String>['core']);
-    final WidgetDeclaration root = library.widgets.single;
-    expect(root.name, 'root');
+    surface.apply(_createSurface());
+    expect(notifications, 1);
 
-    final ConstructorCall column = root.root as ConstructorCall;
+    final ConstructorCall column = rootListenable.value!;
     expect(column.name, 'Column');
     final List<Object?> children =
         column.arguments['children']! as List<Object?>;
-    expect(children, hasLength(4));
+    expect(children, <Object?>[
+      'adapter:title',
+      'adapter:greeting',
+      'adapter:list',
+      'adapter:btn'
+    ]);
 
-    // Literal text + the id carried through as `key`.
-    final ConstructorCall title = children[0]! as ConstructorCall;
+    // Inspect the 'title' component separately.
+    final ConstructorCall title = surface.componentDefinition('title').value!;
     expect(title.name, 'Text');
     expect(title.arguments['text'], 'Hello');
-    expect(title.arguments['key'], 'title');
 
-    // Absolute data binding -> DataReference.
-    final ConstructorCall greeting = children[1]! as ConstructorCall;
+    // Inspect the 'greeting' component (absolute data binding).
+    final ConstructorCall greeting =
+        surface.componentDefinition('greeting').value!;
     final DataReference greetingRef =
         greeting.arguments['text']! as DataReference;
     expect(greetingRef.parts, <Object>['name']);
 
-    // ChildList template -> a children list containing a Loop over the data
-    // path, with a relative binding (matching `[ ...for x in xs: W ]`).
-    final ConstructorCall list = children[2]! as ConstructorCall;
+    // Inspect the 'list' component.
+    final ConstructorCall list = surface.componentDefinition('list').value!;
     final List<Object?> listChildren =
         list.arguments['children']! as List<Object?>;
     final Loop loop = listChildren.single! as Loop;
@@ -107,17 +115,73 @@ void main() {
     expect(itemRef.loop, 0);
     expect(itemRef.parts, <Object>['label']);
 
-    // Button: action.event -> onPressed EventHandler; child resolved inline.
-    final ConstructorCall button = children[3]! as ConstructorCall;
+    // Inspect the 'btn' component.
+    final ConstructorCall button = surface.componentDefinition('btn').value!;
     expect(button.name, 'Button');
     final EventHandler handler = button.arguments['onPressed']! as EventHandler;
     expect(handler.eventName, 'go');
-    expect((button.arguments['child']! as ConstructorCall).arguments['text'],
-        'Go');
+    expect(button.arguments['child'], 'adapter:btnLabel');
+  });
+
+  test('updateComponents notifies only the changed component', () {
+    final A2uiSurface surface = A2uiSurface(
+      adapterBuilder: (String id) => 'adapter:$id',
+    )..apply(_createSurface());
+
+    // Subscribe to both the component that will change and an unrelated one.
+    int titleNotifications = 0;
+    int rootNotifications = 0;
+    final SurfaceListenable<ConstructorCall?> title = surface
+        .componentDefinition('title')
+      ..addListener(() => titleNotifications++);
+    surface.componentDefinition('root').addListener(() => rootNotifications++);
+
+    surface.apply(<String, Object?>{
+      'updateComponents': <String, Object?>{
+        'components': <Object?>[
+          <String, Object?>{'id': 'title', 'component': 'Text', 'text': 'Hi'},
+        ],
+      },
+    });
+
+    // Only the touched component's listenable fires; siblings/parents are left
+    // alone — this is the partial-update isolation that per-id listenables buy.
+    expect(titleNotifications, 1);
+    expect(rootNotifications, 0);
+    expect(title.value!.arguments['text'], 'Hi');
+  });
+
+  test('a component referenced before it arrives renders once it does', () {
+    final A2uiSurface surface = A2uiSurface(
+      adapterBuilder: (String id) => 'adapter:$id',
+    );
+
+    // A host adapter subscribes to an id that has not been ingested yet.
+    int notifications = 0;
+    final SurfaceListenable<ConstructorCall?> pending =
+        surface.componentDefinition('late')..addListener(() => notifications++);
+    expect(pending.value, isNull);
+
+    surface.apply(<String, Object?>{
+      'updateComponents': <String, Object?>{
+        'components': <Object?>[
+          <String, Object?>{
+            'id': 'late',
+            'component': 'Text',
+            'text': 'arrived'
+          },
+        ],
+      },
+    });
+
+    expect(notifications, 1);
+    expect(pending.value!.arguments['text'], 'arrived');
   });
 
   test('applies updateDataModel reactively', () {
-    final A2uiSurface surface = A2uiSurface()..apply(_createSurface());
+    final A2uiSurface surface = A2uiSurface(
+      adapterBuilder: (String id) => 'adapter:$id',
+    )..apply(_createSurface());
     expect(surface.data.subscribe(<Object>['name'], (_) {}), 'Ada');
 
     surface.apply(<String, Object?>{

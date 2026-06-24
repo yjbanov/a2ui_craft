@@ -10,6 +10,7 @@
 /// framework adapters; only the rendered node type (Flutter [Widget]) differs.
 library a2ui_craft_flutter;
 
+export 'src/a2ui_to_rfw_adapter.dart';
 export 'src/core_components.dart';
 export 'src/remote_component.dart';
 export 'src/runtime.dart';

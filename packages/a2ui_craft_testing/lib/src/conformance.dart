@@ -43,6 +43,16 @@ abstract interface class CraftTester {
   /// Activates (taps/clicks) the interactive element carrying the given
   /// component `key`.
   Future<void> activate(String key);
+
+  /// Creates a framework-specific adapter widget/component for the given A2UI [id].
+  Object buildAdapter(
+    A2uiSurface surface,
+    String id, [
+    CraftEventHandler? onEvent,
+  ]);
+
+  /// Renders a host component directly (e.g. an `A2uiToRfwAdapter`).
+  Future<void> mountComponent(Object component);
 }
 
 /// Convenience queries and entry points layered on the minimal [CraftTester]
@@ -177,13 +187,20 @@ void runA2uiConformance(CraftConformanceDriver driver) {
   driver.defineTest(
     'A2UI surface renders text, bindings, a list, and dispatches events',
     (CraftTester tester) async {
-      final A2uiSurface surface = A2uiSurface()..apply(_a2uiCounterSurface());
+      late A2uiSurface surface;
       final List<String> dispatched = <String>[];
-      await tester.mountLibrary(
-        surface.library,
-        data: surface.data,
-        onEvent: (String name, DynamicMap arguments) => dispatched.add(name),
+      void handler(String name, DynamicMap arguments) {
+        dispatched.add(name);
+      }
+
+      surface = A2uiSurface(
+        adapterBuilder: (String id) =>
+            tester.buildAdapter(surface, id, handler),
       );
+      surface.apply(_a2uiCounterSurface());
+
+      await tester
+          .mountComponent(tester.buildAdapter(surface, 'root', handler));
 
       // Literal, absolute data binding, list items, and the button label.
       expect(tester.hasText('Hello'), isTrue);
@@ -192,7 +209,8 @@ void runA2uiConformance(CraftConformanceDriver driver) {
       expect(tester.hasText('b'), isTrue);
       expect(tester.hasText('Go'), isTrue);
 
-      // The Button is located by its A2UI id (carried through as the key).
+      // The Button is located by its A2UI id (the host adapter keys itself by
+      // that id).
       expect(dispatched, isEmpty);
       await tester.activate('btn');
       expect(dispatched, <String>['go']);
@@ -204,6 +222,75 @@ void runA2uiConformance(CraftConformanceDriver driver) {
       await tester.pump();
       expect(tester.hasText('Ada'), isFalse);
       expect(tester.hasText('Grace'), isTrue);
+    },
+  );
+
+  driver.defineTest(
+    'updateComponents updates a single component in place',
+    (CraftTester tester) async {
+      late A2uiSurface surface;
+      surface = A2uiSurface(
+        adapterBuilder: (String id) => tester.buildAdapter(surface, id),
+      );
+      surface.apply(_a2uiCounterSurface());
+      await tester.mountComponent(tester.buildAdapter(surface, 'root'));
+
+      expect(tester.hasText('Hello'), isTrue);
+
+      // A follow-up updateComponents that touches only `title` by id.
+      surface.apply(<String, Object?>{
+        'updateComponents': <String, Object?>{
+          'components': <Object?>[
+            <String, Object?>{'id': 'title', 'component': 'Text', 'text': 'Hi'},
+          ],
+        },
+      });
+      await tester.pump();
+
+      // The targeted component re-renders; its siblings are untouched.
+      expect(tester.hasText('Hello'), isFalse);
+      expect(tester.hasText('Hi'), isTrue);
+      expect(tester.hasText('Ada'), isTrue);
+      expect(tester.hasText('a'), isTrue);
+      expect(tester.hasText('Go'), isTrue);
+    },
+  );
+
+  driver.defineTest(
+    "updateComponents replaces a container's children",
+    (CraftTester tester) async {
+      late A2uiSurface surface;
+      surface = A2uiSurface(
+        adapterBuilder: (String id) => tester.buildAdapter(surface, id),
+      );
+      surface.apply(_a2uiCounterSurface());
+      await tester.mountComponent(tester.buildAdapter(surface, 'root'));
+
+      expect(tester.hasText('Ada'), isTrue); // greeting
+      expect(tester.hasText('a'), isTrue); // list item
+
+      // A follow-up updateComponents that re-points root at a different,
+      // reordered subset of children. Dropped children must unmount.
+      surface.apply(<String, Object?>{
+        'updateComponents': <String, Object?>{
+          'components': <Object?>[
+            <String, Object?>{
+              'id': 'root',
+              'component': 'Column',
+              'children': <Object?>['btn', 'title'],
+            },
+          ],
+        },
+      });
+      await tester.pump();
+
+      // Surviving children still render...
+      expect(tester.hasText('Go'), isTrue); // btn label
+      expect(tester.hasText('Hello'), isTrue); // title
+      // ...and dropped children are gone.
+      expect(tester.hasText('Ada'), isFalse); // greeting removed
+      expect(tester.hasText('a'), isFalse); // list removed
+      expect(tester.hasText('b'), isFalse);
     },
   );
 }

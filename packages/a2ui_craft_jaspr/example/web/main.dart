@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:a2ui_craft/a2ui_craft.dart';
 import 'package:a2ui_craft_bridge/a2ui_craft_bridge.dart';
 import 'package:a2ui_craft_jaspr/a2ui_craft_jaspr.dart';
 import 'package:jaspr/browser.dart';
@@ -21,15 +20,23 @@ class App extends StatefulComponent {
 
 class _AppState extends State<App> {
   final Runtime _runtime = Runtime();
-  final A2uiSurface _surface = A2uiSurface();
+  late final A2uiSurface _surface;
 
   @override
   void initState() {
     super.initState();
+    _runtime.update(
+        const LibraryName(<String>['core']), createCoreComponents());
+
+    _surface = A2uiSurface(
+      adapterBuilder: (String id) => A2uiToRfwAdapter(
+        id: id,
+        surface: _surface,
+        runtime: _runtime,
+        onEvent: _onEvent,
+      ),
+    );
     _surface.apply(_createSurfaceMessage());
-    _runtime
-      ..update(const LibraryName(<String>['core']), createCoreComponents())
-      ..update(const LibraryName(<String>['main']), _surface.library);
   }
 
   void _onEvent(String name, DynamicMap arguments) {
@@ -56,13 +63,10 @@ class _AppState extends State<App> {
         radius: BorderRadius.circular(Unit.pixels(8)),
       ),
       [
-        RemoteComponent(
+        A2uiToRfwAdapter(
+          id: 'root',
+          surface: _surface,
           runtime: _runtime,
-          component: const FullyQualifiedWidgetName(
-            LibraryName(<String>['main']),
-            'root',
-          ),
-          data: _surface.data,
           onEvent: _onEvent,
         ),
       ],

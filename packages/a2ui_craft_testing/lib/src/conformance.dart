@@ -293,6 +293,135 @@ void runA2uiConformance(CraftConformanceDriver driver) {
       expect(tester.hasText('b'), isFalse);
     },
   );
+
+  driver.defineTest(
+    'a data-driven list grows and shrinks with its data array',
+    (CraftTester tester) async {
+      late A2uiSurface surface;
+      surface = A2uiSurface(
+        adapterBuilder: (String id) => tester.buildAdapter(surface, id),
+      );
+      surface.apply(_a2uiCounterSurface());
+      await tester.mountComponent(tester.buildAdapter(surface, 'root'));
+
+      expect(tester.hasText('a'), isTrue);
+      expect(tester.hasText('b'), isTrue);
+      expect(tester.hasText('c'), isFalse);
+
+      // Replace the array with a longer one: a new item appears.
+      surface.apply(<String, Object?>{
+        'updateDataModel': <String, Object?>{
+          'path': '/items',
+          'value': <Object?>[
+            <String, Object?>{'label': 'a'},
+            <String, Object?>{'label': 'b'},
+            <String, Object?>{'label': 'c'},
+          ],
+        },
+      });
+      await tester.pump();
+      expect(tester.hasText('c'), isTrue);
+
+      // Replace with a shorter one: trailing items disappear.
+      surface.apply(<String, Object?>{
+        'updateDataModel': <String, Object?>{
+          'path': '/items',
+          'value': <Object?>[
+            <String, Object?>{'label': 'a'},
+          ],
+        },
+      });
+      await tester.pump();
+      expect(tester.hasText('a'), isTrue);
+      expect(tester.hasText('b'), isFalse);
+      expect(tester.hasText('c'), isFalse);
+    },
+  );
+
+  driver.defineTest(
+    'updateDataModel into a list item updates just that row',
+    (CraftTester tester) async {
+      late A2uiSurface surface;
+      surface = A2uiSurface(
+        adapterBuilder: (String id) => tester.buildAdapter(surface, id),
+      );
+      surface.apply(_a2uiCounterSurface());
+      await tester.mountComponent(tester.buildAdapter(surface, 'root'));
+
+      expect(tester.hasText('a'), isTrue);
+      expect(tester.hasText('b'), isTrue);
+
+      surface.apply(<String, Object?>{
+        'updateDataModel': <String, Object?>{
+          'path': '/items/0/label',
+          'value': 'A1',
+        },
+      });
+      await tester.pump();
+
+      expect(tester.hasText('a'), isFalse);
+      expect(tester.hasText('A1'), isTrue);
+      expect(tester.hasText('b'), isTrue); // the other row is untouched
+    },
+  );
+
+  driver.defineTest(
+    'a nested ChildList scopes each inner loop to its outer item',
+    (CraftTester tester) async {
+      late A2uiSurface surface;
+      surface = A2uiSurface(
+        adapterBuilder: (String id) => tester.buildAdapter(surface, id),
+      );
+      surface.apply(<String, Object?>{
+        'createSurface': <String, Object?>{
+          'surfaceId': 'nested',
+          'components': <Object?>[
+            <String, Object?>{
+              'id': 'root',
+              'component': 'Column',
+              'children': <String, Object?>{
+                'path': '/groups',
+                'componentId': 'group',
+              },
+            },
+            <String, Object?>{
+              'id': 'group',
+              'component': 'Column',
+              'children': <String, Object?>{
+                'path': 'members',
+                'componentId': 'member',
+              },
+            },
+            <String, Object?>{
+              'id': 'member',
+              'component': 'Text',
+              'text': <String, Object?>{'path': 'name'},
+            },
+          ],
+          'dataModel': <String, Object?>{
+            'groups': <Object?>[
+              <String, Object?>{
+                'members': <Object?>[
+                  <String, Object?>{'name': 'alice'},
+                  <String, Object?>{'name': 'bob'},
+                ],
+              },
+              <String, Object?>{
+                'members': <Object?>[
+                  <String, Object?>{'name': 'carol'},
+                ],
+              },
+            ],
+          },
+        },
+      });
+      await tester.mountComponent(tester.buildAdapter(surface, 'root'));
+
+      expect(tester.hasText('alice'), isTrue);
+      expect(tester.hasText('bob'), isTrue);
+      expect(tester.hasText('carol'), isTrue);
+    },
+  );
 }
 
 Map<String, Object?> _a2uiCounterSurface() => <String, Object?>{

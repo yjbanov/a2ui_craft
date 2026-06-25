@@ -119,32 +119,78 @@ class A2uiSurface {
   }
 
   void _applyDataUpdate(String? path, Object? value) {
-    final List<String> parts = _pathParts(path);
+    final List<Object> parts = _absParts(path);
     if (parts.isEmpty) {
       if (value is Map<String, Object?>) {
         _replaceModel(value);
       }
       return;
     }
-    Map<String, Object?> node = _model;
+    // Walk to the container holding the last segment, descending through both
+    // maps (string keys) and lists (int indices); see `_descend`/`_assign`.
+    Object container = _model;
     for (int i = 0; i < parts.length - 1; i++) {
-      final Object? next = node[parts[i]];
-      if (next is Map<String, Object?>) {
-        node = next;
-      } else {
-        final Map<String, Object?> created = <String, Object?>{};
-        node[parts[i]] = created;
-        node = created;
+      container = _descend(container, parts[i]);
+    }
+    _assign(container, parts.last, value);
+    // Re-push the affected top-level key (the data model root is always a map,
+    // so the first segment is a string key).
+    final Object root = parts.first;
+    if (root is String) {
+      final Object? rootValue = _model[root];
+      if (rootValue != null) {
+        _data.update(root, rootValue);
       }
     }
-    if (value == null) {
-      node.remove(parts.last);
-    } else {
-      node[parts.last] = value;
+  }
+
+  /// Descends one level into a map (string key) or list (int index) container,
+  /// creating a nested map for a missing/scalar *map* slot so the walk can
+  /// continue. List slots are not created (an array is grown only by an
+  /// append at its last segment; see `_assign`).
+  static Object _descend(Object container, Object key) {
+    if (container is Map<String, Object?> && key is String) {
+      final Object? next = container[key];
+      if (next is Map<String, Object?> || next is List<Object?>) {
+        return next!;
+      }
+      final Map<String, Object?> created = <String, Object?>{};
+      container[key] = created;
+      return created;
     }
-    final Object? rootValue = _model[parts.first];
-    if (rootValue != null) {
-      _data.update(parts.first, rootValue);
+    if (container is List<Object?> &&
+        key is int &&
+        key >= 0 &&
+        key < container.length) {
+      final Object? next = container[key];
+      if (next is Map<String, Object?> || next is List<Object?>) {
+        return next!;
+      }
+    }
+    // Cannot descend (type/index mismatch): return a throwaway so the eventual
+    // assignment is a harmless no-op rather than a crash.
+    return <String, Object?>{};
+  }
+
+  /// Assigns the leaf [key] in [container], or removes it when [value] is null.
+  /// Supports map keys, in-range list indices, and appending at `list.length`.
+  static void _assign(Object container, Object key, Object? value) {
+    if (container is Map<String, Object?> && key is String) {
+      if (value == null) {
+        container.remove(key);
+      } else {
+        container[key] = value;
+      }
+    } else if (container is List<Object?> && key is int) {
+      if (value == null) {
+        if (key >= 0 && key < container.length) {
+          container.removeAt(key);
+        }
+      } else if (key >= 0 && key < container.length) {
+        container[key] = value;
+      } else if (key == container.length) {
+        container.add(value);
+      }
     }
   }
 
@@ -207,15 +253,18 @@ class A2uiSurface {
       ];
     }
     if (children is Map<String, Object?>) {
-      final List<Object> pathParts =
-          _pathParts(children['path'] as String?).cast<Object>();
+      // The loop *input* is resolved in the enclosing scope: an absolute `/…`
+      // path is a `DataReference`; a relative path inside an outer loop is a
+      // `LoopReference` to that enclosing item — so nested `ChildList`s bind
+      // correctly. The template's own bindings resolve relative to each item,
+      // hence the inner build runs with inLoop: true. In RFW a `...for` is a
+      // list *element*, so the children value is a list containing the Loop
+      // (matching `children: [ ...for x in xs: W ]`).
+      final Object input =
+          _pathRef(children['path'] as String?, inLoop: inLoop);
       final String templateId = children['componentId'] as String;
-      // The template's bindings resolve relative to each list item, hence the
-      // inner build runs with inLoop: true (relative paths -> LoopReference).
-      // In RFW a `...for` is a list *element*, so the children value is a list
-      // containing the Loop (matching `children: [ ...for x in xs: W ]`).
       return <Object?>[
-        Loop(DataReference(pathParts), _buildById(templateId, inLoop: true)),
+        Loop(input, _buildById(templateId, inLoop: true)),
       ];
     }
     return <Object?>[];
@@ -236,29 +285,54 @@ class A2uiSurface {
   /// inside a [Loop]).
   Object? _value(Object? raw, {required bool inLoop}) {
     if (raw is Map<String, Object?> && raw.containsKey('path')) {
-      final String path = raw['path'] as String;
-      if (path.startsWith('/')) {
-        return DataReference(_pathParts(path).cast<Object>());
-      }
-      final List<Object> parts = _relParts(path).cast<Object>();
-      return inLoop ? LoopReference(0, parts) : DataReference(parts);
+      return _pathRef(raw['path'] as String?, inLoop: inLoop);
     }
     return raw;
   }
 
   // --- path helpers -------------------------------------------------------
 
-  /// Splits a JSON Pointer (`/a/b`) into segments; `/` or null -> empty.
-  static List<String> _pathParts(String? pointer) {
-    if (pointer == null || pointer.isEmpty || pointer == '/') {
-      return <String>[];
+  /// Resolves a path string to a binding/loop-input reference: an absolute
+  /// `/…` path is a [DataReference]; a relative path is a [LoopReference] to the
+  /// innermost enclosing item when [inLoop], else a [DataReference].
+  Object _pathRef(String? path, {required bool inLoop}) {
+    if (path == null || path.isEmpty || path == '/') {
+      return DataReference(<Object>[]);
     }
-    return pointer.split('/').where((String s) => s.isNotEmpty).toList();
+    if (path.startsWith('/')) {
+      return DataReference(_absParts(path));
+    }
+    final List<Object> parts = _relParts(path);
+    return inLoop ? LoopReference(0, parts) : DataReference(parts);
   }
 
-  /// Splits a relative path (`a/b`, no leading slash) into segments.
-  static List<String> _relParts(String path) {
-    return path.split('/').where((String s) => s.isNotEmpty).toList();
+  /// Splits a JSON Pointer (`/a/0/b`) into typed segments; `/` or null -> empty.
+  static List<Object> _absParts(String? pointer) {
+    if (pointer == null || pointer.isEmpty || pointer == '/') {
+      return <Object>[];
+    }
+    return pointer
+        .split('/')
+        .where((String s) => s.isNotEmpty)
+        .map(_segment)
+        .toList();
+  }
+
+  /// Splits a relative path (`a/0/b`, no leading slash) into typed segments.
+  static List<Object> _relParts(String path) {
+    return path
+        .split('/')
+        .where((String s) => s.isNotEmpty)
+        .map(_segment)
+        .toList();
+  }
+
+  /// A path segment: a non-negative integer becomes an `int` (a list index);
+  /// anything else stays a `String` (a map key). This is what lets bindings and
+  /// data updates address into arrays (`DynamicContent` indexes lists by int).
+  static Object _segment(String s) {
+    final int? index = int.tryParse(s);
+    return index != null && index >= 0 ? index : s;
   }
 }
 

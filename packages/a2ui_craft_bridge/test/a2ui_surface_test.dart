@@ -189,4 +189,93 @@ void main() {
     });
     expect(surface.data.subscribe(<Object>['name'], (_) {}), 'Grace');
   });
+
+  test('updateDataModel addresses into a list (field, append, remove)', () {
+    final A2uiSurface surface = A2uiSurface(
+      adapterBuilder: (String id) => 'adapter:$id',
+    )..apply(_createSurface());
+    expect(surface.data.subscribe(<Object>['items', 0, 'label'], (_) {}), 'a');
+
+    // Update a field inside an existing item.
+    surface.apply(<String, Object?>{
+      'updateDataModel': <String, Object?>{
+        'path': '/items/0/label',
+        'value': 'A1'
+      },
+    });
+    expect(surface.data.subscribe(<Object>['items', 0, 'label'], (_) {}), 'A1');
+    // Its sibling is untouched.
+    expect(surface.data.subscribe(<Object>['items', 1, 'label'], (_) {}), 'b');
+
+    // Append an item at the end (index == length).
+    surface.apply(<String, Object?>{
+      'updateDataModel': <String, Object?>{
+        'path': '/items/2',
+        'value': <String, Object?>{'label': 'c'},
+      },
+    });
+    expect(surface.data.subscribe(<Object>['items', 2, 'label'], (_) {}), 'c');
+
+    // Remove an item (null value).
+    surface.apply(<String, Object?>{
+      'updateDataModel': <String, Object?>{'path': '/items/1', 'value': null},
+    });
+    final Object items = surface.data.subscribe(<Object>['items'], (_) {});
+    expect((items as List<Object?>).length, 2);
+    expect(surface.data.subscribe(<Object>['items', 1, 'label'], (_) {}), 'c');
+  });
+
+  test('nested ChildList nests the loop scope', () {
+    final A2uiSurface surface = A2uiSurface(
+      adapterBuilder: (String id) => 'adapter:$id',
+    )..apply(<String, Object?>{
+        'createSurface': <String, Object?>{
+          'surfaceId': 'nested',
+          'components': <Object?>[
+            <String, Object?>{
+              'id': 'root',
+              'component': 'Column',
+              'children': <String, Object?>{
+                'path': '/groups',
+                'componentId': 'group',
+              },
+            },
+            <String, Object?>{
+              'id': 'group',
+              'component': 'Column',
+              // Relative path: resolved against each outer (group) item.
+              'children': <String, Object?>{
+                'path': 'members',
+                'componentId': 'member',
+              },
+            },
+            <String, Object?>{
+              'id': 'member',
+              'component': 'Text',
+              'text': <String, Object?>{'path': 'name'},
+            },
+          ],
+        },
+      });
+
+    final ConstructorCall root = surface.componentDefinition('root').value!;
+    final Loop outer =
+        (root.arguments['children']! as List<Object?>).single! as Loop;
+    // Outer input is absolute -> DataReference.
+    expect((outer.input as DataReference).parts, <Object>['groups']);
+
+    final ConstructorCall group = outer.output as ConstructorCall;
+    final Loop inner =
+        (group.arguments['children']! as List<Object?>).single! as Loop;
+    // Inner input is relative & inside the outer loop -> LoopReference(0).
+    final LoopReference innerInput = inner.input as LoopReference;
+    expect(innerInput.loop, 0);
+    expect(innerInput.parts, <Object>['members']);
+
+    // The leaf binding resolves against the innermost (member) item.
+    final ConstructorCall member = inner.output as ConstructorCall;
+    final LoopReference name = member.arguments['text']! as LoopReference;
+    expect(name.loop, 0);
+    expect(name.parts, <Object>['name']);
+  });
 }

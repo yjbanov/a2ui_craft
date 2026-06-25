@@ -444,10 +444,18 @@ updates.
 low-level `core` components, and A2UI references those primitive names — i.e. it
 treats the low-level catalog as if it were the high-level one (a degenerate case
 where high == low, no templates). The high-level template library, and pointing
-the bridge's `scope` at it, is **not yet built**; it is the heart of the hypothesis
-and the next structural step. One mechanic to validate first: invoking a *named*
-template with runtime-injected host-widget `children` (M2's tests injected into a
-bare `Column`, not through a named template's `args.children`).
+the bridge's `scope` at it, is the next structural step (M5).
+
+**Mechanic validated (M5 spike).** `template_layer_spike_test` (both adapters)
+proves the rendering path with **no runtime changes**: `buildNode` resolves a
+*named* high-level template against `scope: catalog` (which `import core;`), binds
+component props as `args`, composes the low-level catalog, and — the previously
+open question — injects runtime host-widget `children` through a named template's
+`args.children` (e.g. a `Grid` of injected `ProductCard`s). What remains for M5 is
+**bridge wiring only**: register the high-level `RemoteWidgetLibrary`, point the
+adapter's `scope` at it, and map A2UI component props → template `args`
+generically (children → injected child adapters), replacing the hardcoded
+low-level type switch.
 
 ## 7. Repository layout
 

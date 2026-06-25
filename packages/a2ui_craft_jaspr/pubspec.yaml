@@ -15,4 +15,5 @@ dependencies:
 dev_dependencies:
   a2ui_craft_testing: ^0.0.1
   jaspr_test: ^0.16.0
+  a2ui_core: ^0.0.1-dev002
   lints: ^4.0.0

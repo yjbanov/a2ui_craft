@@ -652,7 +652,30 @@ protocol/data/binding half of the bridge is delegated.
   canonical direction (the JS stack already follows it).
 - **Pure-Dart deps** (`collection`, `json_schema_builder`, `meta`,
   `preact_signals` — no Flutter), so Jaspr-compatible.
-- **Status: planned, not started (M6).** De-risk with a thin Jaspr spike — a
-  `ProductCard` + `Grid` template library over `core`, an A2UI surface placing two
-  cards in a grid, `a2ui_core` resolving one `formatString` and one
-  `updateDataModel` — before deleting anything.
+- **Status: spike landed; full adoption in progress (M6).** The de-risking
+  Jaspr spike (`a2ui_core_seam_spike_test.dart`) is green and proves the seam end
+  to end with the **real, published** `a2ui_core` (`^0.0.1-dev002` from pub.dev):
+  a `ProductCard` + `Grid` template library over `core`, an A2UI surface placing
+  two cards in a grid, `a2ui_core` resolving a `formatString` price and an
+  `updateDataModel`. Findings:
+  - **No RFW runtime change is needed for the data/binding/structural seam.**
+    `a2ui_core`'s `MessageProcessor` + `SurfaceModel` + `GenericBinder` produce
+    `resolvedProps` (concrete scalars + `List<ChildNode>`); a thin per-id adapter
+    maps props → template `args`, injects child adapters for `ChildNode`s, and
+    renders via the existing `buildNode(scope: catalogLib)`.
+  - **Reactivity is component-granular and works:** an `updateDataModel` flows
+    `DataModel` → `formatString` `computed` → `resolvedProps` signal → a
+    `preact_signals`-`subscribe` → `setState` bridge → only the affected card's
+    adapter rebuilds (guard-verified: disabling the bridge fails the update test).
+  - **Dependency strategy resolved:** depend on the **published** `a2ui_core`
+    (not a path/workspace override — `resolution: workspace` rules that out, and a
+    local path breaks CI).
+  - **Still to prove (the next, smaller seam):** wiring `a2ui_core` action
+    callbacks / two-way setters to RFW `voidHandler`. `GenericBinder` resolves an
+    `action` prop to a Dart `Future<void> Function()`, but RFW's `handler<T>` today
+    only accepts an `AnyEventHandler`; closing this likely needs one small additive
+    runtime affordance (let `handler<T>`/`voidHandler` return an already-resolved
+    `Function`), recorded as a VENDORED extension.
+
+  Only after that seam is closed do we start **deleting** the bridge's protocol/data
+  half (the table above) and re-rooting the per-id adapters on `a2ui_core`.

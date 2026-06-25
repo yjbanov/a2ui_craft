@@ -55,15 +55,14 @@ LocalComponentLibrary createCoreComponents() {
         child: source.child(['child']),
       );
     },
-    // TODO(yjbanov): remove the Core* prefix.
-    'CoreImage': (BuildContext context, DataSource source) {
+    'Image': (BuildContext context, DataSource source) {
       final String? url = source.v<String>(['url']);
       if (url == null || url.isEmpty || url.contains('example.com')) {
         return const SizedBox.shrink();
       }
       return url.startsWith('http') ? Image.network(url) : Image.asset(url);
     },
-    'CoreIcon': (BuildContext context, DataSource source) {
+    'Icon': (BuildContext context, DataSource source) {
       // Very basic icon mapping for demo purposes.
       final String? iconName = source.v<String>(['icon']);
       IconData iconData = Icons.star; // default fallback
@@ -72,15 +71,15 @@ LocalComponentLibrary createCoreComponents() {
       if (iconName == 'check') iconData = Icons.check;
       return Icon(iconData);
     },
-    'CoreDivider': (BuildContext context, DataSource source) {
+    'Divider': (BuildContext context, DataSource source) {
       return const Divider();
     },
-    'CoreScrollView': (BuildContext context, DataSource source) {
+    'ScrollView': (BuildContext context, DataSource source) {
       return SingleChildScrollView(
         child: source.child(['child']),
       );
     },
-    'CoreCard': (BuildContext context, DataSource source) {
+    'Card': (BuildContext context, DataSource source) {
       return Card(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -88,7 +87,7 @@ LocalComponentLibrary createCoreComponents() {
         ),
       );
     },
-    'CoreVideo': (BuildContext context, DataSource source) {
+    'Video': (BuildContext context, DataSource source) {
       // Stub for Video since we don't have video_player plugin
       return Container(
         color: Colors.black,

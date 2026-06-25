@@ -10,19 +10,17 @@ import 'package:json_schema_builder/json_schema_builder.dart';
 /// gallery. This is UI-framework-free so both the app and its tests can import
 /// it (the tests mount each sample's root and assert it renders).
 
-/// The app's **high-level catalog**: small, vetted widgets the agent composes,
-/// authored as RFW templates over the low-level `core` library.
+/// The app's **high-level catalog**: small, vetted widgets the agent composes.
+/// `Label`/`Stack`/`Tappable`/`List` are RFW templates over the low-level `core`
+/// library; the agent also references a few `core` primitives (`Card`, `Image`,
+/// `Icon`, `Divider`) directly, since for those a 1:1 wrapper would add nothing.
 const String catalogSource = '''
 import core;
 
 widget Label = Text(text: args.text);
 widget Stack = Column(children: args.children);
 widget Tappable = Button(onPressed: args.action, child: Text(text: args.label));
-widget Card = CoreCard(child: args.child);
-widget Divider = CoreDivider();
-widget Image = CoreImage(url: args.url, fit: args.fit);
-widget Icon = CoreIcon(icon: args.icon);
-widget List = CoreScrollView(child: Column(children: args.children));
+widget List = ScrollView(child: Column(children: args.children));
 ''';
 
 /// The library name under which [catalogSource] is registered.

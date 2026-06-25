@@ -230,14 +230,14 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
   ) async {
     await tester.mount('''
       import core;
-      widget root = CoreScrollView(
-        child: CoreCard(
+      widget root = ScrollView(
+        child: Card(
           child: Column(
             children: [
-              CoreImage(url: "https://example.com/image.png", fit: "contain"),
-              CoreIcon(icon: "star"),
-              CoreDivider(),
-              CoreVideo(url: "https://example.com/video.mp4"),
+              Image(url: "https://example.com/image.png", fit: "contain"),
+              Icon(icon: "star"),
+              Divider(),
+              Video(url: "https://example.com/video.mp4"),
             ],
           ),
         ),

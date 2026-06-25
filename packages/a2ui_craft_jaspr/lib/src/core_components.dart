@@ -71,22 +71,22 @@ LocalComponentLibrary createCoreComponents() {
         ],
       );
     },
-    'CoreImage': (BuildContext context, DataSource source) {
+    'Image': (BuildContext context, DataSource source) {
       final String? url = source.v<String>(['url']);
       if (url == null || url.isEmpty) {
         return div([]);
       }
       return img(src: url);
     },
-    'CoreIcon': (BuildContext context, DataSource source) {
+    'Icon': (BuildContext context, DataSource source) {
       final String? iconName = source.v<String>(['icon']);
       final String name = iconName ?? 'star'; // default fallback
       return i(classes: 'material-icons', [Component.text(name)]);
     },
-    'CoreDivider': (BuildContext context, DataSource source) {
+    'Divider': (BuildContext context, DataSource source) {
       return hr();
     },
-    'CoreScrollView': (BuildContext context, DataSource source) {
+    'ScrollView': (BuildContext context, DataSource source) {
       return div(
         styles: Styles(
           overflow: Overflow.auto,
@@ -96,7 +96,7 @@ LocalComponentLibrary createCoreComponents() {
         ],
       );
     },
-    'CoreCard': (BuildContext context, DataSource source) {
+    'Card': (BuildContext context, DataSource source) {
       return div(
         styles: Styles(
           padding: Padding.all(Unit.pixels(16)),
@@ -114,7 +114,7 @@ LocalComponentLibrary createCoreComponents() {
         ],
       );
     },
-    'CoreVideo': (BuildContext context, DataSource source) {
+    'Video': (BuildContext context, DataSource source) {
       final String? url = source.v<String>(['url']);
       if (url == null || url.isEmpty) {
         return div([]);

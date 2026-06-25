@@ -105,7 +105,12 @@ class _A2uiToRfwAdapterState extends State<A2uiToRfwAdapter> {
       return div([]);
     }
 
-    final DynamicMap args = a2uiArgsFromProps(props, _injectChild);
+    final DynamicMap args = a2uiArgsFromProps(
+      props,
+      _injectChild,
+      childRefs: _binding.childRefs,
+      basePath: component.basePath,
+    );
     return component.runtime.buildNode(
       context,
       ConstructorCall(type, args),

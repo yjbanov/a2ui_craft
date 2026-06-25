@@ -104,7 +104,12 @@ class _A2uiToRfwAdapterState extends State<A2uiToRfwAdapter> {
       return const SizedBox.shrink();
     }
 
-    final DynamicMap args = a2uiArgsFromProps(props, _injectChild);
+    final DynamicMap args = a2uiArgsFromProps(
+      props,
+      _injectChild,
+      childRefs: _binding.childRefs,
+      basePath: widget.basePath,
+    );
     return widget.runtime.buildNode(
       context,
       ConstructorCall(type, args),

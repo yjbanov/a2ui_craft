@@ -71,5 +71,55 @@ LocalComponentLibrary createCoreComponents() {
         ],
       );
     },
+    'CoreImage': (BuildContext context, DataSource source) {
+      final String? url = source.v<String>(['url']);
+      if (url == null || url.isEmpty) {
+        return div([]);
+      }
+      return img(src: url);
+    },
+    'CoreIcon': (BuildContext context, DataSource source) {
+      final String? iconName = source.v<String>(['icon']);
+      final String name = iconName ?? 'star'; // default fallback
+      return i(classes: 'material-icons', [Component.text(name)]);
+    },
+    'CoreDivider': (BuildContext context, DataSource source) {
+      return hr();
+    },
+    'CoreScrollView': (BuildContext context, DataSource source) {
+      return div(
+        styles: Styles(
+          overflow: Overflow.auto,
+        ),
+        [
+          source.child(['child'])
+        ],
+      );
+    },
+    'CoreCard': (BuildContext context, DataSource source) {
+      return div(
+        styles: Styles(
+          padding: Padding.all(Unit.pixels(16)),
+          radius: BorderRadius.circular(Unit.pixels(8)),
+          shadow: BoxShadow(
+            color: Color.rgba(0, 0, 0, 0.25),
+            blur: Unit.pixels(4),
+            offsetX: Unit.zero,
+            offsetY: Unit.pixels(2),
+          ),
+          backgroundColor: Colors.white,
+        ),
+        [
+          source.child(['child'])
+        ],
+      );
+    },
+    'CoreVideo': (BuildContext context, DataSource source) {
+      final String? url = source.v<String>(['url']);
+      if (url == null || url.isEmpty) {
+        return div([]);
+      }
+      return video(src: url, controls: true, []);
+    },
   });
 }

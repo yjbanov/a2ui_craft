@@ -557,6 +557,17 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
         `runA2uiConformance`, the bridge `A2uiComponentBinding` tests, the custom-
         catalog reorder test, and the `a2ui_core` seam spike. (M1 & M2 are
         vendored-RFW divergences; M6 adds extension #3 — all in `VENDORED.md`.)
+  - [x] **Worked examples + sample tests.** Both adapters ship a gallery example
+        (Greeting, Counter, Profile Card, Image Gallery) over an expanded catalog
+        (`Card`/`Divider`/`Image`/`Icon`/`List` templates over new `Core*`
+        primitives). Each example's catalog + sample message scripts live in an
+        importable `samples.dart`, and `test/samples_test.dart` mounts every
+        sample's root and asserts it renders — wired into `tool/check.sh`. This
+        surfaced (and fixed) a bridge gap: **single child references** — a prop
+        typed as a `componentId` (e.g. a `Card`'s `child`), which `a2ui_core`
+        resolves to a plain id string — are now injected as one child adapter
+        (`A2uiComponentBinding.childRefs` + `a2uiArgsFromProps`), alongside the
+        existing `children` lists.
   - [ ] **Then** — grow the high-level catalog; richer layout widgets; wire
         `a2ui_core` two-way setters for editable inputs (`TextField`/`Checkbox`).
 - [ ] **H2 type/style model** (the `argument_decoders` replacement) — the unlock

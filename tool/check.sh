@@ -35,6 +35,9 @@ step "Analyze: a2ui_craft_jaspr/example"
 step "Analyze: a2ui_craft_flutter"
 (cd packages/a2ui_craft_flutter && flutter analyze)
 
+step "Analyze: a2ui_craft_flutter/example"
+(cd packages/a2ui_craft_flutter/example && flutter analyze)
+
 step "Analyze: tool/testing (repo-wide checks)"
 (cd tool/testing && dart analyze)
 
@@ -50,7 +53,13 @@ step "Test: a2ui_craft_bridge (A2UI translation)"
 step "Test: a2ui_craft_jaspr (parity)"
 (cd packages/a2ui_craft_jaspr && dart test)
 
+step "Test: a2ui_craft_jaspr/example (samples)"
+(cd packages/a2ui_craft_jaspr/example && dart test)
+
 step "Test: a2ui_craft_flutter (parity)"
 (cd packages/a2ui_craft_flutter && flutter test)
+
+step "Test: a2ui_craft_flutter/example (samples)"
+(cd packages/a2ui_craft_flutter/example && flutter test)
 
 printf '\n\033[1;32m==> ALL CHECKS PASSED\033[0m\n'

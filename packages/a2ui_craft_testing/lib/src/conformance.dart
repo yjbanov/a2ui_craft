@@ -225,6 +225,27 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
     expect(tester.hasText('centered'), isTrue);
   });
 
+  driver.defineTest('Basic catalog primitives mount successfully', (
+    CraftTester tester,
+  ) async {
+    await tester.mount('''
+      import core;
+      widget root = CoreScrollView(
+        child: CoreCard(
+          child: Column(
+            children: [
+              CoreImage(url: "https://example.com/image.png", fit: "contain"),
+              CoreIcon(icon: "star"),
+              CoreDivider(),
+              CoreVideo(url: "https://example.com/video.mp4"),
+            ],
+          ),
+        ),
+      );
+    ''');
+    // If it doesn't crash, the primitives are successfully mounting.
+  });
+
   driver.defineTest('Button dispatches its event only when activated', (
     CraftTester tester,
   ) async {

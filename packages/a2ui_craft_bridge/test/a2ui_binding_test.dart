@@ -40,6 +40,47 @@ void main() {
       );
       expect(args['children'], <Object?>['node:a@/', 'node:b@/']);
     });
+
+    test('injects a single child for a childRef prop (componentId)', () {
+      final args = a2uiArgsFromProps(
+        <String, dynamic>{'child': 'inner', 'title': 'not a child'},
+        (ChildNode c) => 'node:${c.id}@${c.basePath}',
+        childRefs: <String>{'child'},
+        basePath: '/items/0',
+      );
+      // The childRef prop becomes one injected child at the owner's scope...
+      expect(args['child'], 'node:inner@/items/0');
+      // ...while an ordinary string prop passes through untouched.
+      expect(args['title'], 'not a child');
+    });
+  });
+
+  group('A2uiComponentBinding.childRefs', () {
+    test('reports componentId props as single child references', () {
+      // a2ui_core's MinimalButton has a `child` componentId slot.
+      final (_, surface) = _surface(<A2uiMessage>[
+        _create(),
+        UpdateComponentsMessage(surfaceId: 's', components: [
+          <String, dynamic>{'id': 'lbl', 'component': 'Text', 'text': 'hi'},
+          <String, dynamic>{
+            'id': 'btn',
+            'component': 'Button',
+            'child': 'lbl',
+            'action': <String, dynamic>{
+              'event': <String, dynamic>{'name': 'go'},
+            },
+          },
+        ]),
+      ]);
+
+      final button = A2uiComponentBinding(surface, 'btn');
+      addTearDown(button.dispose);
+      expect(button.childRefs, contains('child'));
+
+      final label = A2uiComponentBinding(surface, 'lbl');
+      addTearDown(label.dispose);
+      expect(label.childRefs, isEmpty);
+    });
   });
 
   group('A2uiComponentBinding', () {

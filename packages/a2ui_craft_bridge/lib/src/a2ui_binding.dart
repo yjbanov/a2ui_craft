@@ -42,6 +42,7 @@ class A2uiComponentBinding {
 
   GenericBinder? _binder;
   void Function()? _unsubscribe;
+  Set<String> _childRefs = const <String>{};
   final List<void Function()> _listeners = <void Function()>[];
 
   /// The component's resolved props (concrete values + `List<ChildNode>`), or
@@ -51,6 +52,13 @@ class A2uiComponentBinding {
   /// The component's catalog type (the high-level template name), or `null` if
   /// the component has not been ingested yet.
   String? get type => surface.componentsModel.get(id)?.type;
+
+  /// The names of props that are **single child references** — a `componentId`
+  /// naming one other component (e.g. a `Card`'s `child`), as opposed to a
+  /// `children` list. `a2ui_core` resolves these to a plain id string, so the
+  /// adapter consults this set (via [a2uiArgsFromProps]) to inject one child
+  /// adapter for them. Empty until the component is ingested.
+  Set<String> get childRefs => _childRefs;
 
   /// Subscribes to render-affecting changes for this component.
   void addListener(void Function() listener) => _listeners.add(listener);
@@ -67,6 +75,7 @@ class A2uiComponentBinding {
     if (api == null) {
       return;
     }
+    _childRefs = _componentIdProps(api.schema.value);
     final GenericBinder binder = GenericBinder(
       ComponentContext(surface, model, basePath: basePath),
       api.schema,
@@ -83,6 +92,7 @@ class A2uiComponentBinding {
     _unsubscribe = null;
     _binder?.dispose();
     _binder = null;
+    _childRefs = const <String>{};
   }
 
   void _onCreated(ComponentModel model) {
@@ -116,6 +126,42 @@ class A2uiComponentBinding {
   }
 }
 
+/// The names of a schema's top-level properties that are `componentId`
+/// references (single child slots). `a2ui_core`'s schemas tag a `componentId`
+/// with a `REF:…#/$defs/ComponentId` description; properties carrying it (incl.
+/// those merged via `allOf`/`anyOf`/`oneOf`) are single child references.
+/// Takes the schema's raw value map so the bridge needn't depend on the schema
+/// library directly.
+Set<String> _componentIdProps(Map<String, Object?> schemaValue) {
+  const String marker = r'#/$defs/ComponentId';
+  final Set<String> result = <String>{};
+  void visit(Object? node) {
+    if (node is! Map) {
+      return;
+    }
+    final Object? properties = node['properties'];
+    if (properties is Map) {
+      properties.forEach((Object? key, Object? propSchema) {
+        if (key is String &&
+            propSchema is Map &&
+            propSchema['description'] is String &&
+            (propSchema['description'] as String).contains(marker)) {
+          result.add(key);
+        }
+      });
+    }
+    for (final String combinator in const <String>['allOf', 'anyOf', 'oneOf']) {
+      final Object? branches = node[combinator];
+      if (branches is List) {
+        branches.forEach(visit);
+      }
+    }
+  }
+
+  visit(schemaValue);
+  return result;
+}
+
 /// Maps `a2ui_core`'s resolved [props] onto RFW template **args**, delegating
 /// child injection to [injectChild].
 ///
@@ -123,14 +169,19 @@ class A2uiComponentBinding {
 /// two-way setters pass through by name. A `List<ChildNode>` (the resolved form
 /// of a `children` slot — both a static id list and a `ChildList` template) is
 /// turned into a list of framework nodes via [injectChild], which the adapter
-/// implements by building a child adapter per [ChildNode]. The bridge stays
-/// **catalog-agnostic**: it knows no widget's arg schema (that is the template's
-/// concern); props map to args by name, and a high-level template maps those
-/// args onto the low-level catalog.
+/// implements by building a child adapter per [ChildNode]. A prop named in
+/// [childRefs] is a **single child reference** (a `componentId`): its resolved
+/// value is a plain id string, which becomes one injected child sharing the
+/// owner's data scope ([basePath]). The bridge stays **catalog-agnostic**: it
+/// knows no widget's arg schema (that is the template's concern); props map to
+/// args by name, and a high-level template maps those args onto the low-level
+/// catalog.
 DynamicMap a2uiArgsFromProps(
   Map<String, dynamic> props,
-  Object Function(ChildNode child) injectChild,
-) {
+  Object Function(ChildNode child) injectChild, {
+  Set<String> childRefs = const <String>{},
+  String basePath = '/',
+}) {
   final DynamicMap args = <String, Object?>{};
   for (final MapEntry<String, dynamic> entry in props.entries) {
     final Object? value = entry.value;
@@ -139,6 +190,8 @@ DynamicMap a2uiArgsFromProps(
         for (final ChildNode child in value.cast<ChildNode>())
           injectChild(child),
       ];
+    } else if (childRefs.contains(entry.key) && value is String) {
+      args[entry.key] = injectChild(ChildNode(value, basePath));
     } else {
       args[entry.key] = value;
     }

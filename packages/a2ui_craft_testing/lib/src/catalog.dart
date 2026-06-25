@@ -20,5 +20,11 @@ const Set<String> coreCatalog = <String>{
   'Column',
   'Button',
   'Center',
-  'SizedBox'
+  'SizedBox',
+  'CoreImage',
+  'CoreIcon',
+  'CoreDivider',
+  'CoreScrollView',
+  'CoreCard',
+  'CoreVideo',
 };

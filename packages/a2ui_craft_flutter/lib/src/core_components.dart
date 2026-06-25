@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 
 import 'runtime.dart';
 
@@ -53,6 +53,50 @@ LocalComponentLibrary createCoreComponents() {
         width: source.v<double>(['width']),
         height: source.v<double>(['height']),
         child: source.child(['child']),
+      );
+    },
+    // TODO(yjbanov): remove the Core* prefix.
+    'CoreImage': (BuildContext context, DataSource source) {
+      final String? url = source.v<String>(['url']);
+      if (url == null || url.isEmpty || url.contains('example.com')) {
+        return const SizedBox.shrink();
+      }
+      return url.startsWith('http') ? Image.network(url) : Image.asset(url);
+    },
+    'CoreIcon': (BuildContext context, DataSource source) {
+      // Very basic icon mapping for demo purposes.
+      final String? iconName = source.v<String>(['icon']);
+      IconData iconData = Icons.star; // default fallback
+      if (iconName == 'settings') iconData = Icons.settings;
+      if (iconName == 'person') iconData = Icons.person;
+      if (iconName == 'check') iconData = Icons.check;
+      return Icon(iconData);
+    },
+    'CoreDivider': (BuildContext context, DataSource source) {
+      return const Divider();
+    },
+    'CoreScrollView': (BuildContext context, DataSource source) {
+      return SingleChildScrollView(
+        child: source.child(['child']),
+      );
+    },
+    'CoreCard': (BuildContext context, DataSource source) {
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: source.child(['child']),
+        ),
+      );
+    },
+    'CoreVideo': (BuildContext context, DataSource source) {
+      // Stub for Video since we don't have video_player plugin
+      return Container(
+        color: Colors.black,
+        height: 200,
+        width: double.infinity,
+        child: const Center(
+          child: Icon(Icons.play_circle_outline, color: Colors.white, size: 48),
+        ),
       );
     },
   });

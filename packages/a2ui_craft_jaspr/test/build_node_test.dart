@@ -4,6 +4,7 @@
 
 import 'package:a2ui_craft/a2ui_craft.dart';
 import 'package:a2ui_craft_jaspr/a2ui_craft_jaspr.dart';
+import 'package:jaspr/dom.dart';
 import 'package:jaspr/jaspr.dart';
 import 'package:jaspr_test/jaspr_test.dart';
 
@@ -28,8 +29,8 @@ class _Probe extends StatefulComponent {
 class _ProbeState extends State<_Probe> {
   late final int _id = _probeCreations++;
   @override
-  Iterable<Component> build(BuildContext context) sync* {
-    yield Text('${component.label}#$_id');
+  Component build(BuildContext context) {
+    return Component.text('${component.label}#$_id');
   }
 }
 
@@ -38,8 +39,8 @@ class _AdHoc extends StatelessComponent {
   final Runtime runtime;
   final ConstructorCall composition;
   @override
-  Iterable<Component> build(BuildContext context) sync* {
-    yield runtime.buildNode(
+  Component build(BuildContext context) {
+    return runtime.buildNode(
       context,
       composition,
       DynamicContent(),
@@ -62,7 +63,7 @@ class _HarnessState extends State<_Harness> {
   bool _reversed = false;
 
   @override
-  Iterable<Component> build(BuildContext context) sync* {
+  Component build(BuildContext context) {
     final List<Component> probes = <Component>[
       const _Probe(key: ValueKey<String>('a'), label: 'A'),
       const _Probe(key: ValueKey<String>('b'), label: 'B'),
@@ -71,7 +72,7 @@ class _HarnessState extends State<_Harness> {
         ConstructorCall('Column', <String, Object?>{
       'children': _reversed ? probes.reversed.toList() : probes,
     });
-    yield div(<Component>[
+    return div(<Component>[
       component.runtime.buildNode(
         context,
         composition,
@@ -80,7 +81,7 @@ class _HarnessState extends State<_Harness> {
         scope: _core,
       ),
       button(
-        <Component>[const Text('reverse')],
+        <Component>[Component.text('reverse')],
         onClick: () => setState(() => _reversed = true),
       ),
     ]);

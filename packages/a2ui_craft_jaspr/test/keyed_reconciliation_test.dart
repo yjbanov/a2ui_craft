@@ -4,6 +4,7 @@
 
 import 'package:a2ui_craft/a2ui_craft.dart';
 import 'package:a2ui_craft_jaspr/a2ui_craft_jaspr.dart';
+import 'package:jaspr/dom.dart';
 import 'package:jaspr/jaspr.dart';
 import 'package:jaspr_test/jaspr_test.dart';
 
@@ -27,15 +28,16 @@ class _Probe extends StatefulComponent {
 class _ProbeState extends State<_Probe> {
   late final int _id = _probeCreations++;
   @override
-  Iterable<Component> build(BuildContext context) sync* {
-    yield Text('${component.label}#$_id');
+  Component build(BuildContext context) {
+    return Component.text('${component.label}#$_id');
   }
 }
 
 LocalComponentLibrary _testComponents() {
   return LocalComponentLibrary(<String, LocalComponentBuilder>{
     'Column': (BuildContext context, DataSource source) => div(
-          styles: Styles.flexbox(direction: FlexDirection.column),
+          styles: Styles(
+              display: Display.flex, flexDirection: FlexDirection.column),
           source.childList(['children']),
         ),
     'Probe': (BuildContext context, DataSource source) =>

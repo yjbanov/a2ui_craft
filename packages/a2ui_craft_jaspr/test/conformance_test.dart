@@ -6,7 +6,7 @@ import 'package:a2ui_core/a2ui_core.dart';
 import 'package:a2ui_craft/a2ui_craft.dart';
 import 'package:a2ui_craft_jaspr/a2ui_craft_jaspr.dart';
 import 'package:a2ui_craft_testing/a2ui_craft_testing.dart';
-import 'package:jaspr/jaspr.dart' show Component, Key, ValueKey;
+import 'package:jaspr/jaspr.dart';
 import 'package:jaspr_test/jaspr_test.dart';
 
 /// Jaspr implementation of the shared [CraftTester], wrapping a

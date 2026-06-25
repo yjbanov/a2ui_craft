@@ -1684,9 +1684,9 @@ class _WidgetState extends State<_Widget> implements DataSource {
   }
 
   @override
-  Iterable<Component> build(BuildContext context) sync* {
+  Component build(BuildContext context) {
     // TODO(ianh): what if this creates some _dependencies?
-    yield component.curriedWidget.buildChild(
+    return component.curriedWidget.buildChild(
       context,
       this,
       component.data,
@@ -1787,8 +1787,8 @@ class ErrorWidget extends StatelessComponent {
       ErrorWidget(detail.exception);
 
   @override
-  Iterable<Component> build(BuildContext context) sync* {
-    yield Text(exception.toString());
+  Component build(BuildContext context) {
+    return Component.text(exception.toString());
   }
 }
 

@@ -45,8 +45,8 @@ class _AdHoc extends StatelessComponent {
   const _AdHoc(this.builder);
   final Component Function(BuildContext) builder;
   @override
-  Iterable<Component> build(BuildContext context) sync* {
-    yield builder(context);
+  Component build(BuildContext context) {
+    return builder(context);
   }
 }
 
@@ -86,7 +86,10 @@ void main() {
         (BuildContext context) => runtime.buildNode(
           context,
           const ConstructorCall('Grid', <String, Object?>{
-            'children': <Object?>[Text('alpha'), Text('beta')],
+            'children': <Object?>[
+              Component.text('alpha'),
+              Component.text('beta')
+            ],
           }),
           DynamicContent(),
           _noEvents,

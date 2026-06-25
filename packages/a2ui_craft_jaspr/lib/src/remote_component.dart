@@ -97,8 +97,8 @@ class _RemoteComponentState extends State<RemoteComponent> {
   }
 
   @override
-  Iterable<Component> build(BuildContext context) sync* {
-    yield component.runtime
+  Component build(BuildContext context) {
+    return component.runtime
         .build(context, component.component, component.data, _eventHandler);
   }
 }

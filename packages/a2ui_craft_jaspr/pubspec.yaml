@@ -11,11 +11,11 @@ dependencies:
   a2ui_craft: ^0.0.1
   a2ui_craft_bridge: ^0.0.1
   a2ui_core: any
-  jaspr: any
+  jaspr: ^0.23.1
 
 dev_dependencies:
   a2ui_craft_testing: ^0.0.1
-  jaspr_test: ^0.16.0
+  jaspr_test: ^0.23.1
   # The custom-catalog test and a2ui_core seam spike define component schemas.
   json_schema_builder: any
   lints: ^4.0.0

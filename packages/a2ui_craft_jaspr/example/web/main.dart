@@ -5,7 +5,8 @@
 import 'package:a2ui_core/a2ui_core.dart';
 import 'package:a2ui_craft/a2ui_craft.dart' show parseLibraryFile;
 import 'package:a2ui_craft_jaspr/a2ui_craft_jaspr.dart';
-import 'package:jaspr/browser.dart';
+import 'package:jaspr/client.dart';
+import 'package:jaspr/dom.dart';
 import 'package:json_schema_builder/json_schema_builder.dart';
 
 void main() {
@@ -112,12 +113,13 @@ class _AppState extends State<App> {
   }
 
   @override
-  Iterable<Component> build(BuildContext context) sync* {
-    yield div(
-      styles: Styles.box(
-        padding: EdgeInsets.all(Unit.pixels(20)),
+  Component build(BuildContext context) {
+    return div(
+      styles: Styles(
+        padding: Padding.all(Unit.pixels(20)),
         border: Border.all(
-          BorderSide.solid(color: Colors.blue, width: Unit.pixels(2)),
+          color: Colors.blue,
+          width: Unit.pixels(2),
         ),
         radius: BorderRadius.circular(Unit.pixels(8)),
       ),

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'package:jaspr/dom.dart';
 import 'package:jaspr/jaspr.dart';
 
 import 'runtime.dart';
@@ -21,17 +22,18 @@ import 'runtime.dart';
 LocalComponentLibrary createCoreComponents() {
   return LocalComponentLibrary(<String, LocalComponentBuilder>{
     'Text': (BuildContext context, DataSource source) {
-      return Text(source.v<String>(['text']) ?? '');
+      return Component.text(source.v<String>(['text']) ?? '');
     },
     'Row': (BuildContext context, DataSource source) {
       return div(
-        styles: Styles.flexbox(direction: FlexDirection.row),
+        styles: Styles(display: Display.flex, flexDirection: FlexDirection.row),
         source.childList(['children']),
       );
     },
     'Column': (BuildContext context, DataSource source) {
       return div(
-        styles: Styles.flexbox(direction: FlexDirection.column),
+        styles:
+            Styles(display: Display.flex, flexDirection: FlexDirection.column),
         source.childList(['children']),
       );
     },

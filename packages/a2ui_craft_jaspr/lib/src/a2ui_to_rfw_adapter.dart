@@ -5,6 +5,7 @@
 import 'package:a2ui_core/a2ui_core.dart';
 import 'package:a2ui_craft/a2ui_craft.dart';
 import 'package:a2ui_craft_bridge/a2ui_craft_bridge.dart';
+import 'package:jaspr/dom.dart';
 import 'package:jaspr/jaspr.dart';
 
 import 'runtime.dart';
@@ -95,25 +96,23 @@ class _A2uiToRfwAdapterState extends State<A2uiToRfwAdapter> {
   }
 
   @override
-  Iterable<Component> build(BuildContext context) {
+  Component build(BuildContext context) {
     final Map<String, dynamic>? props = _binding.resolvedProps;
     final String? type = _binding.type;
     if (props == null || type == null) {
       // The component has not been ingested yet; render nothing until it
       // arrives (the binding notifies us via onCreated).
-      return const <Component>[];
+      return div([]);
     }
 
     final DynamicMap args = a2uiArgsFromProps(props, _injectChild);
-    return <Component>[
-      component.runtime.buildNode(
-        context,
-        ConstructorCall(type, args),
-        DynamicContent(),
-        _noEvent,
-        scope: component.scope,
-      ),
-    ];
+    return component.runtime.buildNode(
+      context,
+      ConstructorCall(type, args),
+      DynamicContent(),
+      _noEvent,
+      scope: component.scope,
+    );
   }
 
   Object _injectChild(ChildNode child) {

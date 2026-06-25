@@ -43,5 +43,17 @@ LocalComponentLibrary createCoreComponents() {
         child: source.child(['child']),
       );
     },
+    'Center': (BuildContext context, DataSource source) {
+      return Center(
+        child: source.child(['child']),
+      );
+    },
+    'SizedBox': (BuildContext context, DataSource source) {
+      return SizedBox(
+        width: source.v<double>(['width']),
+        height: source.v<double>(['height']),
+        child: source.child(['child']),
+      );
+    },
   });
 }

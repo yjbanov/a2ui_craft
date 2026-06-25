@@ -14,4 +14,11 @@
 /// This is test-scoped for now; it will graduate to a production catalog when
 /// A2UI integration lands and needs to bind catalog `component` references to
 /// templates.
-const Set<String> coreCatalog = <String>{'Text', 'Row', 'Column', 'Button'};
+const Set<String> coreCatalog = <String>{
+  'Text',
+  'Row',
+  'Column',
+  'Button',
+  'Center',
+  'SizedBox'
+};

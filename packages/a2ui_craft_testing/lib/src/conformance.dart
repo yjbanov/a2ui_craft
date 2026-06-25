@@ -208,6 +208,23 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
     expect(tester.hasText('right'), isTrue);
   });
 
+  driver.defineTest('Center and SizedBox provide layout constraints', (
+    CraftTester tester,
+  ) async {
+    await tester.mount('''
+      import core;
+      widget root = Center(
+        child: SizedBox(
+          width: 100.0,
+          height: 100.0,
+          child: Text(text: "centered"),
+        ),
+      );
+    ''');
+
+    expect(tester.hasText('centered'), isTrue);
+  });
+
   driver.defineTest('Button dispatches its event only when activated', (
     CraftTester tester,
   ) async {

@@ -46,5 +46,30 @@ LocalComponentLibrary createCoreComponents() {
         ],
       );
     },
+    'Center': (BuildContext context, DataSource source) {
+      return div(
+        styles: Styles(
+          display: Display.flex,
+          justifyContent: JustifyContent.center,
+          alignItems: AlignItems.center,
+        ),
+        [
+          source.child(['child'])
+        ],
+      );
+    },
+    'SizedBox': (BuildContext context, DataSource source) {
+      final double? w = source.v<double>(['width']);
+      final double? h = source.v<double>(['height']);
+      return div(
+        styles: Styles(
+          width: w != null ? Unit.pixels(w) : null,
+          height: h != null ? Unit.pixels(h) : null,
+        ),
+        [
+          source.child(['child'])
+        ],
+      );
+    },
   });
 }

@@ -55,6 +55,40 @@ doesn't care how a renderer implements them. A2UI Craft slots in cleanly:
 In other words: **A2UI Craft templates are an implementation of an A2UI
 catalog**, as opposed to wrapping native widgets one-for-one.
 
+### The two-level catalog: agent-facing high-level widgets vs. template-private primitives
+
+There are **two distinct catalogs**, and conflating them is the central mistake to
+avoid:
+
+1. **Low-level catalog** — a rich set of primitives (`Text`, `Row`, `Column`,
+   `Button`, `TextField`, `Checkbox`, `Image`, …). This is **never exposed to the
+   agent.** A large primitive vocabulary bloats model context (defeating small,
+   fast models), and letting an LLM compose primitives at runtime is
+   unpredictable and impossible to vet before deployment — which kills high-trust
+   business use-cases. Primitives exist to be composed **by templates, at
+   design/build time.**
+2. **High-level catalog** — a *small*, vetted set of domain widgets
+   (`WeatherCard`, `ProductCard`, `FifaStandings`, …) plus a few layout widgets
+   (`Grid`, `Carousel`, `List`) that give the agent enough control to arrange
+   them for good information architecture. **This is the only catalog A2UI
+   references at runtime:** small context, low latency, predictable output, each
+   widget pre-vetted. **Every high-level widget is materialized from a template.**
+
+**Templates (RFW) are the bridge between the two levels.** A high-level widget is
+authored once as an RFW template that composes the low-level catalog (and may
+reuse other high-level widgets — e.g. a `ProductList` template using `ProductCard`
+— but that is the template's private business; an agent can equally place a bare
+`ProductCard`). Authoring high-level widgets as templates — rather than
+hand-writing each one natively per framework — is exactly what buys cross-framework
+reuse: the same template renders on Flutter and Jaspr. **This is the core of H1,
+and the reason RFW is load-bearing here** even as the A2UI protocol/data layer
+moves to `a2ui_core` (§10).
+
+A2UI operates **only** on the high-level catalog. The bridge maps an A2UI
+high-level component to its template; the template composes the low-level catalog.
+§6 covers how that composition is rendered and kept correct under partial updates,
+and the concrete template layer; §10 covers how `a2ui_core` layers above it.
+
 The vetted vocabulary (primitive widgets and higher-level templates) is
 **predefined by the client** and registered once; an A2UI message only
 **composes** it. How that composition is rendered — and how it stays correct
@@ -314,12 +348,106 @@ solves both the standalone-RFW and A2UI cases with one mechanism.
 ### Lists and scope (the delicate part)
 
 A2UI `ChildList` templates (data-driven lists) create a child data scope:
-relative bindings resolve against each item. With the adapter tree, RFW's loop
-machinery does **not** span the adapter boundary, so the **list adapter** iterates
-the data array itself, spawns one keyed item adapter per item (keyed by item
-identity, à la `KeyedSubtree.wrap(child, index)`), and hands each a **scoped** view
-of the data so relative bindings resolve. This is the most delicate piece; it is
-designed and built as its own step, after the static-children path is proven.
+relative bindings resolve against each item. We render this with **RFW's own
+`Loop`**, emitted *inside* the owning component's `buildNode` composition (the
+`ChildList` becomes `children: [ ...for x in <input>: <template> ]`). RFW already
+gives us everything a list needs here: it unrolls the data array, scopes each
+item via a depth-aware `LoopReference` (so relative bindings — including nested
+`ChildList`s — resolve against the right item), and rebuilds reactively when the
+array changes. A separate host-side "list adapter" was considered and rejected:
+its only extra power was per-item *keyed* identity, which the limitation below
+makes moot, and A2UI list items are template instances (one shared `componentId`),
+so they are not individually id-addressable anyway. (M4)
+
+**Known limitation — positional reconciliation of unrolled children.** Static
+components reconcile **keyed by their A2UI id** (above), but the A2UI spec
+currently attaches **no stable identifier to the elements of a data array** that a
+`ChildList` unrolls. With no per-item id to key on, list items are reconciled
+**positionally** — index 0 onto index 0, and so on. This is precisely the
+imprecise behavior this section otherwise argues against: inserting, removing, or
+reordering items in the *middle* of a list shifts every following item by a slot,
+so element-held state (a checkbox value, in-progress text input, scroll offset,
+animation) reconciles onto the wrong item or is dropped. In-place item updates and
+append/truncate at the *end* are unaffected; only mid-list structural churn is.
+
+We **accept this cost** rather than invent a client-side key — indexes don't help
+(they *are* the position), and hashing item contents is fragile and breaks on
+edits. The proper fix belongs in the protocol and is filed as
+[a2ui#1745](https://github.com/a2ui-project/a2ui/issues/1745): give `ChildList`
+items a stable identifier (a per-item key, or a template-declared key path),
+resolved at the spec and `a2ui_core` level. This is **protocol-inherent, not an RFW
+artifact**: `a2ui_core`'s own `GenericBinder` unrolls a `ChildList` into
+`ChildNode`s that share the template `componentId` and are distinguished only by an
+index-based `basePath` — i.e. the reference implementation reconciles list items
+positionally for the same reason.
+
+**Design policy — keyed-when-present, positional-fallback (permanent).** The engine
+keys each unrolled child instance by a **per-item key when the list provides one**,
+and **falls back to the positional index when it does not**. This is *not* an
+interim stance that a2ui#1745 retires: even once the spec gains per-item keys, they
+are **opt-in** — an agent or a template can always emit an unkeyed list — so the
+engine must never assume keys are present and must degrade to positional
+reconciliation gracefully. The fallback is therefore permanent; the keyed path is
+an *upgrade* applied per list, not a global mode switch.
+
+We are already **structurally ready** for the fix: keyed reconciliation reuses the
+keyed-`_Widget` (M1) / per-id-adapter (M3) machinery; only the **key source**
+changes (today: none → positional index; post-fix: the item's key surfaced by
+`a2ui_core`'s `ChildNode`). Per-item keys are **scoped within their parent list**
+(salted by the list's component id) so a list-item key can never collide with a
+sibling component's A2UI-id key.
+
+### The template layer: what A2UI references, and what the bridge targets
+
+Per the two-level catalog (§2), **A2UI components reference high-level widgets,
+each backed by an RFW template**; the bridge maps a component to its template, and
+the template composes the low-level catalog.
+
+Low-level catalog — an RFW `LocalWidgetLibrary`, implemented per framework:
+
+```
+core: Text, Row, Column, Button, Image, TextField, Checkbox, …
+```
+
+High-level catalog — an RFW `RemoteWidgetLibrary`, authored once and vetted at
+build time (`import core;`):
+
+```
+widget ProductCard = Column(children: [
+  Image(src: args.imageUrl),
+  Text(text: args.title),
+  Text(text: args.price),
+  Button(onPressed: event 'addToCart' { productId: args.id },
+         child: Text(text: 'Add to cart')),
+]);
+
+// a layout widget: its children are supplied by A2UI at runtime
+widget Grid = Column(children: args.children);
+```
+
+An A2UI message references only high-level names; a component's props are the
+template's `args`, and a layout widget's `children` are child component ids:
+
+```
+{ "id": "root", "component": "Grid", "children": ["p1", "wx"] }
+{ "id": "p1", "component": "ProductCard", "title": …, "imageUrl": … }
+```
+
+Rendering is exactly the M1–M4 machinery, re-pointed at the high-level library:
+the `p1` adapter (keyed by its id) renders `buildNode(ConstructorCall('ProductCard',
+{…props…}), scope: catalogLib)`; `'ProductCard'` resolves to the **template**,
+which imports and composes `core`. `Grid`'s `args.children` receive the child
+adapters (`p1`, `wx`) via host-widget injection, reconciled by id under partial
+updates.
+
+**Known gap (current code).** The bridge today maps A2UI components straight to
+low-level `core` components, and A2UI references those primitive names — i.e. it
+treats the low-level catalog as if it were the high-level one (a degenerate case
+where high == low, no templates). The high-level template library, and pointing
+the bridge's `scope` at it, is **not yet built**; it is the heart of the hypothesis
+and the next structural step. One mechanic to validate first: invoking a *named*
+template with runtime-injected host-widget `children` (M2's tests injected into a
+bare `Column`, not through a named template's `args.children`).
 
 ## 7. Repository layout
 
@@ -385,18 +513,35 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
         demo/conformance switched over and the shortcut retired. Covered by
         per-id partial-update isolation, child replace/removal, forward-reference,
         and custom-catalog reorder-identity tests.
-  - [ ] **M4** — data-driven lists: list adapter + scoped data views.
-  - [ ] **Then** — functions/`formatString`, more components, two-way-binding
-        inputs, `deleteSurface`, theme. `deleteSurface`/component-removal also
-        closes a known limitation: `A2uiSurface._components` and
-        `_componentListenables` currently grow monotonically — entries are never
-        pruned when a component is dropped (e.g. children replaced), so a
-        long-lived surface that churns component ids retains them unboundedly.
-        Listeners themselves are cleaned up by adapters on dispose; it is the
-        cached per-id definitions that linger. Fix = prune both maps on removal
-        (explicit message and/or a reachability sweep after `updateComponents`).
-        (M1 & M2 are vendored-RFW divergences: record in `VENDORED.md`; propose
+  - [x] **M4** — data-driven lists via RFW's `Loop` (emitted inside the owning
+        component's `buildNode`): array unroll, depth-scoped item bindings
+        (incl. nested `ChildList`s), and reactive add/remove/field-update through
+        `updateDataModel` (now array-index-aware). Unrolled items reconcile
+        **positionally** — the A2UI spec has no per-item id to key on (known
+        limitation, §6; spec fix filed as
+        [a2ui#1745](https://github.com/a2ui-project/a2ui/issues/1745)). Policy is
+        keyed-when-present, positional-fallback (§6) — the fallback is permanent.
+        No new RFW deviation (Loop is used as-is). Covered by bridge unit tests
+        (list field/append/remove, nested-loop scoping) and cross-adapter
+        conformance (list grow/shrink, per-item update, nested lists).
+  - [ ] **M5 — the template layer (§6).** Author the high-level catalog as an RFW
+        `RemoteWidgetLibrary` over the low-level `core` library, point the bridge's
+        `scope` at it, and feed component props as template `args`. This is the
+        degenerate-case fix (today high == low) and the heart of the hypothesis.
+        Validate named-template invocation with injected host-widget `children`.
+  - [ ] **M6 — layer `a2ui_core` underneath the protocol/data half (§10).** Adopt
+        `a2ui_core` for A2UI ingest, the data model, and binding/function/`checks`
+        resolution; keep RFW + the bridge for template materialization. This is how
+        functions/`formatString`, `checks`, two-way-binding inputs, theme, and
+        `deleteSurface` are delivered — by delegation, **not** by building them on
+        RFW (whose AST has no function/expression node). `deleteSurface` also
+        retires the current map-growth limitation (`A2uiSurface._components` /
+        `_componentListenables` grow monotonically; a2ui_core owns that lifecycle).
+        (M1 & M2 are vendored-RFW divergences: recorded in `VENDORED.md`; propose
         upstream.)
+  - [ ] **Then** — grow the high-level catalog; richer layout widgets.
+- [ ] **H2 type/style model** (the `argument_decoders` replacement) — the unlock
+      for more low-level components and theme; see §9.
 - [ ] Prove the state-model axis with a third, non-Flutter-like framework.
 - [ ] Consider upstream RFW restructuring so the formats layer need not be
       vendored.
@@ -414,3 +559,93 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
   name). Still open: named higher-level templates (e.g. a `WeatherCard` template
   resolving an A2UI `component="WeatherCard"`), and how such templates are
   authored, bundled, and versioned alongside a catalog.
+- **List-item identity — filed as [a2ui#1745](https://github.com/a2ui-project/a2ui/issues/1745).**
+  A2UI gives every *component* a stable id but attaches **no identifier to the
+  elements of a data array** unrolled by a `ChildList`, forcing positional
+  reconciliation for list items (§6). The fix is requested at the spec +
+  `a2ui_core` level. Our side is **keyed-when-present, positional-fallback
+  (permanent)** — see §6; the fallback stays even after keys land, since per-item
+  keys are opt-in. To adopt keys when available: surface the item key from
+  `a2ui_core`'s `ChildNode` and set it as the child adapter's key (salted by the
+  parent list id). Track the issue for the final key shape.
+- **`a2ui_core` seam (§10):** with `a2ui_core` resolving props to concrete values
+  fed as template `args`, reactivity becomes component-granular (whole-component
+  rebuild) rather than per-binding. Open: is that granularity acceptable for the
+  high-level catalog (likely yes — small vetted widgets), and how exactly do
+  template-internal inputs wire back to `a2ui_core`'s two-way setters?
+
+## 10. Layering with `a2ui_core` (planned direction)
+
+`a2ui_core` (the Dart core package in `flutter/genui` that backs the `genui`
+Flutter renderer — mirroring how `web_core` backs the Angular/React/Lit renderers)
+owns the A2UI protocol, the data model, and the resolution of
+bindings/functions/`checks`. It is **complementary to RFW, not a replacement**:
+`a2ui_core` sits *above* the template layer, RFW sits *below* it. This supersedes
+the protocol/data half of the interim bridge; the template/rendering half (§6)
+stays on RFW.
+
+### The stack
+
+```
+A2UI message (high-level component refs + data + functions/checks)
+  │  a2ui_core: MessageProcessor + DataModel + GenericBinder
+  ▼  → resolved props (concrete scalars), id'd child tree, action callbacks, two-way setters
+  │  bridge (thin): component name → RFW template; resolved props → template ARGS;
+  │                 inject child adapters; wire callbacks → events
+  ▼
+  │  RFW: buildNode(ConstructorCall(templateName, {args, children:[adapters]}), scope: catalogLib)
+  │       template composes the LOW-level catalog (args.* / internal ...for / switch)
+  ▼
+Flutter / Jaspr low-level widgets
+```
+
+### Why this is the right division
+
+RFW is the **build-time template engine** that materializes high-level widgets
+from low-level primitives, once, cross-framework (§2). `a2ui_core` is the
+**runtime A2UI layer** — protocol, data, and the value-level computation RFW
+deliberately lacks (functions/`formatString`, `checks`, two-way binding, theme;
+RFW's AST has no function/expression node). Building those on RFW would duplicate
+canonical logic and diverge from the reference implementation.
+
+### The seam
+
+`a2ui_core` resolves bindings/functions/`checks` to **concrete values**, handed to
+a template as **args** — not data references. Consequences:
+
+- **RFW's data layer (`DynamicContent`, `data.x` path bindings) is no longer used
+  for A2UI.** Reactivity moves to **component granularity**: when inputs change,
+  `a2ui_core`'s `resolvedProps` signal fires, the per-id adapter rebuilds, and
+  `buildNode` re-renders the template with new args.
+- **RFW's `Loop` survives only for template-*internal* iteration** over an args
+  list (`...for p in args.products`). The A2UI-level `ChildList` is resolved by
+  `a2ui_core` into the id'd child tree and injected as host adapters.
+- A `preact_signals → setState` bridge per adapter, plus wiring `a2ui_core`
+  actions / two-way setters to RFW `EventHandler` / `voidHandler`.
+
+### What moves, stays, and gets built
+
+| Concern | Disposition |
+| --- | --- |
+| A2UI ingest (`A2uiSurface`), `SurfaceListenable`, `_buildComponent`/`_children`→`Loop`, `_value`/`_pathRef` | **delete** → `a2ui_core` |
+| A2UI data (`DynamicContent`) + M4 data-path (`_applyDataUpdate`/`_descend`/`_assign`/`_segment`) | **delete** → `a2ui_core` `DataModel` |
+| functions/`formatString`, `checks`, two-way setters, theme, `deleteSurface` (+ the map-growth leak) | **don't build** → `a2ui_core` provides |
+| RFW runtime: `buildNode`, host-injection, keyed `_Widget`, `Loop`, `args`, `Switch` (M1/M2) | **keep** |
+| low-level `core_components` catalog | **keep** |
+| per-id adapter tree (M3) | **keep, re-rooted** on `a2ui_core`'s component tree + `resolvedProps` signals |
+| the bridge | **keep, thin** — name→template, args feed, child injection, event wiring |
+| high-level template `RemoteWidgetLibrary` | **build** (the missing layer, §6 / M5) |
+
+M1–M4 are not wasted: they are the template-rendering plumbing. Only the
+protocol/data/binding half of the bridge is delegated.
+
+### Risks & status
+
+- **Maturity:** `a2ui_core` is pre-1.0 (`0.0.1-wip002`); API may churn. It is the
+  canonical direction (the JS stack already follows it).
+- **Pure-Dart deps** (`collection`, `json_schema_builder`, `meta`,
+  `preact_signals` — no Flutter), so Jaspr-compatible.
+- **Status: planned, not started (M6).** De-risk with a thin Jaspr spike — a
+  `ProductCard` + `Grid` template library over `core`, an A2UI surface placing two
+  cards in a grid, `a2ui_core` resolving one `formatString` and one
+  `updateDataModel` — before deleting anything.

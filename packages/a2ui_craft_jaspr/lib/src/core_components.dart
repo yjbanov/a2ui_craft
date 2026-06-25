@@ -121,5 +121,40 @@ LocalComponentLibrary createCoreComponents() {
       }
       return video(src: url, controls: true, []);
     },
+    'TextField': (BuildContext context, DataSource source) {
+      final String? labelText = source.v<String>(['label']);
+      // The `onChanged` arg is a2ui_core's two-way setter (a resolved callback),
+      // accepted directly by the runtime's handler affordance.
+      final onChanged = source.handler<ValueChanged<String>>(
+        ['onChanged'],
+        (HandlerTrigger trigger) =>
+            (String value) => trigger(<String, Object?>{'value': value}),
+      );
+      return label([
+        if (labelText != null) Component.text(labelText),
+        input<String>(
+          type: InputType.text,
+          value: source.v<String>(['value']) ?? '',
+          onInput: onChanged,
+        ),
+      ]);
+    },
+    'Checkbox': (BuildContext context, DataSource source) {
+      final bool value = source.v<bool>(['value']) ?? false;
+      final onChanged = source.handler<ValueChanged<bool>>(
+        ['onChanged'],
+        (HandlerTrigger trigger) =>
+            (bool v) => trigger(<String, Object?>{'value': v}),
+      );
+      // Toggle from the bound value rather than reading the event target, so the
+      // handler works without a live DOM (e.g. in component tests).
+      return input(
+        type: InputType.checkbox,
+        checked: value,
+        events: onChanged == null
+            ? null
+            : <String, EventCallback>{'change': (_) => onChanged(!value)},
+      );
+    },
   });
 }

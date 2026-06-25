@@ -72,6 +72,33 @@ void main() {
     });
   });
 
+  testWidgets('Form: typing two-way-binds the field back to the data model',
+      (WidgetTester tester) async {
+    await _pump(tester, formSpec('Flutter'));
+    // The greeting Label mirrors /name, which starts empty.
+    expect(find.text('Ada'), findsNothing);
+
+    await tester.enterText(find.byType(TextField), 'Ada');
+    await tester.pump();
+
+    // 'Ada' now shows in two places: the field's own echo *and* the greeting
+    // Label bound to /name. The Label only updates if the edit wrote /name back
+    // through a2ui_core's setter, so two matches proves two-way binding (a
+    // one-way field would leave the Label empty, yielding a single match).
+    expect(find.text('Ada'), findsNWidgets(2));
+  });
+
+  testWidgets('Form: toggling the checkbox flips its bound value',
+      (WidgetTester tester) async {
+    await _pump(tester, formSpec('Flutter'));
+    expect(tester.widget<Checkbox>(find.byType(Checkbox)).value, isFalse);
+
+    await tester.tap(find.byType(Checkbox));
+    await tester.pump();
+
+    expect(tester.widget<Checkbox>(find.byType(Checkbox)).value, isTrue);
+  });
+
   testWidgets('the gallery app mounts and shows the first sample',
       (WidgetTester tester) async {
     await tester.pumpWidget(const GalleryApp());

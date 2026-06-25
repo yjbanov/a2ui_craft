@@ -6,7 +6,7 @@ import 'package:a2ui_core/a2ui_core.dart';
 import 'package:a2ui_craft/a2ui_craft.dart';
 import 'package:a2ui_craft_flutter/a2ui_craft_flutter.dart';
 import 'package:a2ui_craft_testing/a2ui_craft_testing.dart';
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Flutter implementation of the shared [CraftTester], wrapping a [WidgetTester]
@@ -30,9 +30,8 @@ class _FlutterCraftTester implements CraftTester {
     _runtime.update(const LibraryName(<String>['main']), main);
 
     await _tester.pumpWidget(
-      Directionality(
-        textDirection: TextDirection.ltr,
-        child: RemoteComponent(
+      _host(
+        RemoteComponent(
           runtime: _runtime,
           component: const FullyQualifiedWidgetName(
             LibraryName(<String>['main']),
@@ -44,6 +43,12 @@ class _FlutterCraftTester implements CraftTester {
       ),
     );
   }
+
+  /// Hosts [child] under just enough Material chrome (Directionality, Theme,
+  /// MediaQuery, Overlay, a Material surface) for inputs like `TextField` to
+  /// render; the behavioral probes still see only the template's own content.
+  Widget _host(Widget child) =>
+      MaterialApp(home: Scaffold(body: Center(child: child)));
 
   @override
   Object buildAdapter(SurfaceModel<ComponentApi> surface, String id) {
@@ -57,12 +62,7 @@ class _FlutterCraftTester implements CraftTester {
 
   @override
   Future<void> mountComponent(Object component) async {
-    await _tester.pumpWidget(
-      Directionality(
-        textDirection: TextDirection.ltr,
-        child: component as Widget,
-      ),
-    );
+    await _tester.pumpWidget(_host(component as Widget));
   }
 
   @override
@@ -74,6 +74,12 @@ class _FlutterCraftTester implements CraftTester {
   @override
   Future<void> activate(String key) async {
     await _tester.tap(find.byKey(ValueKey<String>(key)));
+    await _tester.pump();
+  }
+
+  @override
+  Future<void> toggleCheckbox() async {
+    await _tester.tap(find.byType(Checkbox));
     await _tester.pump();
   }
 }

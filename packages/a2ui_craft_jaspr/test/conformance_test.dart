@@ -70,6 +70,12 @@ class _JasprCraftTester implements CraftTester {
     final Key k = ValueKey<String>(key);
     return _tester.click(find.byKey(k));
   }
+
+  @override
+  Future<void> toggleCheckbox() async {
+    _tester.dispatchEvent(find.tag('input'), 'change');
+    await _tester.pump();
+  }
 }
 
 class _JasprConformanceDriver implements CraftConformanceDriver {

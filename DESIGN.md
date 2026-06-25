@@ -596,8 +596,22 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
         messages, render the `root` adapter) and its gallery shell; the Flutter and
         Jaspr galleries render the *same* specs. This is a second proof of H1 — one
         set of sample definitions drives two genuinely different rendering engines.
-  - [ ] **Then** — grow the high-level catalog; richer layout widgets; wire
-        `a2ui_core` two-way setters for editable inputs (`TextField`/`Checkbox`).
+  - [x] **Two-way binding (editable inputs).** Added low-level `TextField` and
+        `Checkbox` core components (both adapters). The write-back path needed **no
+        new plumbing**: `a2ui_core`'s `GenericBinder` already resolves a `setX`
+        callback for a `{path}`-bound prop, and the runtime's resolved-callback
+        affordance (ext #3) lets a template wire it to the widget's `onChanged`
+        (`widget Field = TextField(value: args.value, onChanged: args.setValue)`).
+        Editing writes straight back to the data model, and bound widgets
+        re-render. Proven cross-framework by a `runA2uiConformance` checkbox test
+        (toggle → data model updates on both adapters) and a Flutter `Form` sample
+        test (free-text typing → a Label bound to the same path mirrors it).
+        *Harness note:* `jaspr_test` can't synthesize a real DOM input value, so
+        free-text *entry* is exercised on Flutter; the cross-framework write-back
+        contract is proven via the checkbox (a value-free toggle) plus the shared
+        setter path. A `Form` sample demonstrates both inputs in the gallery.
+  - [ ] **Then** — grow the high-level catalog; richer layout widgets; the H2
+        type/style model.
 - [ ] **H2 type/style model** (the `argument_decoders` replacement) — the unlock
       for more low-level components and theme; see §9.
 - [ ] Prove the state-model axis with a third, non-Flutter-like framework.

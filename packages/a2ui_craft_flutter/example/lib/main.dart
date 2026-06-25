@@ -20,6 +20,7 @@ const List<IconData> _icons = <IconData>[
   Icons.add,
   Icons.person,
   Icons.image,
+  Icons.edit_note,
 ];
 
 /// A simple gallery shell that shows one [Sample] at a time. Each sample is

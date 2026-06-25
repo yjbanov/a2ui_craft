@@ -20,6 +20,8 @@ widget Label = Text(text: args.text);
 widget Stack = Column(children: args.children);
 
 widget Tappable = Button(onPressed: args.action, child: Text(text: args.label));
+
+widget Check = Checkbox(value: args.value, onChanged: args.setValue);
 ''';
 
 /// The library name under which [a2uiDemoCatalogSource] is registered.
@@ -64,10 +66,20 @@ class _TappableApi extends ComponentApi {
       );
 }
 
+class _CheckApi extends ComponentApi {
+  @override
+  String get name => 'Check';
+  @override
+  Schema get schema => Schema.object(
+        properties: {'value': CommonSchemas.dynamicBoolean},
+        required: ['value'],
+      );
+}
+
 /// Builds the `a2ui_core` demo catalog (matching [a2uiDemoCatalogSource]).
 Catalog<ComponentApi> a2uiDemoCatalog() => Catalog<ComponentApi>(
       id: a2uiDemoCatalogId,
-      components: [_StackApi(), _LabelApi(), _TappableApi()],
+      components: [_StackApi(), _LabelApi(), _TappableApi(), _CheckApi()],
     );
 
 /// Framework-neutral signature for an event dispatched by a rendered component.
@@ -107,6 +119,9 @@ abstract interface class CraftTester {
   /// Activates (taps/clicks) the interactive element carrying the given
   /// component `key`.
   Future<void> activate(String key);
+
+  /// Toggles the (single) rendered checkbox, as a user click would.
+  Future<void> toggleCheckbox();
 
   /// Creates a framework-specific adapter for the A2UI component [id] in
   /// [surface], rendering it against the demo catalog ([a2uiDemoCatalogName]).
@@ -244,6 +259,24 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
       );
     ''');
     // If it doesn't crash, the primitives are successfully mounting.
+  });
+
+  driver.defineTest('TextField and Checkbox render their bound values', (
+    CraftTester tester,
+  ) async {
+    final DynamicContent data = DynamicContent();
+    data.update('name', 'Ada');
+    data.update('agree', true);
+    await tester.mount('''
+      import core;
+      widget root = Column(children: [
+        TextField(label: "Your name", value: data.name),
+        Checkbox(value: data.agree),
+      ]);
+    ''', data: data);
+
+    // The field's label renders; the checkbox mounts without crashing.
+    expect(tester.hasText('Your name'), isTrue);
   });
 
   driver.defineTest('Button dispatches its event only when activated', (
@@ -535,6 +568,39 @@ void runA2uiConformance(CraftConformanceDriver driver) {
       expect(tester.hasText('alice'), isTrue);
       expect(tester.hasText('bob'), isTrue);
       expect(tester.hasText('carol'), isTrue);
+    },
+  );
+
+  driver.defineTest(
+    'a two-way Checkbox writes its bound value back to the data model',
+    (CraftTester tester) async {
+      final (_, SurfaceModel<ComponentApi> surface) = tester.applyA2ui(
+        <A2uiMessage>[
+          CreateSurfaceMessage(surfaceId: 'conformance', catalogId: 'demo'),
+          UpdateDataModelMessage(
+            surfaceId: 'conformance',
+            path: '/',
+            value: <String, Object?>{'agree': false},
+          ),
+          UpdateComponentsMessage(
+            surfaceId: 'conformance',
+            components: <Map<String, dynamic>>[
+              <String, dynamic>{
+                'id': 'root',
+                'component': 'Check',
+                'value': <String, dynamic>{'path': '/agree'},
+              },
+            ],
+          ),
+        ],
+      );
+      await tester.mountComponent(tester.buildAdapter(surface, 'root'));
+
+      // a2ui_core resolved a `setValue` for the bound `value`; the template
+      // wired it to the checkbox's `onChanged`, so toggling writes it back.
+      expect(surface.dataModel.get('/agree'), false);
+      await tester.toggleCheckbox();
+      expect(surface.dataModel.get('/agree'), true);
     },
   );
 }

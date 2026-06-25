@@ -27,4 +27,6 @@ const Set<String> coreCatalog = <String>{
   'ScrollView',
   'Card',
   'Video',
+  'TextField',
+  'Checkbox',
 };

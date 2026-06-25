@@ -98,5 +98,75 @@ LocalComponentLibrary createCoreComponents() {
         ),
       );
     },
+    'TextField': (BuildContext context, DataSource source) {
+      return _CoreTextField(
+        label: source.v<String>(['label']),
+        value: source.v<String>(['value']),
+        // The `onChanged` arg is a2ui_core's two-way setter (a resolved
+        // callback), accepted directly by the runtime's handler affordance.
+        onChanged: source.handler<ValueChanged<String>>(
+          ['onChanged'],
+          (HandlerTrigger trigger) =>
+              (String value) => trigger(<String, Object?>{'value': value}),
+        ),
+      );
+    },
+    'Checkbox': (BuildContext context, DataSource source) {
+      final bool value = source.v<bool>(['value']) ?? false;
+      final ValueChanged<bool>? onChanged = source.handler<ValueChanged<bool>>(
+        ['onChanged'],
+        (HandlerTrigger trigger) =>
+            (bool v) => trigger(<String, Object?>{'value': v}),
+      );
+      return Checkbox(
+        value: value,
+        onChanged:
+            onChanged == null ? null : (bool? v) => onChanged(v ?? !value),
+      );
+    },
   });
+}
+
+/// A text field that reflects an externally-bound [value] (without clobbering
+/// the cursor mid-edit) and reports edits through [onChanged] — the two halves
+/// of two-way binding.
+class _CoreTextField extends StatefulWidget {
+  const _CoreTextField({this.label, this.value, this.onChanged});
+
+  final String? label;
+  final String? value;
+  final ValueChanged<String>? onChanged;
+
+  @override
+  State<_CoreTextField> createState() => _CoreTextFieldState();
+}
+
+class _CoreTextFieldState extends State<_CoreTextField> {
+  late final TextEditingController _controller =
+      TextEditingController(text: widget.value ?? '');
+
+  @override
+  void didUpdateWidget(_CoreTextField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Reflect external (data-model) changes, but don't fight the user's cursor
+    // for edits that already match.
+    if (widget.value != null && widget.value != _controller.text) {
+      _controller.text = widget.value!;
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: _controller,
+      decoration: InputDecoration(labelText: widget.label),
+      onChanged: widget.onChanged,
+    );
+  }
 }

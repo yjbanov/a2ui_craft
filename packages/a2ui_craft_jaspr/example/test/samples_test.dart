@@ -46,6 +46,14 @@ void main() {
     expect(find.tag('img'), findsNComponents(3));
   });
 
+  testComponents('Form renders a labelled text field and a checkbox',
+      (ComponentTester tester) async {
+    await _pump(tester, formSpec('Jaspr'));
+    expect(find.text('Your name'), findsOneComponent);
+    // A text input and a checkbox input.
+    expect(find.tag('input'), findsNComponents(2));
+  });
+
   testComponents('the gallery app mounts and shows the first sample',
       (ComponentTester tester) async {
     tester.pumpComponent(App());

@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 import 'package:a2ui_core/a2ui_core.dart';
-import 'package:json_schema_builder/json_schema_builder.dart';
 
 import '../sample.dart';
 
@@ -25,10 +24,19 @@ widget Greeting = Column(children: [
 ''';
 
   @override
-  Catalog<ComponentApi> buildCatalog() => Catalog<ComponentApi>(
-        id: catalogId,
-        components: [_GreetingApi()],
-      );
+  Map<String, Object?> get catalogSchema => <String, Object?>{
+        'catalogId': catalogId,
+        'components': <String, Object?>{
+          'Greeting': <String, Object?>{
+            'properties': <String, Object?>{
+              'title': <String, Object?>{r'$ref': 'DynamicString'},
+              'message': <String, Object?>{r'$ref': 'DynamicString'},
+              'buttonLabel': <String, Object?>{r'$ref': 'DynamicString'},
+              'action': <String, Object?>{r'$ref': 'Action'},
+            },
+          },
+        },
+      };
 
   @override
   List<A2uiMessage> buildMessages() => <A2uiMessage>[
@@ -64,18 +72,4 @@ widget Greeting = Column(children: [
       host.updateData('/greeting', 'Hello from an A2UI event!');
     }
   }
-}
-
-class _GreetingApi extends ComponentApi {
-  @override
-  String get name => 'Greeting';
-  @override
-  Schema get schema => Schema.object(
-        properties: {
-          'title': CommonSchemas.dynamicString,
-          'message': CommonSchemas.dynamicString,
-          'buttonLabel': CommonSchemas.dynamicString,
-          'action': CommonSchemas.action,
-        },
-      );
 }

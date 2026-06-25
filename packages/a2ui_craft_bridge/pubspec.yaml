@@ -14,6 +14,8 @@ dependencies:
   a2ui_craft: ^0.0.1
   # The A2UI protocol, data model, and binding/function/checks resolution.
   a2ui_core: any
+  # The catalog loader parses component schemas (JSON Schema) at runtime.
+  json_schema_builder: any
 
 dev_dependencies:
   lints: ^4.0.0

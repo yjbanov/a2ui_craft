@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 import 'package:a2ui_core/a2ui_core.dart';
-import 'package:json_schema_builder/json_schema_builder.dart';
 
 import '../sample.dart';
 
@@ -29,10 +28,19 @@ widget Gallery = ScrollView(child: Column(children: [
 ''';
 
   @override
-  Catalog<ComponentApi> buildCatalog() => Catalog<ComponentApi>(
-        id: catalogId,
-        components: [_GalleryApi()],
-      );
+  Map<String, Object?> get catalogSchema => <String, Object?>{
+        'catalogId': catalogId,
+        'components': <String, Object?>{
+          'Gallery': <String, Object?>{
+            'properties': <String, Object?>{
+              'images': <String, Object?>{
+                'type': 'array',
+                'items': <String, Object?>{'type': 'string'},
+              },
+            },
+          },
+        },
+      };
 
   @override
   List<A2uiMessage> buildMessages() => <A2uiMessage>[
@@ -48,13 +56,4 @@ widget Gallery = ScrollView(child: Column(children: [
           ],
         ),
       ];
-}
-
-class _GalleryApi extends ComponentApi {
-  @override
-  String get name => 'Gallery';
-  @override
-  Schema get schema => Schema.object(
-        properties: {'images': Schema.list(items: Schema.string())},
-      );
 }

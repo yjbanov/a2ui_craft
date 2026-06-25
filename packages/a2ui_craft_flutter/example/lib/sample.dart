@@ -4,6 +4,7 @@
 
 import 'package:a2ui_core/a2ui_core.dart';
 import 'package:a2ui_craft/a2ui_craft.dart' show LibraryName, parseLibraryFile;
+import 'package:a2ui_craft_bridge/a2ui_craft_bridge.dart';
 import 'package:a2ui_craft_flutter/a2ui_craft_flutter.dart';
 import 'package:flutter/widgets.dart';
 
@@ -51,9 +52,11 @@ abstract class Sample extends StatefulWidget {
   /// (`import core; widget Foo = …;`).
   String get catalogSource;
 
-  /// The `a2ui_core` schemas for this sample's agent-facing widgets (its
-  /// `id` must be [catalogId]).
-  Catalog<ComponentApi> buildCatalog();
+  /// This sample's component API as a **raw JSON Schema catalog document**
+  /// (`{catalogId, components: {...}}`, with props referencing A2UI common types
+  /// by `$ref`). Loaded ephemerally via [loadCatalog] — the client knows nothing
+  /// about it ahead of time. Its `catalogId` must be [catalogId].
+  Map<String, Object?> get catalogSchema;
 
   /// The A2UI messages that build the sample's surface (root id `root`).
   List<A2uiMessage> buildMessages();
@@ -76,8 +79,8 @@ class _SampleState extends State<Sample> {
     _runtime = Runtime()
       ..update(const LibraryName(<String>['core']), createCoreComponents())
       ..update(_catalogName, parseLibraryFile(widget.catalogSource));
-    _processor =
-        MessageProcessor<ComponentApi>(catalogs: [widget.buildCatalog()]);
+    _processor = MessageProcessor<ComponentApi>(
+        catalogs: [loadCatalog(widget.catalogSchema)]);
     _processor.processMessages(widget.buildMessages());
     _surface = _processor.groupModel.getSurface(surfaceId)!;
     _surface.onAction.addListener(_onAction);

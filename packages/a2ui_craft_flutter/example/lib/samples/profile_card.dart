@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 import 'package:a2ui_core/a2ui_core.dart';
-import 'package:json_schema_builder/json_schema_builder.dart';
 
 import '../sample.dart';
 
@@ -34,10 +33,24 @@ widget ProfileCard = Card(child: Column(children: [
 ''';
 
   @override
-  Catalog<ComponentApi> buildCatalog() => Catalog<ComponentApi>(
-        id: catalogId,
-        components: [_ColumnApi(), _ProfileCardApi()],
-      );
+  Map<String, Object?> get catalogSchema => <String, Object?>{
+        'catalogId': catalogId,
+        'components': <String, Object?>{
+          'Column': <String, Object?>{
+            'properties': <String, Object?>{
+              'children': <String, Object?>{r'$ref': 'ChildList'},
+            },
+            'required': <Object?>['children'],
+          },
+          'ProfileCard': <String, Object?>{
+            'properties': <String, Object?>{
+              'name': <String, Object?>{r'$ref': 'DynamicString'},
+              'avatarUrl': <String, Object?>{r'$ref': 'DynamicString'},
+              'bio': <String, Object?>{r'$ref': 'DynamicString'},
+            },
+          },
+        },
+      };
 
   @override
   List<A2uiMessage> buildMessages() => <A2uiMessage>[
@@ -68,27 +81,4 @@ widget ProfileCard = Card(child: Column(children: [
           ],
         ),
       ];
-}
-
-class _ColumnApi extends ComponentApi {
-  @override
-  String get name => 'Column';
-  @override
-  Schema get schema => Schema.object(
-        properties: {'children': CommonSchemas.childList},
-        required: ['children'],
-      );
-}
-
-class _ProfileCardApi extends ComponentApi {
-  @override
-  String get name => 'ProfileCard';
-  @override
-  Schema get schema => Schema.object(
-        properties: {
-          'name': CommonSchemas.dynamicString,
-          'avatarUrl': CommonSchemas.dynamicString,
-          'bio': CommonSchemas.dynamicString,
-        },
-      );
 }

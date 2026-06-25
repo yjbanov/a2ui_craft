@@ -576,6 +576,19 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
         resolves to a plain id string — are now injected as one child adapter
         (`A2uiComponentBinding.childRefs` + `a2uiArgsFromProps`), alongside the
         existing `children` lists.
+  - [x] **Ephemeral component APIs (`loadCatalog`).** A real client starts knowing
+        *nothing* about a template's component API, but its code is precompiled —
+        so the API must be **loadable as data**, like the RFW template and the JSON
+        messages. `loadCatalog` (in the bridge) parses a catalog delivered as **raw
+        JSON Schema**: each component is an object schema whose props reference the
+        A2UI **common-type vocabulary** (`DynamicString`/`Action`/`ChildList`/
+        `ComponentId`/… ) by `$ref`, resolved against `a2ui_core`'s `CommonSchemas`
+        so `GenericBinder` can scrape behavior. The boundary is exactly right: the
+        *protocol* (common types + RFW grammar) is precompiled; *per-template*
+        schemas arrive as data. The samples now declare their catalog as JSON
+        Schema (no in-code `ComponentApi` classes); next the template (RFW), messages
+        (JSON), and catalog (JSON Schema) collapse into shared, framework-neutral
+        data, dropping the Flutter/Jaspr sample duplication.
   - [ ] **Then** — grow the high-level catalog; richer layout widgets; wire
         `a2ui_core` two-way setters for editable inputs (`TextField`/`Checkbox`).
 - [ ] **H2 type/style model** (the `argument_decoders` replacement) — the unlock

@@ -12,7 +12,6 @@ dependencies:
   a2ui_craft_bridge: ^0.0.1
   a2ui_craft_jaspr: ^0.0.1
   a2ui_core: any
-  json_schema_builder: any
   jaspr: ^0.23.1
 
 dev_dependencies:

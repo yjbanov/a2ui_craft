@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 import 'package:a2ui_core/a2ui_core.dart';
-import 'package:json_schema_builder/json_schema_builder.dart';
 
 import '../sample.dart';
 
@@ -25,10 +24,19 @@ widget Counter = Column(children: [
 ''';
 
   @override
-  Catalog<ComponentApi> buildCatalog() => Catalog<ComponentApi>(
-        id: catalogId,
-        components: [_CounterApi()],
-      );
+  Map<String, Object?> get catalogSchema => <String, Object?>{
+        'catalogId': catalogId,
+        'components': <String, Object?>{
+          'Counter': <String, Object?>{
+            'properties': <String, Object?>{
+              'label': <String, Object?>{r'$ref': 'DynamicString'},
+              'count': <String, Object?>{r'$ref': 'DynamicString'},
+              'buttonLabel': <String, Object?>{r'$ref': 'DynamicString'},
+              'action': <String, Object?>{r'$ref': 'Action'},
+            },
+          },
+        },
+      };
 
   @override
   List<A2uiMessage> buildMessages() => <A2uiMessage>[
@@ -66,18 +74,4 @@ widget Counter = Column(children: [
       host.updateData('/count', '${current + 1}');
     }
   }
-}
-
-class _CounterApi extends ComponentApi {
-  @override
-  String get name => 'Counter';
-  @override
-  Schema get schema => Schema.object(
-        properties: {
-          'label': CommonSchemas.dynamicString,
-          'count': CommonSchemas.dynamicString,
-          'buttonLabel': CommonSchemas.dynamicString,
-          'action': CommonSchemas.action,
-        },
-      );
 }

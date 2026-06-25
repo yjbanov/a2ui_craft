@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'package:a2ui_core/a2ui_core.dart';
 import 'package:a2ui_craft/a2ui_craft.dart';
-import 'package:a2ui_craft_bridge/a2ui_craft_bridge.dart';
+import 'package:json_schema_builder/json_schema_builder.dart';
 import 'package:test/test.dart';
 
 /// The high-level demo catalog used by [runA2uiConformance], authored as RFW
@@ -23,6 +24,51 @@ widget Tappable = Button(onPressed: args.action, child: Text(text: args.label));
 
 /// The library name under which [a2uiDemoCatalogSource] is registered.
 const LibraryName a2uiDemoCatalogName = LibraryName(<String>['catalog']);
+
+/// The `a2ui_core` catalog id that A2UI `createSurface` messages reference.
+const String a2uiDemoCatalogId = 'demo';
+
+/// The `a2ui_core` component schemas mirroring [a2uiDemoCatalogSource]. These
+/// drive `GenericBinder`'s behavior scraping (which prop is data-bound, an
+/// action, or a structural child list).
+class _LabelApi extends ComponentApi {
+  @override
+  String get name => 'Label';
+  @override
+  Schema get schema => Schema.object(
+        properties: {'text': CommonSchemas.dynamicString},
+        required: ['text'],
+      );
+}
+
+class _StackApi extends ComponentApi {
+  @override
+  String get name => 'Stack';
+  @override
+  Schema get schema => Schema.object(
+        properties: {'children': CommonSchemas.childList},
+        required: ['children'],
+      );
+}
+
+class _TappableApi extends ComponentApi {
+  @override
+  String get name => 'Tappable';
+  @override
+  Schema get schema => Schema.object(
+        properties: {
+          'label': CommonSchemas.dynamicString,
+          'action': CommonSchemas.action,
+        },
+        required: ['label', 'action'],
+      );
+}
+
+/// Builds the `a2ui_core` demo catalog (matching [a2uiDemoCatalogSource]).
+Catalog<ComponentApi> a2uiDemoCatalog() => Catalog<ComponentApi>(
+      id: a2uiDemoCatalogId,
+      components: [_StackApi(), _LabelApi(), _TappableApi()],
+    );
 
 /// Framework-neutral signature for an event dispatched by a rendered component.
 ///
@@ -62,12 +108,9 @@ abstract interface class CraftTester {
   /// component `key`.
   Future<void> activate(String key);
 
-  /// Creates a framework-specific adapter widget/component for the given A2UI [id].
-  Object buildAdapter(
-    A2uiSurface surface,
-    String id, [
-    CraftEventHandler? onEvent,
-  ]);
+  /// Creates a framework-specific adapter for the A2UI component [id] in
+  /// [surface], rendering it against the demo catalog ([a2uiDemoCatalogName]).
+  Object buildAdapter(SurfaceModel<ComponentApi> surface, String id);
 
   /// Renders a host component directly (e.g. an `A2uiToRfwAdapter`).
   Future<void> mountComponent(Object component);
@@ -87,6 +130,20 @@ extension CraftTesterQueries on CraftTester {
   }) {
     return mountLibrary(parseLibraryFile(template),
         data: data, onEvent: onEvent);
+  }
+
+  /// Builds a fresh `a2ui_core` processor over the demo catalog, applies
+  /// [messages], and returns the processor paired with its surface (id
+  /// [surfaceId]). Follow-up messages go through `processor.processMessages`, so
+  /// tests exercise the real A2UI message path.
+  (MessageProcessor<ComponentApi>, SurfaceModel<ComponentApi>) applyA2ui(
+    List<A2uiMessage> messages, {
+    String surfaceId = 'conformance',
+  }) {
+    final MessageProcessor<ComponentApi> processor =
+        MessageProcessor<ComponentApi>(catalogs: [a2uiDemoCatalog()]);
+    processor.processMessages(messages);
+    return (processor, processor.groupModel.getSurface(surfaceId)!);
   }
 }
 
@@ -196,7 +253,8 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
 }
 
 /// The shared behavioral specification for rendering an **A2UI surface**
-/// end-to-end: A2UI Transport messages → `A2uiSurface` → the engine.
+/// end-to-end: A2UI messages → `a2ui_core` (`MessageProcessor` + `GenericBinder`)
+/// → the per-id `A2uiToRfwAdapter` tree → the engine.
 ///
 /// Proves the same A2UI surface behaves identically on every framework. Like
 /// [runCoreComponentConformance], every adapter runs this against its own
@@ -205,20 +263,15 @@ void runA2uiConformance(CraftConformanceDriver driver) {
   driver.defineTest(
     'A2UI surface renders text, bindings, a list, and dispatches events',
     (CraftTester tester) async {
-      late A2uiSurface surface;
+      final (
+        MessageProcessor<ComponentApi> processor,
+        SurfaceModel<ComponentApi> surface,
+      ) = tester.applyA2ui(_counterMessages());
       final List<String> dispatched = <String>[];
-      void handler(String name, DynamicMap arguments) {
-        dispatched.add(name);
-      }
+      surface.onAction
+          .addListener((A2uiClientAction a) => dispatched.add(a.name));
 
-      surface = A2uiSurface(
-        adapterBuilder: (String id) =>
-            tester.buildAdapter(surface, id, handler),
-      );
-      surface.apply(_a2uiCounterSurface());
-
-      await tester
-          .mountComponent(tester.buildAdapter(surface, 'root', handler));
+      await tester.mountComponent(tester.buildAdapter(surface, 'root'));
 
       // Literal, absolute data binding, list items, and the button label.
       expect(tester.hasText('Hello'), isTrue);
@@ -228,15 +281,16 @@ void runA2uiConformance(CraftConformanceDriver driver) {
       expect(tester.hasText('Go'), isTrue);
 
       // The Button is located by its A2UI id (the host adapter keys itself by
-      // that id).
+      // that id). a2ui_core resolves the action and dispatches it.
       expect(dispatched, isEmpty);
       await tester.activate('btn');
       expect(dispatched, <String>['go']);
 
       // An updateDataModel message re-renders the bound text.
-      surface.apply(<String, Object?>{
-        'updateDataModel': <String, Object?>{'path': '/name', 'value': 'Grace'},
-      });
+      processor.processMessages(<A2uiMessage>[
+        UpdateDataModelMessage(
+            surfaceId: 'conformance', path: '/name', value: 'Grace'),
+      ]);
       await tester.pump();
       expect(tester.hasText('Ada'), isFalse);
       expect(tester.hasText('Grace'), isTrue);
@@ -246,27 +300,27 @@ void runA2uiConformance(CraftConformanceDriver driver) {
   driver.defineTest(
     'updateComponents updates a single component in place',
     (CraftTester tester) async {
-      late A2uiSurface surface;
-      surface = A2uiSurface(
-        adapterBuilder: (String id) => tester.buildAdapter(surface, id),
-      );
-      surface.apply(_a2uiCounterSurface());
+      final (
+        MessageProcessor<ComponentApi> processor,
+        SurfaceModel<ComponentApi> surface,
+      ) = tester.applyA2ui(_counterMessages());
       await tester.mountComponent(tester.buildAdapter(surface, 'root'));
 
       expect(tester.hasText('Hello'), isTrue);
 
       // A follow-up updateComponents that touches only `title` by id.
-      surface.apply(<String, Object?>{
-        'updateComponents': <String, Object?>{
-          'components': <Object?>[
-            <String, Object?>{
+      processor.processMessages(<A2uiMessage>[
+        UpdateComponentsMessage(
+          surfaceId: 'conformance',
+          components: <Map<String, dynamic>>[
+            <String, dynamic>{
               'id': 'title',
               'component': 'Label',
               'text': 'Hi'
             },
           ],
-        },
-      });
+        ),
+      ]);
       await tester.pump();
 
       // The targeted component re-renders; its siblings are untouched.
@@ -281,11 +335,10 @@ void runA2uiConformance(CraftConformanceDriver driver) {
   driver.defineTest(
     "updateComponents replaces a container's children",
     (CraftTester tester) async {
-      late A2uiSurface surface;
-      surface = A2uiSurface(
-        adapterBuilder: (String id) => tester.buildAdapter(surface, id),
-      );
-      surface.apply(_a2uiCounterSurface());
+      final (
+        MessageProcessor<ComponentApi> processor,
+        SurfaceModel<ComponentApi> surface,
+      ) = tester.applyA2ui(_counterMessages());
       await tester.mountComponent(tester.buildAdapter(surface, 'root'));
 
       expect(tester.hasText('Ada'), isTrue); // greeting
@@ -293,17 +346,18 @@ void runA2uiConformance(CraftConformanceDriver driver) {
 
       // A follow-up updateComponents that re-points root at a different,
       // reordered subset of children. Dropped children must unmount.
-      surface.apply(<String, Object?>{
-        'updateComponents': <String, Object?>{
-          'components': <Object?>[
-            <String, Object?>{
+      processor.processMessages(<A2uiMessage>[
+        UpdateComponentsMessage(
+          surfaceId: 'conformance',
+          components: <Map<String, dynamic>>[
+            <String, dynamic>{
               'id': 'root',
               'component': 'Stack',
               'children': <Object?>['btn', 'title'],
             },
           ],
-        },
-      });
+        ),
+      ]);
       await tester.pump();
 
       // Surviving children still render...
@@ -319,11 +373,10 @@ void runA2uiConformance(CraftConformanceDriver driver) {
   driver.defineTest(
     'a data-driven list grows and shrinks with its data array',
     (CraftTester tester) async {
-      late A2uiSurface surface;
-      surface = A2uiSurface(
-        adapterBuilder: (String id) => tester.buildAdapter(surface, id),
-      );
-      surface.apply(_a2uiCounterSurface());
+      final (
+        MessageProcessor<ComponentApi> processor,
+        SurfaceModel<ComponentApi> surface,
+      ) = tester.applyA2ui(_counterMessages());
       await tester.mountComponent(tester.buildAdapter(surface, 'root'));
 
       expect(tester.hasText('a'), isTrue);
@@ -331,28 +384,30 @@ void runA2uiConformance(CraftConformanceDriver driver) {
       expect(tester.hasText('c'), isFalse);
 
       // Replace the array with a longer one: a new item appears.
-      surface.apply(<String, Object?>{
-        'updateDataModel': <String, Object?>{
-          'path': '/items',
-          'value': <Object?>[
+      processor.processMessages(<A2uiMessage>[
+        UpdateDataModelMessage(
+          surfaceId: 'conformance',
+          path: '/items',
+          value: <Object?>[
             <String, Object?>{'label': 'a'},
             <String, Object?>{'label': 'b'},
             <String, Object?>{'label': 'c'},
           ],
-        },
-      });
+        ),
+      ]);
       await tester.pump();
       expect(tester.hasText('c'), isTrue);
 
       // Replace with a shorter one: trailing items disappear.
-      surface.apply(<String, Object?>{
-        'updateDataModel': <String, Object?>{
-          'path': '/items',
-          'value': <Object?>[
+      processor.processMessages(<A2uiMessage>[
+        UpdateDataModelMessage(
+          surfaceId: 'conformance',
+          path: '/items',
+          value: <Object?>[
             <String, Object?>{'label': 'a'},
           ],
-        },
-      });
+        ),
+      ]);
       await tester.pump();
       expect(tester.hasText('a'), isTrue);
       expect(tester.hasText('b'), isFalse);
@@ -363,22 +418,19 @@ void runA2uiConformance(CraftConformanceDriver driver) {
   driver.defineTest(
     'updateDataModel into a list item updates just that row',
     (CraftTester tester) async {
-      late A2uiSurface surface;
-      surface = A2uiSurface(
-        adapterBuilder: (String id) => tester.buildAdapter(surface, id),
-      );
-      surface.apply(_a2uiCounterSurface());
+      final (
+        MessageProcessor<ComponentApi> processor,
+        SurfaceModel<ComponentApi> surface,
+      ) = tester.applyA2ui(_counterMessages());
       await tester.mountComponent(tester.buildAdapter(surface, 'root'));
 
       expect(tester.hasText('a'), isTrue);
       expect(tester.hasText('b'), isTrue);
 
-      surface.apply(<String, Object?>{
-        'updateDataModel': <String, Object?>{
-          'path': '/items/0/label',
-          'value': 'A1',
-        },
-      });
+      processor.processMessages(<A2uiMessage>[
+        UpdateDataModelMessage(
+            surfaceId: 'conformance', path: '/items/0/label', value: 'A1'),
+      ]);
       await tester.pump();
 
       expect(tester.hasText('a'), isFalse);
@@ -390,53 +442,56 @@ void runA2uiConformance(CraftConformanceDriver driver) {
   driver.defineTest(
     'a nested ChildList scopes each inner loop to its outer item',
     (CraftTester tester) async {
-      late A2uiSurface surface;
-      surface = A2uiSurface(
-        adapterBuilder: (String id) => tester.buildAdapter(surface, id),
-      );
-      surface.apply(<String, Object?>{
-        'createSurface': <String, Object?>{
-          'surfaceId': 'nested',
-          'components': <Object?>[
-            <String, Object?>{
-              'id': 'root',
-              'component': 'Stack',
-              'children': <String, Object?>{
-                'path': '/groups',
-                'componentId': 'group',
-              },
+      final (_, SurfaceModel<ComponentApi> surface) = tester.applyA2ui(
+        <A2uiMessage>[
+          CreateSurfaceMessage(surfaceId: 'conformance', catalogId: 'demo'),
+          UpdateDataModelMessage(
+            surfaceId: 'conformance',
+            path: '/',
+            value: <String, Object?>{
+              'groups': <Object?>[
+                <String, Object?>{
+                  'members': <Object?>[
+                    <String, Object?>{'name': 'alice'},
+                    <String, Object?>{'name': 'bob'},
+                  ],
+                },
+                <String, Object?>{
+                  'members': <Object?>[
+                    <String, Object?>{'name': 'carol'},
+                  ],
+                },
+              ],
             },
-            <String, Object?>{
-              'id': 'group',
-              'component': 'Stack',
-              'children': <String, Object?>{
-                'path': 'members',
-                'componentId': 'member',
+          ),
+          UpdateComponentsMessage(
+            surfaceId: 'conformance',
+            components: <Map<String, dynamic>>[
+              <String, dynamic>{
+                'id': 'root',
+                'component': 'Stack',
+                'children': <String, dynamic>{
+                  'path': '/groups',
+                  'componentId': 'group',
+                },
               },
-            },
-            <String, Object?>{
-              'id': 'member',
-              'component': 'Label',
-              'text': <String, Object?>{'path': 'name'},
-            },
-          ],
-          'dataModel': <String, Object?>{
-            'groups': <Object?>[
-              <String, Object?>{
-                'members': <Object?>[
-                  <String, Object?>{'name': 'alice'},
-                  <String, Object?>{'name': 'bob'},
-                ],
+              <String, dynamic>{
+                'id': 'group',
+                'component': 'Stack',
+                'children': <String, dynamic>{
+                  'path': 'members',
+                  'componentId': 'member',
+                },
               },
-              <String, Object?>{
-                'members': <Object?>[
-                  <String, Object?>{'name': 'carol'},
-                ],
+              <String, dynamic>{
+                'id': 'member',
+                'component': 'Label',
+                'text': <String, dynamic>{'path': 'name'},
               },
             ],
-          },
-        },
-      });
+          ),
+        ],
+      );
       await tester.mountComponent(tester.buildAdapter(surface, 'root'));
 
       expect(tester.hasText('alice'), isTrue);
@@ -446,56 +501,64 @@ void runA2uiConformance(CraftConformanceDriver driver) {
   );
 }
 
-Map<String, Object?> _a2uiCounterSurface() => <String, Object?>{
-      'createSurface': <String, Object?>{
-        'surfaceId': 'conformance',
-        'components': <Object?>[
-          <String, Object?>{
-            'id': 'root',
-            'component': 'Stack',
-            'children': <Object?>['title', 'greeting', 'list', 'btn'],
-          },
-          <String, Object?>{
-            'id': 'title',
-            'component': 'Label',
-            'text': 'Hello'
-          },
-          <String, Object?>{
-            'id': 'greeting',
-            'component': 'Label',
-            'text': <String, Object?>{'path': '/name'},
-          },
-          <String, Object?>{
-            'id': 'list',
-            'component': 'Stack',
-            'children': <String, Object?>{
-              'path': '/items',
-              'componentId': 'itemTmpl',
-            },
-          },
-          <String, Object?>{
-            'id': 'itemTmpl',
-            'component': 'Label',
-            'text': <String, Object?>{'path': 'label'},
-          },
-          <String, Object?>{
-            'id': 'btn',
-            'component': 'Tappable',
-            'label': 'Go',
-            'action': <String, Object?>{
-              'event': <String, Object?>{
-                'name': 'go',
-                'context': <String, Object?>{}
-              },
-            },
-          },
-        ],
-        'dataModel': <String, Object?>{
+/// The shared "counter" surface as a2ui_core messages: createSurface, seed the
+/// data model, then a static tree (title/greeting/list/btn) plus a data-driven
+/// list of `itemTmpl`.
+List<A2uiMessage> _counterMessages() => <A2uiMessage>[
+      CreateSurfaceMessage(surfaceId: 'conformance', catalogId: 'demo'),
+      UpdateDataModelMessage(
+        surfaceId: 'conformance',
+        path: '/',
+        value: <String, Object?>{
           'name': 'Ada',
           'items': <Object?>[
             <String, Object?>{'label': 'a'},
             <String, Object?>{'label': 'b'},
           ],
         },
-      },
-    };
+      ),
+      UpdateComponentsMessage(
+        surfaceId: 'conformance',
+        components: <Map<String, dynamic>>[
+          <String, dynamic>{
+            'id': 'root',
+            'component': 'Stack',
+            'children': <Object?>['title', 'greeting', 'list', 'btn'],
+          },
+          <String, dynamic>{
+            'id': 'title',
+            'component': 'Label',
+            'text': 'Hello'
+          },
+          <String, dynamic>{
+            'id': 'greeting',
+            'component': 'Label',
+            'text': <String, dynamic>{'path': '/name'},
+          },
+          <String, dynamic>{
+            'id': 'list',
+            'component': 'Stack',
+            'children': <String, dynamic>{
+              'path': '/items',
+              'componentId': 'itemTmpl',
+            },
+          },
+          <String, dynamic>{
+            'id': 'itemTmpl',
+            'component': 'Label',
+            'text': <String, dynamic>{'path': 'label'},
+          },
+          <String, dynamic>{
+            'id': 'btn',
+            'component': 'Tappable',
+            'label': 'Go',
+            'action': <String, dynamic>{
+              'event': <String, dynamic>{
+                'name': 'go',
+                'context': <String, dynamic>{}
+              },
+            },
+          },
+        ],
+      ),
+    ];

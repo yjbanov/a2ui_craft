@@ -10,6 +10,7 @@ resolution: workspace
 dependencies:
   a2ui_craft: ^0.0.1
   a2ui_craft_bridge: ^0.0.1
+  a2ui_core: any
   flutter:
     sdk: flutter
 
@@ -17,4 +18,6 @@ dev_dependencies:
   a2ui_craft_testing: ^0.0.1
   flutter_test:
     sdk: flutter
+  # The custom-catalog test defines its own a2ui_core component schemas.
+  json_schema_builder: any
   lints: ^4.0.0

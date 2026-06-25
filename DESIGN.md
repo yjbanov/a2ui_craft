@@ -536,17 +536,29 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
         `template_layer_spike_test` (runtime mechanics: named-template
         composition, host-widget injection through `args.children`,
         `EventHandler`-as-arg) and `runA2uiConformance` (end-to-end, both adapters).
-  - [ ] **M6 — layer `a2ui_core` underneath the protocol/data half (§10).** Adopt
-        `a2ui_core` for A2UI ingest, the data model, and binding/function/`checks`
-        resolution; keep RFW + the bridge for template materialization. This is how
-        functions/`formatString`, `checks`, two-way-binding inputs, theme, and
-        `deleteSurface` are delivered — by delegation, **not** by building them on
-        RFW (whose AST has no function/expression node). `deleteSurface` also
-        retires the current map-growth limitation (`A2uiSurface._components` /
-        `_componentListenables` grow monotonically; a2ui_core owns that lifecycle).
-        (M1 & M2 are vendored-RFW divergences: recorded in `VENDORED.md`; propose
-        upstream.)
-  - [ ] **Then** — grow the high-level catalog; richer layout widgets.
+  - [x] **M6 — layer `a2ui_core` underneath the protocol/data half (§10).**
+        `a2ui_core` (a git dependency on `flutter/genui`) now owns A2UI ingest, the
+        data model, and binding/function/`checks` resolution; RFW + the bridge keep
+        materializing templates. The bridge shrank to `A2uiComponentBinding`
+        (one per component id: wraps `a2ui_core`'s `GenericBinder`, surfaces resolved
+        props) + `a2uiArgsFromProps`; each `A2uiToRfwAdapter` now takes an
+        `a2ui_core` `SurfaceModel` + `basePath`, maps resolved props → template args,
+        injects keyed child adapters (A2UI id for static children, positional
+        `basePath` for `ChildList` items), and renders via `buildNode`. Actions are
+        dispatched by `a2ui_core` and wired to RFW `voidHandler` via the resolved-
+        callback affordance (VENDORED extension #3). Deleted: `A2uiSurface`,
+        `SurfaceListenable`, `_buildComponent`/`_children`→`Loop`, `_value`/`_pathRef`,
+        and the M4 data-path — together with the map-growth limitation (`a2ui_core`
+        owns the component/data lifecycle, incl. `deleteSurface`). Reactivity is now
+        component-granular (a `GenericBinder` resolvedProps signal per component).
+        functions/`formatString`, `checks`, and theme are delivered by `a2ui_core` and
+        available to the high-level catalog. Two-way setter wiring (editable inputs)
+        remains follow-on. Verified by the rewritten cross-adapter
+        `runA2uiConformance`, the bridge `A2uiComponentBinding` tests, the custom-
+        catalog reorder test, and the `a2ui_core` seam spike. (M1 & M2 are
+        vendored-RFW divergences; M6 adds extension #3 — all in `VENDORED.md`.)
+  - [ ] **Then** — grow the high-level catalog; richer layout widgets; wire
+        `a2ui_core` two-way setters for editable inputs (`TextField`/`Checkbox`).
 - [ ] **H2 type/style model** (the `argument_decoders` replacement) — the unlock
       for more low-level components and theme; see §9.
 - [ ] Prove the state-model axis with a third, non-Flutter-like framework.
@@ -681,6 +693,11 @@ protocol/data/binding half of the bridge is delegated.
     path breaks CI, and the published pub.dev prerelease lags `main`.) Switch to a
     published version once the team cuts a release.
 
-  With the data, structural, reactivity, and action seams all green, the next step
-  is to start **deleting** the bridge's protocol/data half (the table above) and
-  re-rooting the per-id adapters on `a2ui_core` — adapter by adapter, in lockstep.
+  **Adoption complete (M6).** The deletion + re-rooting in the table above is
+  done: the bridge is now `A2uiComponentBinding` + `a2uiArgsFromProps` over
+  `a2ui_core`; both `A2uiToRfwAdapter`s render from an `a2ui_core` `SurfaceModel`;
+  `runA2uiConformance`, the bridge binding tests, the custom-catalog reorder test,
+  and the seam spike are green on both adapters. `a2ui_core` is pulled via a git
+  dependency on `flutter/genui` (a workspace-wide `dependency_overrides`), to be
+  pinned once the team cuts a release. Remaining: wiring `a2ui_core`'s two-way
+  setters for editable inputs.

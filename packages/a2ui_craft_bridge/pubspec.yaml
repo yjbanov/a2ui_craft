@@ -12,6 +12,8 @@ resolution: workspace
 
 dependencies:
   a2ui_craft: ^0.0.1
+  # The A2UI protocol, data model, and binding/function/checks resolution.
+  a2ui_core: any
 
 dev_dependencies:
   lints: ^4.0.0

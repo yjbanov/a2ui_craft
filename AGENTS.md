@@ -16,8 +16,10 @@ It is a Dart [pub workspace](https://dart.dev/tools/pub/workspaces):
 
 - `packages/a2ui_craft` — core engine. Pure Dart, **no UI-framework dependency**:
   parsing, AST, binary format, and the `DynamicContent` reactive model.
-- `packages/a2ui_craft_bridge` — framework-neutral A2UI integration: translates
-  A2UI Transport surfaces (`A2uiSurface`) into the RFW model the adapters render.
+- `packages/a2ui_craft_bridge` — framework-neutral A2UI integration, layered on
+  `a2ui_core` (the A2UI protocol/data/binding package): an `A2uiComponentBinding`
+  surfaces each component's resolved props, which the adapters render as RFW
+  template args.
 - `packages/a2ui_craft_flutter` — adapter that renders templates as Flutter widgets.
 - `packages/a2ui_craft_jaspr` — adapter that renders templates as HTML DOM (Jaspr).
 

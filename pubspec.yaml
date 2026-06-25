@@ -25,3 +25,14 @@ workspace:
 dev_dependencies:
   lints: ^4.0.0
   test: ^1.25.0
+
+# Workspace-wide override: A2UI Craft layers the A2UI protocol/data model on
+# `a2ui_core`. It is pulled from git so the workspace tracks the latest and so
+# others can run the repo without a local checkout. Switch to a hosted version
+# once the a2ui_core team cuts a release. (`resolution: workspace` in a2ui_core
+# does not block a git dependency.)
+dependency_overrides:
+  a2ui_core:
+    git:
+      url: https://github.com/flutter/genui.git
+      path: packages/a2ui_core

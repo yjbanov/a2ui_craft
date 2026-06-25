@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'package:a2ui_core/a2ui_core.dart';
 import 'package:a2ui_craft/a2ui_craft.dart';
-import 'package:a2ui_craft_bridge/a2ui_craft_bridge.dart';
 import 'package:a2ui_craft_jaspr/a2ui_craft_jaspr.dart';
 import 'package:a2ui_craft_testing/a2ui_craft_testing.dart';
 import 'package:jaspr/jaspr.dart' show Component, Key, ValueKey;
@@ -44,17 +44,12 @@ class _JasprCraftTester implements CraftTester {
   }
 
   @override
-  Object buildAdapter(
-    A2uiSurface surface,
-    String id, [
-    CraftEventHandler? onEvent,
-  ]) {
+  Object buildAdapter(SurfaceModel<ComponentApi> surface, String id) {
     return A2uiToRfwAdapter(
       id: id,
       surface: surface,
       runtime: _runtime,
       scope: a2uiDemoCatalogName,
-      onEvent: onEvent,
     );
   }
 

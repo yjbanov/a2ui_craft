@@ -2,15 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:a2ui_craft_bridge/a2ui_craft_bridge.dart';
+import 'package:a2ui_core/a2ui_core.dart';
 import 'package:a2ui_craft_jaspr/a2ui_craft_jaspr.dart';
 import 'package:jaspr/jaspr.dart';
 import 'package:jaspr_test/jaspr_test.dart';
+import 'package:json_schema_builder/json_schema_builder.dart';
 
 // Exercises a *developer-provided* catalog (not the seed `core` library) driven
-// by a real A2UI surface, and proves end-to-end that reordering a container's
-// children via `updateComponents` preserves each child's identity (and thus its
-// State) — the payoff of keying each `A2uiToRfwAdapter` by its A2UI id.
+// by a real A2UI surface (via a2ui_core), and proves end-to-end that reordering a
+// container's children via `updateComponents` preserves each child's identity
+// (and thus its State) — the payoff of keying each `A2uiToRfwAdapter` by its A2UI
+// id.
 //
 // The catalog uses two distinct *stateful* component types, each stamping a
 // creation ordinal into its State. If a child is merely moved, its ordinal
@@ -37,7 +39,7 @@ class _ProbeState extends State<_Probe> {
   }
 }
 
-/// A custom catalog: a container plus two stateful leaf component types. The
+/// The RFW low-level catalog: a container plus two stateful leaf types. The
 /// adapter resolves names against `core`, so the catalog is registered there.
 LocalComponentLibrary _customCatalog() {
   return LocalComponentLibrary(<String, LocalComponentBuilder>{
@@ -56,22 +58,51 @@ LocalComponentLibrary _customCatalog() {
   });
 }
 
-Map<String, Object?> _surfaceMessage(List<Object?> rootChildren) {
-  return <String, Object?>{
-    'createSurface': <String, Object?>{
-      'surfaceId': 'custom',
-      'components': <Object?>[
-        <String, Object?>{
-          'id': 'root',
-          'component': 'Column',
-          'children': rootChildren,
-        },
-        <String, Object?>{'id': 'pa', 'component': 'ProbeA'},
-        <String, Object?>{'id': 'pb', 'component': 'ProbeB'},
-      ],
-    },
-  };
+/// The matching a2ui_core component schemas.
+class _ColumnApi extends ComponentApi {
+  @override
+  String get name => 'Column';
+  @override
+  Schema get schema => Schema.object(
+        properties: {'children': CommonSchemas.childList},
+        required: ['children'],
+      );
 }
+
+class _ProbeAApi extends ComponentApi {
+  @override
+  String get name => 'ProbeA';
+  @override
+  Schema get schema => Schema.object(properties: {});
+}
+
+class _ProbeBApi extends ComponentApi {
+  @override
+  String get name => 'ProbeB';
+  @override
+  Schema get schema => Schema.object(properties: {});
+}
+
+Catalog<ComponentApi> _coreCatalog() => Catalog<ComponentApi>(
+      id: 'custom',
+      components: [_ColumnApi(), _ProbeAApi(), _ProbeBApi()],
+    );
+
+List<A2uiMessage> _messages(List<Object?> rootChildren) => <A2uiMessage>[
+      CreateSurfaceMessage(surfaceId: 'custom', catalogId: 'custom'),
+      UpdateComponentsMessage(
+        surfaceId: 'custom',
+        components: <Map<String, dynamic>>[
+          <String, dynamic>{
+            'id': 'root',
+            'component': 'Column',
+            'children': rootChildren,
+          },
+          <String, dynamic>{'id': 'pa', 'component': 'ProbeA'},
+          <String, dynamic>{'id': 'pb', 'component': 'ProbeB'},
+        ],
+      ),
+    ];
 
 void main() {
   testComponents(
@@ -79,15 +110,11 @@ void main() {
     (ComponentTester tester) async {
       _probeCreations = 0;
       final Runtime runtime = Runtime()..update(_core, _customCatalog());
-      late final A2uiSurface surface;
-      surface = A2uiSurface(
-        adapterBuilder: (String id) => A2uiToRfwAdapter(
-          id: id,
-          surface: surface,
-          runtime: runtime,
-        ),
-      );
-      surface.apply(_surfaceMessage(<Object?>['pa', 'pb']));
+      final MessageProcessor<ComponentApi> processor =
+          MessageProcessor<ComponentApi>(catalogs: [_coreCatalog()]);
+      processor.processMessages(_messages(<Object?>['pa', 'pb']));
+      final SurfaceModel<ComponentApi> surface =
+          processor.groupModel.getSurface('custom')!;
 
       tester.pumpComponent(
         A2uiToRfwAdapter(id: 'root', surface: surface, runtime: runtime),
@@ -98,17 +125,18 @@ void main() {
       expect(find.text('B#1'), findsOneComponent);
 
       // Reorder root's children via a follow-up updateComponents.
-      surface.apply(<String, Object?>{
-        'updateComponents': <String, Object?>{
-          'components': <Object?>[
-            <String, Object?>{
+      processor.processMessages(<A2uiMessage>[
+        UpdateComponentsMessage(
+          surfaceId: 'custom',
+          components: <Map<String, dynamic>>[
+            <String, dynamic>{
               'id': 'root',
               'component': 'Column',
               'children': <Object?>['pb', 'pa'],
             },
           ],
-        },
-      });
+        ),
+      ]);
       await tester.pump();
 
       // Each child followed its A2UI id: the original ordinals survive (no

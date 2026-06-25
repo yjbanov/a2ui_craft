@@ -13,6 +13,7 @@ dependencies:
   a2ui_core: any
   a2ui_craft: ^0.0.1
   a2ui_craft_bridge: ^0.0.1
+  a2ui_craft_examples: ^0.0.1
   a2ui_craft_flutter: ^0.0.1
 
 dev_dependencies:

@@ -469,10 +469,11 @@ a2ui-craft/
 ├── skills/                       # project skills (adapter-authoring guidance)
 └── packages/
     ├── a2ui_craft/               # core: vendored RFW formats + DynamicContent
-    ├── a2ui_craft_bridge/        # A2UI Transport → engine (framework-neutral)
+    ├── a2ui_craft_bridge/        # A2UI → engine, on a2ui_core (framework-neutral)
     ├── a2ui_craft_testing/       # shared conformance suite + catalog (not published)
-    ├── a2ui_craft_flutter/       # Flutter adapter (runtime + core comps + test)
-    └── a2ui_craft_jaspr/         # Jaspr adapter (runtime + core comps + example + test)
+    ├── a2ui_craft_examples/      # shared, framework-neutral sample specs (demo only)
+    ├── a2ui_craft_flutter/       # Flutter adapter (runtime + core comps + example)
+    └── a2ui_craft_jaspr/         # Jaspr adapter (runtime + core comps + example)
 ```
 
 Run `tool/check.sh` to verify the whole workspace (format, analyze, and tests for
@@ -586,9 +587,15 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
         so `GenericBinder` can scrape behavior. The boundary is exactly right: the
         *protocol* (common types + RFW grammar) is precompiled; *per-template*
         schemas arrive as data. The samples now declare their catalog as JSON
-        Schema (no in-code `ComponentApi` classes); next the template (RFW), messages
-        (JSON), and catalog (JSON Schema) collapse into shared, framework-neutral
-        data, dropping the Flutter/Jaspr sample duplication.
+        Schema (no in-code `ComponentApi` classes).
+  - [x] **Cross-framework sample dedupe.** Because a sample is now pure data
+        (RFW template + JSON-Schema catalog + A2UI messages) plus a small
+        `onAction`, each sample is defined **once** as a framework-neutral
+        `SampleSpec` in `a2ui_craft_examples`. Each example keeps only a thin
+        per-framework `Sample` widget (parse template, `loadCatalog`, process
+        messages, render the `root` adapter) and its gallery shell; the Flutter and
+        Jaspr galleries render the *same* specs. This is a second proof of H1 — one
+        set of sample definitions drives two genuinely different rendering engines.
   - [ ] **Then** — grow the high-level catalog; richer layout widgets; wire
         `a2ui_core` two-way setters for editable inputs (`TextField`/`Checkbox`).
 - [ ] **H2 type/style model** (the `argument_decoders` replacement) — the unlock

@@ -4,16 +4,14 @@
 
 import 'package:a2ui_core/a2ui_core.dart';
 
-import '../sample.dart';
+import '../sample_spec.dart';
 
 /// A high-level `Counter` widget. The count lives in the surface's data model;
 /// pressing the button dispatches `increment`, which reads the current count,
 /// adds one, and writes it back — the bound text re-renders reactively.
-class CounterSample extends Sample {
-  const CounterSample({super.key});
-
-  @override
-  String get catalogSource => '''
+SampleSpec counterSpec(String framework) => SampleSpec(
+      label: 'Counter',
+      catalogSource: '''
 import core;
 
 widget Counter = Column(children: [
@@ -21,10 +19,8 @@ widget Counter = Column(children: [
   Text(text: args.count),
   Button(onPressed: args.action, child: Text(text: args.buttonLabel)),
 ]);
-''';
-
-  @override
-  Map<String, Object?> get catalogSchema => <String, Object?>{
+''',
+      catalogSchema: <String, Object?>{
         'catalogId': catalogId,
         'components': <String, Object?>{
           'Counter': <String, Object?>{
@@ -36,10 +32,8 @@ widget Counter = Column(children: [
             },
           },
         },
-      };
-
-  @override
-  List<A2uiMessage> buildMessages() => <A2uiMessage>[
+      },
+      messages: <A2uiMessage>[
         CreateSurfaceMessage(surfaceId: surfaceId, catalogId: catalogId),
         UpdateDataModelMessage(
           surfaceId: surfaceId,
@@ -64,14 +58,12 @@ widget Counter = Column(children: [
             },
           ],
         ),
-      ];
-
-  @override
-  void onAction(A2uiClientAction action, SampleHost host) {
-    if (action.name == 'increment') {
-      final int current =
-          int.tryParse(host.read('/count') as String? ?? '0') ?? 0;
-      host.updateData('/count', '${current + 1}');
-    }
-  }
-}
+      ],
+      onAction: (A2uiClientAction action, SampleHost host) {
+        if (action.name == 'increment') {
+          final int current =
+              int.tryParse(host.read('/count') as String? ?? '0') ?? 0;
+          host.updateData('/count', '${current + 1}');
+        }
+      },
+    );

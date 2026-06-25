@@ -2,31 +2,29 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'package:a2ui_craft_examples/a2ui_craft_examples.dart';
 import 'package:flutter/material.dart';
 
 import 'sample.dart';
-import 'samples/counter.dart';
-import 'samples/gallery.dart';
-import 'samples/greeting.dart';
-import 'samples/profile_card.dart';
 
 void main() {
   runApp(const GalleryApp());
 }
 
-/// One entry in the gallery's navigation.
-typedef _Entry = ({String label, IconData icon, Sample sample});
+/// The shared sample specs, labelled for this adapter.
+final List<SampleSpec> _specs = sampleSpecs('Flutter');
 
-const List<_Entry> _entries = <_Entry>[
-  (label: 'Greeting', icon: Icons.message, sample: GreetingSample()),
-  (label: 'Counter', icon: Icons.add, sample: CounterSample()),
-  (label: 'Profile Card', icon: Icons.person, sample: ProfileCardSample()),
-  (label: 'Image Gallery', icon: Icons.image, sample: GallerySample()),
+/// Nav icons, parallel to [_specs].
+const List<IconData> _icons = <IconData>[
+  Icons.message,
+  Icons.add,
+  Icons.person,
+  Icons.image,
 ];
 
 /// A simple gallery shell that shows one [Sample] at a time. Each sample is
-/// fully self-contained (its own catalog, runtime, and surface), so switching
-/// tabs tears the old one down and builds the next from scratch.
+/// fully self-contained, so switching tabs tears the old one down and builds the
+/// next from scratch.
 class GalleryApp extends StatefulWidget {
   const GalleryApp({super.key});
 
@@ -49,10 +47,10 @@ class _GalleryAppState extends State<GalleryApp> {
                   setState(() => _index = index),
               labelType: NavigationRailLabelType.all,
               destinations: <NavigationRailDestination>[
-                for (final _Entry entry in _entries)
+                for (var i = 0; i < _specs.length; i++)
                   NavigationRailDestination(
-                    icon: Icon(entry.icon),
-                    label: Text(entry.label),
+                    icon: Icon(_icons[i]),
+                    label: Text(_specs[i].label),
                   ),
               ],
             ),
@@ -66,10 +64,7 @@ class _GalleryAppState extends State<GalleryApp> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   // The key ensures a fresh, isolated sample on every switch.
-                  child: KeyedSubtree(
-                    key: ValueKey<int>(_index),
-                    child: _entries[_index].sample,
-                  ),
+                  child: Sample(_specs[_index], key: ValueKey<int>(_index)),
                 ),
               ),
             ),

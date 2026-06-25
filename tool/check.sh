@@ -26,6 +26,9 @@ step "Analyze: a2ui_craft_bridge (A2UI integration)"
 step "Analyze: a2ui_craft_testing"
 (cd packages/a2ui_craft_testing && dart analyze)
 
+step "Analyze: a2ui_craft_examples (shared sample specs)"
+(cd packages/a2ui_craft_examples && dart analyze)
+
 step "Analyze: a2ui_craft_jaspr"
 (cd packages/a2ui_craft_jaspr && dart analyze)
 

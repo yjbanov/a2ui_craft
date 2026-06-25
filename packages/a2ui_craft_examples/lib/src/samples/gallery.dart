@@ -4,7 +4,7 @@
 
 import 'package:a2ui_core/a2ui_core.dart';
 
-import '../sample.dart';
+import '../sample_spec.dart';
 
 const List<String> _images = <String>[
   'https://images.unsplash.com/photo-1507838153414-b4b713384a76?w=50&h=50&fit=crop',
@@ -15,20 +15,16 @@ const List<String> _images = <String>[
 /// A high-level `Gallery` widget: the agent passes a list of image URLs and the
 /// template iterates over them internally (`...for url in args.images`), so the
 /// A2UI payload is a single component.
-class GallerySample extends Sample {
-  const GallerySample({super.key});
-
-  @override
-  String get catalogSource => '''
+SampleSpec gallerySpec(String framework) => SampleSpec(
+      label: 'Image Gallery',
+      catalogSource: '''
 import core;
 
 widget Gallery = ScrollView(child: Column(children: [
   ...for url in args.images: Image(url: url),
 ]));
-''';
-
-  @override
-  Map<String, Object?> get catalogSchema => <String, Object?>{
+''',
+      catalogSchema: <String, Object?>{
         'catalogId': catalogId,
         'components': <String, Object?>{
           'Gallery': <String, Object?>{
@@ -40,10 +36,8 @@ widget Gallery = ScrollView(child: Column(children: [
             },
           },
         },
-      };
-
-  @override
-  List<A2uiMessage> buildMessages() => <A2uiMessage>[
+      },
+      messages: <A2uiMessage>[
         CreateSurfaceMessage(surfaceId: surfaceId, catalogId: catalogId),
         UpdateComponentsMessage(
           surfaceId: surfaceId,
@@ -55,5 +49,5 @@ widget Gallery = ScrollView(child: Column(children: [
             },
           ],
         ),
-      ];
-}
+      ],
+    );

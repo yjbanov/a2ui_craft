@@ -4,7 +4,7 @@
 
 import 'package:a2ui_core/a2ui_core.dart';
 
-import '../sample.dart';
+import '../sample_spec.dart';
 
 const String _avatar1 =
     'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=50&h=50&fit=crop';
@@ -14,11 +14,9 @@ const String _avatar2 =
 /// A high-level `ProfileCard` widget — a template composing `Card`, `Image`,
 /// `Row`, `Text`, `Icon`, and `Divider`. The agent passes a name/avatar/bio and
 /// arranges several of them with the layout `Column`.
-class ProfileCardSample extends Sample {
-  const ProfileCardSample({super.key});
-
-  @override
-  String get catalogSource => '''
+SampleSpec profileCardSpec(String framework) => SampleSpec(
+      label: 'Profile Card',
+      catalogSource: '''
 import core;
 
 widget ProfileCard = Card(child: Column(children: [
@@ -30,10 +28,8 @@ widget ProfileCard = Card(child: Column(children: [
   Divider(),
   Text(text: args.bio),
 ]));
-''';
-
-  @override
-  Map<String, Object?> get catalogSchema => <String, Object?>{
+''',
+      catalogSchema: <String, Object?>{
         'catalogId': catalogId,
         'components': <String, Object?>{
           'Column': <String, Object?>{
@@ -50,10 +46,8 @@ widget ProfileCard = Card(child: Column(children: [
             },
           },
         },
-      };
-
-  @override
-  List<A2uiMessage> buildMessages() => <A2uiMessage>[
+      },
+      messages: <A2uiMessage>[
         CreateSurfaceMessage(surfaceId: surfaceId, catalogId: catalogId),
         UpdateComponentsMessage(
           surfaceId: surfaceId,
@@ -66,7 +60,7 @@ widget ProfileCard = Card(child: Column(children: [
             <String, dynamic>{
               'id': 'p1',
               'component': 'ProfileCard',
-              'name': 'Flutter Framework',
+              'name': '$framework Framework',
               'avatarUrl': _avatar1,
               'bio': 'Build apps for any screen.',
             },
@@ -80,5 +74,5 @@ widget ProfileCard = Card(child: Column(children: [
             },
           ],
         ),
-      ];
-}
+      ],
+    );

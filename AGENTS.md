@@ -22,6 +22,9 @@ It is a Dart [pub workspace](https://dart.dev/tools/pub/workspaces):
   template args.
 - `packages/a2ui_craft_flutter` — adapter that renders templates as Flutter widgets.
 - `packages/a2ui_craft_jaspr` — adapter that renders templates as HTML DOM (Jaspr).
+- `packages/a2ui_craft_examples` — shared, framework-neutral sample definitions
+  (RFW template + JSON-Schema catalog + A2UI messages) the Flutter and Jaspr
+  example galleries both render. Demo only; not published.
 
 ## Dev environment
 

@@ -2,25 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'package:a2ui_craft_examples/a2ui_craft_examples.dart';
 import 'package:example/main.dart';
 import 'package:example/sample.dart';
-import 'package:example/samples/counter.dart';
-import 'package:example/samples/gallery.dart';
-import 'package:example/samples/greeting.dart';
-import 'package:example/samples/profile_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:network_image_mock/network_image_mock.dart';
 
-/// Mounts a self-contained [Sample] exactly as the gallery does.
-Future<void> _pump(WidgetTester tester, Sample sample) {
-  return tester.pumpWidget(MaterialApp(home: Scaffold(body: sample)));
+/// Mounts a shared [SampleSpec] exactly as the gallery does.
+Future<void> _pump(WidgetTester tester, SampleSpec spec) {
+  return tester.pumpWidget(MaterialApp(home: Scaffold(body: Sample(spec))));
 }
 
 void main() {
   testWidgets('Greeting renders its title, bound message, and button',
       (WidgetTester tester) async {
-    await _pump(tester, const GreetingSample());
+    await _pump(tester, greetingSpec('Flutter'));
     expect(find.text('A2UI Craft × Flutter'), findsOneWidget);
     expect(find.text('Press the button.'), findsOneWidget);
     expect(find.text('Say hi'), findsOneWidget);
@@ -28,7 +25,7 @@ void main() {
 
   testWidgets('Greeting button dispatches an action that updates bound text',
       (WidgetTester tester) async {
-    await _pump(tester, const GreetingSample());
+    await _pump(tester, greetingSpec('Flutter'));
     await tester.tap(find.text('Say hi'));
     await tester.pump();
     expect(find.text('Press the button.'), findsNothing);
@@ -37,7 +34,7 @@ void main() {
 
   testWidgets('Counter renders its label, count, and button',
       (WidgetTester tester) async {
-    await _pump(tester, const CounterSample());
+    await _pump(tester, counterSpec('Flutter'));
     expect(find.text('You have pushed the button this many times:'),
         findsOneWidget);
     expect(find.text('0'), findsOneWidget);
@@ -46,7 +43,7 @@ void main() {
 
   testWidgets('Counter increments its bound count on each press',
       (WidgetTester tester) async {
-    await _pump(tester, const CounterSample());
+    await _pump(tester, counterSpec('Flutter'));
     await tester.tap(find.text('Increment'));
     await tester.pump();
     expect(find.text('1'), findsOneWidget);
@@ -58,7 +55,7 @@ void main() {
   testWidgets('Profile Card renders a Column of ProfileCard templates',
       (WidgetTester tester) async {
     await mockNetworkImagesFor(() async {
-      await _pump(tester, const ProfileCardSample());
+      await _pump(tester, profileCardSpec('Flutter'));
       // Two ProfileCard templates, each expanding to its own card subtree.
       expect(find.text('Flutter Framework'), findsOneWidget);
       expect(find.text('Build apps for any screen.'), findsOneWidget);
@@ -70,7 +67,7 @@ void main() {
   testWidgets('Image Gallery renders three images',
       (WidgetTester tester) async {
     await mockNetworkImagesFor(() async {
-      await _pump(tester, const GallerySample());
+      await _pump(tester, gallerySpec('Flutter'));
       expect(find.byType(Image), findsNWidgets(3));
     });
   });

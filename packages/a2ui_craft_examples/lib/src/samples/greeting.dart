@@ -4,16 +4,14 @@
 
 import 'package:a2ui_core/a2ui_core.dart';
 
-import '../sample.dart';
+import '../sample_spec.dart';
 
 /// A high-level `Greeting` widget: the agent supplies a title, a data-bound
 /// message, and a button; the template builds the whole subtree. Pressing the
 /// button dispatches `greet`, which updates the bound message.
-class GreetingSample extends Sample {
-  const GreetingSample({super.key});
-
-  @override
-  String get catalogSource => '''
+SampleSpec greetingSpec(String framework) => SampleSpec(
+      label: 'Greeting',
+      catalogSource: '''
 import core;
 
 widget Greeting = Column(children: [
@@ -21,10 +19,8 @@ widget Greeting = Column(children: [
   Text(text: args.message),
   Button(onPressed: args.action, child: Text(text: args.buttonLabel)),
 ]);
-''';
-
-  @override
-  Map<String, Object?> get catalogSchema => <String, Object?>{
+''',
+      catalogSchema: <String, Object?>{
         'catalogId': catalogId,
         'components': <String, Object?>{
           'Greeting': <String, Object?>{
@@ -36,10 +32,8 @@ widget Greeting = Column(children: [
             },
           },
         },
-      };
-
-  @override
-  List<A2uiMessage> buildMessages() => <A2uiMessage>[
+      },
+      messages: <A2uiMessage>[
         CreateSurfaceMessage(surfaceId: surfaceId, catalogId: catalogId),
         UpdateDataModelMessage(
           surfaceId: surfaceId,
@@ -52,7 +46,7 @@ widget Greeting = Column(children: [
             <String, dynamic>{
               'id': 'root',
               'component': 'Greeting',
-              'title': 'A2UI Craft × Jaspr',
+              'title': 'A2UI Craft × $framework',
               'message': <String, dynamic>{'path': '/greeting'},
               'buttonLabel': 'Say hi',
               'action': <String, dynamic>{
@@ -64,12 +58,10 @@ widget Greeting = Column(children: [
             },
           ],
         ),
-      ];
-
-  @override
-  void onAction(A2uiClientAction action, SampleHost host) {
-    if (action.name == 'greet') {
-      host.updateData('/greeting', 'Hello from an A2UI event!');
-    }
-  }
-}
+      ],
+      onAction: (A2uiClientAction action, SampleHost host) {
+        if (action.name == 'greet') {
+          host.updateData('/greeting', 'Hello from an A2UI event!');
+        }
+      },
+    );

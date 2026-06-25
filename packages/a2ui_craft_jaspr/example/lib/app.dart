@@ -2,28 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'package:a2ui_craft_examples/a2ui_craft_examples.dart';
 import 'package:jaspr/dom.dart';
 import 'package:jaspr/jaspr.dart';
 
 import 'sample.dart';
-import 'samples/counter.dart';
-import 'samples/gallery.dart';
-import 'samples/greeting.dart';
-import 'samples/profile_card.dart';
 
-/// One entry in the gallery's navigation.
-typedef _Entry = ({String label, Sample sample});
-
-const List<_Entry> _entries = <_Entry>[
-  (label: 'Greeting', sample: GreetingSample()),
-  (label: 'Counter', sample: CounterSample()),
-  (label: 'Profile Card', sample: ProfileCardSample()),
-  (label: 'Image Gallery', sample: GallerySample()),
-];
+/// The shared sample specs, labelled for this adapter.
+final List<SampleSpec> _specs = sampleSpecs('Jaspr');
 
 /// A simple gallery shell that shows one [Sample] at a time. Each sample is
-/// fully self-contained (its own catalog, runtime, and surface), so switching
-/// tabs tears the old one down and builds the next from scratch.
+/// fully self-contained, so switching tabs tears the old one down and builds the
+/// next from scratch.
 class App extends StatefulComponent {
   @override
   State<App> createState() => _AppState();
@@ -50,10 +40,10 @@ class _AppState extends State<App> {
             border: Border.all(color: Colors.blue, width: Unit.pixels(1)),
           ),
           [
-            for (var i = 0; i < _entries.length; i++) ...[
+            for (var i = 0; i < _specs.length; i++) ...[
               button(
                 onClick: () => setState(() => _index = i),
-                [Component.text(_entries[i].label)],
+                [Component.text(_specs[i].label)],
               ),
               div(styles: Styles(height: Unit.pixels(10)), []),
             ],
@@ -73,9 +63,8 @@ class _AppState extends State<App> {
                 border: Border.all(color: Colors.blue, width: Unit.pixels(2)),
                 radius: BorderRadius.circular(Unit.pixels(8)),
               ),
-              // The differing runtimeType per sample guarantees a fresh,
-              // isolated sample (and runtime/surface) on every switch.
-              [_entries[_index].sample],
+              // The key ensures a fresh, isolated sample on every switch.
+              [Sample(_specs[_index], key: ValueKey<int>(_index))],
             ),
           ],
         ),

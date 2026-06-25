@@ -10,17 +10,40 @@ import 'package:json_schema_builder/json_schema_builder.dart';
 /// gallery. This is UI-framework-free so both the app and its tests can import
 /// it (the tests mount each sample's root and assert it renders).
 
-/// The app's **high-level catalog**: small, vetted widgets the agent composes.
-/// `Label`/`Stack`/`Tappable`/`List` are RFW templates over the low-level `core`
-/// library; the agent also references a few `core` primitives (`Card`, `Image`,
-/// `Icon`, `Divider`) directly, since for those a 1:1 wrapper would add nothing.
+/// The app's **high-level catalog**: each agent-facing widget is a vetted RFW
+/// template that composes the low-level `core` primitives. `Greeting`, `Counter`,
+/// `ProfileCard`, and `Gallery` are real domain widgets — the agent supplies a
+/// few props and the template builds the whole subtree — so the A2UI payloads
+/// below stay short and never spell out primitive trees. `Column` is the one
+/// layout widget the agent arranges them with (it resolves to `core`'s `Column`).
 const String catalogSource = '''
 import core;
 
-widget Label = Text(text: args.text);
-widget Stack = Column(children: args.children);
-widget Tappable = Button(onPressed: args.action, child: Text(text: args.label));
-widget List = ScrollView(child: Column(children: args.children));
+widget Greeting = Column(children: [
+  Text(text: args.title),
+  Text(text: args.message),
+  Button(onPressed: args.action, child: Text(text: args.buttonLabel)),
+]);
+
+widget Counter = Column(children: [
+  Text(text: args.label),
+  Text(text: args.count),
+  Button(onPressed: args.action, child: Text(text: args.buttonLabel)),
+]);
+
+widget ProfileCard = Card(child: Column(children: [
+  Image(url: args.avatarUrl),
+  Row(children: [
+    Text(text: args.name),
+    Icon(icon: "check"),
+  ]),
+  Divider(),
+  Text(text: args.bio),
+]));
+
+widget Gallery = ScrollView(child: Column(children: [
+  ...for url in args.images: Image(url: url),
+]));
 ''';
 
 /// The library name under which [catalogSource] is registered.
@@ -40,21 +63,13 @@ const List<String> sampleNames = <String>[
   'Image Gallery',
 ];
 
-/// The matching `a2ui_core` component schemas (these drive `GenericBinder`'s
-/// resolution of bindings, actions, and structural child lists).
-class _LabelApi extends ComponentApi {
+/// The matching `a2ui_core` component schemas — one per **agent-facing** widget
+/// (the primitives the templates use internally are resolved by RFW, not
+/// a2ui_core, so they need no schema here). These drive `GenericBinder`'s
+/// resolution of bindings, actions, and structural child lists.
+class _ColumnApi extends ComponentApi {
   @override
-  String get name => 'Label';
-  @override
-  Schema get schema => Schema.object(
-        properties: {'text': CommonSchemas.dynamicString},
-        required: ['text'],
-      );
-}
-
-class _StackApi extends ComponentApi {
-  @override
-  String get name => 'Stack';
+  String get name => 'Column';
   @override
   Schema get schema => Schema.object(
         properties: {'children': CommonSchemas.childList},
@@ -62,64 +77,53 @@ class _StackApi extends ComponentApi {
       );
 }
 
-class _TappableApi extends ComponentApi {
+class _GreetingApi extends ComponentApi {
   @override
-  String get name => 'Tappable';
+  String get name => 'Greeting';
+  @override
+  Schema get schema => Schema.object(
+        properties: {
+          'title': CommonSchemas.dynamicString,
+          'message': CommonSchemas.dynamicString,
+          'buttonLabel': CommonSchemas.dynamicString,
+          'action': CommonSchemas.action,
+        },
+      );
+}
+
+class _CounterApi extends ComponentApi {
+  @override
+  String get name => 'Counter';
   @override
   Schema get schema => Schema.object(
         properties: {
           'label': CommonSchemas.dynamicString,
+          'count': CommonSchemas.dynamicString,
+          'buttonLabel': CommonSchemas.dynamicString,
           'action': CommonSchemas.action,
         },
-        required: ['label', 'action'],
       );
 }
 
-class _CardApi extends ComponentApi {
+class _ProfileCardApi extends ComponentApi {
   @override
-  String get name => 'Card';
-  @override
-  Schema get schema => Schema.object(
-        properties: {'child': CommonSchemas.componentId},
-        required: ['child'],
-      );
-}
-
-class _DividerApi extends ComponentApi {
-  @override
-  String get name => 'Divider';
-  @override
-  Schema get schema => Schema.object();
-}
-
-class _ImageApi extends ComponentApi {
-  @override
-  String get name => 'Image';
+  String get name => 'ProfileCard';
   @override
   Schema get schema => Schema.object(
         properties: {
-          'url': CommonSchemas.dynamicString,
-          'fit': CommonSchemas.dynamicString,
+          'name': CommonSchemas.dynamicString,
+          'avatarUrl': CommonSchemas.dynamicString,
+          'bio': CommonSchemas.dynamicString,
         },
       );
 }
 
-class _IconApi extends ComponentApi {
+class _GalleryApi extends ComponentApi {
   @override
-  String get name => 'Icon';
-  @override
-  Schema get schema => Schema.object(
-        properties: {'icon': CommonSchemas.dynamicString},
-      );
-}
-
-class _ListApi extends ComponentApi {
-  @override
-  String get name => 'List';
+  String get name => 'Gallery';
   @override
   Schema get schema => Schema.object(
-        properties: {'children': CommonSchemas.childList},
-        required: ['children'],
+        properties: {'images': Schema.list(items: Schema.string())},
       );
 }
 
@@ -127,14 +131,11 @@ class _ListApi extends ComponentApi {
 Catalog<ComponentApi> demoCatalog() => Catalog<ComponentApi>(
       id: catalogId,
       components: [
-        _StackApi(),
-        _LabelApi(),
-        _TappableApi(),
-        _CardApi(),
-        _DividerApi(),
-        _ImageApi(),
-        _IconApi(),
-        _ListApi(),
+        _ColumnApi(),
+        _GreetingApi(),
+        _CounterApi(),
+        _ProfileCardApi(),
+        _GalleryApi(),
       ],
     );
 
@@ -153,6 +154,14 @@ List<A2uiMessage> messagesForSample(String sample) {
   }
 }
 
+// A few image URLs reused across the samples.
+const String _flutterLogo =
+    'https://storage.googleapis.com/cms-storage-bucket/lockup_flutter_horizontal.c823e53b3a1a7b0d36a9.png';
+const String _dartLogo =
+    'https://dart.dev/assets/shared/dart/logo+text/horizontal/white.png';
+const String _flutterShare =
+    'https://flutter.dev/images/flutter-logo-sharing.png';
+
 List<A2uiMessage> _greetingMessages() => <A2uiMessage>[
       CreateSurfaceMessage(surfaceId: surfaceId, catalogId: catalogId),
       UpdateDataModelMessage(
@@ -165,23 +174,10 @@ List<A2uiMessage> _greetingMessages() => <A2uiMessage>[
         components: <Map<String, dynamic>>[
           <String, dynamic>{
             'id': 'root',
-            'component': 'Stack',
-            'children': <Object?>['title', 'greeting', 'btn'],
-          },
-          <String, dynamic>{
-            'id': 'title',
-            'component': 'Label',
-            'text': 'A2UI Craft × Flutter',
-          },
-          <String, dynamic>{
-            'id': 'greeting',
-            'component': 'Label',
-            'text': <String, dynamic>{'path': '/greeting'},
-          },
-          <String, dynamic>{
-            'id': 'btn',
-            'component': 'Tappable',
-            'label': 'Say hi',
+            'component': 'Greeting',
+            'title': 'A2UI Craft × Flutter',
+            'message': <String, dynamic>{'path': '/greeting'},
+            'buttonLabel': 'Say hi',
             'action': <String, dynamic>{
               'event': <String, dynamic>{
                 'name': 'greet',
@@ -205,23 +201,10 @@ List<A2uiMessage> _counterMessages() => <A2uiMessage>[
         components: <Map<String, dynamic>>[
           <String, dynamic>{
             'id': 'root',
-            'component': 'Stack',
-            'children': <Object?>['title', 'count', 'btn'],
-          },
-          <String, dynamic>{
-            'id': 'title',
-            'component': 'Label',
-            'text': 'You have pushed the button this many times:',
-          },
-          <String, dynamic>{
-            'id': 'count',
-            'component': 'Label',
-            'text': <String, dynamic>{'path': '/count'},
-          },
-          <String, dynamic>{
-            'id': 'btn',
-            'component': 'Tappable',
-            'label': 'Increment',
+            'component': 'Counter',
+            'label': 'You have pushed the button this many times:',
+            'count': <String, dynamic>{'path': '/count'},
+            'buttonLabel': 'Increment',
             'action': <String, dynamic>{
               'event': <String, dynamic>{
                 'name': 'increment',
@@ -235,54 +218,27 @@ List<A2uiMessage> _counterMessages() => <A2uiMessage>[
 
 List<A2uiMessage> _profileCardMessages() => <A2uiMessage>[
       CreateSurfaceMessage(surfaceId: surfaceId, catalogId: catalogId),
-      UpdateDataModelMessage(
-        surfaceId: surfaceId,
-        path: '/',
-        value: <String, Object?>{},
-      ),
       UpdateComponentsMessage(
         surfaceId: surfaceId,
         components: <Map<String, dynamic>>[
           <String, dynamic>{
             'id': 'root',
-            'component': 'Card',
-            'child': 'list',
+            'component': 'Column',
+            'children': <Object?>['p1', 'p2'],
           },
           <String, dynamic>{
-            'id': 'list',
-            'component': 'List',
-            'children': <Object?>['avatar', 'name_row', 'div', 'bio'],
+            'id': 'p1',
+            'component': 'ProfileCard',
+            'name': 'Flutter Framework',
+            'avatarUrl': _flutterLogo,
+            'bio': 'Build apps for any screen.',
           },
           <String, dynamic>{
-            'id': 'avatar',
-            'component': 'Image',
-            'url':
-                'https://storage.googleapis.com/cms-storage-bucket/lockup_flutter_horizontal.c823e53b3a1a7b0d36a9.png',
-            'fit': 'contain',
-          },
-          <String, dynamic>{
-            'id': 'name_row',
-            'component': 'Stack',
-            'children': <Object?>['name', 'verified'],
-          },
-          <String, dynamic>{
-            'id': 'name',
-            'component': 'Label',
-            'text': 'Flutter Framework',
-          },
-          <String, dynamic>{
-            'id': 'verified',
-            'component': 'Icon',
-            'icon': 'check',
-          },
-          <String, dynamic>{
-            'id': 'div',
-            'component': 'Divider',
-          },
-          <String, dynamic>{
-            'id': 'bio',
-            'component': 'Label',
-            'text': 'Build apps for any screen.',
+            'id': 'p2',
+            'component': 'ProfileCard',
+            'name': 'Dart',
+            'avatarUrl': _dartLogo,
+            'bio': 'A client-optimized language for fast apps on any platform.',
           },
         ],
       ),
@@ -290,35 +246,13 @@ List<A2uiMessage> _profileCardMessages() => <A2uiMessage>[
 
 List<A2uiMessage> _imageGalleryMessages() => <A2uiMessage>[
       CreateSurfaceMessage(surfaceId: surfaceId, catalogId: catalogId),
-      UpdateDataModelMessage(
-        surfaceId: surfaceId,
-        path: '/',
-        value: <String, Object?>{},
-      ),
       UpdateComponentsMessage(
         surfaceId: surfaceId,
         components: <Map<String, dynamic>>[
           <String, dynamic>{
             'id': 'root',
-            'component': 'List',
-            'children': <Object?>['img1', 'img2', 'img3'],
-          },
-          <String, dynamic>{
-            'id': 'img1',
-            'component': 'Image',
-            'url': 'https://flutter.dev/images/flutter-logo-sharing.png',
-          },
-          <String, dynamic>{
-            'id': 'img2',
-            'component': 'Image',
-            'url':
-                'https://dart.dev/assets/shared/dart/logo+text/horizontal/white.png',
-          },
-          <String, dynamic>{
-            'id': 'img3',
-            'component': 'Image',
-            'url':
-                'https://storage.googleapis.com/cms-storage-bucket/lockup_flutter_horizontal.c823e53b3a1a7b0d36a9.png',
+            'component': 'Gallery',
+            'images': <Object?>[_flutterShare, _dartLogo, _flutterLogo],
           },
         ],
       ),

@@ -55,12 +55,15 @@ void main() {
     expect(find.text('Increment'), findsOneWidget);
   });
 
-  testWidgets('Profile Card sample renders its card contents',
+  testWidgets('Profile Card sample renders a Column of ProfileCard templates',
       (WidgetTester tester) async {
     await mockNetworkImagesFor(() async {
       await _pumpSample(tester, 'Profile Card');
+      // Two ProfileCard templates, each expanding to its own card subtree.
       expect(find.text('Flutter Framework'), findsOneWidget);
       expect(find.text('Build apps for any screen.'), findsOneWidget);
+      expect(find.text('Dart'), findsOneWidget);
+      expect(find.byType(Card), findsNWidgets(2));
     });
   });
 

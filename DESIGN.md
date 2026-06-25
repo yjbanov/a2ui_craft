@@ -558,9 +558,15 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
         catalog reorder test, and the `a2ui_core` seam spike. (M1 & M2 are
         vendored-RFW divergences; M6 adds extension #3 — all in `VENDORED.md`.)
   - [x] **Worked examples + sample tests.** Both adapters ship a gallery example
-        (Greeting, Counter, Profile Card, Image Gallery) over an expanded catalog
-        (`Card`/`Divider`/`Image`/`Icon`/`List` templates over new `Core*`
-        primitives). Each example's catalog + sample message scripts live in an
+        (Greeting, Counter, Profile Card, Image Gallery) that demonstrates the
+        two-level model concretely: each agent-facing widget (`Greeting`,
+        `Counter`, `ProfileCard`, `Gallery`) is a **vetted RFW template** composing
+        low-level `core` primitives (incl. `Image`/`Icon`/`Divider`/`ScrollView`/
+        `Card`, added unprefixed alongside `Text`/`Row`/`Column`/`Button`), so the
+        A2UI payloads only **compose** those templates with a few props — e.g.
+        `Column(children: [ProfileCard(name, avatarUrl, bio), …])`, or a single
+        `Gallery(images: [...])` whose template iterates internally (`...for url in
+        args.images`). Each example's catalog + sample message scripts live in an
         importable `samples.dart`, and `test/samples_test.dart` mounts every
         sample's root and asserts it renders — wired into `tool/check.sh`. This
         surfaced (and fixed) a bridge gap: **single child references** — a prop

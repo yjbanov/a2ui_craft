@@ -51,11 +51,14 @@ void main() {
     expect(find.text('Increment'), findsOneComponent);
   });
 
-  testComponents('Profile Card sample renders its card contents',
+  testComponents(
+      'Profile Card sample renders a Column of ProfileCard templates',
       (ComponentTester tester) async {
     await _pumpSample(tester, 'Profile Card');
+    // Two ProfileCard templates, each expanding to its own card subtree.
     expect(find.text('Jaspr Framework'), findsOneComponent);
     expect(find.text('Build apps for any screen.'), findsOneComponent);
+    expect(find.text('Dart'), findsOneComponent);
   });
 
   testComponents('Image Gallery sample renders three images',

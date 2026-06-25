@@ -2,73 +2,40 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:a2ui_core/a2ui_core.dart';
-import 'package:a2ui_craft/a2ui_craft.dart' show parseLibraryFile;
-import 'package:a2ui_craft_flutter/a2ui_craft_flutter.dart';
 import 'package:flutter/material.dart';
 
-import 'samples.dart';
+import 'sample.dart';
+import 'samples/counter.dart';
+import 'samples/gallery.dart';
+import 'samples/greeting.dart';
+import 'samples/profile_card.dart';
 
 void main() {
-  runApp(const App());
+  runApp(const GalleryApp());
 }
 
-/// End-to-end A2UI demo gallery: an agent would stream the A2UI messages in
-/// `samples.dart`; `a2ui_core` ingests them and resolves bindings/actions, and
-/// A2UI Craft renders the resolved components with the Flutter adapter.
-class App extends StatefulWidget {
-  const App({super.key});
+/// One entry in the gallery's navigation.
+typedef _Entry = ({String label, IconData icon, Sample sample});
+
+const List<_Entry> _entries = <_Entry>[
+  (label: 'Greeting', icon: Icons.message, sample: GreetingSample()),
+  (label: 'Counter', icon: Icons.add, sample: CounterSample()),
+  (label: 'Profile Card', icon: Icons.person, sample: ProfileCardSample()),
+  (label: 'Image Gallery', icon: Icons.image, sample: GallerySample()),
+];
+
+/// A simple gallery shell that shows one [Sample] at a time. Each sample is
+/// fully self-contained (its own catalog, runtime, and surface), so switching
+/// tabs tears the old one down and builds the next from scratch.
+class GalleryApp extends StatefulWidget {
+  const GalleryApp({super.key});
 
   @override
-  State<App> createState() => _AppState();
+  State<GalleryApp> createState() => _GalleryAppState();
 }
 
-class _AppState extends State<App> {
-  final Runtime _runtime = Runtime();
-  late MessageProcessor<ComponentApi> _processor;
-  late SurfaceModel<ComponentApi> _surface;
-
-  String _currentSample = sampleNames.first;
-  int _count = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _runtime
-      ..update(const LibraryName(<String>['core']), createCoreComponents())
-      ..update(catalogName, parseLibraryFile(catalogSource));
-
-    _loadSample(_currentSample);
-  }
-
-  void _loadSample(String sample) {
-    _count = 0;
-    _processor = MessageProcessor<ComponentApi>(catalogs: [demoCatalog()]);
-    _processor.processMessages(messagesForSample(sample));
-    _surface = _processor.groupModel.getSurface(surfaceId)!;
-    _surface.onAction.addListener(_onAction);
-  }
-
-  void _onAction(A2uiClientAction action) {
-    if (action.name == 'greet') {
-      _processor.processMessages(<A2uiMessage>[
-        UpdateDataModelMessage(
-          surfaceId: surfaceId,
-          path: '/greeting',
-          value: 'Hello from an A2UI event!',
-        ),
-      ]);
-    } else if (action.name == 'increment') {
-      _count++;
-      _processor.processMessages(<A2uiMessage>[
-        UpdateDataModelMessage(
-          surfaceId: surfaceId,
-          path: '/count',
-          value: _count.toString(),
-        ),
-      ]);
-    }
-  }
+class _GalleryAppState extends State<GalleryApp> {
+  int _index = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -77,31 +44,16 @@ class _AppState extends State<App> {
         body: Row(
           children: [
             NavigationRail(
-              selectedIndex: sampleNames.indexOf(_currentSample),
-              onDestinationSelected: (int index) {
-                setState(() {
-                  _currentSample = sampleNames[index];
-                  _loadSample(_currentSample);
-                });
-              },
+              selectedIndex: _index,
+              onDestinationSelected: (int index) =>
+                  setState(() => _index = index),
               labelType: NavigationRailLabelType.all,
-              destinations: const [
-                NavigationRailDestination(
-                  icon: Icon(Icons.message),
-                  label: Text('Greeting'),
-                ),
-                NavigationRailDestination(
-                  icon: Icon(Icons.add),
-                  label: Text('Counter'),
-                ),
-                NavigationRailDestination(
-                  icon: Icon(Icons.person),
-                  label: Text('Profile Card'),
-                ),
-                NavigationRailDestination(
-                  icon: Icon(Icons.image),
-                  label: Text('Image Gallery'),
-                ),
+              destinations: <NavigationRailDestination>[
+                for (final _Entry entry in _entries)
+                  NavigationRailDestination(
+                    icon: Icon(entry.icon),
+                    label: Text(entry.label),
+                  ),
               ],
             ),
             const VerticalDivider(thickness: 1, width: 1),
@@ -113,11 +65,10 @@ class _AppState extends State<App> {
                     border: Border.all(color: Colors.blue, width: 2),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: A2uiToRfwAdapter(
-                    id: 'root',
-                    surface: _surface,
-                    runtime: _runtime,
-                    scope: catalogName,
+                  // The key ensures a fresh, isolated sample on every switch.
+                  child: KeyedSubtree(
+                    key: ValueKey<int>(_index),
+                    child: _entries[_index].sample,
                   ),
                 ),
               ),

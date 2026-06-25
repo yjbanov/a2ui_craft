@@ -566,9 +566,11 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
         A2UI payloads only **compose** those templates with a few props — e.g.
         `Column(children: [ProfileCard(name, avatarUrl, bio), …])`, or a single
         `Gallery(images: [...])` whose template iterates internally (`...for url in
-        args.images`). Each example's catalog + sample message scripts live in an
-        importable `samples.dart`, and `test/samples_test.dart` mounts every
-        sample's root and asserts it renders — wired into `tool/check.sh`. This
+        args.images`). Each sample lives in its **own file** as a subclass of an
+        abstract `Sample` widget that owns the sample's catalog, message script,
+        `Runtime`, and surface — so samples are fully isolated from one another;
+        `test/samples_test.dart` mounts each `Sample` and asserts it renders (and
+        that its actions update bound data) — wired into `tool/check.sh`. This
         surfaced (and fixed) a bridge gap: **single child references** — a prop
         typed as a `componentId` (e.g. a `Card`'s `child`), which `a2ui_core`
         resolves to a plain id string — are now injected as one child adapter

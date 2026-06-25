@@ -61,6 +61,16 @@ abstract cheaply, so each adapter vendors its own copy of
    effect on existing RFW usage, which never passes host widgets as args). Needed
    to render runtime-composed A2UI surfaces; upstream candidate. Design:
    `DESIGN.md` §6.
+7. **`handler<T>` accepts a resolved callback (A2UI Craft extension #3).** At the
+   top of `DataSource.handler<T>`, if the fetched argument value is already a Dart
+   `Function` assignable to `T`, it is returned as-is (so `voidHandler` returns it
+   directly). This lets an already-resolved callback be supplied as an argument —
+   the A2UI Craft / `a2ui_core` seam, where `a2ui_core`'s `GenericBinder` resolves
+   an `action` prop to a `Future<void> Function()` that a template wires onto a
+   low-level `Button`'s `onPressed`. Additive: existing RFW parsed args never carry
+   bare Dart functions (only `AnyEventHandler`/`SetStateHandler` nodes), so the
+   branch only matches host-supplied callbacks. Needed for A2UI actions under the
+   `a2ui_core` layering (M6); upstream candidate. Design: `DESIGN.md` §10.
 
 `RemoteComponent` (from RFW's `remote_widget.dart`) is reimplemented per adapter
 with the unified API (`RemoteComponent`, field `component`) rather than RFW's
@@ -75,6 +85,6 @@ with the unified API (`RemoteComponent`, field `component`) rather than RFW's
 
 When pulling a newer `rfw`: re-copy the core files and re-apply the single
 `content.dart` change; re-copy `runtime.dart` per adapter and re-apply
-modifications 1–6 above. The parity/conformance tests (`a2ui_craft_testing` +
+modifications 1–7 above. The parity/conformance tests (`a2ui_craft_testing` +
 `packages/*/test`, including the keyed-reconciliation and buildNode tests) are the
 safety net that the runtimes still behave identically.

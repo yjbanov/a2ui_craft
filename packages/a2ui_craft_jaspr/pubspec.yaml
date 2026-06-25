@@ -15,5 +15,8 @@ dependencies:
 dev_dependencies:
   a2ui_craft_testing: ^0.0.1
   jaspr_test: ^0.16.0
-  a2ui_core: ^0.0.1-dev002
+  a2ui_core:
+    git:
+      url: https://github.com/flutter/genui.git
+      path: packages/a2ui_core
   lints: ^4.0.0

@@ -1548,6 +1548,13 @@ class _WidgetState extends State<_Widget> implements DataSource {
   T? handler<T extends Function>(
       List<Object> argsKey, HandlerGenerator<T> generator) {
     Object value = _fetch(argsKey, expandLists: true);
+    // a2ui_core seam: an already-resolved Dart callback supplied directly as an
+    // argument value (e.g. an action callback produced by a2ui_core's
+    // GenericBinder). RFW's own parsed args never carry bare Dart functions, so
+    // this is additive — it only matches host-supplied callbacks, returned as-is.
+    if (value is T) {
+      return value;
+    }
     if (value is AnyEventHandler) {
       value = <Object>[value];
     } else if (value is _ResolvedDynamicList) {

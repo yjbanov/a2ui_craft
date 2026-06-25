@@ -667,15 +667,20 @@ protocol/data/binding half of the bridge is delegated.
     `DataModel` → `formatString` `computed` → `resolvedProps` signal → a
     `preact_signals`-`subscribe` → `setState` bridge → only the affected card's
     adapter rebuilds (guard-verified: disabling the bridge fails the update test).
-  - **Dependency strategy resolved:** depend on the **published** `a2ui_core`
-    (not a path/workspace override — `resolution: workspace` rules that out, and a
-    local path breaks CI).
-  - **Still to prove (the next, smaller seam):** wiring `a2ui_core` action
-    callbacks / two-way setters to RFW `voidHandler`. `GenericBinder` resolves an
-    `action` prop to a Dart `Future<void> Function()`, but RFW's `handler<T>` today
-    only accepts an `AnyEventHandler`; closing this likely needs one small additive
-    runtime affordance (let `handler<T>`/`voidHandler` return an already-resolved
-    `Function`), recorded as a VENDORED extension.
+  - **Action seam proven.** `GenericBinder` resolves an `action` prop to a Dart
+    `Future<void> Function()`; a template wires it to a low-level `Button`'s
+    `onPressed`; clicking dispatches an `A2uiClientAction` (name + context) back
+    through `a2ui_core`. This required **one small additive runtime affordance** —
+    `handler<T>`/`voidHandler` now accept an already-resolved `Function` arg
+    (VENDORED extension #3, both runtimes; guard-verified). Two-way setters (the
+    `setX` callbacks `GenericBinder` injects for `{path}`-bound props) remain to be
+    wired for editable inputs — a follow-on, not a blocker for read/action UIs.
+  - **Dependency strategy resolved:** depend on `a2ui_core` via a **git dependency**
+    on `flutter/genui` (`packages/a2ui_core`) so we track latest and others can run
+    it locally. (`resolution: workspace` does not block a git or path dep; a bare
+    path breaks CI, and the published pub.dev prerelease lags `main`.) Switch to a
+    published version once the team cuts a release.
 
-  Only after that seam is closed do we start **deleting** the bridge's protocol/data
-  half (the table above) and re-rooting the per-id adapters on `a2ui_core`.
+  With the data, structural, reactivity, and action seams all green, the next step
+  is to start **deleting** the bridge's protocol/data half (the table above) and
+  re-rooting the per-id adapters on `a2ui_core` — adapter by adapter, in lockstep.

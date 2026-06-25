@@ -15,9 +15,11 @@
 //     → Jaspr DOM
 //
 // Scope per §10: a `ProductCard` + `Grid` library over `core`, a surface placing
-// two cards in a grid, a2ui_core resolving one `formatString` and one
-// `updateDataModel`. Actions/two-way setters are intentionally out of scope here
-// (the next, smaller seam — wiring a2ui_core callbacks to RFW voidHandler).
+// two cards in a grid, a2ui_core resolving a `formatString` and an
+// `updateDataModel`. Plus the action seam: a2ui_core resolves an `action` prop to
+// a Dart callback, the template wires it to a low-level Button's `onPressed`, and
+// the runtime's seam affordance (handler<T> accepting a resolved Function) lets it
+// dispatch back into a2ui_core. Two-way setters remain future work.
 
 import 'package:a2ui_core/a2ui_core.dart';
 import 'package:a2ui_craft/a2ui_craft.dart';
@@ -36,6 +38,12 @@ widget ProductCard = Column(children: [
 ]);
 
 widget Grid = Column(children: args.children);
+
+widget Tappable = Button(
+  key: 'buy',
+  onPressed: args.action,
+  child: Text(text: args.label),
+);
 ''';
 
 const LibraryName _catalogName = LibraryName(<String>['catalog']);
@@ -67,9 +75,23 @@ class _GridApi extends ComponentApi {
       );
 }
 
+class _TappableApi extends ComponentApi {
+  @override
+  String get name => 'Tappable';
+
+  @override
+  Schema get schema => Schema.object(
+        properties: {
+          'label': CommonSchemas.dynamicString,
+          'action': CommonSchemas.action,
+        },
+        required: ['label', 'action'],
+      );
+}
+
 Catalog<ComponentApi> _buildCatalog() => Catalog<ComponentApi>(
       id: 'spike',
-      components: [_GridApi(), _ProductCardApi()],
+      components: [_GridApi(), _ProductCardApi(), _TappableApi()],
       functions: [FormatStringFunction()],
     );
 
@@ -283,6 +305,57 @@ void main() {
       expect(find.text('Price: 19.99').evaluate(), isEmpty);
       // p2 untouched.
       expect(find.text('Price: 5.0').evaluate(), isNotEmpty);
+    },
+  );
+
+  testComponents(
+    'an a2ui_core action callback fires through RFW voidHandler',
+    (ComponentTester tester) async {
+      // a2ui_core's GenericBinder resolves an `action` prop to a Dart callback
+      // that dispatches through the surface. The Tappable template wires it to a
+      // low-level Button's `onPressed`; the runtime's seam affordance lets
+      // voidHandler accept that resolved callback directly.
+      final List<A2uiClientAction> actions = <A2uiClientAction>[];
+      surface.onAction.addListener(actions.add);
+
+      processor.processMessages(<A2uiMessage>[
+        UpdateComponentsMessage(
+          surfaceId: 's',
+          components: <Map<String, dynamic>>[
+            <String, dynamic>{
+              'id': 'btn',
+              'component': 'Tappable',
+              'label': 'Buy',
+              'action': <String, dynamic>{
+                'event': <String, dynamic>{
+                  'name': 'addToCart',
+                  'context': <String, dynamic>{'productId': 'p1'},
+                },
+              },
+            },
+          ],
+        ),
+      ]);
+
+      tester.pumpComponent(
+        _SeamAdapter(
+          id: 'btn',
+          basePath: '/',
+          surface: surface,
+          runtime: runtime,
+        ),
+      );
+      await tester.pump();
+      expect(find.text('Buy').evaluate(), isNotEmpty);
+      expect(actions, isEmpty);
+
+      await tester.click(find.byKey(const ValueKey<String>('buy')));
+      // The dispatched action carries the A2UI event name and context — proof
+      // the callback round-tripped through the template and back into a2ui_core.
+      expect(
+          actions.map((A2uiClientAction a) => a.name), <String>['addToCart']);
+      expect(actions.single.context, <String, dynamic>{'productId': 'p1'});
+      expect(actions.single.sourceComponentId, 'btn');
     },
   );
 }

@@ -118,7 +118,9 @@ void main() {
     // Inspect the 'btn' component.
     final ConstructorCall button = surface.componentDefinition('btn').value!;
     expect(button.name, 'Button');
-    final EventHandler handler = button.arguments['onPressed']! as EventHandler;
+    // Props map to args by name: the A2UI `action` becomes an `action` arg
+    // (a template maps it onto the low-level widget's handler).
+    final EventHandler handler = button.arguments['action']! as EventHandler;
     expect(handler.eventName, 'go');
     expect(button.arguments['child'], 'adapter:btnLabel');
   });

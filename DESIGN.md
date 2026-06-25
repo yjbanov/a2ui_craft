@@ -440,22 +440,18 @@ which imports and composes `core`. `Grid`'s `args.children` receive the child
 adapters (`p1`, `wx`) via host-widget injection, reconciled by id under partial
 updates.
 
-**Known gap (current code).** The bridge today maps A2UI components straight to
-low-level `core` components, and A2UI references those primitive names — i.e. it
-treats the low-level catalog as if it were the high-level one (a degenerate case
-where high == low, no templates). The high-level template library, and pointing
-the bridge's `scope` at it, is the next structural step (M5).
-
-**Mechanic validated (M5 spike).** `template_layer_spike_test` (both adapters)
-proves the rendering path with **no runtime changes**: `buildNode` resolves a
-*named* high-level template against `scope: catalog` (which `import core;`), binds
-component props as `args`, composes the low-level catalog, and — the previously
-open question — injects runtime host-widget `children` through a named template's
-`args.children` (e.g. a `Grid` of injected `ProductCard`s). What remains for M5 is
-**bridge wiring only**: register the high-level `RemoteWidgetLibrary`, point the
-adapter's `scope` at it, and map A2UI component props → template `args`
-generically (children → injected child adapters), replacing the hardcoded
-low-level type switch.
+**Status: done (M5).** The two levels are no longer conflated. The bridge is now
+**catalog-agnostic** — `_buildComponent` maps a component's props to `args` **by
+name** (`children`/`child` are structural slots by key; an `{event}`→`EventHandler`,
+a `{path}`→data binding, else literal), with no per-type knowledge — and
+`A2uiToRfwAdapter` takes a configurable `scope` (the high-level catalog library).
+A high-level template then maps those args onto the low-level catalog (e.g.
+`widget Tappable = Button(onPressed: args.action, …)`). The conformance suite and
+the Jaspr example now render A2UI components (`Stack`/`Label`/`Tappable`) against a
+real high-level catalog over `core`. Validated bottom-up: `template_layer_spike_test`
+proves the runtime mechanics (named-template composition, host-widget injection
+through `args.children`, `EventHandler`-as-arg) with **no runtime changes**;
+`runA2uiConformance` proves the end-to-end bridge path on both adapters.
 
 ## 7. Repository layout
 
@@ -532,11 +528,14 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
         No new RFW deviation (Loop is used as-is). Covered by bridge unit tests
         (list field/append/remove, nested-loop scoping) and cross-adapter
         conformance (list grow/shrink, per-item update, nested lists).
-  - [ ] **M5 — the template layer (§6).** Author the high-level catalog as an RFW
-        `RemoteWidgetLibrary` over the low-level `core` library, point the bridge's
-        `scope` at it, and feed component props as template `args`. This is the
-        degenerate-case fix (today high == low) and the heart of the hypothesis.
-        Validate named-template invocation with injected host-widget `children`.
+  - [x] **M5 — the template layer (§6).** The bridge is catalog-agnostic (props →
+        `args` by name; `children`/`child` structural; `{event}`/`{path}` by
+        shape) and `A2uiToRfwAdapter` takes a configurable `scope`. Conformance +
+        the Jaspr example render A2UI components (`Stack`/`Label`/`Tappable`)
+        against a real high-level catalog over `core`. Covered by
+        `template_layer_spike_test` (runtime mechanics: named-template
+        composition, host-widget injection through `args.children`,
+        `EventHandler`-as-arg) and `runA2uiConformance` (end-to-end, both adapters).
   - [ ] **M6 — layer `a2ui_core` underneath the protocol/data half (§10).** Adopt
         `a2ui_core` for A2UI ingest, the data model, and binding/function/`checks`
         resolution; keep RFW + the bridge for template materialization. This is how

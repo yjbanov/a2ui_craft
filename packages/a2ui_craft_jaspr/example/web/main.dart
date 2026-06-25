@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'package:a2ui_craft/a2ui_craft.dart' show parseLibraryFile;
 import 'package:a2ui_craft_bridge/a2ui_craft_bridge.dart';
 import 'package:a2ui_craft_jaspr/a2ui_craft_jaspr.dart';
 import 'package:jaspr/browser.dart';
@@ -9,6 +10,21 @@ import 'package:jaspr/browser.dart';
 void main() {
   runApp(App());
 }
+
+/// This app's **high-level catalog**: small, vetted widgets the agent composes,
+/// authored as RFW templates over the low-level `core` library. A2UI components
+/// reference these names; the bridge passes their props through as `args`.
+const String _catalogSource = '''
+import core;
+
+widget Label = Text(text: args.text);
+
+widget Stack = Column(children: args.children);
+
+widget Tappable = Button(onPressed: args.action, child: Text(text: args.label));
+''';
+
+const LibraryName _catalog = LibraryName(<String>['catalog']);
 
 /// End-to-end A2UI demo: an agent would stream the A2UI Transport messages
 /// below; the client renders them with A2UI Craft templates as the catalog (here
@@ -25,14 +41,16 @@ class _AppState extends State<App> {
   @override
   void initState() {
     super.initState();
-    _runtime.update(
-        const LibraryName(<String>['core']), createCoreComponents());
+    _runtime
+      ..update(const LibraryName(<String>['core']), createCoreComponents())
+      ..update(_catalog, parseLibraryFile(_catalogSource));
 
     _surface = A2uiSurface(
       adapterBuilder: (String id) => A2uiToRfwAdapter(
         id: id,
         surface: _surface,
         runtime: _runtime,
+        scope: _catalog,
         onEvent: _onEvent,
       ),
     );
@@ -67,6 +85,7 @@ class _AppState extends State<App> {
           id: 'root',
           surface: _surface,
           runtime: _runtime,
+          scope: _catalog,
           onEvent: _onEvent,
         ),
       ],
@@ -81,28 +100,23 @@ Map<String, Object?> _createSurfaceMessage() => <String, Object?>{
         'components': <Object?>[
           <String, Object?>{
             'id': 'root',
-            'component': 'Column',
+            'component': 'Stack',
             'children': <Object?>['title', 'greeting', 'btn'],
           },
           <String, Object?>{
             'id': 'title',
-            'component': 'Text',
+            'component': 'Label',
             'text': 'A2UI Craft × Jaspr',
           },
           <String, Object?>{
             'id': 'greeting',
-            'component': 'Text',
+            'component': 'Label',
             'text': <String, Object?>{'path': '/greeting'},
           },
           <String, Object?>{
-            'id': 'btnLabel',
-            'component': 'Text',
-            'text': 'Say hi',
-          },
-          <String, Object?>{
             'id': 'btn',
-            'component': 'Button',
-            'child': 'btnLabel',
+            'component': 'Tappable',
+            'label': 'Say hi',
             'action': <String, Object?>{
               'event': <String, Object?>{
                 'name': 'greet',

@@ -22,6 +22,7 @@ class A2uiToRfwAdapter extends StatefulWidget {
     required this.id,
     required this.surface,
     required this.runtime,
+    this.scope = const LibraryName(<String>['core']),
     this.onEvent,
   }) : super(key: ValueKey<String>(id));
 
@@ -33,6 +34,11 @@ class A2uiToRfwAdapter extends StatefulWidget {
 
   /// The engine evaluating the RFW template.
   final Runtime runtime;
+
+  /// The library whose names the component resolves against — the **high-level
+  /// catalog** (which imports the low-level `core` library). A2UI `component`
+  /// types are looked up here.
+  final LibraryName scope;
 
   /// Event handler for actions dispatched by the rendered component.
   final RemoteEventHandler? onEvent;
@@ -82,7 +88,7 @@ class _A2uiToRfwAdapterState extends State<A2uiToRfwAdapter> {
       call,
       widget.surface.data,
       widget.onEvent ?? (String name, DynamicMap arguments) {},
-      scope: const LibraryName(<String>['core']),
+      scope: widget.scope,
     );
   }
 }

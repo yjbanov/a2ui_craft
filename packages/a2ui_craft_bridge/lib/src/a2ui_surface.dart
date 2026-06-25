@@ -196,37 +196,54 @@ class A2uiSurface {
 
   // --- translation: A2UI component map -> RFW model -----------------------
 
+  /// Translates an A2UI component map into an RFW [ConstructorCall] that invokes
+  /// the catalog widget of the same name, passing the component's props as args.
+  ///
+  /// The bridge is **catalog-agnostic**: it does not know any widget's arg schema
+  /// (that is the template's concern), so props map to args **by name**. Two
+  /// structural slots are recognized by key — `children` (a static id list or a
+  /// `ChildList` template) and `child` (a single id) — and resolve to host
+  /// adapters / loops. Otherwise the value *shape* decides (see [_arg]). A
+  /// high-level template then maps these args onto the low-level catalog (e.g.
+  /// `widget Tappable = Button(onPressed: args.action, ...)`).
   ConstructorCall _buildComponent(
     Map<String, Object?> component, {
     required bool inLoop,
   }) {
     final String type = component['component'] as String;
     final DynamicMap args = <String, Object?>{};
-
-    switch (type) {
-      case 'Text':
-        args['text'] = _value(component['text'], inLoop: inLoop);
-      case 'Row':
-      case 'Column':
-        args['children'] = _children(component['children'], inLoop: inLoop);
-      case 'Button':
-        final Object? child = component['child'];
-        if (child is String) {
-          args['child'] = _buildById(child, inLoop: inLoop);
-        }
-        final Object? action = component['action'];
-        if (action is Map<String, Object?>) {
-          final Object? event = action['event'];
-          if (event is Map<String, Object?>) {
-            args['onPressed'] = EventHandler(
-              event['name'] as String,
-              _context(event['context'], inLoop: inLoop),
-            );
-          }
-        }
+    for (final MapEntry<String, Object?> entry in component.entries) {
+      if (entry.key == 'id' || entry.key == 'component') {
+        continue;
+      }
+      args[entry.key] = _arg(entry.key, entry.value, inLoop: inLoop);
     }
-
     return ConstructorCall(type, args);
+  }
+
+  /// Translates a single A2UI prop into its RFW arg value: `children`/`child`
+  /// are structural slots; an `{event}` becomes an [EventHandler], a `{path}` a
+  /// data binding, and anything else passes through as a literal.
+  Object? _arg(String key, Object? value, {required bool inLoop}) {
+    if (key == 'children') {
+      return _children(value, inLoop: inLoop);
+    }
+    if (key == 'child' && value is String) {
+      return _buildById(value, inLoop: inLoop);
+    }
+    if (value is Map<String, Object?>) {
+      final Object? event = value['event'];
+      if (event is Map<String, Object?>) {
+        return EventHandler(
+          event['name'] as String,
+          _context(event['context'], inLoop: inLoop),
+        );
+      }
+      if (value.containsKey('path')) {
+        return _value(value, inLoop: inLoop);
+      }
+    }
+    return value;
   }
 
   Object _buildById(String id, {required bool inLoop}) {

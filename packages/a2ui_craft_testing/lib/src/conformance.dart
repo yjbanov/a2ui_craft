@@ -6,6 +6,24 @@ import 'package:a2ui_craft/a2ui_craft.dart';
 import 'package:a2ui_craft_bridge/a2ui_craft_bridge.dart';
 import 'package:test/test.dart';
 
+/// The high-level demo catalog used by [runA2uiConformance], authored as RFW
+/// templates over the low-level `core` library. A2UI components reference these
+/// names; each template maps the component's props (`args`) onto the low-level
+/// catalog. Adapters parse this with `parseLibraryFile` and register it under
+/// [a2uiDemoCatalogName], then render A2UI components with that as their scope.
+const String a2uiDemoCatalogSource = '''
+import core;
+
+widget Label = Text(text: args.text);
+
+widget Stack = Column(children: args.children);
+
+widget Tappable = Button(onPressed: args.action, child: Text(text: args.label));
+''';
+
+/// The library name under which [a2uiDemoCatalogSource] is registered.
+const LibraryName a2uiDemoCatalogName = LibraryName(<String>['catalog']);
+
 /// Framework-neutral signature for an event dispatched by a rendered component.
 ///
 /// Mirrors each adapter's `RemoteEventHandler` (which this package cannot name
@@ -241,7 +259,11 @@ void runA2uiConformance(CraftConformanceDriver driver) {
       surface.apply(<String, Object?>{
         'updateComponents': <String, Object?>{
           'components': <Object?>[
-            <String, Object?>{'id': 'title', 'component': 'Text', 'text': 'Hi'},
+            <String, Object?>{
+              'id': 'title',
+              'component': 'Label',
+              'text': 'Hi'
+            },
           ],
         },
       });
@@ -276,7 +298,7 @@ void runA2uiConformance(CraftConformanceDriver driver) {
           'components': <Object?>[
             <String, Object?>{
               'id': 'root',
-              'component': 'Column',
+              'component': 'Stack',
               'children': <Object?>['btn', 'title'],
             },
           ],
@@ -378,7 +400,7 @@ void runA2uiConformance(CraftConformanceDriver driver) {
           'components': <Object?>[
             <String, Object?>{
               'id': 'root',
-              'component': 'Column',
+              'component': 'Stack',
               'children': <String, Object?>{
                 'path': '/groups',
                 'componentId': 'group',
@@ -386,7 +408,7 @@ void runA2uiConformance(CraftConformanceDriver driver) {
             },
             <String, Object?>{
               'id': 'group',
-              'component': 'Column',
+              'component': 'Stack',
               'children': <String, Object?>{
                 'path': 'members',
                 'componentId': 'member',
@@ -394,7 +416,7 @@ void runA2uiConformance(CraftConformanceDriver driver) {
             },
             <String, Object?>{
               'id': 'member',
-              'component': 'Text',
+              'component': 'Label',
               'text': <String, Object?>{'path': 'name'},
             },
           ],
@@ -430,22 +452,22 @@ Map<String, Object?> _a2uiCounterSurface() => <String, Object?>{
         'components': <Object?>[
           <String, Object?>{
             'id': 'root',
-            'component': 'Column',
+            'component': 'Stack',
             'children': <Object?>['title', 'greeting', 'list', 'btn'],
           },
           <String, Object?>{
             'id': 'title',
-            'component': 'Text',
+            'component': 'Label',
             'text': 'Hello'
           },
           <String, Object?>{
             'id': 'greeting',
-            'component': 'Text',
+            'component': 'Label',
             'text': <String, Object?>{'path': '/name'},
           },
           <String, Object?>{
             'id': 'list',
-            'component': 'Column',
+            'component': 'Stack',
             'children': <String, Object?>{
               'path': '/items',
               'componentId': 'itemTmpl',
@@ -453,24 +475,19 @@ Map<String, Object?> _a2uiCounterSurface() => <String, Object?>{
           },
           <String, Object?>{
             'id': 'itemTmpl',
-            'component': 'Text',
+            'component': 'Label',
             'text': <String, Object?>{'path': 'label'},
           },
           <String, Object?>{
             'id': 'btn',
-            'component': 'Button',
-            'child': 'btnLabel',
+            'component': 'Tappable',
+            'label': 'Go',
             'action': <String, Object?>{
               'event': <String, Object?>{
                 'name': 'go',
                 'context': <String, Object?>{}
               },
             },
-          },
-          <String, Object?>{
-            'id': 'btnLabel',
-            'component': 'Text',
-            'text': 'Go'
           },
         ],
         'dataModel': <String, Object?>{

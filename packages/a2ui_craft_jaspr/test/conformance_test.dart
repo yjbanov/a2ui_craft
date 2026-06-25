@@ -18,7 +18,8 @@ class _JasprCraftTester implements CraftTester {
   final ComponentTester _tester;
 
   final Runtime _runtime = Runtime()
-    ..update(const LibraryName(<String>['core']), createCoreComponents());
+    ..update(const LibraryName(<String>['core']), createCoreComponents())
+    ..update(a2uiDemoCatalogName, parseLibraryFile(a2uiDemoCatalogSource));
 
   @override
   Future<void> mountLibrary(
@@ -52,6 +53,7 @@ class _JasprCraftTester implements CraftTester {
       id: id,
       surface: surface,
       runtime: _runtime,
+      scope: a2uiDemoCatalogName,
       onEvent: onEvent,
     );
   }

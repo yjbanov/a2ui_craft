@@ -170,4 +170,46 @@ void main() {
       expect(const Rgba(0x00000000).toCssString(), 'rgba(0, 0, 0, 0.0)');
     });
   });
+
+  group('TextVariant.parse', () {
+    test('parses canonical names; defaults to body', () {
+      expect(TextVariant.parse('caption'), TextVariant.caption);
+      expect(TextVariant.parse('body'), TextVariant.body);
+      expect(TextVariant.parse(null), TextVariant.body);
+      expect(TextVariant.parse('bogus'), TextVariant.body);
+    });
+  });
+
+  group('ImageFit.parse', () {
+    test('parses each name; defaults to fill', () {
+      expect(ImageFit.parse('contain'), ImageFit.contain);
+      expect(ImageFit.parse('cover'), ImageFit.cover);
+      expect(ImageFit.parse('fill'), ImageFit.fill);
+      expect(ImageFit.parse('none'), ImageFit.none);
+      expect(ImageFit.parse('scaleDown'), ImageFit.scaleDown);
+      expect(ImageFit.parse(null), ImageFit.fill);
+      expect(ImageFit.parse('bogus'), ImageFit.fill);
+    });
+  });
+
+  group('ImageVariant', () {
+    test('parses each name; defaults to mediumFeature', () {
+      expect(ImageVariant.parse('icon'), ImageVariant.icon);
+      expect(ImageVariant.parse('avatar'), ImageVariant.avatar);
+      expect(ImageVariant.parse('header'), ImageVariant.header);
+      expect(ImageVariant.parse(null), ImageVariant.mediumFeature);
+      expect(ImageVariant.parse('bogus'), ImageVariant.mediumFeature);
+    });
+
+    test('canonical sizes: fixed variants are square; header fills width', () {
+      expect(ImageVariant.icon.width, 24);
+      expect(ImageVariant.icon.height, 24);
+      expect(ImageVariant.avatar.width, 48);
+      expect(ImageVariant.avatar.circular, isTrue);
+      expect(ImageVariant.largeFeature.width, 280);
+      expect(ImageVariant.header.width, isNull); // fills available width
+      expect(ImageVariant.header.height, 200);
+      expect(ImageVariant.mediumFeature.circular, isFalse);
+    });
+  });
 }

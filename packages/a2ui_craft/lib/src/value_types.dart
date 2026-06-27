@@ -361,3 +361,112 @@ final class Rgba {
   String toString() =>
       'Rgba(0x${value.toRadixString(16).padLeft(8, '0').toUpperCase()})';
 }
+
+/// A hint for a `Text`'s base style.
+///
+/// The renderer (eventually a theme) decides the concrete size/weight; [body] is
+/// the default running text and [caption] is smaller, secondary text.
+enum TextVariant {
+  body,
+  caption;
+
+  /// Parses `"body"` / `"caption"`, defaulting to [body].
+  static TextVariant parse(String? raw,
+      {TextVariant fallback = TextVariant.body}) {
+    switch (raw?.trim()) {
+      case 'body':
+        return TextVariant.body;
+      case 'caption':
+        return TextVariant.caption;
+      default:
+        return fallback;
+    }
+  }
+}
+
+/// How an `Image` is resized to fit its box — the equivalent of CSS
+/// `object-fit` and Flutter `BoxFit`.
+enum ImageFit {
+  contain,
+  cover,
+  fill,
+  none,
+  scaleDown;
+
+  /// Parses a canonical name, defaulting to [fallback] ([fill]).
+  static ImageFit parse(String? raw, {ImageFit fallback = ImageFit.fill}) {
+    switch (raw?.trim()) {
+      case 'contain':
+        return ImageFit.contain;
+      case 'cover':
+        return ImageFit.cover;
+      case 'fill':
+        return ImageFit.fill;
+      case 'none':
+        return ImageFit.none;
+      case 'scaleDown':
+        return ImageFit.scaleDown;
+      default:
+        return fallback;
+    }
+  }
+}
+
+/// A hint for an `Image`'s size and shape.
+///
+/// Each variant maps to a canonical box ([width] × [height]) that **both
+/// adapters share**, so an image of a given variant occupies the same space on
+/// Flutter and the web. A null dimension means "fill the available extent on
+/// that axis" (the [header] variant spans its container's width).
+enum ImageVariant {
+  icon,
+  avatar,
+  smallFeature,
+  mediumFeature,
+  largeFeature,
+  header;
+
+  /// Parses a canonical name, defaulting to [fallback] ([mediumFeature]).
+  static ImageVariant parse(String? raw,
+      {ImageVariant fallback = ImageVariant.mediumFeature}) {
+    switch (raw?.trim()) {
+      case 'icon':
+        return ImageVariant.icon;
+      case 'avatar':
+        return ImageVariant.avatar;
+      case 'smallFeature':
+        return ImageVariant.smallFeature;
+      case 'mediumFeature':
+        return ImageVariant.mediumFeature;
+      case 'largeFeature':
+        return ImageVariant.largeFeature;
+      case 'header':
+        return ImageVariant.header;
+      default:
+        return fallback;
+    }
+  }
+
+  /// The canonical width in logical pixels, or null to fill the available width.
+  double? get width => switch (this) {
+        ImageVariant.icon => 24,
+        ImageVariant.avatar => 48,
+        ImageVariant.smallFeature => 96,
+        ImageVariant.mediumFeature => 160,
+        ImageVariant.largeFeature => 280,
+        ImageVariant.header => null,
+      };
+
+  /// The canonical height in logical pixels.
+  double get height => switch (this) {
+        ImageVariant.icon => 24,
+        ImageVariant.avatar => 48,
+        ImageVariant.smallFeature => 96,
+        ImageVariant.mediumFeature => 160,
+        ImageVariant.largeFeature => 280,
+        ImageVariant.header => 200,
+      };
+
+  /// Whether the image is clipped to a circle (the [avatar] variant).
+  bool get circular => this == ImageVariant.avatar;
+}

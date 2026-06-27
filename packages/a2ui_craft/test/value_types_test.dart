@@ -90,4 +90,84 @@ void main() {
       expect(CrossAxisAlign.parse('bogus'), CrossAxisAlign.center);
     });
   });
+
+  group('Insets.decode', () {
+    test('a bare number is the same offset on all sides', () {
+      expect(Insets.decode(8), const Insets.all(8));
+      expect(Insets.decode(2.5), const Insets(2.5, 2.5, 2.5, 2.5));
+    });
+
+    test('a 2-element array is [vertical, horizontal]', () {
+      // vertical=10 → top/bottom; horizontal=20 → left/right.
+      final Insets i = Insets.decode(<Object?>[10, 20]);
+      expect(i.top, 10);
+      expect(i.bottom, 10);
+      expect(i.left, 20);
+      expect(i.right, 20);
+    });
+
+    test('a 4-element array is [top, right, bottom, left] (CSS order)', () {
+      // Deliberately asymmetric so a side-swap would be caught.
+      final Insets i = Insets.decode(<Object?>[1, 2, 3, 4]);
+      expect(i.top, 1);
+      expect(i.right, 2);
+      expect(i.bottom, 3);
+      expect(i.left, 4);
+    });
+
+    test('accepts int or double elements', () {
+      expect(
+          Insets.decode(<Object?>[1, 2.5, 3, 4]), const Insets(1, 2.5, 3, 4));
+    });
+
+    test('unrecognized shapes decode to zero', () {
+      expect(Insets.decode(null), Insets.zero);
+      expect(Insets.decode('8'), Insets.zero); // strings are not insets
+      expect(Insets.decode(<Object?>[1, 2, 3]), Insets.zero); // wrong length
+      expect(Insets.decode(<Object?>[1, 'x', 3, 4]), Insets.zero); // non-num
+    });
+
+    test('named constructors and isZero', () {
+      expect(const Insets.all(0).isZero, isTrue);
+      expect(Insets.zero.isZero, isTrue);
+      expect(const Insets.all(1).isZero, isFalse);
+      expect(const Insets.symmetric(vertical: 5, horizontal: 9),
+          const Insets(5, 9, 5, 9));
+      // fromLTRB(left, top, right, bottom) maps to (top, right, bottom, left).
+      expect(const Insets.fromLTRB(4, 1, 2, 3), const Insets(1, 2, 3, 4));
+    });
+  });
+
+  group('Rgba.decode', () {
+    test('a 6-digit hex string is opaque', () {
+      final Rgba? c = Rgba.decode('#102030');
+      expect(c, isNotNull);
+      expect(c!.value, 0xFF102030);
+      expect(c.alpha, 0xFF);
+      expect(c.red, 0x10);
+      expect(c.green, 0x20);
+      expect(c.blue, 0x30);
+    });
+
+    test('an 8-digit hex string carries its alpha', () {
+      expect(Rgba.decode('#80aabbcc')!.value, 0x80AABBCC);
+    });
+
+    test('parsing is case-insensitive and trims whitespace', () {
+      expect(Rgba.decode('  #AaBbCc ')!.value, 0xFFAABBCC);
+    });
+
+    test('invalid inputs decode to null', () {
+      expect(Rgba.decode('102030'), isNull); // missing '#'
+      expect(Rgba.decode('#12345'), isNull); // wrong length
+      expect(Rgba.decode('#GG0000'), isNull); // non-hex
+      expect(Rgba.decode(0xFF102030), isNull); // not a string
+      expect(Rgba.decode(null), isNull);
+    });
+
+    test('toCssString renders channels and 0–1 alpha', () {
+      expect(const Rgba(0xFF102030).toCssString(), 'rgba(16, 32, 48, 1.0)');
+      expect(const Rgba(0x00000000).toCssString(), 'rgba(0, 0, 0, 0.0)');
+    });
+  });
 }

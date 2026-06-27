@@ -23,6 +23,7 @@ const Set<String> coreCatalog = <String>{
   'Button',
   'Center',
   'SizedBox',
+  'Box',
   'Image',
   'Icon',
   'Divider',

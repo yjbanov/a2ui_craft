@@ -52,6 +52,14 @@ void main() {
     expect(find.text('2'), findsOneWidget);
   });
 
+  testWidgets('Boxes renders the nested-box layout',
+      (WidgetTester tester) async {
+    await _pump(tester, boxesSpec('Flutter'));
+    expect(find.text('Here are some nested boxes with margins and padding:'),
+        findsOneWidget);
+    expect(find.text('Center'), findsOneWidget);
+  });
+
   testWidgets('Profile Card renders a Column of ProfileCard templates',
       (WidgetTester tester) async {
     await mockNetworkImagesFor(() async {

@@ -83,6 +83,7 @@ LocalWidgetLibrary createCoreComponents() {
         },
       );
     },
+    'Box': (BuildContext context, DataSource source) => _buildBox(source),
     'Image': (BuildContext context, DataSource source) {
       final String? url = source.v<String>(['url']);
       if (url == null || url.isEmpty) {
@@ -206,11 +207,82 @@ Component _buildFlex(DataSource source, FlexAxis axis) {
   );
 }
 
-/// Reads a raw scalar (a number → a fixed size, or a keyword string) for a
-/// `Dimension`-valued argument. `DataSource.v` requires a concrete scalar type,
-/// so we probe the few a `Dimension` can take.
+/// Reads a raw scalar for a `Dimension`-valued argument.
 Object? _dimRaw(DataSource source, List<Object> key) =>
     source.v<double>(key) ?? source.v<int>(key) ?? source.v<String>(key);
+
+/// Builds a `Box` — the catalog's single container primitive (size + padding +
+/// margin + background) — from the spec, on the same explicit-sizing and
+/// border-box model the Flutter adapter renders.
+///
+/// `margin` is rendered as an **outer wrapper** rather than CSS `margin`, so the
+/// keyed node's `getBoundingClientRect` *includes* the margin band — matching the
+/// Flutter adapter (whose margin `Padding` is likewise part of the measured box).
+/// The wrapper sizes to fill only when the box itself fills; otherwise it hugs
+/// the inner box plus its margin. This keeps the measured footprint identical
+/// across adapters (CSS `margin` would be excluded from the rect; see DESIGN.md
+/// §11 Pillar C).
+Component _buildBox(DataSource source) {
+  final Dimension width = Dimension.decode(_dimRaw(source, ['width']));
+  final Dimension height = Dimension.decode(_dimRaw(source, ['height']));
+  final Insets padding = Insets.decode(_insetsRaw(source, 'padding'));
+  final Insets margin = Insets.decode(_insetsRaw(source, 'margin'));
+  final Rgba? color = _rgba(source, 'color');
+  final Component? child = source.optionalChild(['child']);
+
+  final Map<String, String> inner = <String, String>{
+    'box-sizing': 'border-box',
+    'width': _cssExtent(width),
+    'height': _cssExtent(height),
+  };
+  if (!padding.isZero) inner['padding'] = _cssInsets(padding);
+  if (color != null) inner['background-color'] = color.toCssString();
+
+  Component box = div(styles: Styles(raw: inner), _childList(child));
+
+  if (!margin.isZero) {
+    box = div(
+      styles: Styles(raw: <String, String>{
+        'box-sizing': 'border-box',
+        // The wrapper fills only if the box fills; otherwise it hugs inner+margin.
+        'width': width is FillDimension ? '100%' : 'fit-content',
+        'height': height is FillDimension ? '100%' : 'fit-content',
+        'padding': _cssInsets(margin),
+      }),
+      <Component>[box],
+    );
+  }
+
+  return box;
+}
+
+List<Component> _childList(Component? child) => switch (child) {
+      final Component c => <Component>[c],
+      _ => const <Component>[],
+    };
+
+/// Gathers a raw inset value (a number or a list of numbers) from [source] so
+/// the framework-neutral `Insets.decode` can interpret it. Only the extraction
+/// is adapter-specific; the 2-vs-4-element interpretation lives in the core.
+Object? _insetsRaw(DataSource source, String key) {
+  if (source.isList([key])) {
+    final int n = source.length([key]);
+    return <double>[
+      for (int i = 0; i < n; i++)
+        source.v<double>([key, i]) ??
+            source.v<int>([key, i])?.toDouble() ??
+            0.0,
+    ];
+  }
+  return source.v<double>([key]) ?? source.v<int>([key])?.toDouble();
+}
+
+Rgba? _rgba(DataSource source, String key) =>
+    Rgba.decode(source.v<String>([key]));
+
+/// Formats [i] as a CSS `top right bottom left` length list.
+String _cssInsets(Insets i) =>
+    '${_px(i.top)}px ${_px(i.right)}px ${_px(i.bottom)}px ${_px(i.left)}px';
 
 /// Reads the `gap` argument, accepting either an int or double literal.
 double _gap(DataSource source) =>

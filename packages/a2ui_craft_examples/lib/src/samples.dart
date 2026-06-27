@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 import 'sample_spec.dart';
+import 'samples/boxes.dart';
 import 'samples/counter.dart';
 import 'samples/form.dart';
 import 'samples/gallery.dart';
@@ -14,6 +15,7 @@ import 'samples/profile_card.dart';
 List<SampleSpec> sampleSpecs(String framework) => <SampleSpec>[
       greetingSpec(framework),
       counterSpec(framework),
+      boxesSpec(framework),
       profileCardSpec(framework),
       gallerySpec(framework),
       formSpec(framework),

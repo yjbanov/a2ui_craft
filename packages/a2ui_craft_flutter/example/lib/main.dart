@@ -18,6 +18,7 @@ final List<SampleSpec> _specs = sampleSpecs('Flutter');
 const List<IconData> _icons = <IconData>[
   Icons.message,
   Icons.add,
+  Icons.crop_square,
   Icons.person,
   Icons.image,
   Icons.edit_note,

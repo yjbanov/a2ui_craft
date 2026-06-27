@@ -31,6 +31,14 @@ void main() {
     expect(find.text('Increment'), findsOneComponent);
   });
 
+  testComponents('Boxes renders the nested-box layout',
+      (ComponentTester tester) async {
+    await _pump(tester, boxesSpec('Jaspr'));
+    expect(find.text('Here are some nested boxes with margins and padding:'),
+        findsOneComponent);
+    expect(find.text('Center'), findsOneComponent);
+  });
+
   testComponents('Profile Card renders a Column of ProfileCard templates',
       (ComponentTester tester) async {
     await _pump(tester, profileCardSpec('Jaspr'));

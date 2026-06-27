@@ -223,3 +223,141 @@ enum CrossAxisAlign {
     }
   }
 }
+
+/// An immutable set of offsets in each of the four cardinal directions, used for
+/// padding and margin.
+///
+/// The name avoids Flutter's `EdgeInsets` (and the field order follows the CSS
+/// shorthand `top right bottom left`), so an adapter can import this library and
+/// `package:flutter/material.dart` together without prefixing.
+final class Insets {
+  const Insets(this.top, this.right, this.bottom, this.left);
+
+  /// The same offset on all four sides.
+  const Insets.all(double value)
+      : top = value,
+        right = value,
+        bottom = value,
+        left = value;
+
+  /// Symmetric [vertical] (top/bottom) and [horizontal] (left/right) offsets.
+  const Insets.symmetric({double vertical = 0, double horizontal = 0})
+      : top = vertical,
+        bottom = vertical,
+        left = horizontal,
+        right = horizontal;
+
+  /// Offsets given in Flutter's left/top/right/bottom order (a convenience for
+  /// adapters that map down to a Flutter `EdgeInsets.fromLTRB`).
+  const Insets.fromLTRB(this.left, this.top, this.right, this.bottom);
+
+  /// No offset on any side.
+  static const Insets zero = Insets(0, 0, 0, 0);
+
+  final double top;
+  final double right;
+  final double bottom;
+  final double left;
+
+  /// Whether every side is zero.
+  bool get isZero => top == 0 && right == 0 && bottom == 0 && left == 0;
+
+  /// Decodes a raw argument value into [Insets].
+  ///
+  /// Accepts:
+  /// - `num`: the same offset on all sides.
+  /// - `[vertical, horizontal]`: a 2-element array.
+  /// - `[top, right, bottom, left]`: a 4-element array in CSS order.
+  ///
+  /// Anything else (wrong length, non-numeric elements, absent) yields [zero].
+  /// This is the single source of truth for inset decoding; adapters extract the
+  /// raw value from their `DataSource` and delegate here.
+  static Insets decode(Object? raw) {
+    if (raw is num) return Insets.all(raw.toDouble());
+    if (raw is List) {
+      if (raw.length == 2) {
+        final double? v = _asDouble(raw[0]);
+        final double? h = _asDouble(raw[1]);
+        if (v != null && h != null) {
+          return Insets.symmetric(vertical: v, horizontal: h);
+        }
+      } else if (raw.length == 4) {
+        final double? t = _asDouble(raw[0]);
+        final double? r = _asDouble(raw[1]);
+        final double? b = _asDouble(raw[2]);
+        final double? l = _asDouble(raw[3]);
+        if (t != null && r != null && b != null && l != null) {
+          return Insets(t, r, b, l);
+        }
+      }
+    }
+    return zero;
+  }
+
+  static double? _asDouble(Object? o) => o is num ? o.toDouble() : null;
+
+  @override
+  bool operator ==(Object other) =>
+      other is Insets &&
+      other.top == top &&
+      other.right == right &&
+      other.bottom == bottom &&
+      other.left == left;
+
+  @override
+  int get hashCode => Object.hash(top, right, bottom, left);
+
+  @override
+  String toString() => 'Insets($top, $right, $bottom, $left)';
+}
+
+/// A color stored as a 32-bit ARGB integer (`0xAARRGGBB`).
+///
+/// The name avoids Flutter's and Jaspr's `Color`, so an adapter can import this
+/// library alongside either without prefixing.
+final class Rgba {
+  const Rgba(this.value);
+
+  /// The packed `0xAARRGGBB` value.
+  final int value;
+
+  /// Decodes a CSS-style hex string into an [Rgba].
+  ///
+  /// Accepts `"#RRGGBB"` (assumed opaque) or `"#AARRGGBB"`, case-insensitive.
+  /// Returns null for anything else (no `#`, wrong length, non-hex, non-string).
+  static Rgba? decode(Object? raw) {
+    if (raw is! String) return null;
+    String s = raw.trim();
+    if (!s.startsWith('#')) return null;
+    s = s.substring(1);
+    if (s.length == 6) s = 'FF$s'; // Default to opaque.
+    if (s.length != 8) return null;
+    final int? val = int.tryParse(s, radix: 16);
+    return val == null ? null : Rgba(val);
+  }
+
+  /// The alpha channel, 0–255.
+  int get alpha => (value >> 24) & 0xFF;
+
+  /// The red channel, 0–255.
+  int get red => (value >> 16) & 0xFF;
+
+  /// The green channel, 0–255.
+  int get green => (value >> 8) & 0xFF;
+
+  /// The blue channel, 0–255.
+  int get blue => value & 0xFF;
+
+  /// Returns a CSS-compatible `rgba(...)` string (alpha as a 0–1 fraction).
+  String toCssString() => 'rgba($red, $green, $blue, ${alpha / 255.0})';
+
+  @override
+  bool operator ==(Object other) => other is Rgba && other.value == value;
+
+  @override
+  int get hashCode => value.hashCode;
+
+  @override
+  String toString() =>
+      'Rgba(0x${value.toRadixString(16).padLeft(8, '0').toUpperCase()})';
+}

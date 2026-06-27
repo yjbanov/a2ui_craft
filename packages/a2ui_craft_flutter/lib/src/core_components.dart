@@ -60,6 +60,7 @@ LocalWidgetLibrary createCoreComponents() {
         child: source.optionalChild(['child']),
       );
     },
+    'Box': (BuildContext context, DataSource source) => _buildBox(source),
     'Image': (BuildContext context, DataSource source) {
       final String? url = source.v<String>(['url']);
       if (url == null || url.isEmpty || url.contains('example.com')) {
@@ -176,6 +177,77 @@ Object? _dimRaw(DataSource source, List<Object> key) =>
 /// Reads the `gap` argument, accepting either an int or double literal.
 double _gap(DataSource source) =>
     source.v<double>(['gap']) ?? source.v<int>(['gap'])?.toDouble() ?? 0.0;
+
+/// Builds a `Box` — the catalog's single container primitive (size + padding +
+/// margin + background) — from the spec, on the same explicit-sizing and
+/// border-box model the Jaspr adapter renders.
+///
+/// Composition, inside-out: child → padding → fixed/fill size (child placed
+/// top-left, like CSS block flow) → background (fills the padded box, not the
+/// margin) → margin. `Container` is deliberately *not* used: with an alignment
+/// it expands to fill when unsized, which would break `hug`.
+///
+/// `margin` is rendered as an outer `Padding`, so the keyed node's measured rect
+/// includes the margin — matching how the Jaspr adapter wraps margin. Measuring
+/// margin as part of the box (rather than excluding it) is the one consistent
+/// contract available, since the runtime lifts the key onto the builder's output.
+Widget _buildBox(DataSource source) {
+  final Dimension width = Dimension.decode(_dimRaw(source, ['width']));
+  final Dimension height = Dimension.decode(_dimRaw(source, ['height']));
+  final Insets padding = Insets.decode(_insetsRaw(source, 'padding'));
+  final Insets margin = Insets.decode(_insetsRaw(source, 'margin'));
+  final Rgba? color = _rgba(source, 'color');
+
+  Widget box = source.optionalChild(['child']) ?? const SizedBox.shrink();
+
+  if (!padding.isZero) {
+    box = Padding(padding: _toEdgeInsets(padding), child: box);
+  }
+
+  final double? w = _extent(width);
+  final double? h = _extent(height);
+  if (w != null || h != null) {
+    // A definite/fill box places its (smaller) child at the top-left, as a CSS
+    // block does — not stretched to fill, which is Flutter's default.
+    box = SizedBox(
+      width: w,
+      height: h,
+      child: Align(alignment: Alignment.topLeft, child: box),
+    );
+  }
+
+  if (color != null) {
+    box = ColoredBox(color: Color(color.value), child: box);
+  }
+
+  if (!margin.isZero) {
+    box = Padding(padding: _toEdgeInsets(margin), child: box);
+  }
+
+  return box;
+}
+
+/// Gathers a raw inset value (a number or a list of numbers) from [source] so
+/// the framework-neutral `Insets.decode` can interpret it. Only the extraction
+/// is adapter-specific; the 2-vs-4-element interpretation lives in the core.
+Object? _insetsRaw(DataSource source, String key) {
+  if (source.isList([key])) {
+    final int n = source.length([key]);
+    return <double>[
+      for (int i = 0; i < n; i++)
+        source.v<double>([key, i]) ??
+            source.v<int>([key, i])?.toDouble() ??
+            0.0,
+    ];
+  }
+  return source.v<double>([key]) ?? source.v<int>([key])?.toDouble();
+}
+
+Rgba? _rgba(DataSource source, String key) =>
+    Rgba.decode(source.v<String>([key]));
+
+EdgeInsets _toEdgeInsets(Insets i) =>
+    EdgeInsets.fromLTRB(i.left, i.top, i.right, i.bottom);
 
 /// Wraps [child] in a `SizedBox` when either axis is `fixed`/`fill`; `hug`
 /// leaves the axis unconstrained (shrink-wrap). `fill` resolves to

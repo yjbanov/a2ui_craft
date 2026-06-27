@@ -66,4 +66,5 @@ class _FlutterGeometryDriver implements CraftGeometryDriver {
 
 void main() {
   runFlexGeometryConformance(_FlutterGeometryDriver());
+  runBoxGeometryConformance(_FlutterGeometryDriver());
 }

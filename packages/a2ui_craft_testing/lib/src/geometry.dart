@@ -205,3 +205,70 @@ void runFlexGeometryConformance(CraftGeometryDriver driver) {
     },
   );
 }
+
+/// The shared **geometric** specification for the `Box` primitive (size +
+/// padding + margin on the constrained common model).
+///
+/// The insets are deliberately **asymmetric** (`[top, right, bottom, left]` all
+/// distinct), so a per-side ordering bug — in decode, in the Flutter
+/// `EdgeInsets.fromLTRB` remap, or in the CSS shorthand — is caught rather than
+/// hidden by equal values. Fixtures use fixed-size boxes; no text.
+void runBoxGeometryConformance(CraftGeometryDriver driver) {
+  driver.defineTest(
+    'Box: border-box sizing — asymmetric padding shrinks a fill child per side',
+    (CraftGeometryTester tester) async {
+      await tester.mountTemplate('''
+        import core;
+        widget root = Box(
+          key: "outer", width: 100.0, height: 100.0,
+          padding: [10.0, 20.0, 30.0, 40.0],
+          child: Box(key: "inner", width: "fill", height: "fill")
+        );
+      ''');
+      // padding is t=10, r=20, b=30, l=40 (CSS order). With border-box, the
+      // 100x100 box has a content area of 100-(l40+r20)=40 wide, 100-(t10+b30)=60
+      // tall, at offset (left 40, top 10). A fill child exactly covers it — so
+      // each of the four sides is checked independently:
+      //   left offset → l, top offset → t, width → l+r, height → t+b.
+      final CraftRect outer = await tester.rectOf('outer');
+      final CraftRect inner = await tester.rectOf('inner');
+      expect(outer.width, closeTo(100, _tol));
+      expect(outer.height, closeTo(100, _tol));
+      expect(inner.left - outer.left, closeTo(40, _tol));
+      expect(inner.top - outer.top, closeTo(10, _tol));
+      expect(inner.width, closeTo(40, _tol));
+      expect(inner.height, closeTo(60, _tol));
+    },
+  );
+
+  driver.defineTest(
+    'Box: asymmetric margin offsets content and is part of the measured box',
+    (CraftGeometryTester tester) async {
+      await tester.mountTemplate('''
+        import core;
+        widget root = Box(key: "outer", width: 200.0, height: 200.0,
+          child: Box(key: "mid", margin: [10.0, 20.0, 30.0, 40.0],
+            child: Box(key: "leaf", width: 50.0, height: 50.0)
+          )
+        );
+      ''');
+      // margin is t=10, r=20, b=30, l=40; the middle box hugs its 50x50 leaf.
+      final CraftRect outer = await tester.rectOf('outer');
+      final CraftRect mid = await tester.rectOf('mid');
+      final CraftRect leaf = await tester.rectOf('leaf');
+
+      // The leaf is pushed in by the *left*/*top* margin (40, 10).
+      expect(leaf.left - outer.left, closeTo(40, _tol));
+      expect(leaf.top - outer.top, closeTo(10, _tol));
+
+      // The middle box's measured footprint *includes* the margin band on every
+      // side — identically on both adapters — so it starts at the outer's origin
+      // and is leaf + (l+r) wide, leaf + (t+b) tall. (left+right margin = 60,
+      // top+bottom = 40.)
+      expect(mid.left - outer.left, closeTo(0, _tol));
+      expect(mid.top - outer.top, closeTo(0, _tol));
+      expect(mid.width, closeTo(110, _tol));
+      expect(mid.height, closeTo(90, _tol));
+    },
+  );
+}

@@ -240,6 +240,25 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
     expect(tester.hasText('centered'), isTrue);
   });
 
+  driver.defineTest('Box renders its child through size, padding, and color', (
+    CraftTester tester,
+  ) async {
+    // A fast behavioral smoke test (geometry is covered separately by
+    // runBoxGeometryConformance): a fully-configured Box still renders its child.
+    await tester.mount('''
+      import core;
+      widget root = Box(
+        width: 80.0, height: 80.0,
+        padding: [8.0, 8.0, 8.0, 8.0],
+        margin: [4.0, 4.0, 4.0, 4.0],
+        color: "#3366cc",
+        child: Text(text: "inside"),
+      );
+    ''');
+
+    expect(tester.hasText('inside'), isTrue);
+  });
+
   driver.defineTest('Basic catalog primitives mount successfully', (
     CraftTester tester,
   ) async {

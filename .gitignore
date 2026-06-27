@@ -7,6 +7,9 @@ pubspec.lock
 # Coverage
 coverage/
 
+# Test logs
+*.log
+
 # Jaspr / web build output
 .jaspr_web/
 **/web/main.dart.js

@@ -7,20 +7,21 @@ import 'package:flutter/material.dart';
 
 import 'runtime.dart';
 
+// Design notes (not part of the public API):
+// - Each component implements the framework-neutral spec (DESIGN.md §11,
+//   Pillar A) using the shared value types (Dimension, FlexAxis, the
+//   alignments), rather than mirroring the Jaspr adapter by hand; the contract
+//   is verified by package:a2ui_craft_testing (behavioral, and geometric for the
+//   Flex/Box slices).
+// - Components outside the Flex/Box slices are still seed-grade fixtures.
+// - The runtime lifts the reserved `key` onto its reconciliation unit
+//   (`_Widget`, DESIGN.md §6), so these builders never read or apply it.
 /// A library of standard core components (Text, Flex/Row/Column, Button, …)
 /// implemented using Flutter widgets.
 ///
-/// Each component **implements the framework-neutral spec** (DESIGN.md §11,
-/// Pillar A) — the cross-framework value types (`Dimension`, `FlexAxis`,
-/// `MainAxisAlign`/`CrossAxisAlign`) and behavioral contract — rather than
-/// mirroring the Jaspr file by hand. The shared contract is verified by the
-/// conformance suite in `package:a2ui_craft_testing` (behavioral and, for the
-/// `Flex` slice, geometric), and the set of names is pinned by its `coreCatalog`.
-/// Components outside the `Flex` slice are still seed-grade fixtures.
-///
-/// Note: the reserved `key` argument is handled by the runtime, which lifts it
-/// onto the reconciliation unit (`_Widget`) — see DESIGN.md §6 — so these
-/// builders do not read or apply it themselves.
+/// Register the result under the `core` library name; templates then compose
+/// these primitives. The reserved `key` argument is handled by the runtime, so
+/// the builders here do not read or apply it.
 LocalWidgetLibrary createCoreComponents() {
   return LocalWidgetLibrary(<String, LocalWidgetBuilder>{
     'Text': (BuildContext context, DataSource source) {
@@ -136,7 +137,7 @@ LocalWidgetLibrary createCoreComponents() {
 /// Builds a `Flex` (and thus `Row`/`Column`) from the catalog spec, mapping the
 /// framework-neutral value types onto Flutter's `Flex`.
 ///
-/// Sizing is **explicit** (DESIGN.md §11): a default `Flex` hugs both axes
+/// Sizing is **explicit**: a default `Flex` hugs both axes
 /// (`MainAxisSize.min` on the main axis; `CrossAxisAlignment.center`, so children
 /// keep their intrinsic cross size). `fill`/`fixed` opt into filling or a fixed
 /// extent. Neither Flutter's nor CSS's native defaults are inherited, so the same

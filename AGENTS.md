@@ -68,6 +68,16 @@ shared catalog + conformance suite — not a single adapter's test (see
 - Match the surrounding code; format with `dart format`.
 - Lints are shared via the root `analysis_options.yaml`; keep `analyze` clean.
 - Sort imports: `dart:` first, then `package:` (alphabetical), then relative.
+- Public API docs: `///` comments are the consumer-facing contract (shown on
+  pub.dev and IDE hover). Keep them self-contained.
+  - DO put `///` on public members; say what it is and how to use it.
+  - DO link other public members and permanent external resources (Dart/Flutter
+    docs, web standards).
+  - DON'T reference private members, unpublished/transient files (`DESIGN.md`),
+    or internal rationale from a `///` doc.
+  - Put design rationale, cross-framework decisions, and `DESIGN.md` references in
+    `//` implementation comments instead — keep the knowledge, not in the doc.
+  - Prefer stable external links over volatile ones.
 
 ## Working on framework adapters (read this before touching `packages/a2ui_craft_*`)
 
@@ -101,7 +111,10 @@ Quick rules of thumb:
 
 ## Scope guardrail
 
-Current scope is **Flutter + Jaspr, Dart-only**. The core component sets are
-**minimal harness fixtures**. The real cross-platform core component/type library
-("H2" in `DESIGN.md`) is deliberately **not started yet** — do not begin it unless
-a task explicitly calls for H2 work.
+Current scope is **Flutter + Jaspr, Dart-only**. The cross-platform core
+component/type library ("H2" in `DESIGN.md`) is **in progress**, built as a
+constrained common model (see `DESIGN.md` §11): the `Flex` and `Box` slices —
+value types, explicit sizing, and geometry conformance — have landed, and the
+catalog grows depth-first from there. The older seed components outside that work
+remain **minimal harness fixtures**. Grow the catalog as a task calls for it;
+don't start unrelated large efforts (a third framework, theming) unsolicited.

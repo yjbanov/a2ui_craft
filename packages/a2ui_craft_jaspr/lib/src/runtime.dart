@@ -342,11 +342,11 @@ class Runtime extends ChangeNotifier {
   /// provided [composition] directly. Component names inside [composition] are
   /// resolved against [scope] (a registered library and its imports). Slot
   /// arguments may contain already-built host components, which are injected
-  /// as-is (see `_CurriedHostWidget`).
+  /// as-is.
   ///
   /// This is the entry point for runtime-composed UIs (e.g. an A2UI surface),
   /// where the structure is decided at runtime rather than declared ahead of
-  /// time. See DESIGN.md §6.
+  /// time.
   Component buildNode(
     BuildContext context,
     ConstructorCall composition,

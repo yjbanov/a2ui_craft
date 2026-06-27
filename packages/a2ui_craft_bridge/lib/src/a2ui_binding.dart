@@ -9,7 +9,7 @@ import 'package:a2ui_craft/a2ui_craft.dart';
 /// [SurfaceModel] so a framework adapter can render it as an RFW template.
 ///
 /// This is the thin, framework-neutral half of the bridge under the `a2ui_core`
-/// layering (DESIGN.md §10). `a2ui_core` owns ingest, the data model, and the
+/// layering. `a2ui_core` owns ingest, the data model, and the
 /// resolution of bindings/functions/`checks`; this object owns a
 /// [GenericBinder] for one component and surfaces its **resolved props**
 /// (concrete scalars + `List<ChildNode>`), re-notifying whenever the component

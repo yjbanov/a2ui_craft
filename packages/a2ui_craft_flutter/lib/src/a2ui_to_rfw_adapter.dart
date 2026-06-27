@@ -19,7 +19,7 @@ import 'runtime.dart';
 /// against [scope], feeding resolved props as template args and injecting a child
 /// adapter for each structural [ChildNode] slot.
 ///
-/// Reconciliation identity (DESIGN.md §6): a **static** child keeps its A2UI id
+/// Reconciliation identity: a **static** child keeps its A2UI id
 /// as its key (so a control is locatable by id and survives reorders); a
 /// **`ChildList` item** falls back to its positional [ChildNode.basePath], since
 /// the A2UI spec attaches no per-item id (see a2ui#1745).

@@ -8,20 +8,21 @@ import 'package:jaspr/jaspr.dart';
 
 import 'runtime.dart';
 
+// Design notes (not part of the public API):
+// - Each component implements the framework-neutral spec (DESIGN.md §11,
+//   Pillar A) using the shared value types (Dimension, FlexAxis, the
+//   alignments), rather than mirroring the Flutter adapter by hand; the contract
+//   is verified by package:a2ui_craft_testing (behavioral, and geometric for the
+//   Flex/Box slices via getBoundingClientRect).
+// - Components outside the Flex/Box slices are still seed-grade fixtures.
+// - The runtime lifts the reserved `key` onto its reconciliation unit
+//   (`_Widget`, DESIGN.md §6), so these builders never read or apply it.
 /// A library of standard core components (Text, Flex/Row/Column, Button, …)
 /// implemented using Jaspr DOM elements.
 ///
-/// Each component **implements the framework-neutral spec** (DESIGN.md §11,
-/// Pillar A) — the cross-framework value types (`Dimension`, `FlexAxis`,
-/// `MainAxisAlign`/`CrossAxisAlign`) and behavioral contract — rather than
-/// mirroring the Flutter file by hand. The shared contract is verified by the
-/// conformance suite in `package:a2ui_craft_testing` (behavioral and, for the
-/// `Flex` slice, geometric via `getBoundingClientRect`/`getComputedStyle`).
-/// Components outside the `Flex` slice are still seed-grade fixtures.
-///
-/// Note: the reserved `key` argument is handled by the runtime, which lifts it
-/// onto the reconciliation unit (`_Widget`) — see DESIGN.md §6 — so these
-/// builders do not read or apply it themselves.
+/// Register the result under the `core` library name; templates then compose
+/// these primitives. The reserved `key` argument is handled by the runtime, so
+/// the builders here do not read or apply it.
 LocalWidgetLibrary createCoreComponents() {
   return LocalWidgetLibrary(<String, LocalWidgetBuilder>{
     'Text': (BuildContext context, DataSource source) {
@@ -175,7 +176,7 @@ LocalWidgetLibrary createCoreComponents() {
 /// Builds a `Flex` (and thus `Row`/`Column`) from the catalog spec, mapping the
 /// framework-neutral value types onto a CSS flex container.
 ///
-/// Sizing is **explicit** (DESIGN.md §11): a default `Flex` hugs both axes
+/// Sizing is **explicit**: a default `Flex` hugs both axes
 /// (`width`/`height: fit-content`; `align-items: center`, so children keep their
 /// intrinsic cross size). This deliberately does *not* inherit CSS's native
 /// block-level defaults (a `display:flex` div would fill its inline axis and
@@ -220,8 +221,7 @@ Object? _dimRaw(DataSource source, List<Object> key) =>
 /// Flutter adapter (whose margin `Padding` is likewise part of the measured box).
 /// The wrapper sizes to fill only when the box itself fills; otherwise it hugs
 /// the inner box plus its margin. This keeps the measured footprint identical
-/// across adapters (CSS `margin` would be excluded from the rect; see DESIGN.md
-/// §11 Pillar C).
+/// across adapters (CSS `margin` would otherwise be excluded from the rect).
 Component _buildBox(DataSource source) {
   final Dimension width = Dimension.decode(_dimRaw(source, ['width']));
   final Dimension height = Dimension.decode(_dimRaw(source, ['height']));

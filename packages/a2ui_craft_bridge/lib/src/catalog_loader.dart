@@ -10,7 +10,7 @@ import 'package:json_schema_builder/json_schema_builder.dart';
 /// ahead of time.
 ///
 /// This is the ephemeral counterpart to `a2ui_core`'s in-capability catalog
-/// serialization (DESIGN.md §6): a template ships as RFW text, its messages as
+/// serialization: a template ships as RFW text, its messages as
 /// JSON, and its **component API as JSON Schema** parsed here. Only the A2UI
 /// *protocol* (the common-type vocabulary below + the RFW grammar) is
 /// precompiled; per-template schemas arrive as data.

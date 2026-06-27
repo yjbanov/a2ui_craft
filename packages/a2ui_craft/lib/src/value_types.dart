@@ -2,41 +2,43 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-/// Cross-framework value types for the low-level catalog.
+/// Framework-neutral value types for the low-level catalog.
 ///
-/// These are the framework-neutral "type model" described in DESIGN.md §11
-/// (Pillar B): each type has **one canonical representation** that every adapter
-/// maps down to its framework's native layout. They are the replacement for
-/// RFW's intensely Flutter-specific `argument_decoders` — the catalog speaks
-/// these types, and Flutter/Jaspr each translate them, so a template means the
-/// same thing on both.
+/// A small set of types — sizing ([Dimension]), the flex [FlexAxis] and
+/// alignments ([MainAxisAlign]/[CrossAxisAlign]), edge [Insets], and [Rgba]
+/// color — each with a single canonical representation. Every renderer maps these
+/// onto its own native layout, so a template that uses them means the same thing
+/// regardless of the framework drawing it.
 ///
-/// Decoding lives here (not in the adapters) on purpose: if each adapter parsed
-/// raw argument values itself, the two could silently disagree about what
-/// `"fill"` or `"spaceBetween"` means. Adapters read the raw scalar out of their
-/// `DataSource` and hand it to these `decode`/`parse` entry points; only the
-/// final *mapping* to a framework primitive is adapter-specific.
-///
-/// The names here deliberately avoid Flutter's (`Axis`, `MainAxisAlignment`, …)
-/// so an adapter can import both this library and `package:flutter/material.dart`
-/// without prefixing.
+/// Each type exposes a `decode`/`parse` entry point that turns a raw argument
+/// value into the type; callers read the raw value from their data source and
+/// delegate here.
 library;
 
-/// How a box is sized along one axis (DESIGN.md §11: the explicit-sizing
-/// decision that removes default-divergence between Flutter and CSS).
+// Design notes (not part of the public contract):
+// - This is the "H2 type model" in DESIGN.md §11: the framework-neutral
+//   replacement for RFW's Flutter-specific argument_decoders.
+// - Decoding lives here, not in each adapter, so the adapters cannot silently
+//   disagree about what "fill" or "spaceBetween" means.
+// - Type names deliberately avoid Flutter's (Axis, MainAxisAlignment, …) so an
+//   adapter can import this library and package:flutter/material.dart together
+//   without prefixing.
+
+/// How a box is sized along one axis: one of [Dimension.hug], [Dimension.fill],
+/// [Dimension.fixed], or [Dimension.flex].
 ///
-/// The canonical forms are `hug` | `fill` | `fixed(px)` | `flex(n)`:
+/// Sizing is always stated explicitly rather than inheriting a framework's
+/// default, which is what lets a `Row`/`Column` lay out identically on every
+/// renderer:
 ///
-/// * [hug] — size to the content (Flutter `mainAxisSize.min`; CSS `fit-content`).
-/// * [fill] — fill the available space (Flutter `mainAxisSize.max` / a stretched
-///   cross axis; CSS `100%`).
-/// * [fixed] — an exact pixel size.
-/// * [flex] — take a share of the parent's free space along its main axis
-///   (Flutter `Expanded(flex:)`; CSS `flex-grow`). Only meaningful for a child of
-///   a [FlexAxis] container.
-///
-/// Neither platform's defaults are inherited; sizing is always stated, which is
-/// what keeps a `Row`/`Column` laying out identically on both sides.
+/// * [Dimension.hug] — size to the content (like Flutter `mainAxisSize.min` or
+///   CSS `fit-content`).
+/// * [Dimension.fill] — fill the available space (Flutter `mainAxisSize.max` /
+///   a stretched cross axis; CSS `100%`).
+/// * [Dimension.fixed] — an exact pixel size.
+/// * [Dimension.flex] — take a share of the parent's free space along its main
+///   axis (Flutter `Expanded(flex:)`; CSS `flex-grow`). Only meaningful for a
+///   child of a [FlexAxis] container.
 sealed class Dimension {
   const Dimension();
 
@@ -143,7 +145,7 @@ final class FlexDimension extends Dimension {
 
 /// The axis a [Flex] lays its children along.
 ///
-/// `Row`/`Column` in the catalog are a `Flex` plus this (DESIGN.md §11).
+/// `Row`/`Column` in the catalog are a `Flex` plus this.
 enum FlexAxis {
   /// Children are laid out left-to-right (a `Row`).
   horizontal,
@@ -166,7 +168,7 @@ enum FlexAxis {
 
 /// Placement of children along a [Flex]'s main axis.
 ///
-/// Maps to Flutter `MainAxisAlignment` / CSS `justify-content` (DESIGN.md §11).
+/// Maps to Flutter `MainAxisAlignment` / CSS `justify-content`.
 enum MainAxisAlign {
   start,
   center,
@@ -199,7 +201,7 @@ enum MainAxisAlign {
 
 /// Placement of children along a [Flex]'s cross axis.
 ///
-/// Maps to Flutter `CrossAxisAlignment` / CSS `align-items` (DESIGN.md §11).
+/// Maps to Flutter `CrossAxisAlignment` / CSS `align-items`.
 enum CrossAxisAlign {
   start,
   center,
@@ -227,9 +229,10 @@ enum CrossAxisAlign {
 /// An immutable set of offsets in each of the four cardinal directions, used for
 /// padding and margin.
 ///
-/// The name avoids Flutter's `EdgeInsets` (and the field order follows the CSS
-/// shorthand `top right bottom left`), so an adapter can import this library and
-/// `package:flutter/material.dart` together without prefixing.
+/// The positional constructor takes the sides in CSS shorthand order:
+/// `top, right, bottom, left`.
+// Named `Insets` (not `EdgeInsets`) so an adapter can import this library and
+// package:flutter/material.dart together without prefixing.
 final class Insets {
   const Insets(this.top, this.right, this.bottom, this.left);
 
@@ -270,8 +273,6 @@ final class Insets {
   /// - `[top, right, bottom, left]`: a 4-element array in CSS order.
   ///
   /// Anything else (wrong length, non-numeric elements, absent) yields [zero].
-  /// This is the single source of truth for inset decoding; adapters extract the
-  /// raw value from their `DataSource` and delegate here.
   static Insets decode(Object? raw) {
     if (raw is num) return Insets.all(raw.toDouble());
     if (raw is List) {
@@ -312,9 +313,8 @@ final class Insets {
 }
 
 /// A color stored as a 32-bit ARGB integer (`0xAARRGGBB`).
-///
-/// The name avoids Flutter's and Jaspr's `Color`, so an adapter can import this
-/// library alongside either without prefixing.
+// Named `Rgba` (not `Color`) so an adapter can import this library alongside
+// Flutter's or Jaspr's `Color` without prefixing.
 final class Rgba {
   const Rgba(this.value);
 

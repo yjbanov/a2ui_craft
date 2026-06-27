@@ -39,6 +39,15 @@ void main() {
     expect(find.text('Center'), findsOneComponent);
   });
 
+  testComponents('Contact Card renders the atoms (name, caption, icon rows)',
+      (ComponentTester tester) async {
+    await _pump(tester, contactCardSpec('Jaspr'));
+    expect(find.text('Ada Lovelace'), findsOneComponent);
+    expect(find.text('Mathematician'), findsOneComponent);
+    expect(find.text('ada@example.com'), findsOneComponent);
+    expect(find.text('London, UK'), findsOneComponent);
+  });
+
   testComponents('Profile Card renders a Column of ProfileCard templates',
       (ComponentTester tester) async {
     await _pump(tester, profileCardSpec('Jaspr'));

@@ -13,6 +13,7 @@ library a2ui_craft_examples;
 export 'src/sample_spec.dart';
 export 'src/samples.dart';
 export 'src/samples/boxes.dart';
+export 'src/samples/contact_card.dart';
 export 'src/samples/counter.dart';
 export 'src/samples/form.dart';
 export 'src/samples/gallery.dart';

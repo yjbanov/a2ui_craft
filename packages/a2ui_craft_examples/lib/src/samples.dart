@@ -4,6 +4,7 @@
 
 import 'sample_spec.dart';
 import 'samples/boxes.dart';
+import 'samples/contact_card.dart';
 import 'samples/counter.dart';
 import 'samples/form.dart';
 import 'samples/gallery.dart';
@@ -16,6 +17,7 @@ List<SampleSpec> sampleSpecs(String framework) => <SampleSpec>[
       greetingSpec(framework),
       counterSpec(framework),
       boxesSpec(framework),
+      contactCardSpec(framework),
       profileCardSpec(framework),
       gallerySpec(framework),
       formSpec(framework),

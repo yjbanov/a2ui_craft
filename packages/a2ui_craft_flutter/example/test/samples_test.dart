@@ -60,6 +60,15 @@ void main() {
     expect(find.text('Center'), findsOneWidget);
   });
 
+  testWidgets('Contact Card renders the atoms (name, caption, icon rows)',
+      (WidgetTester tester) async {
+    await _pump(tester, contactCardSpec('Flutter'));
+    expect(find.text('Ada Lovelace'), findsOneWidget);
+    expect(find.text('Mathematician'), findsOneWidget);
+    expect(find.text('ada@example.com'), findsOneWidget);
+    expect(find.text('London, UK'), findsOneWidget);
+  });
+
   testWidgets('Profile Card renders a Column of ProfileCard templates',
       (WidgetTester tester) async {
     await mockNetworkImagesFor(() async {

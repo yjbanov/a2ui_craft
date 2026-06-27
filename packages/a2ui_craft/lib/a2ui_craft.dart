@@ -14,3 +14,4 @@ export 'src/binary.dart';
 export 'src/content.dart';
 export 'src/model.dart';
 export 'src/text.dart';
+export 'src/value_types.dart';

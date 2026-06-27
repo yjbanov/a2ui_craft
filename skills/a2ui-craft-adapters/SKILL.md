@@ -3,7 +3,7 @@ name: a2ui-craft-adapters
 description: >-
   Use when modifying, reviewing, or extending an A2UI Craft framework adapter
   (packages/a2ui_craft_flutter, packages/a2ui_craft_jaspr, or a new one) — its
-  runtime, core components, RemoteComponent, or public API. Enforces the
+  runtime, core components, RemoteWidget, or public API. Enforces the
   cross-adapter invariants: what MUST stay identical across every adapter and
   where framework-specific deviation is allowed. Trigger on any edit under
   packages/a2ui_craft_*/lib, on changes to the core (packages/a2ui_craft), or
@@ -33,12 +33,13 @@ belongs in the core.
 1. **Template language & semantics.** Adapters consume the RFW format unchanged.
    No adapter adds, removes, or reinterprets language features (data binding,
    `...for`, `switch`, `state`, `event`, args). Parsing is core-only.
-2. **Public API surface & names** — component-centric everywhere (never Flutter's
-   "Widget" vocabulary in public names):
+2. **Public API surface & names** — RFW's upstream public names verbatim, the
+   same across every adapter (do not rename to "Component" or any framework's
+   native vocabulary):
    - `Runtime` with `update(LibraryName, WidgetLibrary)` and
      `build(context, FullyQualifiedWidgetName, DynamicContent, RemoteEventHandler)`
-   - `RemoteComponent` with fields `runtime`, `component`, `data`, `onEvent`
-   - `LocalComponentLibrary` / `LocalComponentBuilder`
+   - `RemoteWidget` with fields `runtime`, `widget`, `data`, `onEvent`
+   - `LocalWidgetLibrary` / `LocalWidgetBuilder`
    - `DataSource` with `v<T>`, `child`, `childList`, `voidHandler`, `handler<T>`
    - `RemoteEventHandler`, `createCoreComponents()`
 3. **Runtime behavior.** Reconciliation, data-path subscription, scope/relative
@@ -55,7 +56,7 @@ belongs in the core.
    style="display:flex">`; `Button` → `GestureDetector` vs `<button>`). The
    mapping is the adapter's job; the contract is not.
 3. **Framework lifecycle integration** (`StatefulWidget`/`State`/`setState` vs the
-   framework's equivalent; how `RemoteComponent` hosts the built node).
+   framework's equivalent; how `RemoteWidget` hosts the built node).
 4. **Styling/layout mechanics** inherent to the rendering engine, as long as the
    observable result honors the component contract.
 

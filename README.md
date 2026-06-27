@@ -25,9 +25,9 @@ a2ui_craft           core engine — pure Dart, NO UI-framework dependency
   of the RFW runtime specialized to its framework's node type, plus a minimal
   library of core components (`Text`, `Row`, `Column`, `Button`).
 
-Every adapter exposes the **same component-centric API** (`Runtime`,
-`RemoteComponent`, `LocalComponentLibrary`, `createCoreComponents`, …) so client
-code reads identically across frameworks. What each adapter may and may not
+Every adapter exposes the **same API**, keeping RFW's upstream public names
+(`Runtime`, `RemoteWidget`, `LocalWidgetLibrary`, `createCoreComponents`, …) so
+client code reads identically across frameworks. What each adapter may and may not
 change is specified in [`DESIGN.md` §5](DESIGN.md) and enforced by the project
 skills in [`skills/`](skills).
 

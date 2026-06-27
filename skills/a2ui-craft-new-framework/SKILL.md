@@ -5,7 +5,7 @@ description: >-
   packages/a2ui_craft_<framework> that renders RFW templates with another UI
   framework. Codifies the recipe proven with the Flutter and Jaspr adapters
   (vendor/port the RFW runtime specialized to the framework's node type, repoint
-  to the core, expose the unified component-centric API, implement minimal core
+  to the core, expose RFW's upstream public API, implement minimal core
   components, add a parity test). Trigger on requests like "add a SwiftUI/Compose/
   React adapter" or "stand up a new a2ui_craft_<x> package".
 ---
@@ -40,17 +40,19 @@ task explicitly calls for it.
      framework's imports.
    - Specialize the **node type** to the framework's (e.g. `Widget`, `Component`,
      `View`). This is the one pervasive, *allowed* change.
-   - Apply the **unified, component-centric API names**: `LocalComponentLibrary`,
-     `LocalComponentBuilder`, etc. Do NOT introduce framework-native names
-     (e.g. "Widget") into the public API.
+   - Keep **RFW's upstream public names verbatim**: `LocalWidgetLibrary`,
+     `LocalWidgetBuilder`, etc. Do NOT rename them (e.g. to "Component"); matching
+     upstream keeps the vendored runtime a clean, upstreamable delta.
 
-3. **Port `RemoteComponent`** into `lib/src/remote_component.dart` — same fields
-   (`runtime`, `component`, `data`, `onEvent`) and behavior; host it using the
-   framework's stateful-component lifecycle. (Watch for getter/field aliasing,
-   e.g. Flutter's `State.widget` — hand-write this file rather than sed.)
+3. **Port `RemoteWidget`** into `lib/src/remote_component.dart` — same fields
+   (`runtime`, `widget`, `data`, `onEvent`) and behavior; host it using the
+   framework's stateful-component lifecycle. (Watch for getter/field aliasing:
+   the `widget` field collides with Flutter's `State.widget` getter, giving
+   `widget.widget`, and the host's State getter differs per framework — e.g.
+   Jaspr's is `component`. Hand-write this file rather than sed.)
 
 4. **Implement minimal core components** in `lib/src/core_components.dart`:
-   `createCoreComponents()` returning a `LocalComponentLibrary` with `Text`,
+   `createCoreComponents()` returning a `LocalWidgetLibrary` with `Text`,
    `Row`, `Column`, `Button` — **the exact same names, argument names, and
    behavior** as the other adapters, realized with the new framework's
    primitives. Keep it minimal; this is a harness fixture, not the H2 core

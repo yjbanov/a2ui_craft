@@ -30,9 +30,9 @@ class _JasprCraftTester implements CraftTester {
     _runtime.update(const LibraryName(<String>['main']), main);
 
     _tester.pumpComponent(
-      RemoteComponent(
+      RemoteWidget(
         runtime: _runtime,
-        component: const FullyQualifiedWidgetName(
+        widget: const FullyQualifiedWidgetName(
           LibraryName(<String>['main']),
           'root',
         ),

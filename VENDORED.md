@@ -37,21 +37,18 @@ abstract cheaply, so each adapter vendors its own copy of
 
 1. **Repointed imports:** the RFW-internal `formats`/`content` imports →
    `import 'package:a2ui_craft/a2ui_craft.dart';`.
-2. **Unified public API names** (component-centric, not Flutter "Widget"
-   vocabulary): `LocalWidgetLibrary` → `LocalComponentLibrary`,
-   `LocalWidgetBuilder` → `LocalComponentBuilder`.
-3. **Node-type specialization:** the Flutter adapter keeps `Widget`; the Jaspr
+2. **Node-type specialization:** the Flutter adapter keeps `Widget`; the Jaspr
    adapter uses Jaspr's `Component`.
-4. **Minor lint fixes** kept identical across adapters (e.g. `assert(library ==
+3. **Minor lint fixes** kept identical across adapters (e.g. `assert(library ==
    null)`).
-5. **Keyed `_Widget` (A2UI Craft extension #1).** `_CurriedWidget.build` lifts a
+4. **Keyed `_Widget` (A2UI Craft extension #1).** `_CurriedWidget.build` lifts a
    reserved literal `key` argument onto the `_Widget` reconciliation unit (via
    `_liftKey`), so a keyed remote-widget subtree reconciles by identity rather
    than position. This is additive and behavior-preserving for existing RFW usage
    (widgets without a `key` arg are unaffected). It is needed for A2UI's
    id-addressed, reorderable updates and independently improves RFW for dynamic
    lists — a candidate to propose upstream. Rationale and design: `DESIGN.md` §6.
-6. **`Runtime.buildNode` + host-widget injection (A2UI Craft extension #2).**
+5. **`Runtime.buildNode` + host-widget injection (A2UI Craft extension #2).**
    `Runtime.buildNode` renders an ad-hoc `ConstructorCall` against the registered
    libraries (resolving names via a `scope` library), reusing the existing
    currying path — no synthesized library required. `_bindArguments` wraps any
@@ -61,7 +58,7 @@ abstract cheaply, so each adapter vendors its own copy of
    effect on existing RFW usage, which never passes host widgets as args). Needed
    to render runtime-composed A2UI surfaces; upstream candidate. Design:
    `DESIGN.md` §6.
-7. **`handler<T>` accepts a resolved callback (A2UI Craft extension #3).** At the
+6. **`handler<T>` accepts a resolved callback (A2UI Craft extension #3).** At the
    top of `DataSource.handler<T>`, if the fetched argument value is already a Dart
    `Function` assignable to `T`, it is returned as-is (so `voidHandler` returns it
    directly). This lets an already-resolved callback be supplied as an argument —
@@ -72,9 +69,9 @@ abstract cheaply, so each adapter vendors its own copy of
    branch only matches host-supplied callbacks. Needed for A2UI actions under the
    `a2ui_core` layering (M6); upstream candidate. Design: `DESIGN.md` §10.
 
-`RemoteComponent` (from RFW's `remote_widget.dart`) is reimplemented per adapter
-with the unified API (`RemoteComponent`, field `component`) rather than RFW's
-`RemoteWidget`.
+`RemoteWidget` (from RFW's `remote_widget.dart`) is reimplemented per adapter,
+keeping RFW's public API (`RemoteWidget`, field `widget`); the Jaspr copy swaps
+the node type to Jaspr's `Component`.
 
 > Note: RFW's `argument_decoders.dart` and `core_widgets.dart` are **not**
 > vendored — they are intensely Flutter-specific. Each adapter defines its own
@@ -85,6 +82,6 @@ with the unified API (`RemoteComponent`, field `component`) rather than RFW's
 
 When pulling a newer `rfw`: re-copy the core files and re-apply the single
 `content.dart` change; re-copy `runtime.dart` per adapter and re-apply
-modifications 1–7 above. The parity/conformance tests (`a2ui_craft_testing` +
+modifications 1–6 above. The parity/conformance tests (`a2ui_craft_testing` +
 `packages/*/test`, including the keyed-reconciliation and buildNode tests) are the
 safety net that the runtimes still behave identically.

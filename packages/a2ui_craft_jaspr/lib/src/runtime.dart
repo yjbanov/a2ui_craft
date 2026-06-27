@@ -13,18 +13,17 @@ typedef VoidCallback = void Function();
 
 /// Signature of builders for local widgets.
 ///
-/// The [LocalComponentLibrary] class wraps a map of widget names to
-/// [LocalComponentBuilder] callbacks.
-typedef LocalComponentBuilder = Component Function(
+/// The [LocalWidgetLibrary] class wraps a map of widget names to
+/// [LocalWidgetBuilder] callbacks.
+typedef LocalWidgetBuilder = Component Function(
     BuildContext context, DataSource source);
 
 /// Signature of builders for remote widgets.
-typedef _RemoteComponentBuilder = _CurriedWidget Function(
-    DynamicMap builderArg);
+typedef _RemoteWidgetBuilder = _CurriedWidget Function(DynamicMap builderArg);
 
-/// Signature of the callback passed to a [RemoteComponent].
+/// Signature of the callback passed to a [RemoteWidget].
 ///
-/// This is used by [RemoteComponent] and [Runtime.build] as the callback for
+/// This is used by [RemoteWidget] and [Runtime.build] as the callback for
 /// events triggered by remote widgets.
 typedef RemoteEventHandler = void Function(
     String eventName, DynamicMap eventArguments);
@@ -64,7 +63,7 @@ class RemoteFlutterWidgetsException implements Exception {
   String toString() => message;
 }
 
-/// Interface for [LocalComponentBuilder] to obtain data from arguments.
+/// Interface for [LocalWidgetBuilder] to obtain data from arguments.
 ///
 /// The interface exposes the [v] method, the argument to which is a list of
 /// keys forming a path to a node in the arguments expected by the component. If
@@ -184,34 +183,34 @@ abstract class DataSource {
 
 /// Widgets defined by the client application. All remote widgets eventually
 /// bottom out in these widgets.
-class LocalComponentLibrary extends WidgetLibrary {
-  /// Create a [LocalComponentLibrary].
+class LocalWidgetLibrary extends WidgetLibrary {
+  /// Create a [LocalWidgetLibrary].
   ///
   /// The given map must not change once the object is created.
-  LocalComponentLibrary(this._widgets);
+  LocalWidgetLibrary(this._widgets);
 
-  final Map<String, LocalComponentBuilder> _widgets;
+  final Map<String, LocalWidgetBuilder> _widgets;
 
   /// Returns the builder for the widget of the given name, if any.
   @protected
-  LocalComponentBuilder? findConstructor(String name) {
+  LocalWidgetBuilder? findConstructor(String name) {
     return _widgets[name];
   }
 
-  /// The widgets defined by this [LocalComponentLibrary].
+  /// The widgets defined by this [LocalWidgetLibrary].
   ///
   /// The returned map is an immutable view of the map provided to the constructor.
   /// They keys are the unqualified widget names, and the values are the corresponding
-  /// [LocalComponentBuilder]s.
+  /// [LocalWidgetBuilder]s.
   ///
-  /// The map never changes during the lifetime of the [LocalComponentLibrary], but a new
+  /// The map never changes during the lifetime of the [LocalWidgetLibrary], but a new
   /// instance of an [UnmodifiableMapView] is returned each time this getter is used.
   ///
   /// See also:
   ///
   ///  * [createCoreWidgets], a function that creates a [Map] of local widgets.
-  UnmodifiableMapView<String, LocalComponentBuilder> get widgets {
-    return UnmodifiableMapView<String, LocalComponentBuilder>(_widgets);
+  UnmodifiableMapView<String, LocalWidgetBuilder> get widgets {
+    return UnmodifiableMapView<String, LocalWidgetBuilder>(_widgets);
   }
 }
 
@@ -225,12 +224,12 @@ class _ResolvedConstructor {
 ///
 /// To declare the libraries of widgets, the [update] method is used.
 ///
-/// At least one [LocalComponentLibrary] instance must be declared
+/// At least one [LocalWidgetLibrary] instance must be declared
 /// so that [RemoteWidgetLibrary] instances can resolve to real widgets.
 ///
 /// The [build] method returns a [Component] generated from one of the libraries of
 /// widgets added in this manner. Generally, it is simpler to use the
-/// [RemoteComponent] widget (which calls [build]).
+/// [RemoteWidget] widget (which calls [build]).
 class Runtime extends ChangeNotifier {
   /// Create a [Runtime] object.
   ///
@@ -245,7 +244,7 @@ class Runtime extends ChangeNotifier {
   /// References to widgets that are not defined in the available libraries will
   /// default to using the [ErrorWidget] component.
   ///
-  /// [LocalComponentLibrary] and [RemoteWidgetLibrary] instances are added using
+  /// [LocalWidgetLibrary] and [RemoteWidgetLibrary] instances are added using
   /// this method.
   ///
   /// [RemoteWidgetLibrary] instances are typically first obtained using
@@ -262,7 +261,7 @@ class Runtime extends ChangeNotifier {
   ///
   /// Calling this notifies the listeners, which typically causes them to
   /// rebuild their widgets in the next frame (for example, that is how
-  /// [RemoteComponent] is implemented). If no libraries are readded after calling
+  /// [RemoteWidget] is implemented). If no libraries are readded after calling
   /// [clearLibraries], and there are any listeners, they will fail to rebuild
   /// any widgets that they were configured to create. For this reason, this
   /// call should usually be immediately followed by calls to [update].
@@ -449,8 +448,8 @@ class Runtime extends ChangeNotifier {
           return _cachedConstructors[fullName] = result;
         }
       }
-    } else if (library is LocalComponentLibrary) {
-      final LocalComponentBuilder? constructor =
+    } else if (library is LocalWidgetLibrary) {
+      final LocalWidgetBuilder? constructor =
           library.findConstructor(fullName.widget);
       if (constructor != null) {
         return _cachedConstructors[fullName] =
@@ -469,7 +468,7 @@ class Runtime extends ChangeNotifier {
       yield library;
       return;
     }
-    if (root is LocalComponentLibrary) {
+    if (root is LocalWidgetLibrary) {
       return;
     }
     root as RemoteWidgetLibrary;
@@ -488,7 +487,7 @@ class Runtime extends ChangeNotifier {
   ///
   /// The `source` argument is the [BlobNode] that referenced the widget
   /// constructor, in the event that the widget comes from a
-  /// [LocalComponentBuilder] rather than a [WidgetDeclaration], and is used to
+  /// [LocalWidgetBuilder] rather than a [WidgetDeclaration], and is used to
   /// provide source information for local widgets (which otherwise could not be
   /// associated with a part of the source). See also [Runtime.blobNodeFor].
   _CurriedWidget _applyConstructorAndBindArguments(
@@ -503,7 +502,7 @@ class Runtime extends ChangeNotifier {
     if (component != null) {
       if (component.constructor is WidgetDeclaration) {
         if (usedWidgets.contains(component.fullName)) {
-          return _CurriedLocalComponent.error(
+          return _CurriedLocalWidget.error(
             fullName,
             'Component loop: Tried to call ${component.fullName} constructor reentrantly.',
           )..propagateSource(source);
@@ -535,7 +534,7 @@ class Runtime extends ChangeNotifier {
         } else {
           result as _CurriedWidget;
           if (constructor.initialState != null) {
-            result = _CurriedRemoteComponent(
+            result = _CurriedRemoteWidget(
               component.fullName,
               result,
               arguments,
@@ -546,10 +545,10 @@ class Runtime extends ChangeNotifier {
         }
         return result as _CurriedWidget;
       }
-      assert(component.constructor is LocalComponentBuilder);
-      return _CurriedLocalComponent(
+      assert(component.constructor is LocalWidgetBuilder);
+      return _CurriedLocalWidget(
         component.fullName,
-        component.constructor as LocalComponentBuilder,
+        component.constructor as LocalWidgetBuilder,
         arguments,
         widgetBuilderScope,
       )..propagateSource(source);
@@ -557,13 +556,13 @@ class Runtime extends ChangeNotifier {
     final Set<LibraryName> missingLibraries =
         _findMissingLibraries(fullName.library).toSet();
     if (missingLibraries.isNotEmpty) {
-      return _CurriedLocalComponent.error(
+      return _CurriedLocalWidget.error(
         fullName,
         'Could not find remote widget named ${fullName.widget} in ${fullName.library}, '
         'possibly because some dependencies were missing: ${missingLibraries.join(", ")}',
       )..propagateSource(source);
     }
-    return _CurriedLocalComponent.error(fullName,
+    return _CurriedLocalWidget.error(fullName,
         'Could not find remote widget named ${fullName.widget} in ${fullName.library}.')
       ..propagateSource(source);
   }
@@ -770,8 +769,8 @@ abstract class _CurriedWidget extends BlobNode {
           ))
         ..propagateSource(node);
     }
-    if (node is _CurriedLocalComponent) {
-      return _CurriedLocalComponent(
+    if (node is _CurriedLocalWidget) {
+      return _CurriedLocalWidget(
         node.fullName,
         node.child,
         _bindLoopVariable(node.arguments, argument, depth) as DynamicMap,
@@ -779,8 +778,8 @@ abstract class _CurriedWidget extends BlobNode {
             as DynamicMap,
       )..propagateSource(node);
     }
-    if (node is _CurriedRemoteComponent) {
-      return _CurriedRemoteComponent(
+    if (node is _CurriedRemoteWidget) {
+      return _CurriedRemoteWidget(
         node.fullName,
         _bindLoopVariable(node.child, argument, depth) as _CurriedWidget,
         _bindLoopVariable(node.arguments, argument, depth) as DynamicMap,
@@ -1131,17 +1130,17 @@ abstract class _CurriedWidget extends BlobNode {
   String toString() => '$fullName ${initialState ?? "{}"} $arguments';
 }
 
-class _CurriedLocalComponent extends _CurriedWidget {
-  const _CurriedLocalComponent(
+class _CurriedLocalWidget extends _CurriedWidget {
+  const _CurriedLocalWidget(
     FullyQualifiedWidgetName fullName,
     this.child,
     DynamicMap arguments,
     DynamicMap widgetBuilderScope,
   ) : super(fullName, arguments, widgetBuilderScope, null);
 
-  factory _CurriedLocalComponent.error(
+  factory _CurriedLocalWidget.error(
       FullyQualifiedWidgetName fullName, String message) {
-    return _CurriedLocalComponent(
+    return _CurriedLocalWidget(
       fullName,
       (BuildContext context, DataSource data) => _buildErrorWidget(message),
       const <String, Object?>{},
@@ -1149,7 +1148,7 @@ class _CurriedLocalComponent extends _CurriedWidget {
     );
   }
 
-  final LocalComponentBuilder child;
+  final LocalWidgetBuilder child;
 
   @override
   Component buildChild(
@@ -1216,8 +1215,8 @@ class _CurriedHostWidget extends _CurriedWidget {
   }
 }
 
-class _CurriedRemoteComponent extends _CurriedWidget {
-  const _CurriedRemoteComponent(
+class _CurriedRemoteWidget extends _CurriedWidget {
+  const _CurriedRemoteWidget(
     FullyQualifiedWidgetName fullName,
     this.child,
     DynamicMap arguments,
@@ -1525,7 +1524,7 @@ class _WidgetState extends State<_Widget> implements DataSource {
     bool optional = true,
   }) {
     final Object value = _fetch(argsKey, expandLists: false);
-    if (value is _RemoteComponentBuilder) {
+    if (value is _RemoteWidgetBuilder) {
       final _CurriedWidget curriedWidget = value(builderArg);
       return curriedWidget.build(
         context,

@@ -39,8 +39,8 @@ class _ProbeState extends State<_Probe> {
 
 /// The RFW low-level catalog: a container plus two stateful leaf types. The
 /// adapter resolves names against `core`, so the catalog is registered there.
-LocalComponentLibrary _customCatalog() {
-  return LocalComponentLibrary(<String, LocalComponentBuilder>{
+LocalWidgetLibrary _customCatalog() {
+  return LocalWidgetLibrary(<String, LocalWidgetBuilder>{
     'Column': (BuildContext context, DataSource source) {
       return Column(
         mainAxisSize: MainAxisSize.min,

@@ -14,19 +14,19 @@ export 'package:a2ui_craft/a2ui_craft.dart' show DynamicMap, LibraryName;
 /// Injection point for a remote component.
 ///
 /// This component combines an RFW [Runtime] and [DynamicData], inserting a
-/// specified [component] into the tree.
-class RemoteComponent extends StatefulComponent {
-  /// Inserts the specified [component] into the tree.
+/// specified [widget] into the tree.
+class RemoteWidget extends StatefulComponent {
+  /// Inserts the specified [widget] into the tree.
   ///
   /// The [onEvent] argument is optional. When omitted, events are discarded.
-  const RemoteComponent(
+  const RemoteWidget(
       {super.key,
       required this.runtime,
-      required this.component,
+      required this.widget,
       required this.data,
       this.onEvent});
 
-  /// The [Runtime] to use to render the component specified by [component].
+  /// The [Runtime] to use to render the widget specified by [widget].
   ///
   /// This should update rarely (doing so is relatively expensive), but it is
   /// fine to update it. For example, a client could update this on the fly when
@@ -42,9 +42,9 @@ class RemoteComponent extends StatefulComponent {
   /// dependencies.
   ///
   /// The data to show in the component is specified using [data].
-  final FullyQualifiedWidgetName component;
+  final FullyQualifiedWidgetName widget;
 
-  /// The data to which the component specified by [name] will be bound.
+  /// The data to which the widget specified by [widget] will be bound.
   ///
   /// This includes data that comes from the application, e.g. a description of
   /// the user's device, the current time, or an animation controller's value,
@@ -61,10 +61,10 @@ class RemoteComponent extends StatefulComponent {
   final RemoteEventHandler? onEvent;
 
   @override
-  State<RemoteComponent> createState() => _RemoteComponentState();
+  State<RemoteWidget> createState() => _RemoteWidgetState();
 }
 
-class _RemoteComponentState extends State<RemoteComponent> {
+class _RemoteWidgetState extends State<RemoteWidget> {
   @override
   void initState() {
     super.initState();
@@ -72,7 +72,7 @@ class _RemoteComponentState extends State<RemoteComponent> {
   }
 
   @override
-  void didUpdateComponent(RemoteComponent oldWidget) {
+  void didUpdateComponent(RemoteWidget oldWidget) {
     super.didUpdateComponent(oldWidget);
     if (oldWidget.runtime != component.runtime) {
       oldWidget.runtime.removeListener(_runtimeChanged);
@@ -99,6 +99,6 @@ class _RemoteComponentState extends State<RemoteComponent> {
   @override
   Component build(BuildContext context) {
     return component.runtime
-        .build(context, component.component, component.data, _eventHandler);
+        .build(context, component.widget, component.data, _eventHandler);
   }
 }

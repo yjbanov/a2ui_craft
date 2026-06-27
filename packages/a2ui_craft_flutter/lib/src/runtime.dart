@@ -12,9 +12,9 @@ import 'package:flutter/widgets.dart';
 
 /// Signature of builders for local widgets.
 ///
-/// The [LocalComponentLibrary] class wraps a map of widget names to
-/// [LocalComponentBuilder] callbacks.
-typedef LocalComponentBuilder = Widget Function(
+/// The [LocalWidgetLibrary] class wraps a map of widget names to
+/// [LocalWidgetBuilder] callbacks.
+typedef LocalWidgetBuilder = Widget Function(
     BuildContext context, DataSource source);
 
 /// Signature of builders for remote widgets.
@@ -62,7 +62,7 @@ class RemoteFlutterWidgetsException implements Exception {
   String toString() => message;
 }
 
-/// Interface for [LocalComponentBuilder] to obtain data from arguments.
+/// Interface for [LocalWidgetBuilder] to obtain data from arguments.
 ///
 /// The interface exposes the [v] method, the argument to which is a list of
 /// keys forming a path to a node in the arguments expected by the widget. If
@@ -182,34 +182,34 @@ abstract class DataSource {
 
 /// Widgets defined by the client application. All remote widgets eventually
 /// bottom out in these widgets.
-class LocalComponentLibrary extends WidgetLibrary {
-  /// Create a [LocalComponentLibrary].
+class LocalWidgetLibrary extends WidgetLibrary {
+  /// Create a [LocalWidgetLibrary].
   ///
   /// The given map must not change once the object is created.
-  LocalComponentLibrary(this._widgets);
+  LocalWidgetLibrary(this._widgets);
 
-  final Map<String, LocalComponentBuilder> _widgets;
+  final Map<String, LocalWidgetBuilder> _widgets;
 
   /// Returns the builder for the widget of the given name, if any.
   @protected
-  LocalComponentBuilder? findConstructor(String name) {
+  LocalWidgetBuilder? findConstructor(String name) {
     return _widgets[name];
   }
 
-  /// The widgets defined by this [LocalComponentLibrary].
+  /// The widgets defined by this [LocalWidgetLibrary].
   ///
   /// The returned map is an immutable view of the map provided to the constructor.
   /// They keys are the unqualified widget names, and the values are the corresponding
-  /// [LocalComponentBuilder]s.
+  /// [LocalWidgetBuilder]s.
   ///
-  /// The map never changes during the lifetime of the [LocalComponentLibrary], but a new
+  /// The map never changes during the lifetime of the [LocalWidgetLibrary], but a new
   /// instance of an [UnmodifiableMapView] is returned each time this getter is used.
   ///
   /// See also:
   ///
   ///  * [createCoreWidgets], a function that creates a [Map] of local widgets.
-  UnmodifiableMapView<String, LocalComponentBuilder> get widgets {
-    return UnmodifiableMapView<String, LocalComponentBuilder>(_widgets);
+  UnmodifiableMapView<String, LocalWidgetBuilder> get widgets {
+    return UnmodifiableMapView<String, LocalWidgetBuilder>(_widgets);
   }
 }
 
@@ -223,7 +223,7 @@ class _ResolvedConstructor {
 ///
 /// To declare the libraries of widgets, the [update] method is used.
 ///
-/// At least one [LocalComponentLibrary] instance must be declared
+/// At least one [LocalWidgetLibrary] instance must be declared
 /// so that [RemoteWidgetLibrary] instances can resolve to real widgets.
 ///
 /// The [build] method returns a [Widget] generated from one of the libraries of
@@ -243,7 +243,7 @@ class Runtime extends ChangeNotifier {
   /// References to widgets that are not defined in the available libraries will
   /// default to using the [ErrorWidget] widget.
   ///
-  /// [LocalComponentLibrary] and [RemoteWidgetLibrary] instances are added using
+  /// [LocalWidgetLibrary] and [RemoteWidgetLibrary] instances are added using
   /// this method.
   ///
   /// [RemoteWidgetLibrary] instances are typically first obtained using
@@ -447,8 +447,8 @@ class Runtime extends ChangeNotifier {
           return _cachedConstructors[fullName] = result;
         }
       }
-    } else if (library is LocalComponentLibrary) {
-      final LocalComponentBuilder? constructor =
+    } else if (library is LocalWidgetLibrary) {
+      final LocalWidgetBuilder? constructor =
           library.findConstructor(fullName.widget);
       if (constructor != null) {
         return _cachedConstructors[fullName] =
@@ -467,7 +467,7 @@ class Runtime extends ChangeNotifier {
       yield library;
       return;
     }
-    if (root is LocalComponentLibrary) {
+    if (root is LocalWidgetLibrary) {
       return;
     }
     root as RemoteWidgetLibrary;
@@ -486,7 +486,7 @@ class Runtime extends ChangeNotifier {
   ///
   /// The `source` argument is the [BlobNode] that referenced the widget
   /// constructor, in the event that the widget comes from a
-  /// [LocalComponentBuilder] rather than a [WidgetDeclaration], and is used to
+  /// [LocalWidgetBuilder] rather than a [WidgetDeclaration], and is used to
   /// provide source information for local widgets (which otherwise could not be
   /// associated with a part of the source). See also [Runtime.blobNodeFor].
   _CurriedWidget _applyConstructorAndBindArguments(
@@ -544,10 +544,10 @@ class Runtime extends ChangeNotifier {
         }
         return result as _CurriedWidget;
       }
-      assert(widget.constructor is LocalComponentBuilder);
+      assert(widget.constructor is LocalWidgetBuilder);
       return _CurriedLocalWidget(
         widget.fullName,
-        widget.constructor as LocalComponentBuilder,
+        widget.constructor as LocalWidgetBuilder,
         arguments,
         widgetBuilderScope,
       )..propagateSource(source);
@@ -1147,7 +1147,7 @@ class _CurriedLocalWidget extends _CurriedWidget {
     );
   }
 
-  final LocalComponentBuilder child;
+  final LocalWidgetBuilder child;
 
   @override
   Widget buildChild(

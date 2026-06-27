@@ -188,12 +188,12 @@ the same way, and the same interactions dispatch the same events.
    same shapes:
    - `Runtime` (with `update(LibraryName, WidgetLibrary)` and
      `build(context, FullyQualifiedWidgetName, DynamicContent, RemoteEventHandler)`),
-   - `RemoteComponent` (fields: `runtime`, `component`, `data`, `onEvent`),
-   - `LocalComponentLibrary` / `LocalComponentBuilder`,
+   - `RemoteWidget` (fields: `runtime`, `widget`, `data`, `onEvent`),
+   - `LocalWidgetLibrary` / `LocalWidgetBuilder`,
    - `DataSource` (with `v<T>`, `child`, `childList`, `voidHandler`, `handler<T>`),
    - `RemoteEventHandler`, `createCoreComponents()`.
-   We use **component-centric** names everywhere (not Flutter's "Widget"
-   vocabulary), so client code reads identically regardless of framework.
+   We keep RFW's upstream public names verbatim, so the vendored runtime stays a
+   clean, upstreamable delta and client code reads identically across frameworks.
 3. **Runtime behavior.** Reconciliation, data-path subscription, scope/relative
    path resolution, loop/switch expansion, local `state`, and event dispatch must
    behave identically. A template that works on one adapter must work on all.
@@ -208,7 +208,7 @@ the same way, and the same interactions dispatch the same events.
    `<div style="display:flex">`. `Button` → a `GestureDetector` vs. a `<button>`.
    The *mapping* is the adapter's job; the *contract* (name/args/behavior) is not.
 3. **Framework lifecycle integration.** `StatefulWidget`/`State`/`setState` vs.
-   Jaspr's equivalents; how `RemoteComponent` hosts the built node.
+   Jaspr's equivalents; how `RemoteWidget` hosts the built node.
 4. **Styling/layout mechanics** that are inherent to the rendering engine, as
    long as the observable result honors the component contract.
 
@@ -782,7 +782,7 @@ protocol/data/binding half of the bridge is delegated.
 ## 11. The low-level catalog: a constrained common model
 
 This section defines the approach for growing the low-level catalog (the
-`LocalComponentLibrary` / "core" library) from today's seed into a **capable**
+`LocalWidgetLibrary` / "core" library) from today's seed into a **capable**
 primitive vocabulary. It is the concrete plan for **H2** (§3) and supersedes the
 "see §9" placeholders for the type/style model.
 
@@ -838,7 +838,7 @@ widget. We reject that:
 
 So extension and replacement are **first-class and must be ergonomic**, not an
 afterthought. Mechanically this is a short step from where we are: the catalog is
-already a `LocalComponentLibrary` (a name→builder map), so super-setting is adding
+already a `LocalWidgetLibrary` (a name→builder map), so super-setting is adding
 entries and sub-setting is overriding them; what's missing is an ergonomic
 compose/override API and clear registration. This is the **structured form of §3's
 "drop to the raw framework" escape hatch** — applied at the catalog level instead

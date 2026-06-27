@@ -5,7 +5,7 @@
 /// # A2UI Craft — Flutter adapter
 ///
 /// Renders A2UI Craft (RFW-format) templates using Flutter widgets. The public
-/// API (`Runtime`, `RemoteComponent`, `LocalComponentLibrary`,
+/// API (`Runtime`, `RemoteWidget`, `LocalWidgetLibrary`,
 /// `createCoreComponents`, ...) is intentionally identical to the other
 /// framework adapters; only the rendered node type (Flutter [Widget]) differs.
 library a2ui_craft_flutter;

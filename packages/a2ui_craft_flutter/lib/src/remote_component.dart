@@ -14,24 +14,24 @@ export 'package:a2ui_craft/a2ui_craft.dart' show DynamicMap, LibraryName;
 /// Injection point for a remote component.
 ///
 /// This widget combines an A2UI Craft [Runtime] and [DynamicContent], inserting
-/// a specified [component] into the tree.
+/// a specified [widget] into the tree.
 ///
 /// The public API of this class is intentionally identical across framework
-/// adapters (see the `a2ui_craft_jaspr` package's `RemoteComponent`). Only the
+/// adapters (see the `a2ui_craft_jaspr` package's `RemoteWidget`). Only the
 /// node type it ultimately produces — here a Flutter [Widget] — differs.
-class RemoteComponent extends StatefulWidget {
-  /// Inserts the specified [component] into the tree.
+class RemoteWidget extends StatefulWidget {
+  /// Inserts the specified [widget] into the tree.
   ///
   /// The [onEvent] argument is optional. When omitted, events are discarded.
-  const RemoteComponent({
+  const RemoteWidget({
     super.key,
     required this.runtime,
-    required this.component,
+    required this.widget,
     required this.data,
     this.onEvent,
   });
 
-  /// The [Runtime] to use to render the component specified by [component].
+  /// The [Runtime] to use to render the widget specified by [widget].
   ///
   /// This should update rarely (doing so is relatively expensive), but it is
   /// fine to update it. For example, a client could update this on the fly when
@@ -45,9 +45,9 @@ class RemoteComponent extends StatefulWidget {
   ///
   /// The component must be declared either in the specified library, or one of
   /// its dependencies.
-  final FullyQualifiedWidgetName component;
+  final FullyQualifiedWidgetName widget;
 
-  /// The data to which the component specified by [component] will be bound.
+  /// The data to which the widget specified by [widget] will be bound.
   ///
   /// This can be updated frequently (once per frame) using
   /// [DynamicContent.update].
@@ -59,10 +59,10 @@ class RemoteComponent extends StatefulWidget {
   final RemoteEventHandler? onEvent;
 
   @override
-  State<RemoteComponent> createState() => _RemoteComponentState();
+  State<RemoteWidget> createState() => _RemoteWidgetState();
 }
 
-class _RemoteComponentState extends State<RemoteComponent> {
+class _RemoteWidgetState extends State<RemoteWidget> {
   @override
   void initState() {
     super.initState();
@@ -70,7 +70,7 @@ class _RemoteComponentState extends State<RemoteComponent> {
   }
 
   @override
-  void didUpdateWidget(RemoteComponent oldWidget) {
+  void didUpdateWidget(RemoteWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.runtime != widget.runtime) {
       oldWidget.runtime.removeListener(_runtimeChanged);
@@ -95,6 +95,6 @@ class _RemoteComponentState extends State<RemoteComponent> {
   @override
   Widget build(BuildContext context) {
     return widget.runtime
-        .build(context, widget.component, widget.data, _eventHandler);
+        .build(context, widget.widget, widget.data, _eventHandler);
   }
 }

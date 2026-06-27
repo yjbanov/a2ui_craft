@@ -31,9 +31,9 @@ class _FlutterCraftTester implements CraftTester {
 
     await _tester.pumpWidget(
       _host(
-        RemoteComponent(
+        RemoteWidget(
           runtime: _runtime,
-          component: const FullyQualifiedWidgetName(
+          widget: const FullyQualifiedWidgetName(
             LibraryName(<String>['main']),
             'root',
           ),

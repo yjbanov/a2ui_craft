@@ -33,8 +33,8 @@ class _ProbeState extends State<_Probe> {
   }
 }
 
-LocalComponentLibrary _testComponents() {
-  return LocalComponentLibrary(<String, LocalComponentBuilder>{
+LocalWidgetLibrary _testComponents() {
+  return LocalWidgetLibrary(<String, LocalWidgetBuilder>{
     'Column': (BuildContext context, DataSource source) => div(
           styles: Styles(
               display: Display.flex, flexDirection: FlexDirection.column),
@@ -71,9 +71,9 @@ void main() {
       ..update(const LibraryName(<String>['main']), parseLibraryFile(_ab));
 
     tester.pumpComponent(
-      RemoteComponent(
+      RemoteWidget(
         runtime: runtime,
-        component: const FullyQualifiedWidgetName(
+        widget: const FullyQualifiedWidgetName(
           LibraryName(<String>['main']),
           'root',
         ),

@@ -30,8 +30,8 @@ class _ProbeState extends State<_Probe> {
   Widget build(BuildContext context) => Text('${widget.label}#$_id');
 }
 
-LocalComponentLibrary _testComponents() {
-  return LocalComponentLibrary(<String, LocalComponentBuilder>{
+LocalWidgetLibrary _testComponents() {
+  return LocalWidgetLibrary(<String, LocalWidgetBuilder>{
     'Column': (BuildContext context, DataSource source) => Column(
           mainAxisSize: MainAxisSize.min,
           children: source.childList(['children']),
@@ -69,9 +69,9 @@ void main() {
     await tester.pumpWidget(
       Directionality(
         textDirection: TextDirection.ltr,
-        child: RemoteComponent(
+        child: RemoteWidget(
           runtime: runtime,
-          component: const FullyQualifiedWidgetName(
+          widget: const FullyQualifiedWidgetName(
             LibraryName(<String>['main']),
             'root',
           ),

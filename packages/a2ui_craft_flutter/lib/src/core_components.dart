@@ -19,8 +19,8 @@ import 'runtime.dart';
 /// Note: the reserved `key` argument is handled by the runtime, which lifts it
 /// onto the reconciliation unit (`_Widget`) — see DESIGN.md §6 — so these
 /// builders do not read or apply it themselves.
-LocalComponentLibrary createCoreComponents() {
-  return LocalComponentLibrary(<String, LocalComponentBuilder>{
+LocalWidgetLibrary createCoreComponents() {
+  return LocalWidgetLibrary(<String, LocalWidgetBuilder>{
     'Text': (BuildContext context, DataSource source) {
       return Text(source.v<String>(['text']) ?? '');
     },

@@ -50,10 +50,10 @@ class _JasprGeometryTester implements CraftGeometryTester {
         _tester.findNode<web.Element>(find.byKey(ValueKey<String>(key)))!;
     final web.DOMRect r = el.getBoundingClientRect();
     return CraftRect(
-      left: r.left.toDouble(),
-      top: r.top.toDouble(),
-      width: r.width.toDouble(),
-      height: r.height.toDouble(),
+      left: r.left,
+      top: r.top,
+      width: r.width,
+      height: r.height,
     );
   }
 }

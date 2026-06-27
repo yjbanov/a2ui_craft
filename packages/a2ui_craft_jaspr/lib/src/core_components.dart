@@ -77,7 +77,10 @@ LocalWidgetLibrary createCoreComponents() {
           width: w != null ? Unit.pixels(w) : null,
           height: h != null ? Unit.pixels(h) : null,
         ),
-        <Component>[if (child != null) child],
+        switch (child) {
+          final Component c => <Component>[c],
+          _ => const <Component>[],
+        },
       );
     },
     'Image': (BuildContext context, DataSource source) {

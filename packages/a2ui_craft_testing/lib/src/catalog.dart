@@ -16,8 +16,10 @@
 /// templates.
 const Set<String> coreCatalog = <String>{
   'Text',
+  'Flex',
   'Row',
   'Column',
+  'Expanded',
   'Button',
   'Center',
   'SizedBox',

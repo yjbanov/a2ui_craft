@@ -2,19 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'package:a2ui_craft/a2ui_craft.dart';
 import 'package:jaspr/dom.dart';
 import 'package:jaspr/jaspr.dart';
 
 import 'runtime.dart';
 
-/// A library of standard core components (Text, Row, Column, Button)
+/// A library of standard core components (Text, Flex/Row/Column, Button, …)
 /// implemented using Jaspr DOM elements.
 ///
-/// This deliberately mirrors, component-for-component, the `createCoreComponents`
-/// of the `a2ui_craft_flutter` adapter so that the *same* template renders on
-/// both frameworks. The shared behavioral contract is verified by the
-/// conformance suite in `package:a2ui_craft_testing`, and the set of names is
-/// pinned by its `coreCatalog`.
+/// Each component **implements the framework-neutral spec** (DESIGN.md §11,
+/// Pillar A) — the cross-framework value types (`Dimension`, `FlexAxis`,
+/// `MainAxisAlign`/`CrossAxisAlign`) and behavioral contract — rather than
+/// mirroring the Flutter file by hand. The shared contract is verified by the
+/// conformance suite in `package:a2ui_craft_testing` (behavioral and, for the
+/// `Flex` slice, geometric via `getBoundingClientRect`/`getComputedStyle`).
+/// Components outside the `Flex` slice are still seed-grade fixtures.
 ///
 /// Note: the reserved `key` argument is handled by the runtime, which lifts it
 /// onto the reconciliation unit (`_Widget`) — see DESIGN.md §6 — so these
@@ -24,17 +27,23 @@ LocalWidgetLibrary createCoreComponents() {
     'Text': (BuildContext context, DataSource source) {
       return Component.text(source.v<String>(['text']) ?? '');
     },
-    'Row': (BuildContext context, DataSource source) {
+    // Row, Column, and Flex are one builder over a `FlexAxis`: Row/Column pin
+    // the axis, Flex reads it from `direction` (DESIGN.md §11).
+    'Flex': (BuildContext context, DataSource source) =>
+        _buildFlex(source, FlexAxis.parse(source.v<String>(['direction']))),
+    'Row': (BuildContext context, DataSource source) =>
+        _buildFlex(source, FlexAxis.horizontal),
+    'Column': (BuildContext context, DataSource source) =>
+        _buildFlex(source, FlexAxis.vertical),
+    'Expanded': (BuildContext context, DataSource source) {
+      // A flex item that grows to take `flex` shares of free space, like
+      // Flutter's `Expanded(flex:)`: grow factor, shrink 1, basis 0.
+      final int flex = source.v<int>(['flex']) ?? 1;
       return div(
-        styles: Styles(display: Display.flex, flexDirection: FlexDirection.row),
-        source.childList(['children']),
-      );
-    },
-    'Column': (BuildContext context, DataSource source) {
-      return div(
-        styles:
-            Styles(display: Display.flex, flexDirection: FlexDirection.column),
-        source.childList(['children']),
+        styles: Styles(raw: <String, String>{'flex': '$flex 1 0'}),
+        <Component>[
+          source.child(['child'])
+        ],
       );
     },
     'Button': (BuildContext context, DataSource source) {
@@ -158,3 +167,76 @@ LocalWidgetLibrary createCoreComponents() {
     },
   });
 }
+
+/// Builds a `Flex` (and thus `Row`/`Column`) from the catalog spec, mapping the
+/// framework-neutral value types onto a CSS flex container.
+///
+/// Sizing is **explicit** (DESIGN.md §11): a default `Flex` hugs both axes
+/// (`width`/`height: fit-content`; `align-items: center`, so children keep their
+/// intrinsic cross size). This deliberately does *not* inherit CSS's native
+/// block-level defaults (a `display:flex` div would fill its inline axis and
+/// stretch its children), so the same template lays out identically here and in
+/// the Flutter adapter. `fill`/`fixed` opt into `100%`/an exact pixel extent.
+Component _buildFlex(DataSource source, FlexAxis axis) {
+  final MainAxisAlign main =
+      MainAxisAlign.parse(source.v<String>(['mainAxisAlignment']));
+  final CrossAxisAlign cross =
+      CrossAxisAlign.parse(source.v<String>(['crossAxisAlignment']));
+  final double gap = _gap(source);
+  final Dimension width = Dimension.decode(_dimRaw(source, ['width']));
+  final Dimension height = Dimension.decode(_dimRaw(source, ['height']));
+  final bool horizontal = axis == FlexAxis.horizontal;
+
+  return div(
+    styles: Styles(
+      display: Display.flex,
+      flexDirection: horizontal ? FlexDirection.row : FlexDirection.column,
+      justifyContent: _toJustify(main),
+      alignItems: _toAlign(cross),
+      raw: <String, String>{
+        'width': _cssExtent(width),
+        'height': _cssExtent(height),
+        if (gap > 0) 'gap': '${_px(gap)}px',
+      },
+    ),
+    source.childList(['children']),
+  );
+}
+
+/// Reads a raw scalar (a number → a fixed size, or a keyword string) for a
+/// `Dimension`-valued argument. `DataSource.v` requires a concrete scalar type,
+/// so we probe the few a `Dimension` can take.
+Object? _dimRaw(DataSource source, List<Object> key) =>
+    source.v<double>(key) ?? source.v<int>(key) ?? source.v<String>(key);
+
+/// Reads the `gap` argument, accepting either an int or double literal.
+double _gap(DataSource source) =>
+    source.v<double>(['gap']) ?? source.v<int>(['gap'])?.toDouble() ?? 0.0;
+
+String _cssExtent(Dimension d) => switch (d) {
+      HugDimension() => 'fit-content',
+      FillDimension() => '100%',
+      FixedDimension(:final double pixels) => '${_px(pixels)}px',
+      // A container is not itself a flex child, so `flex(n)` has no meaning here.
+      FlexDimension() => 'fit-content',
+    };
+
+/// Renders a CSS length without a trailing `.0` for whole pixels.
+String _px(double v) =>
+    v == v.roundToDouble() ? v.toInt().toString() : v.toString();
+
+JustifyContent _toJustify(MainAxisAlign a) => switch (a) {
+      MainAxisAlign.start => JustifyContent.start,
+      MainAxisAlign.center => JustifyContent.center,
+      MainAxisAlign.end => JustifyContent.end,
+      MainAxisAlign.spaceBetween => JustifyContent.spaceBetween,
+      MainAxisAlign.spaceAround => JustifyContent.spaceAround,
+      MainAxisAlign.spaceEvenly => JustifyContent.spaceEvenly,
+    };
+
+AlignItems _toAlign(CrossAxisAlign a) => switch (a) {
+      CrossAxisAlign.start => AlignItems.start,
+      CrossAxisAlign.center => AlignItems.center,
+      CrossAxisAlign.end => AlignItems.end,
+      CrossAxisAlign.stretch => AlignItems.stretch,
+    };

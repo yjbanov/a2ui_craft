@@ -632,9 +632,20 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
         layout on both sides: Flutter `RenderBox` (`WidgetTester.getRect`) and
         Jaspr **headless-Chrome** `getBoundingClientRect` (`dart test -p chrome`,
         wired into `check.sh`) — not a CSS-structure proxy.
-  - [ ] **Next:** `Box`/`Container` (size + padding + margin + decoration) and the
-        `EdgeInsets`/`Color` types; then atoms (`Text` over `TextStyle`) and
-        controls. Wrap, `Stack`, and `Grid` extend the layout algebra later.
+  - [x] **`Box` slice.** The container primitive (size + padding + margin +
+        background) on the same explicit-sizing / border-box model, with `Insets`
+        and `Rgba` value types (decoded in the core) and asymmetric-inset geometry
+        conformance on both adapters.
+  - [x] **Atoms slice (toward the A2UI Basic Catalog).** `Text` (`variant`),
+        `Image` (`ImageFit` + `ImageVariant` canonical sizes), `Icon` (shared
+        name→glyph subset), `Divider` (`axis`), and `List`, with behavioral +
+        geometry conformance. Proven end-to-end by rendering the gallery's
+        **Contact Card** surface as a Craft template on both adapters.
+  - [ ] **Next (toward the gallery):** controls/forms (`Slider`, `ChoicePicker`,
+        `TextField` variants, `CheckBox` label) — verifying `a2ui_core` supplies
+        the validation/format functions — then the stateful/overlay components
+        (`Tabs`, `Modal`, `DateTimeInput`). The cross-cutting `weight` (flex-grow
+        on any Row/Column child) and theming are still open. `Stack`/`Grid` later.
 - [ ] Prove the state-model axis with a third, non-Flutter-like framework.
 - [ ] **Security: uphold A2UI's secure-by-design promise (§12).** When templates
       are delivered ephemerally, treat them as untrusted input: add engine-level

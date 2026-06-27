@@ -125,7 +125,9 @@ under A2UI's id-addressed, incremental updates — is the subject of §6.
    CSS layout/animation). H2 has started — the component contract and conformance
    harness (§8) — but the cross-platform type/style model is still ahead. The
    current core component sets are intentionally minimal harness fixtures, not the
-   real library.
+   real library. **§11 defines the approach** for growing them: a *constrained
+   common model* (flexbox-shaped, with an explicit value-type vocabulary) rather
+   than mirroring either framework's native layout.
 
 A2UI Craft is deliberately a **least-common-denominator** engine. The hunch is
 that this denominator is still quite expressive and covers many A2UI use cases.
@@ -610,11 +612,25 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
         free-text *entry* is exercised on Flutter; the cross-framework write-back
         contract is proven via the checkbox (a value-free toggle) plus the shared
         setter path. A `Form` sample demonstrates both inputs in the gallery.
-  - [ ] **Then** — grow the high-level catalog; richer layout widgets; the H2
-        type/style model.
-- [ ] **H2 type/style model** (the `argument_decoders` replacement) — the unlock
-      for more low-level components and theme; see §9.
+  - [ ] **Then** — grow the **low-level** catalog into a capable primitive
+        vocabulary (§11): the high-level catalog is the app developer's job,
+        authored *as templates over* these primitives. Approach decided —
+        constrained common model + value-type vocabulary + geometry conformance.
+- [ ] **H2 type/style model + capable low-level catalog (§11).** Build the
+      framework-neutral value-type vocabulary (the `argument_decoders`
+      replacement — `Dimension`/`Color`/`EdgeInsets`/alignment/`TextStyle`),
+      sharpen conformance to geometry-with-tolerance, and grow the catalog
+      depth-first on layout (`Flex` vertical slice first). The unlock for richer
+      primitives and, later, theming.
 - [ ] Prove the state-model axis with a third, non-Flutter-like framework.
+- [ ] **Security: uphold A2UI's secure-by-design promise (§12).** When templates
+      are delivered ephemerally, treat them as untrusted input: add engine-level
+      operation budgets (loop / instantiation / depth / node counters + wall-clock
+      deadline) — **time-windowed, not reset-per-update**, and routing all
+      engine-scheduled async (microtasks/timers) through one instrumented,
+      cancellable scheduler so chains can't evade the counters — with cooperative
+      interruption and cleanup, and keep the catalog + surface scope as the
+      capability ceiling. Noted, not yet designed.
 - [ ] Consider upstream RFW restructuring so the formats layer need not be
       vendored.
 
@@ -622,10 +638,18 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
 
 - **Core component vocabulary (H2):** what is the least-common-denominator set,
   and how are layout/animation differences reconciled between Flutter and the
-  DOM?
+  DOM? **Direction decided (§11):** a constrained common model with a flexbox
+  spine and explicit sizing, rather than mirroring either framework. Still open:
+  the exact per-category widget set and how far the layout algebra reaches (e.g.
+  `Grid`, scrolling/overflow, `Stack` z-order) before the "drop to raw framework"
+  escape hatch (§3).
 - **Type model:** the equivalent of RFW's `argument_decoders` is intensely
   Flutter-specific and is explicitly *not* part of the core; H2 must define a
-  framework-neutral type/style model that each adapter maps down.
+  framework-neutral type/style model that each adapter maps down. **Direction
+  decided (§11):** a small value-type vocabulary (`Dimension`/`Color`/`EdgeInsets`/
+  alignment/`TextStyle`) extending the A2UI common-type `$ref` mechanism. Still
+  open: the precise canonical shapes and how `Dimension`'s `flex`/`fill`/`hug`
+  interact with nested scroll/intrinsic-sizing edge cases.
 - **Template packaging & richer A2UI catalog binding:** the basic binding
   exists (`a2ui_craft_bridge` maps A2UI `component` types to core components by
   name). Still open: named higher-level templates (e.g. a `WeatherCard` template
@@ -752,5 +776,345 @@ protocol/data/binding half of the bridge is delegated.
   `runA2uiConformance`, the bridge binding tests, the custom-catalog reorder test,
   and the seam spike are green on both adapters. `a2ui_core` is pulled via a git
   dependency on `flutter/genui` (a workspace-wide `dependency_overrides`), to be
-  pinned once the team cuts a release. Remaining: wiring `a2ui_core`'s two-way
-  setters for editable inputs.
+  pinned once the team cuts a release. Two-way setters for editable inputs are
+  now wired (see the roadmap entry in §8).
+
+## 11. The low-level catalog: a constrained common model
+
+This section defines the approach for growing the low-level catalog (the
+`LocalComponentLibrary` / "core" library) from today's seed into a **capable**
+primitive vocabulary. It is the concrete plan for **H2** (§3) and supersedes the
+"see §9" placeholders for the type/style model.
+
+### Why this is the load-bearing library
+
+The low-level catalog is the framework's **instruction set**. Per the two-level
+model (§2), app developers **compose it into templates** to build their own
+high-level, domain-specific catalogs — and they can also **extend and replace** it
+with bespoke or brand-styled widgets ("Extensible by design", below). So our job
+is not to ship a high-level catalog, nor an exhaustive one: it is to ship a
+**strong, broadly-useful, cross-framework default** — expressive enough to build
+most high-level catalogs, and extensible where it isn't. Two requirements pull
+against each other:
+
+- **Expressiveness** — it must scale to a wide variety of use-cases, because each
+  app's high-level catalog is unique.
+- **Cross-framework identity** — a primitive must behave the same whether a
+  template is rendered by Flutter or Jaspr (§5). Every primitive we add multiplies
+  the surface where the two can silently diverge.
+
+### Extensible by design: sub- and super-setting the catalog
+
+The catalog we ship is a **default, not a closed set**. Real apps must be able to
+**super-set** it (add widgets) and **sub-set** it (replace widgets), for two needs
+that don't go away:
+
+- **Bespoke widgets.** An app has local widgets that are hard or pointless to
+  rebuild from primitives; the developer wants to register and reuse them directly.
+- **Branded design language.** An app's **controls** (`Button`, `TextField`,
+  `Checkbox`, `Switch`, `Radio`) are usually heavily styled to its UX. Layout
+  primitives are broadly reusable as-is; controls are the frequent replacement
+  target.
+
+#### Considered and rejected: an HTML/CSS-expressive catalog
+
+The alternative is to make our primitive set so expressive you can build anything
+by composing it (effectively "HTML/CSS in a box"), and never need to replace a
+widget. We reject that:
+
+- It is a **heavy lift, and a *cross-framework* one.** A maximally expressive
+  primitive set *is* building our own UI framework — which would make the
+  "cross-framework" claim tongue-in-cheek (we'd *be* a framework, not an adapter
+  onto frameworks).
+- It **doesn't remove the need** for sub-/super-setting anyway: bespoke widgets and
+  brand styling are real-app requirements no matter how expressive the core is.
+- **Design language is coupled to the framework the developer already chose.** They
+  picked HTML/CSS on the web and SwiftUI on iOS because those toolkits give the
+  best results; adopting A2UI Craft should let them keep extracting those results,
+  not wall them off behind our primitives.
+- **It matches how A2UI already works** without Craft — a catalog of framework-
+  native widgets — so sub-/super-setting keeps the overall model familiar and
+  consistent.
+
+So extension and replacement are **first-class and must be ergonomic**, not an
+afterthought. Mechanically this is a short step from where we are: the catalog is
+already a `LocalComponentLibrary` (a name→builder map), so super-setting is adding
+entries and sub-setting is overriding them; what's missing is an ergonomic
+compose/override API and clear registration. This is the **structured form of §3's
+"drop to the raw framework" escape hatch** — applied at the catalog level instead
+of abandoning the engine.
+
+#### Where the contract still bites
+
+The cross-framework behavioral contract (§5) and conformance (Pillar C, below)
+cover the widgets *we* ship. A developer's additions and replacements are theirs to
+keep consistent: a replacement that preserves the same **name, props, and
+observable behavior** stays template-portable across their frameworks (and they can
+run it through our conformance harness to prove it); one that diverges is, by
+choice, framework-specific. Two complementary axes serve "make it look like my
+app": **theming** (the deferred H2 layer — restyle *our* control via tokens) for
+the light-touch case, and **replacement** (swap in a native or bespoke control) for
+the heavy case.
+
+This also **relieves pressure on the catalog's breadth** (Pillar D): because apps
+extend and replace, our core need not chase every widget or every styling knob. We
+aim for a strong, broadly-useful default — especially the **layout spine** (the
+most reusable, least-restyled part) and the common controls — and let extension
+cover the long tail.
+
+### Why the seed won't scale as-is
+
+Today the catalog is two hand-written files (`core_components.dart` ×2) that, per
+their own headers, "deliberately mirror, component-for-component" each other, with
+`runCoreComponentConformance` as the only thing holding them together. That is
+fine at ~14 widgets with coarse probes, but it does not scale:
+
+- **The frameworks have genuinely different layout models.** Flutter is
+  constraint-based (constraints down, sizes up; explicit `mainAxisSize`/`Expanded`);
+  the DOM is the CSS box model (flow, margin collapse, `height:auto` vs.
+  `width:100%` defaults, intrinsic sizing). Mirroring two native implementations
+  by hand means the defaults diverge silently as the catalog grows.
+- **The conformance suite can't see layout divergence.** "Is this text visible?"
+  passes even when a `Row` lays out completely differently on the two sides. The
+  gap between "tests green" and "actually identical" widens with every widget.
+- **The seed implementations are already demo-grade and already divergent** in
+  telling ways: `Icon` is a 3-name string→`IconData` switch, `Video` is a stub box
+  on Flutter but a real `<video>` on Jaspr, `Card` hard-codes padding/shadow
+  independently on each side. Nothing catches the mismatch.
+
+So the task is not "write more widgets like these." It is to **establish a
+contract that makes the adapters converge by construction, and sharpen the
+enforcement enough to keep them honest.**
+
+### The decision: a constrained common model, flexbox-shaped
+
+The load-bearing choice is *whose layout model the catalog's contract speaks*.
+Three options were considered: **Flutter-canonical** (Jaspr emulates Flutter's
+constraint protocol in CSS — doesn't scale; intrinsic sizing is very hard to fake),
+**CSS-canonical** (Flutter emulates flow layout and margin collapse — same problem
+mirrored), and a **constrained common model** that both adapters render natively.
+We choose the **constrained common model**: a small layout algebra that is cheap
+and faithful on *both* sides. The catalog is therefore **neither "Flutter widgets"
+nor "HTML elements"** — it is its own vocabulary that each adapter maps down.
+
+This is tractable because **flexbox is the one layout model both sides already
+implement with near-identical semantics** (not a coincidence — Flutter's `Flex`
+was modeled on flexbox). It is the spine of the model:
+
+| Common model | Flutter | CSS |
+| --- | --- | --- |
+| `mainAxisAlignment` | `MainAxisAlignment` | `justify-content` |
+| `crossAxisAlignment` | `CrossAxisAlignment` | `align-items` |
+| flex factor on a child | `Expanded(flex:)` / `Flexible` | `flex-grow` |
+| `gap` | spacing between children | `gap` |
+| wrap | `Wrap` | `flex-wrap` |
+
+The one real trap *within* flexbox is **default sizing**: a Flutter `Column` with
+`mainAxisSize.min` hugs its children, whereas a CSS flex container fills its
+cross-axis and hugs its main-axis by `auto`. The fix is to **not inherit either
+platform's defaults** — make sizing **explicit** through a shared dimension type.
+That single decision removes the largest source of silent divergence, and it is
+the seed of the type model below.
+
+#### Considered and rejected: Yoga as a shared runtime layout engine
+
+[Yoga](https://www.yogalayout.dev/) is the canonical embeddable flexbox engine (a
+C++ core implementing CSS Flexbox, exposed via a C API with native/WASM bindings;
+the archived [zup-archive/yoga](https://github.com/zup-archive/yoga) wired it into
+Flutter over FFI). The tempting idea: run Yoga on the native frameworks (Flutter,
+SwiftUI, Compose) and plain HTML/CSS on the web — and because Yoga *targets web
+standards*, the two stay consistent. We **rejected it as a runtime dependency**:
+
+- **No advantage over the native frameworks worth its weight.** Flutter `Flex`,
+  SwiftUI stacks, and Compose `Row`/`Column` are *already* flexbox-shaped native
+  implementations of this exact model. Yoga's consistency-with-the-web is real but
+  **redundant** — it mainly buys tighter *bit-for-bit* parity with CSS, which this
+  contract explicitly does not need (behavioral identity within a tolerance band,
+  not pixel parity — §5). We'd pay a large fixed cost to close a gap the contract
+  already tolerates.
+- **The cost lands exactly where it hurts.** A C++ library plus per-platform FFI
+  bindings (and no FFI-to-native on Flutter web), which **breaks host-only
+  `flutter test`** — undermining Pillar C (geometry conformance), the one
+  mechanism that keeps the adapters honest.
+- **It does not solve the hard part.** Yoga delegates *leaf measurement* (text
+  shaping, font fallback, line-breaking — the real source of cross-framework
+  divergence) back to the host, so feeding it host-measured sizes leaves the same
+  divergence; it just relocates into the measure callbacks.
+- **Yoga is for environments that *lack* flexbox** (game engines, custom canvases).
+  Every target we care about already has a native flexbox-equivalent, so we **map
+  onto** each framework's native layout rather than **embedding a third engine** —
+  embedding one only reduces divergence if *both* adapters route through it, at
+  which point we've stopped using either framework's renderer (and, on the web,
+  bypassed the DOM and broken SSR).
+
+Yoga remains useful as a **reference**: it is the de-facto "flexbox minus CSS
+cruft" spec, so its well-tested prop set, enums, and defaults are a good model to
+crib for the `Flex`/`Dimension` vocabulary, and it is third-party validation that
+flexbox is the right spine. It may also serve as a **test-time geometry oracle**
+for layout-only fixtures (Pillar C) — but not as a shipped dependency.
+
+### Pillar A — the catalog is a *specification*, not parallel implementations
+
+There is **one framework-neutral source of truth** per primitive: its prop names,
+their value types and defaults, and its behavioral semantics stated concretely
+enough to test. Both adapters implement *against* that spec; neither adapter's code
+is the contract. `coreCatalog` is the embryo of this — it pins the *set of names* —
+and it grows into the real contract by also pinning props, types, and semantics.
+The header comment "deliberately mirrors the other adapter" is replaced by "implements
+the spec"; the spec, not a sibling file, is what each adapter answers to.
+
+### Pillar B — a shared value-type vocabulary (the H2 type model)
+
+The catalog needs a small set of cross-framework value types, each with one
+canonical representation that every adapter maps down. This is the
+framework-neutral replacement for RFW's intensely Flutter-specific
+`argument_decoders` (§9), and the foundation theming later plugs into:
+
+| Type | Canonical shape | Notes |
+| --- | --- | --- |
+| `Dimension` | `hug` \| `fill` \| `fixed(px)` \| `flex(n)` | the explicit-sizing decision; removes default-divergence |
+| `Color` | RGBA | |
+| `EdgeInsets` | per-side px (padding / margin) | |
+| `MainAxisAlignment` / `CrossAxisAlignment` | flexbox-aligned enums | map per the table above |
+| `Axis` | `horizontal` \| `vertical` | `Row`/`Column` are `Flex` + this |
+| `TextStyle` | size, weight, color, … | |
+
+These extend the **A2UI common-type vocabulary** already settled for ephemeral
+schemas (the `$ref`/`CommonSchemas` mechanism behind `loadCatalog`, §8), so a
+template author and a catalog schema describe a dimension or a color the same way
+A2UI describes a `DynamicString`. Designing these now — even minimally — is
+deliberate: they are load-bearing for every primitive and brutal to retrofit.
+**Theming itself is deferred** ("one step at a time"), but the types it will hang
+on are not.
+
+### Pillar C — conformance graduates from "visible" to geometry-with-tolerance
+
+The contract is only real if it is enforced. The probes must rise from "is this
+text visible?" to **"this child sits at this offset, at this size — within
+tolerance."** `CraftTester` gains geometry queries (a node's box position and
+size); `runCoreComponentConformance` asserts layout outcomes for `Flex`, sizing,
+alignment, gap, and wrap on both adapters.
+
+Parity is **behavioral with a tolerance band**, never pixel-exact — text shaping
+and line-breaking differ across engines, so exact pixels are impossible and not the
+goal (§5). Choosing the constrained model (above) is precisely what keeps the band
+small. This sharpening is where the real investment goes; without it the contract
+is just a comment.
+
+### Pillar D — breadth by category, depth-first on layout
+
+A capable catalog needs coverage across these categories (today's seed is a thin
+slice of each):
+
+- **Layout** — `Flex` (`Row`/`Column`), `Box`/`Container` (size + padding + margin
+  + decoration), `Align`/`Center`, `Stack` + `Positioned`, `Spacer`/`Gap`, `Wrap`,
+  `ScrollView`, `Grid`.
+- **Atoms** — `Text` (over the `TextStyle` type), `Image`, `Icon`, `Divider`.
+- **Controls** — `Button`, `TextField`, `Checkbox`, `Switch`, `Radio`, `Slider`,
+  `Select`. (Two-way binding is already proven, §8.)
+
+The order is **depth-first on layout + the value types**: `Flex`, `Box`, and the
+`Dimension`/`EdgeInsets`/alignment types are where Pillars A–C are proven and where
+cross-framework divergence is hardest. Controls and atoms then compose on that
+proven foundation, so breadth is comparatively cheap. The first concrete step is a
+**vertical slice through `Flex`** — spec + value types + geometry conformance — end
+to end on both adapters, before going wide.
+
+### What this is not (yet)
+
+- **Not theming.** The value types are theming's foundation; the theming layer on
+  top is deliberately later.
+- **Not pixel parity.** Behavioral identity within a tolerance band (§5).
+- **Not a Flutter or DOM mirror.** The catalog is its own constrained vocabulary;
+  "looks like a Flutter `Row`" / "looks like a `<div style=flex>`" is an adapter
+  implementation detail, not the contract.
+
+## 12. Security: upholding A2UI's secure-by-design promise
+
+> **Status: noted, not yet designed.** This section records a requirement so it is
+> not forgotten. The actual threat model and mechanisms are future work, orthogonal
+> to the low-level catalog (§11) and not designed in this pass.
+
+A2UI is built for **secure, trusted agentic experiences**. Its security rests on
+the ephemerally-loaded payload being **declarative data, not code**: A2UI Transport
+is JSON that *composes a vetted catalog* and *binds a scoped data model*, with **no
+arbitrary code execution**, so an agent-influenced payload stays within the
+boundaries the client allows. A2UI Craft adds expressivity — most notably
+**templates** — and that expressivity must not erode the promise.
+
+### The invariant we inherit, and must keep
+
+A2UI Craft preserves the no-arbitrary-code property: RFW templates are
+**declarative** (data binding, `...for` loops, `switch`, `state`, `event`/args)
+with **no host-code eval**. The only things a template can *do* are compose the
+**catalog** and dispatch scoped **events/actions** — so **the catalog is the
+capability ceiling.** (This is also why sub-/super-setting, §11, is the right place
+to reason about what a deployment grants: capability is conferred by what goes into
+the catalog.) Keeping that boundary intact as the language and engine grow is the
+core security invariant.
+
+### Where the risk concentrates: template provenance
+
+The threat scales with **who supplies a template, and when**:
+
+- **Build-time, vetted, shipped with the client** (today's stance, §2) — templates
+  are *app code*: trusted, reviewed, not an external attack vector. A runaway
+  template only harms its own author.
+- **Ephemerally delivered at runtime** (the trajectory: `loadCatalog` already makes
+  component *schemas* data; templates are the natural next thing to deliver on
+  demand) from a server, a third-party catalog, or anything the agent can
+  influence — now a template is **untrusted input** and must be treated with the
+  same suspicion as the rest of the ephemeral payload.
+
+The work below matters precisely when templates cross into the second category.
+
+### Threat classes (initial, non-exhaustive)
+
+- **Resource exhaustion / DoS** *(primary)* — template nesting and loops make it
+  easy to overload CPU or exhaust memory: deep or recursive composition, large
+  fan-out, long or nested `...for` loops, pathological data driving an unrolled
+  `ChildList`.
+- **Async amplification (counter-reset evasion)** — a subtler variant that
+  specifically defeats naive per-update counters. Budgets are presumably checked
+  and **reset around an update**, but template-driven work can schedule
+  **microtasks or timers** that the VM runs *after* that reset. Each resulting
+  update is individually within budget, yet each schedules the next — so an
+  attacker sustains unbounded aggregate work as a chain of innocuous-looking
+  updates, escaping any counter that returns to zero between them. (Dart
+  microtasks / `Timer`s; the JS event loop under Jaspr — both adapters.)
+- **Capability / data-scope** — a template must not bind or exfiltrate data, nor
+  dispatch actions, beyond what the surface is scoped to allow. The catalog plus
+  the surface's data/action scope define the ceiling, and the engine must not let a
+  template widen it.
+
+### Direction for the primary class
+
+Install **engine-level operation budgets** in the runtime (both adapters, in
+lockstep): counters for loop iterations, widget/component instantiations, tree
+depth, and total node count, plus a wall-clock deadline. When a budget is exceeded,
+**cooperatively interrupt** the interpreter and **clean up** the partial tree
+rather than let it run away.
+
+Two constraints follow from the async-amplification case and must be designed in
+from the start, not bolted on:
+
+- **Budgets accrue over a time window; they do not reset to zero per update.** A
+  rate-limited budget (e.g. a token bucket that refills at a fixed rate over
+  wall-clock time) bounds *sustained* cross-update work, so a chain of
+  individually-cheap updates still trips the limit. A hard per-update reset is the
+  exact hole the microtask/timer chain exploits.
+- **All engine-scheduled async funnels through one instrumented scheduler.** The
+  engine routes its own microtasks, timers, futures, and frame callbacks through a
+  single chokepoint that (a) counts them against the budget, (b) attributes them to
+  the originating surface, so a runaway surface can be isolated and torn down
+  without killing the app, and (c) is fully **cancellable** on cleanup, so
+  interrupting a surface also drains its pending async. Bounding chained-update
+  depth within the window catches feedback loops (an update that re-triggers an
+  update).
+
+Because this lives in the vendored RFW runtime (alongside keyed `_Widget` and
+`buildNode`), it is another candidate VENDORED extension and a plausible
+upstream-RFW contribution — any host running untrusted RFW wants resource limits.
+
+Revisit this when ephemeral template delivery (or a security review of the
+ephemeral surface) is on the table.

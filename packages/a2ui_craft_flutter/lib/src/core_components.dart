@@ -25,7 +25,14 @@ import 'runtime.dart';
 LocalWidgetLibrary createCoreComponents() {
   return LocalWidgetLibrary(<String, LocalWidgetBuilder>{
     'Text': (BuildContext context, DataSource source) {
-      return Text(source.v<String>(['text']) ?? '');
+      final TextVariant variant =
+          TextVariant.parse(source.v<String>(['variant']));
+      return Text(
+        source.v<String>(['text']) ?? '',
+        style: variant == TextVariant.caption
+            ? const TextStyle(fontSize: 12, color: Color(0xFF5F6368))
+            : null,
+      );
     },
     // Row, Column, and Flex are one builder over a `FlexAxis`: Row/Column pin
     // the axis, Flex reads it from `direction` (DESIGN.md §11).
@@ -62,28 +69,38 @@ LocalWidgetLibrary createCoreComponents() {
       );
     },
     'Box': (BuildContext context, DataSource source) => _buildBox(source),
-    'Image': (BuildContext context, DataSource source) {
-      final String? url = source.v<String>(['url']);
-      if (url == null || url.isEmpty || url.contains('example.com')) {
-        return const SizedBox.shrink();
-      }
-      return url.startsWith('http') ? Image.network(url) : Image.asset(url);
-    },
+    'Image': (BuildContext context, DataSource source) => _buildImage(source),
     'Icon': (BuildContext context, DataSource source) {
-      // Very basic icon mapping for demo purposes.
-      final String? iconName = source.v<String>(['icon']);
-      IconData iconData = Icons.star; // default fallback
-      if (iconName == 'settings') iconData = Icons.settings;
-      if (iconName == 'person') iconData = Icons.person;
-      if (iconName == 'check') iconData = Icons.check;
-      return Icon(iconData);
+      return Icon(_iconData(source.v<String>(['icon'])));
     },
     'Divider': (BuildContext context, DataSource source) {
-      return const Divider();
+      final FlexAxis axis = FlexAxis.parse(source.v<String>(['axis']),
+          fallback: FlexAxis.horizontal);
+      return axis == FlexAxis.vertical
+          ? const VerticalDivider()
+          : const Divider();
     },
     'ScrollView': (BuildContext context, DataSource source) {
       return SingleChildScrollView(
         child: source.child(['child']),
+      );
+    },
+    // A scrollable run of children along an axis (A2UI `List`).
+    'List': (BuildContext context, DataSource source) {
+      final bool horizontal = FlexAxis.parse(source.v<String>(['direction']),
+              fallback: FlexAxis.vertical) ==
+          FlexAxis.horizontal;
+      final CrossAxisAlign align = CrossAxisAlign.parse(
+          source.v<String>(['align']),
+          fallback: CrossAxisAlign.stretch);
+      return SingleChildScrollView(
+        scrollDirection: horizontal ? Axis.horizontal : Axis.vertical,
+        child: Flex(
+          direction: horizontal ? Axis.horizontal : Axis.vertical,
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: _toCrossAxisAlignment(align),
+          children: source.childList(['children']),
+        ),
       );
     },
     'Card': (BuildContext context, DataSource source) {
@@ -249,6 +266,67 @@ Rgba? _rgba(DataSource source, String key) =>
 
 EdgeInsets _toEdgeInsets(Insets i) =>
     EdgeInsets.fromLTRB(i.left, i.top, i.right, i.bottom);
+
+/// Builds an `Image` sized to its [ImageVariant] (so it occupies the same box as
+/// the Jaspr adapter) with the requested [ImageFit].
+///
+/// An empty or `example.com` URL renders a sized placeholder instead of a
+/// network image, so widget tests stay deterministic and network-free.
+Widget _buildImage(DataSource source) {
+  final String? url = source.v<String>(['url']);
+  final ImageVariant variant =
+      ImageVariant.parse(source.v<String>(['variant']));
+  final BoxFit fit = _boxFit(ImageFit.parse(source.v<String>(['fit'])));
+  final bool placeholder =
+      url == null || url.isEmpty || url.contains('example.com');
+
+  final Widget content = placeholder
+      ? const ColoredBox(color: Color(0x1F000000))
+      : Image.network(url,
+          fit: fit, width: variant.width, height: variant.height);
+
+  Widget box =
+      SizedBox(width: variant.width, height: variant.height, child: content);
+  if (variant.circular) box = ClipOval(child: box);
+  return box;
+}
+
+BoxFit _boxFit(ImageFit f) => switch (f) {
+      ImageFit.contain => BoxFit.contain,
+      ImageFit.cover => BoxFit.cover,
+      ImageFit.fill => BoxFit.fill,
+      ImageFit.none => BoxFit.none,
+      ImageFit.scaleDown => BoxFit.scaleDown,
+    };
+
+/// Maps a (subset of) A2UI icon names to Material icons; unmapped names fall
+/// back to a generic glyph. The full catalog icon set is future work.
+IconData _iconData(String? name) => switch (name) {
+      'accountCircle' => Icons.account_circle,
+      'add' => Icons.add,
+      'arrowBack' => Icons.arrow_back,
+      'arrowForward' => Icons.arrow_forward,
+      'attachFile' => Icons.attach_file,
+      'calendarToday' || 'event' => Icons.event,
+      'call' || 'phone' => Icons.call,
+      'camera' => Icons.camera_alt,
+      'check' => Icons.check,
+      'close' => Icons.close,
+      'delete' => Icons.delete,
+      'download' => Icons.download,
+      'edit' => Icons.edit,
+      'error' => Icons.error,
+      'email' || 'mail' => Icons.email,
+      'favorite' => Icons.favorite,
+      'favoriteOff' => Icons.favorite_border,
+      'folder' => Icons.folder,
+      'help' => Icons.help,
+      'location' || 'place' => Icons.place,
+      'person' => Icons.person,
+      'settings' => Icons.settings,
+      'star' => Icons.star,
+      _ => Icons.help_outline,
+    };
 
 /// Wraps [child] in a `SizedBox` when either axis is `fixed`/`fill`; `hug`
 /// leaves the axis unconstrained (shrink-wrap). `fill` resolves to

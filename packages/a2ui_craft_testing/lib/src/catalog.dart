@@ -20,6 +20,7 @@ const Set<String> coreCatalog = <String>{
   'Row',
   'Column',
   'Expanded',
+  'List',
   'Button',
   'Center',
   'SizedBox',

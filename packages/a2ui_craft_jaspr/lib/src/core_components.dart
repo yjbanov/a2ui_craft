@@ -26,7 +26,18 @@ import 'runtime.dart';
 LocalWidgetLibrary createCoreComponents() {
   return LocalWidgetLibrary(<String, LocalWidgetBuilder>{
     'Text': (BuildContext context, DataSource source) {
-      return Component.text(source.v<String>(['text']) ?? '');
+      final String text = source.v<String>(['text']) ?? '';
+      final TextVariant variant =
+          TextVariant.parse(source.v<String>(['variant']));
+      return variant == TextVariant.caption
+          ? span(
+              styles: Styles(raw: <String, String>{
+                'font-size': '12px',
+                'color': '#5f6368',
+              }),
+              <Component>[Component.text(text)],
+            )
+          : Component.text(text);
     },
     // Row, Column, and Flex are one builder over a `FlexAxis`: Row/Column pin
     // the axis, Flex reads it from `direction` (DESIGN.md §11).
@@ -85,19 +96,28 @@ LocalWidgetLibrary createCoreComponents() {
       );
     },
     'Box': (BuildContext context, DataSource source) => _buildBox(source),
-    'Image': (BuildContext context, DataSource source) {
-      final String? url = source.v<String>(['url']);
-      if (url == null || url.isEmpty) {
-        return div([]);
-      }
-      return img(src: url);
-    },
+    'Image': (BuildContext context, DataSource source) => _buildImage(source),
     'Icon': (BuildContext context, DataSource source) {
-      final String? iconName = source.v<String>(['icon']);
-      final String name = iconName ?? 'star'; // default fallback
-      return i(classes: 'material-icons', [Component.text(name)]);
+      return i(
+        classes: 'material-icons',
+        <Component>[
+          Component.text(_iconLigature(source.v<String>(['icon'])))
+        ],
+      );
     },
     'Divider': (BuildContext context, DataSource source) {
+      final FlexAxis axis = FlexAxis.parse(source.v<String>(['axis']),
+          fallback: FlexAxis.horizontal);
+      if (axis == FlexAxis.vertical) {
+        return div(
+          styles: Styles(raw: <String, String>{
+            'width': '1px',
+            'align-self': 'stretch',
+            'background-color': 'rgba(0, 0, 0, 0.12)',
+          }),
+          const <Component>[],
+        );
+      }
       return hr();
     },
     'ScrollView': (BuildContext context, DataSource source) {
@@ -108,6 +128,24 @@ LocalWidgetLibrary createCoreComponents() {
         [
           source.child(['child'])
         ],
+      );
+    },
+    // A scrollable run of children along an axis (A2UI `List`).
+    'List': (BuildContext context, DataSource source) {
+      final bool horizontal = FlexAxis.parse(source.v<String>(['direction']),
+              fallback: FlexAxis.vertical) ==
+          FlexAxis.horizontal;
+      final CrossAxisAlign align = CrossAxisAlign.parse(
+          source.v<String>(['align']),
+          fallback: CrossAxisAlign.stretch);
+      return div(
+        styles: Styles(
+          display: Display.flex,
+          flexDirection: horizontal ? FlexDirection.row : FlexDirection.column,
+          alignItems: _toAlign(align),
+          raw: <String, String>{'overflow': 'auto'},
+        ),
+        source.childList(['children']),
       );
     },
     'Card': (BuildContext context, DataSource source) {
@@ -299,6 +337,63 @@ String _cssExtent(Dimension d) => switch (d) {
 /// Renders a CSS length without a trailing `.0` for whole pixels.
 String _px(double v) =>
     v == v.roundToDouble() ? v.toInt().toString() : v.toString();
+
+/// Builds an `Image` sized to its [ImageVariant] (so it occupies the same box as
+/// the Flutter adapter) with the requested [ImageFit] as `object-fit`.
+Component _buildImage(DataSource source) {
+  final String? url = source.v<String>(['url']);
+  final ImageVariant variant =
+      ImageVariant.parse(source.v<String>(['variant']));
+  final Map<String, String> raw = <String, String>{
+    'width': variant.width != null ? '${_px(variant.width!)}px' : '100%',
+    'height': '${_px(variant.height)}px',
+    'object-fit': _objectFit(ImageFit.parse(source.v<String>(['fit']))),
+    if (variant.circular) 'border-radius': '50%',
+  };
+  if (url == null || url.isEmpty) {
+    // Placeholder box (keeps tests deterministic and matches Flutter).
+    raw['background-color'] = 'rgba(0, 0, 0, 0.12)';
+    return div(styles: Styles(raw: raw), const <Component>[]);
+  }
+  return img(src: url, styles: Styles(raw: raw));
+}
+
+String _objectFit(ImageFit f) => switch (f) {
+      ImageFit.contain => 'contain',
+      ImageFit.cover => 'cover',
+      ImageFit.fill => 'fill',
+      ImageFit.none => 'none',
+      ImageFit.scaleDown => 'scale-down',
+    };
+
+/// Maps a (subset of) A2UI icon names to Material-Icons ligatures, matching the
+/// Flutter adapter's set; unmapped names fall back to a generic glyph.
+String _iconLigature(String? name) => switch (name) {
+      'accountCircle' => 'account_circle',
+      'add' => 'add',
+      'arrowBack' => 'arrow_back',
+      'arrowForward' => 'arrow_forward',
+      'attachFile' => 'attach_file',
+      'calendarToday' || 'event' => 'event',
+      'call' || 'phone' => 'call',
+      'camera' => 'camera_alt',
+      'check' => 'check',
+      'close' => 'close',
+      'delete' => 'delete',
+      'download' => 'download',
+      'edit' => 'edit',
+      'error' => 'error',
+      'email' || 'mail' => 'email',
+      'favorite' => 'favorite',
+      'favoriteOff' => 'favorite_border',
+      'folder' => 'folder',
+      'help' => 'help',
+      'location' || 'place' => 'place',
+      'person' => 'person',
+      'settings' => 'settings',
+      'star' => 'star',
+      _ => 'help_outline',
+    };
 
 JustifyContent _toJustify(MainAxisAlign a) => switch (a) {
       MainAxisAlign.start => JustifyContent.start,

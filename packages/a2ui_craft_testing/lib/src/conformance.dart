@@ -259,6 +259,29 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
     expect(tester.hasText('inside'), isTrue);
   });
 
+  driver.defineTest('Atoms render: Text variants, Image, Icon, Divider, List', (
+    CraftTester tester,
+  ) async {
+    // A behavioral smoke test for the atoms slice (geometry is covered by
+    // runAtomGeometryConformance): the atoms mount inside a List and their text
+    // renders. Image uses an example.com URL, which renders a placeholder.
+    await tester.mount('''
+      import core;
+      widget root = List(direction: "vertical", children: [
+        Text(text: "headline"),
+        Text(text: "secondary", variant: "caption"),
+        Image(url: "https://example.com/a.png", variant: "avatar"),
+        Icon(icon: "phone"),
+        Divider(),
+        Text(text: "footer"),
+      ]);
+    ''');
+
+    expect(tester.hasText('headline'), isTrue);
+    expect(tester.hasText('secondary'), isTrue);
+    expect(tester.hasText('footer'), isTrue);
+  });
+
   driver.defineTest('Basic catalog primitives mount successfully', (
     CraftTester tester,
   ) async {

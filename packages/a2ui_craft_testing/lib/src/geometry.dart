@@ -272,3 +272,46 @@ void runBoxGeometryConformance(CraftGeometryDriver driver) {
     },
   );
 }
+
+/// The shared **geometric** specification for the atoms slice — `Image` variant
+/// sizing and `List` direction. (Text/Icon are not geometry-tested: text shaping
+/// is the documented cross-engine divergence, §5.)
+void runAtomGeometryConformance(CraftGeometryDriver driver) {
+  driver.defineTest(
+    'Image variant occupies its canonical box (same on both adapters)',
+    (CraftGeometryTester tester) async {
+      // Empty URLs render a sized placeholder, so the box is deterministic.
+      await tester.mountTemplate('''
+        import core;
+        widget root = Column(children: [
+          Image(key: "avatar", url: "", variant: "avatar"),
+          Image(key: "icon", url: "", variant: "icon"),
+        ]);
+      ''');
+      final CraftRect avatar = await tester.rectOf('avatar');
+      expect(avatar.width, closeTo(48, _tol));
+      expect(avatar.height, closeTo(48, _tol));
+      final CraftRect icon = await tester.rectOf('icon');
+      expect(icon.width, closeTo(24, _tol));
+      expect(icon.height, closeTo(24, _tol));
+    },
+  );
+
+  driver.defineTest(
+    'List lays its children along its direction',
+    (CraftGeometryTester tester) async {
+      await tester.mountTemplate('''
+        import core;
+        widget root = List(key: "list", direction: "horizontal", children: [
+          SizedBox(key: "a", width: 20.0, height: 20.0),
+          SizedBox(key: "b", width: 20.0, height: 20.0),
+        ]);
+      ''');
+      final CraftRect a = await tester.rectOf('a');
+      final CraftRect b = await tester.rectOf('b');
+      // Horizontal: the second child sits one item-width to the right, level top.
+      expect(b.left - a.left, closeTo(20, _tol));
+      expect((b.top - a.top).abs(), closeTo(0, _tol));
+    },
+  );
+}

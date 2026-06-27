@@ -612,16 +612,29 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
         free-text *entry* is exercised on Flutter; the cross-framework write-back
         contract is proven via the checkbox (a value-free toggle) plus the shared
         setter path. A `Form` sample demonstrates both inputs in the gallery.
-  - [ ] **Then** — grow the **low-level** catalog into a capable primitive
+  - [~] **Then** — grow the **low-level** catalog into a capable primitive
         vocabulary (§11): the high-level catalog is the app developer's job,
         authored *as templates over* these primitives. Approach decided —
         constrained common model + value-type vocabulary + geometry conformance.
-- [ ] **H2 type/style model + capable low-level catalog (§11).** Build the
+        **First slice landed:** see the `Flex` vertical slice below.
+- [~] **H2 type/style model + capable low-level catalog (§11).** Build the
       framework-neutral value-type vocabulary (the `argument_decoders`
       replacement — `Dimension`/`Color`/`EdgeInsets`/alignment/`TextStyle`),
       sharpen conformance to geometry-with-tolerance, and grow the catalog
       depth-first on layout (`Flex` vertical slice first). The unlock for richer
       primitives and, later, theming.
+  - [x] **`Flex` vertical slice (Pillars A–C).** The cross-framework value types
+        (`Dimension` = `hug`/`fill`/`fixed`/`flex`, `FlexAxis`,
+        `MainAxisAlign`/`CrossAxisAlign`) decode in the **core**, not per-adapter.
+        `Row`/`Column`/`Flex`/`Expanded` are one spec-driven builder per adapter
+        on **explicit sizing** (neither Flutter's nor CSS's native defaults).
+        Conformance graduated to **geometry-with-tolerance**, run against *real*
+        layout on both sides: Flutter `RenderBox` (`WidgetTester.getRect`) and
+        Jaspr **headless-Chrome** `getBoundingClientRect` (`dart test -p chrome`,
+        wired into `check.sh`) — not a CSS-structure proxy.
+  - [ ] **Next:** `Box`/`Container` (size + padding + margin + decoration) and the
+        `EdgeInsets`/`Color` types; then atoms (`Text` over `TextStyle`) and
+        controls. Wrap, `Stack`, and `Grid` extend the layout algebra later.
 - [ ] Prove the state-model axis with a third, non-Flutter-like framework.
 - [ ] **Security: uphold A2UI's secure-by-design promise (§12).** When templates
       are delivered ephemerally, treat them as untrusted input: add engine-level
@@ -1000,6 +1013,17 @@ and line-breaking differ across engines, so exact pixels are impossible and not 
 goal (§5). Choosing the constrained model (above) is precisely what keeps the band
 small. This sharpening is where the real investment goes; without it the contract
 is just a comment.
+
+> **Realized for the `Flex` slice.** `CraftGeometryTester`/`runFlexGeometryConformance`
+> (in `a2ui_craft_testing`) now assert child offsets and sizes for main/cross
+> alignment, gap, and flex distribution against **real layout on both adapters**:
+> Flutter `RenderBox` via `WidgetTester.getRect`, and Jaspr via a **headless
+> browser** — `getBoundingClientRect` under `dart test -p chrome`, wired into
+> `check.sh`. This settles the open worry that Jaspr layout could only be checked
+> host-only (where the DOM does no layout): geometry parity is enforced against a
+> genuine browser, not a CSS-structure proxy. Fixtures use fixed-size boxes (no
+> text) so the band is sub-pixel. Note this is the one place a real browser is
+> required in CI — a deliberate, contained cost for the layout spine.
 
 ### Pillar D — breadth by category, depth-first on layout
 

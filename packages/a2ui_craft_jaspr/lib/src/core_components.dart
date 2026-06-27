@@ -70,14 +70,14 @@ LocalWidgetLibrary createCoreComponents() {
     'SizedBox': (BuildContext context, DataSource source) {
       final double? w = source.v<double>(['width']);
       final double? h = source.v<double>(['height']);
+      // The child is optional: a childless SizedBox is a fixed-size spacer.
+      final Component? child = source.optionalChild(['child']);
       return div(
         styles: Styles(
           width: w != null ? Unit.pixels(w) : null,
           height: h != null ? Unit.pixels(h) : null,
         ),
-        [
-          source.child(['child'])
-        ],
+        <Component>[if (child != null) child],
       );
     },
     'Image': (BuildContext context, DataSource source) {

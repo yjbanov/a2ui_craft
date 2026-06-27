@@ -12,3 +12,4 @@ library a2ui_craft_testing;
 
 export 'src/catalog.dart';
 export 'src/conformance.dart';
+export 'src/geometry.dart';

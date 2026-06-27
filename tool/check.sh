@@ -56,6 +56,9 @@ step "Test: a2ui_craft_bridge (A2UI translation)"
 step "Test: a2ui_craft_jaspr (parity)"
 (cd packages/a2ui_craft_jaspr && dart test)
 
+step "Test: a2ui_craft_jaspr (Flex geometry, headless Chrome)"
+(cd packages/a2ui_craft_jaspr && dart test -p chrome test/flex_geometry_test.dart)
+
 step "Test: a2ui_craft_jaspr/example (samples)"
 (cd packages/a2ui_craft_jaspr/example && dart test)
 

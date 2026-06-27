@@ -53,10 +53,11 @@ LocalWidgetLibrary createCoreComponents() {
       );
     },
     'SizedBox': (BuildContext context, DataSource source) {
+      // The child is optional: a childless SizedBox is a fixed-size spacer.
       return SizedBox(
         width: source.v<double>(['width']),
         height: source.v<double>(['height']),
-        child: source.child(['child']),
+        child: source.optionalChild(['child']),
       );
     },
     'Image': (BuildContext context, DataSource source) {

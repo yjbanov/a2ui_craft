@@ -341,11 +341,12 @@ double? _numArg(DataSource source, String key) =>
 /// framework-neutral value types onto a CSS flex container.
 ///
 /// Sizing is **explicit**: a default `Flex` hugs both axes
-/// (`width`/`height: fit-content`; `align-items: center`, so children keep their
-/// intrinsic cross size). This deliberately does *not* inherit CSS's native
-/// block-level defaults (a `display:flex` div would fill its inline axis and
-/// stretch its children), so the same template lays out identically here and in
-/// the Flutter adapter. `fill`/`fixed` opt into `100%`/an exact pixel extent.
+/// (`width`/`height: fit-content`; `align-items: flex-start`, so children keep
+/// their intrinsic cross size and align to the leading edge). This deliberately
+/// does *not* inherit CSS's native block-level defaults (a `display:flex` div
+/// would fill its inline axis and stretch its children), so the same template
+/// lays out identically here and in the Flutter adapter. `fill`/`fixed` opt into
+/// `100%`/an exact pixel extent.
 Component _buildFlex(DataSource source, FlexAxis axis) {
   final MainAxisAlign main =
       MainAxisAlign.parse(source.v<String>(['mainAxisAlignment']));

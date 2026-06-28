@@ -208,9 +208,15 @@ enum CrossAxisAlign {
   end,
   stretch;
 
-  /// Parses a canonical name, defaulting to [fallback] ([center]).
+  /// Parses a canonical name, defaulting to [fallback] ([start]).
+  ///
+  /// The default is [start] — children keep their intrinsic cross size and align
+  /// to the leading edge, the natural layout for most content (and what the genui
+  /// reference renderer also defaults to). It is deliberately neither Flutter's
+  /// native default ([center]) nor CSS's ([stretch]); a container that wants
+  /// either states it explicitly.
   static CrossAxisAlign parse(String? raw,
-      {CrossAxisAlign fallback = CrossAxisAlign.center}) {
+      {CrossAxisAlign fallback = CrossAxisAlign.start}) {
     switch (raw?.trim()) {
       case 'start':
         return CrossAxisAlign.start;

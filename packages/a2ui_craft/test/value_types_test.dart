@@ -85,9 +85,14 @@ void main() {
       expect(CrossAxisAlign.parse('stretch'), CrossAxisAlign.stretch);
     });
 
-    test('defaults to center', () {
-      expect(CrossAxisAlign.parse(null), CrossAxisAlign.center);
-      expect(CrossAxisAlign.parse('bogus'), CrossAxisAlign.center);
+    test('defaults to start', () {
+      expect(CrossAxisAlign.parse(null), CrossAxisAlign.start);
+      expect(CrossAxisAlign.parse('bogus'), CrossAxisAlign.start);
+    });
+
+    test('honors an explicit fallback', () {
+      expect(CrossAxisAlign.parse(null, fallback: CrossAxisAlign.stretch),
+          CrossAxisAlign.stretch);
     });
   });
 

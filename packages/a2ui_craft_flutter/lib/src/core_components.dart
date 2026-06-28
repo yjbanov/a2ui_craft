@@ -330,10 +330,11 @@ TextStyle _mdHeadingStyle(int level) {
 /// framework-neutral value types onto Flutter's `Flex`.
 ///
 /// Sizing is **explicit**: a default `Flex` hugs both axes
-/// (`MainAxisSize.min` on the main axis; `CrossAxisAlignment.center`, so children
-/// keep their intrinsic cross size). `fill`/`fixed` opt into filling or a fixed
-/// extent. Neither Flutter's nor CSS's native defaults are inherited, so the same
-/// template lays out identically here and in the Jaspr adapter.
+/// (`MainAxisSize.min` on the main axis; `CrossAxisAlignment.start`, so children
+/// keep their intrinsic cross size and align to the leading edge). `fill`/`fixed`
+/// opt into filling or a fixed extent. Neither Flutter's nor CSS's native
+/// defaults are inherited, so the same template lays out identically here and in
+/// the Jaspr adapter.
 Widget _buildFlex(DataSource source, FlexAxis axis) {
   final MainAxisAlign main =
       MainAxisAlign.parse(source.v<String>(['mainAxisAlignment']));

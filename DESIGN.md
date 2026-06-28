@@ -685,6 +685,17 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
         name→glyph subset), `Divider` (`axis`), and `List`, with behavioral +
         geometry conformance. Proven end-to-end by rendering the gallery's
         **Contact Card** surface as a Craft template on both adapters.
+  - [x] **Layout-depth primitives.** The primitive set grows toward what a real
+        cross-framework layout vocabulary needs — taking RFW's `createCoreWidgets`
+        as the reference menu, **not** the A2UI Basic Catalog (which isn't a
+        benchmark for anything). Landed: `Align` (a 9-anchor `Alignment2D`,
+        generalizing `Center`), `AspectRatio`, `Wrap` (flex-wrap flow), and
+        `Opacity` — each with behavioral conformance and, for the layout-affecting
+        ones, geometry conformance against real layout on both adapters. Shown in
+        the demo app's **Layout** screen. (`Stack`/`Positioned` are deferred: they
+        ride Flutter's `ParentDataWidget` mechanism, which the keyed-`_Widget`
+        runtime wrapper would intercept — needs a runtime pass-through, like the
+        host-injection work.)
   - [x] **Direct component→widget mapping (the "bespoke widget" path).** A
         developer can surface an existing local widget *directly* as an A2UI
         component — no template wrapper, no extra binding layer — via the

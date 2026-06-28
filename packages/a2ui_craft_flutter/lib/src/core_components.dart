@@ -60,6 +60,54 @@ LocalWidgetLibrary createCoreComponents() {
         child: source.child(['child']),
       );
     },
+    // Places its child at an `alignment` within an (optionally sized) box. With
+    // no width/height it hugs the child (alignment is then a no-op); a fixed
+    // width/height gives the child room to be positioned. Generalizes `Center`.
+    'Align': (BuildContext context, DataSource source) {
+      final Alignment2D a = Alignment2D.parse(source.v<String>(['alignment']));
+      final double? w = source.v<double>(['width']);
+      final double? h = source.v<double>(['height']);
+      Widget aligned = Align(
+        alignment: Alignment(a.x, a.y),
+        // A factor of 1.0 shrink-wraps that axis to the child; null fills the
+        // (sized) box so the alignment has free space to position within.
+        widthFactor: w == null ? 1.0 : null,
+        heightFactor: h == null ? 1.0 : null,
+        child: source.child(['child']),
+      );
+      if (w != null || h != null) {
+        aligned = SizedBox(width: w, height: h, child: aligned);
+      }
+      return aligned;
+    },
+    // Sizes its child to a `ratio` (width ÷ height) within the incoming
+    // constraints (Flutter `AspectRatio` / CSS `aspect-ratio`).
+    'AspectRatio': (BuildContext context, DataSource source) {
+      return AspectRatio(
+        aspectRatio: _numArg(source, 'ratio') ?? 1.0,
+        child: source.optionalChild(['child']),
+      );
+    },
+    // A run of children that wraps onto the next line/column when they overflow
+    // the main axis (Flutter `Wrap` / CSS `flex-wrap`).
+    'Wrap': (BuildContext context, DataSource source) {
+      final bool horizontal = FlexAxis.parse(source.v<String>(['direction']),
+              fallback: FlexAxis.horizontal) ==
+          FlexAxis.horizontal;
+      return Wrap(
+        direction: horizontal ? Axis.horizontal : Axis.vertical,
+        spacing: _gap(source),
+        runSpacing: _numArg(source, 'runGap') ?? 0.0,
+        children: source.childList(['children']),
+      );
+    },
+    // Makes its child partially (or fully) transparent without affecting layout.
+    'Opacity': (BuildContext context, DataSource source) {
+      return Opacity(
+        opacity: (_numArg(source, 'opacity') ?? 1.0).clamp(0.0, 1.0),
+        child: source.child(['child']),
+      );
+    },
     'SizedBox': (BuildContext context, DataSource source) {
       // The child is optional: a childless SizedBox is a fixed-size spacer.
       return SizedBox(

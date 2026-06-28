@@ -60,6 +60,15 @@ void main() {
     expect(find.text('Center'), findsOneWidget);
   });
 
+  testWidgets(
+      'Layout demo renders the Align/AspectRatio/Wrap/Opacity primitives',
+      (WidgetTester tester) async {
+    await _pump(tester, layoutSpec('Flutter'));
+    expect(find.text('Layout primitives (same on every adapter):'),
+        findsOneWidget);
+    expect(find.text('faded'), findsOneWidget); // inside the Opacity
+  });
+
   testWidgets('Contact Card renders the atoms (name, caption, icon rows)',
       (WidgetTester tester) async {
     await _pump(tester, contactCardSpec('Flutter'));

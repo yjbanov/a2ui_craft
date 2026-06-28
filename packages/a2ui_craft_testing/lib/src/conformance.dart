@@ -282,17 +282,19 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
     expect(tester.hasText('footer'), isTrue);
   });
 
-  driver.defineTest('Basic catalog primitives mount successfully', (
+  driver.defineTest('ScrollView and Card render their nested child content', (
     CraftTester tester,
   ) async {
+    // ScrollView and Card are single-child containers, and Video is a stub.
+    // Assert the child subtree actually renders *through* them — not merely
+    // "doesn't crash". (Image/Icon/Divider are covered by the atoms case above.)
     await tester.mount('''
       import core;
       widget root = ScrollView(
         child: Card(
           child: Column(
             children: [
-              Image(url: "https://example.com/image.png", fit: "contain"),
-              Icon(icon: "star"),
+              Text(text: "card body"),
               Divider(),
               Video(url: "https://example.com/video.mp4"),
             ],
@@ -300,7 +302,36 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
         ),
       );
     ''');
-    // If it doesn't crash, the primitives are successfully mounting.
+
+    expect(tester.hasText('card body'), isTrue);
+  });
+
+  driver
+      .defineTest('Align, AspectRatio, Wrap, and Opacity render their children',
+          (CraftTester tester) async {
+    // A behavioral smoke test for the layout-depth primitives (geometry is
+    // covered by runLayoutGeometryConformance): each wraps a child whose text
+    // must remain visible through it.
+    await tester.mount('''
+      import core;
+      widget root = Column(children: [
+        Align(alignment: "bottomRight", width: 80.0, height: 40.0,
+          child: Text(text: "aligned")),
+        AspectRatio(ratio: 2.0, child: Text(text: "ratio")),
+        Wrap(gap: 8.0, children: [
+          Text(text: "w1"),
+          Text(text: "w2"),
+          Text(text: "w3"),
+        ]),
+        Opacity(opacity: 0.5, child: Text(text: "faded")),
+      ]);
+    ''');
+
+    expect(tester.hasText('aligned'), isTrue);
+    expect(tester.hasText('ratio'), isTrue);
+    expect(tester.hasText('w1'), isTrue);
+    expect(tester.hasText('w3'), isTrue);
+    expect(tester.hasText('faded'), isTrue);
   });
 
   driver.defineTest('TextField and Checkbox mount; the label is templatized', (

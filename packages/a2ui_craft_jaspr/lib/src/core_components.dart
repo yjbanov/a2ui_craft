@@ -79,6 +79,76 @@ LocalWidgetLibrary createCoreComponents() {
         ],
       );
     },
+    // Places its child at an `alignment` within an (optionally sized) box. With
+    // no width/height it hugs the child (alignment is then a no-op); a fixed
+    // width/height gives the child room to be positioned. Generalizes `Center`.
+    'Align': (BuildContext context, DataSource source) {
+      final Alignment2D a = Alignment2D.parse(source.v<String>(['alignment']));
+      final double? w = source.v<double>(['width']);
+      final double? h = source.v<double>(['height']);
+      return div(
+        styles: Styles(
+          display: Display.flex,
+          justifyContent: _justifyFor(a.x),
+          alignItems: _alignItemsFor(a.y),
+          width: w != null ? Unit.pixels(w) : null,
+          height: h != null ? Unit.pixels(h) : null,
+        ),
+        [
+          source.child(['child'])
+        ],
+      );
+    },
+    // Sizes its child to a `ratio` (width ÷ height) within the incoming
+    // constraints (CSS `aspect-ratio` / Flutter `AspectRatio`).
+    'AspectRatio': (BuildContext context, DataSource source) {
+      final double ratio = _numArg(source, 'ratio') ?? 1.0;
+      final Component? child = source.optionalChild(['child']);
+      return div(
+        styles: Styles(raw: <String, String>{
+          'aspect-ratio': '$ratio',
+          'width': '100%',
+        }),
+        switch (child) {
+          final Component c => <Component>[c],
+          _ => const <Component>[],
+        },
+      );
+    },
+    // A run of children that wraps onto the next line/column when they overflow
+    // the main axis (CSS `flex-wrap` / Flutter `Wrap`).
+    'Wrap': (BuildContext context, DataSource source) {
+      final bool horizontal = FlexAxis.parse(source.v<String>(['direction']),
+              fallback: FlexAxis.horizontal) ==
+          FlexAxis.horizontal;
+      final double spacing = _gap(source);
+      final double runSpacing = _numArg(source, 'runGap') ?? 0.0;
+      // CSS `gap` shorthand is `row-gap column-gap`. For a horizontal wrap the
+      // run axis is vertical (row-gap = runSpacing) and item spacing is
+      // horizontal (column-gap = spacing); for a vertical wrap it is the reverse.
+      final String gap = horizontal
+          ? '${runSpacing}px ${spacing}px'
+          : '${spacing}px ${runSpacing}px';
+      return div(
+        styles: Styles(raw: <String, String>{
+          'display': 'flex',
+          'flex-direction': horizontal ? 'row' : 'column',
+          'flex-wrap': 'wrap',
+          'gap': gap,
+        }),
+        source.childList(['children']),
+      );
+    },
+    // Makes its child partially (or fully) transparent without affecting layout.
+    'Opacity': (BuildContext context, DataSource source) {
+      final double o = (_numArg(source, 'opacity') ?? 1.0).clamp(0.0, 1.0);
+      return div(
+        styles: Styles(raw: <String, String>{'opacity': '$o'}),
+        [
+          source.child(['child'])
+        ],
+      );
+    },
     'SizedBox': (BuildContext context, DataSource source) {
       final double? w = source.v<double>(['width']);
       final double? h = source.v<double>(['height']);
@@ -453,3 +523,19 @@ AlignItems _toAlign(CrossAxisAlign a) => switch (a) {
       CrossAxisAlign.end => AlignItems.end,
       CrossAxisAlign.stretch => AlignItems.stretch,
     };
+
+/// Maps an `Alignment2D` horizontal anchor (`x` in `[-1, 1]`) to the
+/// main-axis `justify-content` of the (row) flex box that positions the child.
+JustifyContent _justifyFor(double x) => x < 0
+    ? JustifyContent.start
+    : x > 0
+        ? JustifyContent.end
+        : JustifyContent.center;
+
+/// Maps an `Alignment2D` vertical anchor (`y` in `[-1, 1]`) to the cross-axis
+/// `align-items` of the (row) flex box that positions the child.
+AlignItems _alignItemsFor(double y) => y < 0
+    ? AlignItems.start
+    : y > 0
+        ? AlignItems.end
+        : AlignItems.center;

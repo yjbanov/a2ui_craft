@@ -39,6 +39,15 @@ void main() {
     expect(find.text('Center'), findsOneComponent);
   });
 
+  testComponents(
+      'Layout demo renders the Align/AspectRatio/Wrap/Opacity primitives',
+      (ComponentTester tester) async {
+    await _pump(tester, layoutSpec('Jaspr'));
+    expect(find.text('Layout primitives (same on every adapter):'),
+        findsOneComponent);
+    expect(find.text('faded'), findsOneComponent); // inside the Opacity
+  });
+
   testComponents('Contact Card renders the atoms (name, caption, icon rows)',
       (ComponentTester tester) async {
     await _pump(tester, contactCardSpec('Jaspr'));

@@ -315,3 +315,73 @@ void runAtomGeometryConformance(CraftGeometryDriver driver) {
     },
   );
 }
+
+/// The shared **geometric** specification for the layout-depth primitives —
+/// `Align`, `AspectRatio`, and `Wrap` — beyond the Flex/Box slices. Each is
+/// driven by fixed-size fixtures so the assertions are independent of text
+/// shaping, and each runs identically on both adapters.
+void runLayoutGeometryConformance(CraftGeometryDriver driver) {
+  driver.defineTest(
+    'Align positions its child at the alignment within a sized box',
+    (CraftGeometryTester tester) async {
+      await tester.mountTemplate('''
+        import core;
+        widget root = Align(
+          key: "box", alignment: "bottomRight", width: 100.0, height: 60.0,
+          child: SizedBox(key: "c", width: 20.0, height: 20.0),
+        );
+      ''');
+      final CraftRect box = await tester.rectOf('box');
+      final CraftRect c = await tester.rectOf('c');
+      expect(box.width, closeTo(100, _tol));
+      expect(box.height, closeTo(60, _tol));
+      // bottomRight: child's right edge at the box's right (100-20=80) and its
+      // bottom at the box's bottom (60-20=40).
+      expect(c.left - box.left, closeTo(80, _tol));
+      expect(c.top - box.top, closeTo(40, _tol));
+    },
+  );
+
+  driver.defineTest(
+    'AspectRatio derives height from a width-bounded constraint',
+    (CraftGeometryTester tester) async {
+      await tester.mountTemplate('''
+        import core;
+        widget root = SizedBox(key: "box", width: 100.0,
+          child: AspectRatio(key: "ar", ratio: 2.0,
+            child: SizedBox()
+          )
+        );
+      ''');
+      final CraftRect ar = await tester.rectOf('ar');
+      // width 100, ratio 2 ⇒ height 50, on both adapters.
+      expect(ar.width, closeTo(100, _tol));
+      expect(ar.height, closeTo(50, _tol));
+    },
+  );
+
+  driver.defineTest(
+    'Wrap flows children and wraps to the next run on overflow',
+    (CraftGeometryTester tester) async {
+      await tester.mountTemplate('''
+        import core;
+        widget root = SizedBox(key: "box", width: 100.0,
+          child: Wrap(children: [
+            SizedBox(key: "a", width: 40.0, height: 20.0),
+            SizedBox(key: "b", width: 40.0, height: 20.0),
+            SizedBox(key: "c", width: 40.0, height: 20.0),
+          ])
+        );
+      ''');
+      final CraftRect a = await tester.rectOf('a');
+      final CraftRect b = await tester.rectOf('b');
+      final CraftRect c = await tester.rectOf('c');
+      // Two 40-wide items fit in 100; `a` and `b` share the first run...
+      expect((b.top - a.top).abs(), closeTo(0, _tol));
+      expect(b.left - a.left, closeTo(40, _tol));
+      // ...and the third wraps to the next run, back at the start.
+      expect(c.top - a.top, closeTo(20, _tol));
+      expect((c.left - a.left).abs(), closeTo(0, _tol));
+    },
+  );
+}

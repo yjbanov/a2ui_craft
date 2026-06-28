@@ -226,6 +226,87 @@ enum CrossAxisAlign {
   }
 }
 
+/// A point within a box, used to place a child inside it (the `Align`
+/// primitive).
+///
+/// Each value is one of the nine canonical positions (the three horizontal ×
+/// three vertical anchors). It maps to Flutter's `Alignment` via [x]/[y] (both
+/// in `[-1, 1]`) and to CSS `justify-content`/`align-items` on the web, so an
+/// aligned child lands in the same spot on every renderer.
+enum Alignment2D {
+  topLeft,
+  topCenter,
+  topRight,
+  centerLeft,
+  center,
+  centerRight,
+  bottomLeft,
+  bottomCenter,
+  bottomRight;
+
+  /// Parses a canonical camelCase name (e.g. `"topLeft"`, `"center"`,
+  /// `"bottomRight"`), defaulting to [fallback] ([center]).
+  static Alignment2D parse(String? raw,
+      {Alignment2D fallback = Alignment2D.center}) {
+    switch (raw?.trim()) {
+      case 'topLeft':
+        return Alignment2D.topLeft;
+      case 'topCenter':
+        return Alignment2D.topCenter;
+      case 'topRight':
+        return Alignment2D.topRight;
+      case 'centerLeft':
+        return Alignment2D.centerLeft;
+      case 'center':
+        return Alignment2D.center;
+      case 'centerRight':
+        return Alignment2D.centerRight;
+      case 'bottomLeft':
+        return Alignment2D.bottomLeft;
+      case 'bottomCenter':
+        return Alignment2D.bottomCenter;
+      case 'bottomRight':
+        return Alignment2D.bottomRight;
+      default:
+        return fallback;
+    }
+  }
+
+  /// The horizontal anchor as a fraction in `[-1, 1]`: `-1` left, `0` center,
+  /// `1` right (Flutter `Alignment.x`).
+  double get x => switch (this) {
+        Alignment2D.topLeft ||
+        Alignment2D.centerLeft ||
+        Alignment2D.bottomLeft =>
+          -1,
+        Alignment2D.topCenter ||
+        Alignment2D.center ||
+        Alignment2D.bottomCenter =>
+          0,
+        Alignment2D.topRight ||
+        Alignment2D.centerRight ||
+        Alignment2D.bottomRight =>
+          1,
+      };
+
+  /// The vertical anchor as a fraction in `[-1, 1]`: `-1` top, `0` center,
+  /// `1` bottom (Flutter `Alignment.y`).
+  double get y => switch (this) {
+        Alignment2D.topLeft ||
+        Alignment2D.topCenter ||
+        Alignment2D.topRight =>
+          -1,
+        Alignment2D.centerLeft ||
+        Alignment2D.center ||
+        Alignment2D.centerRight =>
+          0,
+        Alignment2D.bottomLeft ||
+        Alignment2D.bottomCenter ||
+        Alignment2D.bottomRight =>
+          1,
+      };
+}
+
 /// An immutable set of offsets in each of the four cardinal directions, used for
 /// padding and margin.
 ///

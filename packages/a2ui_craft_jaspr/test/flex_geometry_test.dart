@@ -75,4 +75,5 @@ void main() {
   runFlexGeometryConformance(_JasprGeometryDriver());
   runBoxGeometryConformance(_JasprGeometryDriver());
   runAtomGeometryConformance(_JasprGeometryDriver());
+  runLayoutGeometryConformance(_JasprGeometryDriver());
 }

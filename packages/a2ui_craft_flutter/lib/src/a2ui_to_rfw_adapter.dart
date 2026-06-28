@@ -31,6 +31,7 @@ class A2uiToRfwAdapter extends StatefulWidget {
     required this.runtime,
     this.basePath = '/',
     this.scope = const LibraryName(<String>['core']),
+    this.mapComponent,
     String? reconcileKey,
   }) : super(key: ValueKey<String>(reconcileKey ?? id));
 
@@ -51,6 +52,13 @@ class A2uiToRfwAdapter extends StatefulWidget {
   /// The library whose names the component resolves against — the **catalog**
   /// (which imports the `core` primitives).
   final LibraryName scope;
+
+  /// Optional mapping from an A2UI component (its `type` and RFW-arg props) to the
+  /// [ConstructorCall] to render. Defaults to `ConstructorCall(type, args)` — the
+  /// component name *is* a catalog/primitive name. Set it (e.g. to
+  /// `a2uiBasicCatalogCall` with `scope: core`) to render the A2UI Basic Catalog
+  /// directly against the primitives with a prop transform.
+  final ConstructorCall Function(String type, DynamicMap args)? mapComponent;
 
   @override
   State<A2uiToRfwAdapter> createState() => _A2uiToRfwAdapterState();
@@ -110,14 +118,19 @@ class _A2uiToRfwAdapterState extends State<A2uiToRfwAdapter> {
       childRefs: _binding.childRefs,
       basePath: widget.basePath,
     );
+    final ConstructorCall call =
+        (widget.mapComponent ?? _identityCall)(type, args);
     return widget.runtime.buildNode(
       context,
-      ConstructorCall(type, args),
+      call,
       DynamicContent(),
       _noEvent,
       scope: widget.scope,
     );
   }
+
+  static ConstructorCall _identityCall(String type, DynamicMap args) =>
+      ConstructorCall(type, args);
 
   Object _injectChild(ChildNode child) {
     // Static siblings share this component's data scope and are keyed by their
@@ -131,6 +144,7 @@ class _A2uiToRfwAdapterState extends State<A2uiToRfwAdapter> {
       runtime: widget.runtime,
       basePath: child.basePath,
       scope: widget.scope,
+      mapComponent: widget.mapComponent,
       reconcileKey: reconcileKey,
     );
   }

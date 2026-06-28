@@ -13,4 +13,5 @@
 library a2ui_craft_bridge;
 
 export 'src/a2ui_binding.dart';
+export 'src/basic_catalog.dart';
 export 'src/catalog_loader.dart';

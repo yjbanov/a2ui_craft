@@ -11,6 +11,5 @@
 library a2ui_craft_testing;
 
 export 'src/conformance.dart';
-export 'src/gallery_examples.dart';
 export 'src/geometry.dart';
 export 'src/primitives.dart';

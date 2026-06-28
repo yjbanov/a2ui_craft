@@ -55,9 +55,14 @@ class A2uiToRfwAdapter extends StatefulWidget {
 
   /// Optional mapping from an A2UI component (its `type` and RFW-arg props) to the
   /// [ConstructorCall] to render. Defaults to `ConstructorCall(type, args)` — the
-  /// component name *is* a catalog/primitive name. Set it (e.g. to
-  /// `a2uiBasicCatalogCall` with `scope: core`) to render the A2UI Basic Catalog
-  /// directly against the primitives with a prop transform.
+  /// component name *is* the widget name in [scope].
+  ///
+  /// Set it to expose a component under a different widget name and/or to rename
+  /// its props — e.g. to surface an existing local widget directly as an A2UI
+  /// component without authoring a template (the "bespoke widget" path), mapping
+  /// the component's prop names onto the widget's arg names. The mapping is the
+  /// embedder's choice per component; this adapter ships no catalog-specific
+  /// default.
   final ConstructorCall Function(String type, DynamicMap args)? mapComponent;
 
   @override

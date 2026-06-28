@@ -22,3 +22,8 @@ dev_dependencies:
   flutter_lints: ^4.0.0
   # Lets widget tests render the samples' network images without real requests.
   network_image_mock: ^2.1.1
+
+flutter:
+  # Bundle the Material Icons font so `Icon` glyphs render (otherwise they show
+  # as tofu boxes).
+  uses-material-design: true

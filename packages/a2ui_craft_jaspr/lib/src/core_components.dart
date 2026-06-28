@@ -208,6 +208,9 @@ LocalWidgetLibrary createCoreComponents() {
     },
     // A single radio button: shows [selected] and fires `onChanged` when tapped
     // ("select me"). Grouping — which radio is on — is the template's job.
+    // TODO(a2ui-craft): revisit alongside the Flutter Radio (see the Flutter
+    // adapter) so the two stay behaviorally aligned — e.g. native radio grouping
+    // and the `change` vs `click` event choice.
     'Radio': (BuildContext context, DataSource source) {
       final bool selected = source.v<bool>(['selected']) ?? false;
       final onChanged = source.voidHandler(['onChanged']);

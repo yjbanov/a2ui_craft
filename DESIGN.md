@@ -927,27 +927,38 @@ cover the long tail.
 
 ### Why the seed won't scale as-is
 
-Today the catalog is two hand-written files (`core_components.dart` ×2) that, per
-their own headers, "deliberately mirror, component-for-component" each other, with
-`runCoreComponentConformance` as the only thing holding them together. That is
-fine at ~14 widgets with coarse probes, but it does not scale:
+The catalog began as two hand-written files (`core_components.dart` ×2) whose
+headers said they "deliberately mirror, component-for-component" each other, with
+`runCoreComponentConformance` — coarse "is this text visible?" probes — as the only
+thing holding them together. That is fine for a handful of demo widgets, but it
+does not scale:
 
 - **The frameworks have genuinely different layout models.** Flutter is
   constraint-based (constraints down, sizes up; explicit `mainAxisSize`/`Expanded`);
   the DOM is the CSS box model (flow, margin collapse, `height:auto` vs.
   `width:100%` defaults, intrinsic sizing). Mirroring two native implementations
   by hand means the defaults diverge silently as the catalog grows.
-- **The conformance suite can't see layout divergence.** "Is this text visible?"
-  passes even when a `Row` lays out completely differently on the two sides. The
-  gap between "tests green" and "actually identical" widens with every widget.
-- **The seed implementations are already demo-grade and already divergent** in
-  telling ways: `Icon` is a 3-name string→`IconData` switch, `Video` is a stub box
-  on Flutter but a real `<video>` on Jaspr, `Card` hard-codes padding/shadow
-  independently on each side. Nothing catches the mismatch.
+- **Coarse probes can't see layout divergence.** "Is this text visible?" passes
+  even when a `Row` lays out completely differently on the two sides. The gap
+  between "tests green" and "actually identical" widens with every widget.
+- **Hand-mirrored implementations drift in telling ways.** The seed `Video` is a
+  stub box on Flutter but a real `<video>` on Jaspr; the seed `Card` hard-codes its
+  padding and shadow independently on each side. Nothing coarse catches the
+  mismatch.
 
 So the task is not "write more widgets like these." It is to **establish a
 contract that makes the adapters converge by construction, and sharpen the
-enforcement enough to keep them honest.**
+enforcement enough to keep them honest** — which is what the rest of this section
+defines.
+
+> **Progress (this is underway, not hypothetical).** The `Flex`, `Box`, and atoms
+> slices (§8) are now built **against the spec** rather than by mirroring: their
+> value types decode in the **core**, the per-adapter builders implement that
+> contract, and **geometry conformance** runs on both adapters against real layout
+> (`RenderBox` / `getBoundingClientRect`), so divergence is *caught* rather than
+> invisible. The headers that once said "deliberately mirror" now say "implements
+> the spec." The not-yet-converged tail is the remaining seed components — `Card`,
+> `Video`, `AudioPlayer` — which still need to be brought onto the contract.
 
 ### The decision: a constrained common model, flexbox-shaped
 

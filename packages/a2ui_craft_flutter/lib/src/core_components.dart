@@ -151,6 +151,10 @@ LocalWidgetLibrary createCoreComponents() {
     },
     // A single radio button: shows [selected] and fires `onChanged` when tapped
     // ("select me"). Grouping — which radio is on — is the template's job.
+    // TODO(a2ui-craft): revisit. This renders a tappable radio glyph rather than
+    // the material `Radio<T>` widget, whose `groupValue`/`onChanged` API is
+    // mid-deprecation in Flutter 3.46. Move to `RadioGroup`/`Radio` once that
+    // settles, and reconcile the "select-me" event with the native group model.
     'Radio': (BuildContext context, DataSource source) {
       final bool selected = source.v<bool>(['selected']) ?? false;
       final VoidCallback? onChanged = source.voidHandler(['onChanged']);

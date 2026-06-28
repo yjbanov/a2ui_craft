@@ -68,11 +68,20 @@ LocalWidgetLibrary createCoreComponents() {
       );
     },
     'Center': (BuildContext context, DataSource source) {
+      // Flutter's `Center` (an `Align` with null size factors) expands to the
+      // largest size the incoming constraints allow, then centers its child —
+      // shrink-wrapping only when a constraint is unbounded. A bare flex box
+      // collapses to its content instead, pinning the child top-left, so fill
+      // the parent explicitly: `100%` fills a bounded parent (where centering
+      // has room) and resolves to the child's size in an unbounded one — the
+      // same caveat Flutter documents.
       return div(
         styles: Styles(
           display: Display.flex,
           justifyContent: JustifyContent.center,
           alignItems: AlignItems.center,
+          width: Unit.percent(100),
+          height: Unit.percent(100),
         ),
         [
           source.child(['child'])

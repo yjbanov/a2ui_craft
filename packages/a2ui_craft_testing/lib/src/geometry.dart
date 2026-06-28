@@ -322,6 +322,24 @@ void runAtomGeometryConformance(CraftGeometryDriver driver) {
 /// shaping, and each runs identically on both adapters.
 void runLayoutGeometryConformance(CraftGeometryDriver driver) {
   driver.defineTest(
+    'Center fills a bounded parent and centers its child',
+    (CraftGeometryTester tester) async {
+      await tester.mountTemplate('''
+        import core;
+        widget root = Box(key: "box", width: 100.0, height: 100.0,
+          child: Center(child: SizedBox(key: "c", width: 20.0, height: 20.0))
+        );
+      ''');
+      final CraftRect box = await tester.rectOf('box');
+      final CraftRect c = await tester.rectOf('c');
+      // The Center expands to fill the bounded 100×100 box (it does not collapse
+      // to the 20×20 child), so the child is centered at offset (40, 40).
+      expect(c.left - box.left, closeTo(40, _tol));
+      expect(c.top - box.top, closeTo(40, _tol));
+    },
+  );
+
+  driver.defineTest(
     'Align positions its child at the alignment within a sized box',
     (CraftGeometryTester tester) async {
       await tester.mountTemplate('''

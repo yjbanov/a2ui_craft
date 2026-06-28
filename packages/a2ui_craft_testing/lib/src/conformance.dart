@@ -303,22 +303,39 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
     // If it doesn't crash, the primitives are successfully mounting.
   });
 
-  driver.defineTest('TextField and Checkbox render their bound values', (
+  driver.defineTest('TextField and Checkbox mount; the label is templatized', (
     CraftTester tester,
   ) async {
     final DynamicContent data = DynamicContent();
     data.update('name', 'Ada');
     data.update('agree', true);
+    // The low-level TextField is the bare input — no label. A label is a
+    // template's choice, composed as a sibling Text (DESIGN.md §2 / §11).
     await tester.mount('''
       import core;
       widget root = Column(children: [
-        TextField(label: "Your name", value: data.name),
+        Text(text: "Your name"),
+        TextField(value: data.name),
         Checkbox(value: data.agree),
       ]);
     ''', data: data);
 
-    // The field's label renders; the checkbox mounts without crashing.
+    // The templatized label renders; the field and checkbox mount.
     expect(tester.hasText('Your name'), isTrue);
+  });
+
+  driver.defineTest('Radio reflects selection and fires its event on tap', (
+    CraftTester tester,
+  ) async {
+    final List<String> dispatched = <String>[];
+    await tester.mount('''
+      import core;
+      widget root = Radio(key: "r", selected: false, onChanged: event "picked" {});
+    ''', onEvent: (String name, DynamicMap arguments) => dispatched.add(name));
+
+    expect(dispatched, isEmpty);
+    await tester.activate('r');
+    expect(dispatched, <String>['picked']);
   });
 
   driver.defineTest('Button dispatches its event only when activated', (

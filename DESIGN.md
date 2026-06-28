@@ -94,6 +94,23 @@ The vetted vocabulary (primitive widgets and higher-level templates) is
 **composes** it. How that composition is rendered — and how it stays correct
 under A2UI's id-addressed, incremental updates — is the subject of §6.
 
+### Bias to templatize
+
+Whenever a chunk of UI *can* be authored once as a template, it should be —
+collapsing a tree of A2UI nodes into a single high-level widget is the core value
+this project delivers. It moves complexity off the wire (and out of the agent) to
+build time: the agent emits one `component="ContactCard"` plus data instead of a
+dozen nested layout/text/image nodes. That buys **less for the agent to reason
+about, fewer tokens over the wire, more predictable and pre-vettable output, and
+richer visual expression** than an agent would assemble on the fly.
+
+The rare exception is UI whose **structure is itself the agent's creative act** — a
+one-off arrangement that could not have been conceived as a template ahead of
+time. There, raw A2UI transport keeps expressive power a template would remove. But
+that is the exception, not this project's focus: A2UI Craft exists to make the
+**templating** path expressive and capable; developers choose, per surface, when to
+template and when to fall back to raw A2UI.
+
 > The first implementation in `a2ui_craft_bridge` took a shortcut: it translated
 > each surface into a synthesized `RemoteWidgetLibrary` (`widget root = …`) and
 > rendered that. It worked, but it conflated "compose predefined widgets" with
@@ -826,6 +843,28 @@ against each other:
 - **Cross-framework identity** — a primitive must behave the same whether a
   template is rendered by Flutter or Jaspr (§5). Every primitive we add multiplies
   the surface where the two can silently diverge.
+
+### Not a copy of A2UI's basic catalog
+
+The low-level catalog is **not** A2UI's [Basic
+Catalog](https://a2ui.org/specification/v1_0/catalogs/basic/catalog.json)
+re-implemented 1:1. That catalog is caught **between** the two worlds (§2) and
+serves neither cleanly: several of its components bake in **opinionated, high-level
+layout** that a primitive should not impose. Its `TextField` and `CheckBox` bundle
+a `label` with a fixed arrangement (label above the field; label beside the box);
+its `ChoicePicker` is an entire composite (options, single/multi-select, chips,
+filtering). Those are template decisions wearing a primitive's clothing — exactly
+the in-between mismatch this layer fixes.
+
+So our low-level controls are the **bare parts** — a text input, a checkbox, a
+radio — the way Flutter's material/cupertino libraries expose them. Label
+placement, option lists, and selection grouping are composed **in templates**,
+where they belong and where they can differ per design without changing the
+primitive (a labeled field or a choice picker is then itself a high-level
+template). This is the general move (§2's *bias to templatize*): keep each
+primitive minimal and cross-framework, and templatize the opinionated composition.
+We therefore borrow A2UI's catalog as a **coverage target** — what the high-level
+templates must be able to express — not as the shape of the primitives themselves.
 
 ### Extensible by design: sub- and super-setting the catalog
 

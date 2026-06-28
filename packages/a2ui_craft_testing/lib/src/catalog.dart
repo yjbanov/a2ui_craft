@@ -33,4 +33,5 @@ const Set<String> coreCatalog = <String>{
   'Video',
   'TextField',
   'Checkbox',
+  'Radio',
 };

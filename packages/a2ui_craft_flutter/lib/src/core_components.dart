@@ -122,9 +122,10 @@ LocalWidgetLibrary createCoreComponents() {
         ),
       );
     },
+    // The bare text input — no label. Label placement is a template's choice
+    // (see DESIGN.md §2 "Bias to templatize" / §11), composed as a separate Text.
     'TextField': (BuildContext context, DataSource source) {
       return _CoreTextField(
-        label: source.v<String>(['label']),
         value: source.v<String>(['value']),
         // The `onChanged` arg is a2ui_core's two-way setter (a resolved
         // callback), accepted directly by the runtime's handler affordance.
@@ -146,6 +147,18 @@ LocalWidgetLibrary createCoreComponents() {
         value: value,
         onChanged:
             onChanged == null ? null : (bool? v) => onChanged(v ?? !value),
+      );
+    },
+    // A single radio button: shows [selected] and fires `onChanged` when tapped
+    // ("select me"). Grouping — which radio is on — is the template's job.
+    'Radio': (BuildContext context, DataSource source) {
+      final bool selected = source.v<bool>(['selected']) ?? false;
+      final VoidCallback? onChanged = source.voidHandler(['onChanged']);
+      return GestureDetector(
+        onTap: onChanged,
+        child: Icon(
+          selected ? Icons.radio_button_checked : Icons.radio_button_off,
+        ),
       );
     },
   });
@@ -368,9 +381,8 @@ CrossAxisAlignment _toCrossAxisAlignment(CrossAxisAlign a) => switch (a) {
 /// the cursor mid-edit) and reports edits through [onChanged] — the two halves
 /// of two-way binding.
 class _CoreTextField extends StatefulWidget {
-  const _CoreTextField({this.label, this.value, this.onChanged});
+  const _CoreTextField({this.value, this.onChanged});
 
-  final String? label;
   final String? value;
   final ValueChanged<String>? onChanged;
 
@@ -402,7 +414,6 @@ class _CoreTextFieldState extends State<_CoreTextField> {
   Widget build(BuildContext context) {
     return TextField(
       controller: _controller,
-      decoration: InputDecoration(labelText: widget.label),
       onChanged: widget.onChanged,
     );
   }

@@ -18,7 +18,10 @@ import core;
 
 widget Stack = Column(children: args.children);
 widget Label = Text(text: args.text);
-widget Field = TextField(label: args.label, value: args.value, onChanged: args.setValue);
+widget Field = Column(children: [
+  Text(text: args.label, variant: "caption"),
+  TextField(value: args.value, onChanged: args.setValue),
+]);
 widget Toggle = Checkbox(value: args.value, onChanged: args.setValue);
 ''',
       catalogSchema: <String, Object?>{

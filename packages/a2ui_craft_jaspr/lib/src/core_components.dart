@@ -173,8 +173,9 @@ LocalWidgetLibrary createCoreComponents() {
       }
       return video(src: url, controls: true, []);
     },
+    // The bare text input — no label. Label placement is a template's choice
+    // (see DESIGN.md §2 "Bias to templatize" / §11), composed as a separate Text.
     'TextField': (BuildContext context, DataSource source) {
-      final String? labelText = source.v<String>(['label']);
       // The `onChanged` arg is a2ui_core's two-way setter (a resolved callback),
       // accepted directly by the runtime's handler affordance.
       final onChanged = source.handler<ValueChanged<String>>(
@@ -182,14 +183,11 @@ LocalWidgetLibrary createCoreComponents() {
         (HandlerTrigger trigger) =>
             (String value) => trigger(<String, Object?>{'value': value}),
       );
-      return label([
-        if (labelText != null) Component.text(labelText),
-        input<String>(
-          type: InputType.text,
-          value: source.v<String>(['value']) ?? '',
-          onInput: onChanged,
-        ),
-      ]);
+      return input<String>(
+        type: InputType.text,
+        value: source.v<String>(['value']) ?? '',
+        onInput: onChanged,
+      );
     },
     'Checkbox': (BuildContext context, DataSource source) {
       final bool value = source.v<bool>(['value']) ?? false;
@@ -206,6 +204,19 @@ LocalWidgetLibrary createCoreComponents() {
         events: onChanged == null
             ? null
             : <String, EventCallback>{'change': (_) => onChanged(!value)},
+      );
+    },
+    // A single radio button: shows [selected] and fires `onChanged` when tapped
+    // ("select me"). Grouping — which radio is on — is the template's job.
+    'Radio': (BuildContext context, DataSource source) {
+      final bool selected = source.v<bool>(['selected']) ?? false;
+      final onChanged = source.voidHandler(['onChanged']);
+      return input(
+        type: InputType.radio,
+        checked: selected,
+        events: onChanged == null
+            ? null
+            : <String, EventCallback>{'click': (_) => onChanged()},
       );
     },
   });

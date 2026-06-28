@@ -27,12 +27,18 @@ const List<IconData> _icons = <IconData>[
   Icons.edit_note,
   // Templatized A2UI gallery examples.
   Icons.notes,
+  Icons.touch_app,
   Icons.login,
   Icons.wb_sunny,
   Icons.shopping_bag,
   Icons.restaurant,
   Icons.account_balance_wallet,
   Icons.local_shipping,
+  Icons.flight,
+  Icons.check_circle,
+  Icons.coffee,
+  Icons.credit_card,
+  Icons.list,
 ];
 
 /// A simple gallery shell that shows one [Sample] at a time. Each sample is

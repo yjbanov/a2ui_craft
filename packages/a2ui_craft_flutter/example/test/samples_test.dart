@@ -193,6 +193,54 @@ void main() {
     expect(find.text('Delivered'), findsOneWidget); // last `...for` step
   });
 
+  testWidgets('Interactive Button renders the prompt and button',
+      (WidgetTester tester) async {
+    await _pump(tester, interactiveButtonSpec('Flutter'));
+    expect(find.text('Click the button below'), findsOneWidget);
+    expect(find.text('Click Me'), findsOneWidget);
+  });
+
+  testWidgets('Flight Status renders the route and status',
+      (WidgetTester tester) async {
+    await _pump(tester, flightStatusSpec('Flutter'));
+    expect(find.text('OS 87'), findsOneWidget);
+    expect(find.text('Vienna'), findsOneWidget);
+    expect(find.text('New York'), findsOneWidget);
+    expect(find.text('On Time'), findsOneWidget);
+  });
+
+  testWidgets('Purchase Complete renders the confirmation and seller',
+      (WidgetTester tester) async {
+    await _pump(tester, purchaseCompleteSpec('Flutter'));
+    expect(find.text('Purchase Complete'), findsOneWidget);
+    expect(find.text('TechStore Official'), findsOneWidget);
+    expect(find.text('View Order Details'), findsOneWidget);
+  });
+
+  testWidgets('Coffee Order renders items and total',
+      (WidgetTester tester) async {
+    await _pump(tester, coffeeOrderSpec('Flutter'));
+    expect(find.text('Sunrise Coffee'), findsOneWidget);
+    expect(find.text('Oat Milk Latte'), findsOneWidget); // a `...for` item
+    expect(find.text(r'$11.66'), findsOneWidget);
+  });
+
+  testWidgets('Credit Card renders the brand, holder, and expiry',
+      (WidgetTester tester) async {
+    await _pump(tester, creditCardSpec('Flutter'));
+    expect(find.text('VISA'), findsOneWidget);
+    expect(find.text('SARAH JOHNSON'), findsOneWidget);
+    expect(find.text('09/27'), findsOneWidget);
+  });
+
+  testWidgets('Child List Template renders one row per data item',
+      (WidgetTester tester) async {
+    await _pump(tester, childListTemplateSpec('Flutter'));
+    expect(find.text('Dynamic Item List'), findsOneWidget);
+    expect(find.text('Apple'), findsOneWidget); // first `...for` item
+    expect(find.text('Cherry'), findsOneWidget); // last `...for` item
+  });
+
   testWidgets('the gallery app mounts and shows the first sample',
       (WidgetTester tester) async {
     await tester.pumpWidget(const GalleryApp());

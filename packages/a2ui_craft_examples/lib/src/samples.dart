@@ -5,15 +5,21 @@
 import 'sample_spec.dart';
 import 'samples/account_balance.dart';
 import 'samples/boxes.dart';
+import 'samples/child_list_template.dart';
+import 'samples/coffee_order.dart';
 import 'samples/contact_card.dart';
 import 'samples/counter.dart';
+import 'samples/credit_card.dart';
+import 'samples/flight_status.dart';
 import 'samples/form.dart';
 import 'samples/gallery.dart';
 import 'samples/greeting.dart';
+import 'samples/interactive_button.dart';
 import 'samples/layout.dart';
 import 'samples/login_form.dart';
 import 'samples/product_card.dart';
 import 'samples/profile_card.dart';
+import 'samples/purchase_complete.dart';
 import 'samples/restaurant_card.dart';
 import 'samples/shipping_status.dart';
 import 'samples/simple_text.dart';
@@ -34,10 +40,16 @@ List<SampleSpec> sampleSpecs(String framework) => <SampleSpec>[
       formSpec(framework),
       // Templatized A2UI Basic Catalog gallery examples.
       simpleTextSpec(framework),
+      interactiveButtonSpec(framework),
       loginFormSpec(framework),
       weatherSpec(framework),
       productCardSpec(framework),
       restaurantCardSpec(framework),
       accountBalanceSpec(framework),
       shippingStatusSpec(framework),
+      flightStatusSpec(framework),
+      purchaseCompleteSpec(framework),
+      coffeeOrderSpec(framework),
+      creditCardSpec(framework),
+      childListTemplateSpec(framework),
     ];

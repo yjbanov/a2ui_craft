@@ -726,20 +726,21 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
         A2UI's `children: {path, componentId}` child-list templating is expressed
         directly as a `...for` loop over an array arg. Demo screens scroll the nav
         so the gallery scales.
-    - **Landed (7):** Simple Text (00), Login Form (00, labelled fields as a
-      template over the bare input), Weather (04, `...for` forecast), Product Card
-      (05), Restaurant Card (20), Account Balance (15), Shipping Status (21,
-      `...for` step rows). All tested on both adapters.
-    - **Templatizable, not yet authored (28):** 00_complex-layout,
-      00_formatted-text, 00_incremental, 00_interactive-button, 00_row-layout,
-      01_flight-status, 02_email-compose, 03_calendar-day, 06_music-player (Slider),
-      08_user-profile, 09_login-form, 10_notification-permission,
-      11_purchase-complete, 12_chat-message, 13_coffee-order, 14_sports-player,
-      16_workout-summary, 17_event-detail, 18_track-list, 22_credit-card,
-      23_step-counter, 25_contact-card, 27_stats-card, 28_countdown-timer,
-      31_incremental-dashboard, 32_advanced-form-validator (layout only — see
-      below), 33_financial-data-grid, 34_child-list-template, 35_markdown-text.
-      (25/27 overlap the existing hand-authored Contact/Stats cards.)
+    - **Landed (13):** Simple Text (00), Interactive Button (00), Login Form (00,
+      labelled fields as a template over the bare input), Weather (04, `...for`
+      forecast), Product Card (05), Restaurant Card (20), Account Balance (15),
+      Shipping Status (21, `...for` step rows), Flight Status (01), Purchase
+      Complete (11), Coffee Order (13, `...for` items), Credit Card (22), Child
+      List Template (34, `List` + `...for`). All tested on both adapters.
+    - **Templatizable, not yet authored (22):** 00_complex-layout,
+      00_formatted-text, 00_incremental, 00_row-layout, 02_email-compose,
+      03_calendar-day, 06_music-player (Slider), 08_user-profile, 09_login-form,
+      10_notification-permission, 12_chat-message, 14_sports-player,
+      16_workout-summary, 17_event-detail, 18_track-list, 23_step-counter,
+      25_contact-card, 27_stats-card, 28_countdown-timer, 31_incremental-dashboard,
+      32_advanced-form-validator (layout only — see below), 33_financial-data-grid,
+      35_markdown-text. (25/27 overlap the existing hand-authored Contact/Stats
+      cards.)
     - **Blocked — missing primitives (7 examples, 5 primitives):**
       - **`Modal`** (29_movie-card, 36_modal) — an overlay/dialog surface. Needs
         an overlay primitive; on Flutter a routed/`OverlayEntry` layer, on the web

@@ -148,6 +148,54 @@ void main() {
     expect(find.text('Delivered'), findsOneComponent); // last `...for` step
   });
 
+  testComponents('Interactive Button renders the prompt and button',
+      (ComponentTester tester) async {
+    await _pump(tester, interactiveButtonSpec('Jaspr'));
+    expect(find.text('Click the button below'), findsOneComponent);
+    expect(find.text('Click Me'), findsOneComponent);
+  });
+
+  testComponents('Flight Status renders the route and status',
+      (ComponentTester tester) async {
+    await _pump(tester, flightStatusSpec('Jaspr'));
+    expect(find.text('OS 87'), findsOneComponent);
+    expect(find.text('Vienna'), findsOneComponent);
+    expect(find.text('New York'), findsOneComponent);
+    expect(find.text('On Time'), findsOneComponent);
+  });
+
+  testComponents('Purchase Complete renders the confirmation and seller',
+      (ComponentTester tester) async {
+    await _pump(tester, purchaseCompleteSpec('Jaspr'));
+    expect(find.text('Purchase Complete'), findsOneComponent);
+    expect(find.text('TechStore Official'), findsOneComponent);
+    expect(find.text('View Order Details'), findsOneComponent);
+  });
+
+  testComponents('Coffee Order renders items and total',
+      (ComponentTester tester) async {
+    await _pump(tester, coffeeOrderSpec('Jaspr'));
+    expect(find.text('Sunrise Coffee'), findsOneComponent);
+    expect(find.text('Oat Milk Latte'), findsOneComponent); // a `...for` item
+    expect(find.text(r'$11.66'), findsOneComponent);
+  });
+
+  testComponents('Credit Card renders the brand, holder, and expiry',
+      (ComponentTester tester) async {
+    await _pump(tester, creditCardSpec('Jaspr'));
+    expect(find.text('VISA'), findsOneComponent);
+    expect(find.text('SARAH JOHNSON'), findsOneComponent);
+    expect(find.text('09/27'), findsOneComponent);
+  });
+
+  testComponents('Child List Template renders one row per data item',
+      (ComponentTester tester) async {
+    await _pump(tester, childListTemplateSpec('Jaspr'));
+    expect(find.text('Dynamic Item List'), findsOneComponent);
+    expect(find.text('Apple'), findsOneComponent); // first `...for` item
+    expect(find.text('Cherry'), findsOneComponent); // last `...for` item
+  });
+
   testComponents('the gallery app mounts and shows the first sample',
       (ComponentTester tester) async {
     tester.pumpComponent(App());

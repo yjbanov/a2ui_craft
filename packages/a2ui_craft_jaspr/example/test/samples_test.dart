@@ -253,6 +253,54 @@ void main() {
     expect(find.text('January 15, 2025'), findsOneComponent);
   });
 
+  testComponents('Row Layout pushes its two texts to opposite edges',
+      (ComponentTester tester) async {
+    await _pump(tester, rowLayoutSpec('Jaspr'));
+    expect(find.text('Left Content'), findsOneComponent);
+    expect(find.text('Right Content'), findsOneComponent);
+  });
+
+  testComponents('User Profile renders the name heading, stats, and follow',
+      (ComponentTester tester) async {
+    await _pump(tester, userProfileSpec('Jaspr'));
+    expect(find.text('Sarah Chen'), findsOneComponent); // Heading
+    expect(find.text('@sarahchen'), findsOneComponent);
+    expect(find.text('Followers'), findsOneComponent);
+    expect(find.text('Follow'), findsOneComponent);
+  });
+
+  testComponents('Chat renders the channel heading and message rows',
+      (ComponentTester tester) async {
+    await _pump(tester, chatMessageSpec('Jaspr'));
+    expect(find.text('project-updates'), findsOneComponent); // Heading
+    expect(find.text('Mike Chen'), findsOneComponent); // a `...for` message
+    expect(find.text('Sarah Kim'), findsOneComponent);
+  });
+
+  testComponents('Workout renders the heading and metrics',
+      (ComponentTester tester) async {
+    await _pump(tester, workoutSummarySpec('Jaspr'));
+    expect(find.text('Workout Complete'), findsOneComponent); // Heading
+    expect(find.text('Duration'), findsOneComponent);
+    expect(find.text('32:15'), findsOneComponent);
+  });
+
+  testComponents('Track List renders the playlist heading and tracks',
+      (ComponentTester tester) async {
+    await _pump(tester, trackListSpec('Jaspr'));
+    expect(find.text('Focus Flow'), findsOneComponent); // Heading
+    expect(find.text('Weightless'), findsOneComponent); // a `...for` track
+    expect(find.text('Ambient Light'), findsOneComponent);
+  });
+
+  testComponents('Data Grid renders the header and asset rows',
+      (ComponentTester tester) async {
+    await _pump(tester, financialDataGridSpec('Jaspr'));
+    expect(find.text('Asset'), findsOneComponent); // header column
+    expect(find.text('Bitcoin'), findsOneComponent); // a `...for` asset
+    expect(find.text('Solana'), findsOneComponent);
+  });
+
   testComponents('the gallery app mounts and shows the first sample',
       (ComponentTester tester) async {
     tester.pumpComponent(App());

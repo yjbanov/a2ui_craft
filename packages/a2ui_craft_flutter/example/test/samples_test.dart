@@ -298,6 +298,54 @@ void main() {
     expect(find.text('January 15, 2025'), findsOneWidget);
   });
 
+  testWidgets('Row Layout pushes its two texts to opposite edges',
+      (WidgetTester tester) async {
+    await _pump(tester, rowLayoutSpec('Flutter'));
+    expect(find.text('Left Content'), findsOneWidget);
+    expect(find.text('Right Content'), findsOneWidget);
+  });
+
+  testWidgets('User Profile renders the name heading, stats, and follow',
+      (WidgetTester tester) async {
+    await _pump(tester, userProfileSpec('Flutter'));
+    expect(find.text('Sarah Chen'), findsOneWidget); // Heading
+    expect(find.text('@sarahchen'), findsOneWidget);
+    expect(find.text('Followers'), findsOneWidget);
+    expect(find.text('Follow'), findsOneWidget);
+  });
+
+  testWidgets('Chat renders the channel heading and message rows',
+      (WidgetTester tester) async {
+    await _pump(tester, chatMessageSpec('Flutter'));
+    expect(find.text('project-updates'), findsOneWidget); // Heading
+    expect(find.text('Mike Chen'), findsOneWidget); // a `...for` message
+    expect(find.text('Sarah Kim'), findsOneWidget);
+  });
+
+  testWidgets('Workout renders the heading and metrics',
+      (WidgetTester tester) async {
+    await _pump(tester, workoutSummarySpec('Flutter'));
+    expect(find.text('Workout Complete'), findsOneWidget); // Heading
+    expect(find.text('Duration'), findsOneWidget);
+    expect(find.text('32:15'), findsOneWidget);
+  });
+
+  testWidgets('Track List renders the playlist heading and tracks',
+      (WidgetTester tester) async {
+    await _pump(tester, trackListSpec('Flutter'));
+    expect(find.text('Focus Flow'), findsOneWidget); // Heading
+    expect(find.text('Weightless'), findsOneWidget); // a `...for` track
+    expect(find.text('Ambient Light'), findsOneWidget);
+  });
+
+  testWidgets('Data Grid renders the header and asset rows',
+      (WidgetTester tester) async {
+    await _pump(tester, financialDataGridSpec('Flutter'));
+    expect(find.text('Asset'), findsOneWidget); // header column
+    expect(find.text('Bitcoin'), findsOneWidget); // a `...for` asset
+    expect(find.text('Solana'), findsOneWidget);
+  });
+
   testWidgets('the gallery app mounts and shows the first sample',
       (WidgetTester tester) async {
     await tester.pumpWidget(const GalleryApp());

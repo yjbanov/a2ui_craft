@@ -34,6 +34,19 @@ LocalWidgetLibrary createCoreComponents() {
             : null,
       );
     },
+    // A single heading line carrying a real heading role + `level` (1–6) for
+    // assistive tech — distinct from `Text`, which is a plain span. Kept simple:
+    // one line, no inline markup (use `Markdown` for rich content).
+    'Heading': (BuildContext context, DataSource source) {
+      final int level = (source.v<int>(['level']) ?? 1).clamp(1, 6);
+      return Semantics(
+        headingLevel: level,
+        child: Text(
+          source.v<String>(['text']) ?? '',
+          style: _mdHeadingStyle(level),
+        ),
+      );
+    },
     // Renders a Markdown string (parsed in the core) as headings, paragraphs,
     // and lists with inline emphasis — structurally, never as raw HTML.
     'Markdown': (BuildContext context, DataSource source) =>
@@ -264,7 +277,10 @@ Widget _mdBlock(MarkdownBlock block) => switch (block) {
       MarkdownHeading(:final int level, :final List<MarkdownSpan> spans) =>
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 4),
-          child: _mdInline(spans, base: _mdHeadingStyle(level)),
+          child: Semantics(
+            headingLevel: level,
+            child: _mdInline(spans, base: _mdHeadingStyle(level)),
+          ),
         ),
       MarkdownParagraph(:final List<MarkdownSpan> spans) => Padding(
           padding: const EdgeInsets.symmetric(vertical: 2),
@@ -497,9 +513,14 @@ IconData _iconData(String? name) => switch (name) {
       'favoriteOff' => Icons.favorite_border,
       'folder' => Icons.folder,
       'help' => Icons.help,
-      'location' || 'place' => Icons.place,
+      'location' || 'place' || 'locationOn' => Icons.place,
+      'notifications' => Icons.notifications,
+      'pause' => Icons.pause,
       'person' => Icons.person,
+      'play' || 'playArrow' => Icons.play_arrow,
       'settings' => Icons.settings,
+      'skipNext' => Icons.skip_next,
+      'skipPrevious' => Icons.skip_previous,
       'star' => Icons.star,
       _ => Icons.help_outline,
     };

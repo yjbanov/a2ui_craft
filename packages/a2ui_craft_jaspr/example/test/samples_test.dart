@@ -204,6 +204,55 @@ void main() {
     expect(find.text('Link to Google'), findsOneComponent); // `[..](..)` link
   });
 
+  testComponents('Music Player renders the track heading and times',
+      (ComponentTester tester) async {
+    await _pump(tester, musicPlayerSpec('Jaspr'));
+    expect(find.text('Blinding Lights'), findsOneComponent); // Heading
+    expect(find.text('The Weeknd'), findsOneComponent);
+    expect(find.text('4:22'), findsOneComponent);
+  });
+
+  testComponents('Permission renders the prompt and Yes/No actions',
+      (ComponentTester tester) async {
+    await _pump(tester, notificationPermissionSpec('Jaspr'));
+    expect(find.text('Enable notifications'), findsOneComponent); // Heading
+    expect(find.text('Yes'), findsOneComponent);
+    expect(find.text('No'), findsOneComponent);
+  });
+
+  testComponents('Sports Player renders the name heading and stats',
+      (ComponentTester tester) async {
+    await _pump(tester, sportsPlayerSpec('Jaspr'));
+    expect(find.text('Marcus Johnson'), findsOneComponent); // Heading
+    expect(find.text('LA Lakers'), findsOneComponent);
+    expect(find.text('PPG'), findsOneComponent);
+    expect(find.text('APG'), findsOneComponent);
+  });
+
+  testComponents('Event Detail renders the title heading and actions',
+      (ComponentTester tester) async {
+    await _pump(tester, eventDetailSpec('Jaspr'));
+    expect(find.text('Product Launch Meeting'), findsOneComponent); // Heading
+    expect(find.text('Conference Room A, Building 2'), findsOneComponent);
+    expect(find.text('Accept'), findsOneComponent);
+  });
+
+  testComponents('Step Counter renders the heading, steps, and stats',
+      (ComponentTester tester) async {
+    await _pump(tester, stepCounterSpec('Jaspr'));
+    expect(find.text("Today's Steps"), findsOneComponent); // Heading
+    expect(find.text('8,432'), findsOneComponent);
+    expect(find.text('Distance'), findsOneComponent);
+  });
+
+  testComponents('Countdown renders the event heading and units',
+      (ComponentTester tester) async {
+    await _pump(tester, countdownTimerSpec('Jaspr'));
+    expect(find.text('Product Launch'), findsOneComponent); // Heading
+    expect(find.text('Days'), findsOneComponent);
+    expect(find.text('January 15, 2025'), findsOneComponent);
+  });
+
   testComponents('the gallery app mounts and shows the first sample',
       (ComponentTester tester) async {
     tester.pumpComponent(App());

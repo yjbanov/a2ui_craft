@@ -8,8 +8,10 @@ import 'samples/boxes.dart';
 import 'samples/child_list_template.dart';
 import 'samples/coffee_order.dart';
 import 'samples/contact_card.dart';
+import 'samples/countdown_timer.dart';
 import 'samples/counter.dart';
 import 'samples/credit_card.dart';
+import 'samples/event_detail.dart';
 import 'samples/flight_status.dart';
 import 'samples/form.dart';
 import 'samples/gallery.dart';
@@ -18,13 +20,17 @@ import 'samples/interactive_button.dart';
 import 'samples/layout.dart';
 import 'samples/login_form.dart';
 import 'samples/markdown_text.dart';
+import 'samples/music_player.dart';
+import 'samples/notification_permission.dart';
 import 'samples/product_card.dart';
 import 'samples/profile_card.dart';
 import 'samples/purchase_complete.dart';
 import 'samples/restaurant_card.dart';
 import 'samples/shipping_status.dart';
 import 'samples/simple_text.dart';
+import 'samples/sports_player.dart';
 import 'samples/stats_card.dart';
+import 'samples/step_counter.dart';
 import 'samples/weather.dart';
 
 /// All sample specs, in gallery order, labelled for the given [framework] (used
@@ -54,4 +60,10 @@ List<SampleSpec> sampleSpecs(String framework) => <SampleSpec>[
       creditCardSpec(framework),
       childListTemplateSpec(framework),
       markdownTextSpec(framework),
+      musicPlayerSpec(framework),
+      notificationPermissionSpec(framework),
+      sportsPlayerSpec(framework),
+      eventDetailSpec(framework),
+      stepCounterSpec(framework),
+      countdownTimerSpec(framework),
     ];

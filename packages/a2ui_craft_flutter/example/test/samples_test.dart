@@ -249,6 +249,55 @@ void main() {
     expect(find.text('Link to Google'), findsOneWidget); // `[..](..)` link
   });
 
+  testWidgets('Music Player renders the track heading and times',
+      (WidgetTester tester) async {
+    await _pump(tester, musicPlayerSpec('Flutter'));
+    expect(find.text('Blinding Lights'), findsOneWidget); // Heading
+    expect(find.text('The Weeknd'), findsOneWidget);
+    expect(find.text('4:22'), findsOneWidget);
+  });
+
+  testWidgets('Permission renders the prompt and Yes/No actions',
+      (WidgetTester tester) async {
+    await _pump(tester, notificationPermissionSpec('Flutter'));
+    expect(find.text('Enable notifications'), findsOneWidget); // Heading
+    expect(find.text('Yes'), findsOneWidget);
+    expect(find.text('No'), findsOneWidget);
+  });
+
+  testWidgets('Sports Player renders the name heading and stats',
+      (WidgetTester tester) async {
+    await _pump(tester, sportsPlayerSpec('Flutter'));
+    expect(find.text('Marcus Johnson'), findsOneWidget); // Heading
+    expect(find.text('LA Lakers'), findsOneWidget);
+    expect(find.text('PPG'), findsOneWidget);
+    expect(find.text('APG'), findsOneWidget);
+  });
+
+  testWidgets('Event Detail renders the title heading and actions',
+      (WidgetTester tester) async {
+    await _pump(tester, eventDetailSpec('Flutter'));
+    expect(find.text('Product Launch Meeting'), findsOneWidget); // Heading
+    expect(find.text('Conference Room A, Building 2'), findsOneWidget);
+    expect(find.text('Accept'), findsOneWidget);
+  });
+
+  testWidgets('Step Counter renders the heading, steps, and stats',
+      (WidgetTester tester) async {
+    await _pump(tester, stepCounterSpec('Flutter'));
+    expect(find.text("Today's Steps"), findsOneWidget); // Heading
+    expect(find.text('8,432'), findsOneWidget);
+    expect(find.text('Distance'), findsOneWidget);
+  });
+
+  testWidgets('Countdown renders the event heading and units',
+      (WidgetTester tester) async {
+    await _pump(tester, countdownTimerSpec('Flutter'));
+    expect(find.text('Product Launch'), findsOneWidget); // Heading
+    expect(find.text('Days'), findsOneWidget);
+    expect(find.text('January 15, 2025'), findsOneWidget);
+  });
+
   testWidgets('the gallery app mounts and shows the first sample',
       (WidgetTester tester) async {
     await tester.pumpWidget(const GalleryApp());

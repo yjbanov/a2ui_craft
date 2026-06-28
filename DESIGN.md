@@ -708,6 +708,17 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
         (§12). Core unit tests cover the parser; a shared conformance case proves
         cross-adapter parity. (Block quotes, code fences, images, and tables
         degrade to text for now.)
+  - [x] **`Heading` primitive.** Rather than overloading `Text` with a heading
+        mode, a dedicated `Heading(text, level)` carries a real **heading role +
+        level** for assistive tech (Flutter `Semantics(headingLevel:)`; an
+        `h1`–`h6` element on the web) — semantically distinct from a styled
+        `Text`/`span`, which screen readers can't use for outline navigation or
+        "jump to heading". `level` defaults to **1** (a heading with no context is
+        the most prominent one; deeper levels are author-set) and is clamped to
+        1–6; `Markdown` headings carry the same semantics. Kept simple: one line,
+        no inline markup (use `Markdown` for rich content) — the "many simple
+        widgets over one complex one" rule.
+  - [x] **Direct component→widget mapping (the "bespoke widget" path).** A
         developer can surface an existing local widget *directly* as an A2UI
         component — no template wrapper, no extra binding layer — via the
         adapter's optional `mapComponent` seam, which maps a component's `type`
@@ -737,21 +748,23 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
         A2UI's `children: {path, componentId}` child-list templating is expressed
         directly as a `...for` loop over an array arg. Demo screens scroll the nav
         so the gallery scales.
-    - **Landed (14):** Simple Text (00), Interactive Button (00), Login Form (00,
+    - **Landed (20):** Simple Text (00), Interactive Button (00), Login Form (00,
       labelled fields as a template over the bare input), Weather (04, `...for`
       forecast), Product Card (05), Restaurant Card (20), Account Balance (15),
       Shipping Status (21, `...for` step rows), Flight Status (01), Purchase
       Complete (11), Coffee Order (13, `...for` items), Credit Card (22), Child
       List Template (34, `List` + `...for`), Markdown (35, the `Markdown`
-      primitive). All tested on both adapters.
-    - **Templatizable, not yet authored (21):** 00_complex-layout,
+      primitive), Music Player (06, `Slider` + `Heading`), Permission (10),
+      Sports Player (14), Event Detail (17), Step Counter (23), Countdown (28) —
+      the last five using the `Heading` primitive for their titles. All tested on
+      both adapters.
+    - **Templatizable, not yet authored (16):** 00_complex-layout,
       00_formatted-text, 00_incremental, 00_row-layout, 02_email-compose,
-      03_calendar-day, 06_music-player (Slider), 08_user-profile, 09_login-form,
-      10_notification-permission, 12_chat-message, 14_sports-player,
-      16_workout-summary, 17_event-detail, 18_track-list, 23_step-counter,
-      25_contact-card, 27_stats-card, 28_countdown-timer, 31_incremental-dashboard,
-      32_advanced-form-validator (layout only — see below), 33_financial-data-grid.
-      (25/27 overlap the existing hand-authored Contact/Stats cards.)
+      03_calendar-day, 08_user-profile, 09_login-form, 12_chat-message,
+      16_workout-summary, 18_track-list, 25_contact-card, 27_stats-card,
+      31_incremental-dashboard, 32_advanced-form-validator (layout only — see
+      below), 33_financial-data-grid. (25/27 overlap the existing hand-authored
+      Contact/Stats cards.)
     - **Blocked — missing primitives (7 examples, 5 primitives):**
       - **`Modal`** (29_movie-card, 36_modal) — an overlay/dialog surface. Needs
         an overlay primitive; on Flutter a routed/`OverlayEntry` layer, on the web

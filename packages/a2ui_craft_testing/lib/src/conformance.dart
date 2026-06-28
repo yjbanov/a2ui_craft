@@ -205,6 +205,24 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
   );
 
   driver.defineTest(
+    'Heading renders its text (default level and an explicit level)',
+    (CraftTester tester) async {
+      // Heading is a distinct primitive (a real heading role + level for
+      // assistive tech), defaulting to level 1; the level is author-set.
+      await tester.mount('''
+        import core;
+        widget root = Column(children: [
+          Heading(text: "Top Heading"),
+          Heading(text: "Subsection", level: 2),
+        ]);
+      ''');
+
+      expect(tester.hasText('Top Heading'), isTrue); // default level 1
+      expect(tester.hasText('Subsection'), isTrue); // explicit level 2
+    },
+  );
+
+  driver.defineTest(
     'Markdown renders headings, a styled paragraph, and list items',
     (CraftTester tester) async {
       // The Markdown source is passed via the data model (real newlines) rather

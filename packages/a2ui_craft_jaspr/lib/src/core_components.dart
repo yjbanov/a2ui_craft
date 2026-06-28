@@ -39,6 +39,18 @@ LocalWidgetLibrary createCoreComponents() {
             )
           : Component.text(text);
     },
+    // A single heading line carrying a real heading role + `level` (1–6) for
+    // assistive tech (an `h1`–`h6` element) — distinct from `Text`, a plain span.
+    // Kept simple: one line, no inline markup (use `Markdown` for rich content).
+    'Heading': (BuildContext context, DataSource source) {
+      final int level = (source.v<int>(['level']) ?? 1).clamp(1, 6);
+      return _mdHeading(
+        level,
+        <Component>[
+          Component.text(source.v<String>(['text']) ?? '')
+        ],
+      );
+    },
     // Renders a Markdown string (parsed in the core) as headings, paragraphs,
     // and lists with inline emphasis — structurally, never as raw HTML.
     'Markdown': (BuildContext context, DataSource source) =>
@@ -515,9 +527,14 @@ String _iconLigature(String? name) => switch (name) {
       'favoriteOff' => 'favorite_border',
       'folder' => 'folder',
       'help' => 'help',
-      'location' || 'place' => 'place',
+      'location' || 'place' || 'locationOn' => 'place',
+      'notifications' => 'notifications',
+      'pause' => 'pause',
       'person' => 'person',
+      'play' || 'playArrow' => 'play_arrow',
       'settings' => 'settings',
+      'skipNext' => 'skip_next',
+      'skipPrevious' => 'skip_previous',
       'star' => 'star',
       _ => 'help_outline',
     };

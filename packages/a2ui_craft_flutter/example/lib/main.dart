@@ -40,6 +40,12 @@ const List<IconData> _icons = <IconData>[
   Icons.credit_card,
   Icons.list,
   Icons.article,
+  Icons.music_note,
+  Icons.notifications,
+  Icons.sports_basketball,
+  Icons.event_note,
+  Icons.directions_walk,
+  Icons.timer,
 ];
 
 /// A simple gallery shell that shows one [Sample] at a time. Each sample is

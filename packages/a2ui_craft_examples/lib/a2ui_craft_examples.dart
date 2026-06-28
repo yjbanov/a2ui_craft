@@ -26,6 +26,7 @@ export 'src/samples/greeting.dart';
 export 'src/samples/interactive_button.dart';
 export 'src/samples/layout.dart';
 export 'src/samples/login_form.dart';
+export 'src/samples/markdown_text.dart';
 export 'src/samples/product_card.dart';
 export 'src/samples/profile_card.dart';
 export 'src/samples/purchase_complete.dart';

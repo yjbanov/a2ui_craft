@@ -17,6 +17,7 @@ import 'samples/greeting.dart';
 import 'samples/interactive_button.dart';
 import 'samples/layout.dart';
 import 'samples/login_form.dart';
+import 'samples/markdown_text.dart';
 import 'samples/product_card.dart';
 import 'samples/profile_card.dart';
 import 'samples/purchase_complete.dart';
@@ -52,4 +53,5 @@ List<SampleSpec> sampleSpecs(String framework) => <SampleSpec>[
       coffeeOrderSpec(framework),
       creditCardSpec(framework),
       childListTemplateSpec(framework),
+      markdownTextSpec(framework),
     ];

@@ -17,6 +17,7 @@
 /// DESIGN.md's Glossary.)
 const Set<String> corePrimitives = <String>{
   'Text',
+  'Markdown',
   'Flex',
   'Row',
   'Column',

@@ -34,6 +34,10 @@ LocalWidgetLibrary createCoreComponents() {
             : null,
       );
     },
+    // Renders a Markdown string (parsed in the core) as headings, paragraphs,
+    // and lists with inline emphasis — structurally, never as raw HTML.
+    'Markdown': (BuildContext context, DataSource source) =>
+        _buildMarkdown(source.v<String>(['text']) ?? ''),
     // Row, Column, and Flex are one builder over a `FlexAxis`: Row/Column pin
     // the axis, Flex reads it from `direction` (DESIGN.md §11).
     'Flex': (BuildContext context, DataSource source) =>
@@ -240,6 +244,87 @@ LocalWidgetLibrary createCoreComponents() {
 /// Reads a numeric argument, accepting an int or double literal.
 double? _numArg(DataSource source, String key) =>
     source.v<double>([key]) ?? source.v<int>([key])?.toDouble();
+
+/// Builds the `Markdown` primitive: the core parses the source into a neutral
+/// [MarkdownBlock] model, and this renders it as Flutter widgets (headings,
+/// paragraphs, and lists with inline emphasis). The Jaspr adapter renders the
+/// same model with DOM elements.
+Widget _buildMarkdown(String source) {
+  final List<MarkdownBlock> blocks = parseMarkdown(source);
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    mainAxisSize: MainAxisSize.min,
+    children: <Widget>[
+      for (final MarkdownBlock block in blocks) _mdBlock(block)
+    ],
+  );
+}
+
+Widget _mdBlock(MarkdownBlock block) => switch (block) {
+      MarkdownHeading(:final int level, :final List<MarkdownSpan> spans) =>
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: _mdInline(spans, base: _mdHeadingStyle(level)),
+        ),
+      MarkdownParagraph(:final List<MarkdownSpan> spans) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          child: _mdInline(spans),
+        ),
+      MarkdownList(
+        :final bool ordered,
+        :final List<List<MarkdownSpan>> items
+      ) =>
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            for (int i = 0; i < items.length; i++)
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Text(ordered ? '${i + 1}. ' : '• '),
+                  _mdInline(items[i]),
+                ],
+              ),
+          ],
+        ),
+    };
+
+/// Renders a run of spans. A single span becomes a plain `Text` (so the
+/// behavioral conformance harness's `find.text` can locate it); multiple spans
+/// become a `Text.rich`.
+Widget _mdInline(List<MarkdownSpan> spans, {TextStyle? base}) {
+  if (spans.length == 1) {
+    return Text(spans.first.text, style: _mdSpanStyle(spans.first, base));
+  }
+  return Text.rich(TextSpan(children: <InlineSpan>[
+    for (final MarkdownSpan span in spans)
+      TextSpan(text: span.text, style: _mdSpanStyle(span, base)),
+  ]));
+}
+
+TextStyle _mdSpanStyle(MarkdownSpan span, TextStyle? base) {
+  TextStyle style = base ?? const TextStyle();
+  if (span.bold) style = style.copyWith(fontWeight: FontWeight.bold);
+  if (span.italic) style = style.copyWith(fontStyle: FontStyle.italic);
+  if (span.code) style = style.copyWith(fontFamily: 'monospace');
+  if (span.href != null) {
+    style = style.copyWith(
+      color: const Color(0xFF1A73E8),
+      decoration: TextDecoration.underline,
+    );
+  }
+  return style;
+}
+
+TextStyle _mdHeadingStyle(int level) {
+  const List<double> sizes = <double>[24, 22, 20, 18, 16, 14];
+  return TextStyle(
+    fontSize: sizes[(level - 1).clamp(0, 5)],
+    fontWeight: FontWeight.bold,
+  );
+}
 
 /// Builds a `Flex` (and thus `Row`/`Column`) from the catalog spec, mapping the
 /// framework-neutral value types onto Flutter's `Flex`.

@@ -204,6 +204,29 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
     },
   );
 
+  driver.defineTest(
+    'Markdown renders headings, a styled paragraph, and list items',
+    (CraftTester tester) async {
+      // The Markdown source is passed via the data model (real newlines) rather
+      // than a template literal. Each asserted block is a *single* styled run, so
+      // it renders as one discrete text node on both adapters (a heading, an
+      // all-bold paragraph, and plain list items).
+      final DynamicContent data = DynamicContent();
+      data.update('md',
+          '# Heading One\n\n**BoldPara**\n\n- Item A\n- Item B\n\n1. First');
+      await tester.mount('''
+        import core;
+        widget root = Markdown(text: data.md);
+      ''', data: data);
+
+      expect(tester.hasText('Heading One'), isTrue); // # heading
+      expect(tester.hasText('BoldPara'), isTrue); // **bold** paragraph
+      expect(tester.hasText('Item A'), isTrue); // unordered item
+      expect(tester.hasText('Item B'), isTrue);
+      expect(tester.hasText('First'), isTrue); // ordered item
+    },
+  );
+
   driver.defineTest('Row and Column render their children', (
     CraftTester tester,
   ) async {

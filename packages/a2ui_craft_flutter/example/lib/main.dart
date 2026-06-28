@@ -39,6 +39,7 @@ const List<IconData> _icons = <IconData>[
   Icons.coffee,
   Icons.credit_card,
   Icons.list,
+  Icons.article,
 ];
 
 /// A simple gallery shell that shows one [Sample] at a time. Each sample is

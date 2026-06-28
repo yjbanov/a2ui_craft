@@ -196,6 +196,14 @@ void main() {
     expect(find.text('Cherry'), findsOneComponent); // last `...for` item
   });
 
+  testComponents('Markdown renders a heading, list items, and a link',
+      (ComponentTester tester) async {
+    await _pump(tester, markdownTextSpec('Jaspr'));
+    expect(find.text('Heading 1'), findsOneComponent); // `#` heading
+    expect(find.text('List item 1'), findsOneComponent); // `-` list item
+    expect(find.text('Link to Google'), findsOneComponent); // `[..](..)` link
+  });
+
   testComponents('the gallery app mounts and shows the first sample',
       (ComponentTester tester) async {
     tester.pumpComponent(App());

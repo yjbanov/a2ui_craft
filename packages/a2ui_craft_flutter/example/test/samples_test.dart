@@ -241,6 +241,14 @@ void main() {
     expect(find.text('Cherry'), findsOneWidget); // last `...for` item
   });
 
+  testWidgets('Markdown renders a heading, list items, and a link',
+      (WidgetTester tester) async {
+    await _pump(tester, markdownTextSpec('Flutter'));
+    expect(find.text('Heading 1'), findsOneWidget); // `#` heading
+    expect(find.text('List item 1'), findsOneWidget); // `-` list item
+    expect(find.text('Link to Google'), findsOneWidget); // `[..](..)` link
+  });
+
   testWidgets('the gallery app mounts and shows the first sample',
       (WidgetTester tester) async {
     await tester.pumpWidget(const GalleryApp());

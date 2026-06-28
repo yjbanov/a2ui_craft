@@ -14,6 +14,10 @@ resolution: workspace
 # Keep this package dependency-light. The core must remain free of any
 # UI-framework dependency so adapters can build on it for any framework.
 dependencies:
+  # Pure-Dart Markdown parser for the `Markdown` primitive. Parsing lives in the
+  # core (like the value-type decoders) so adapters render a shared neutral model
+  # and cannot disagree; it adds no UI-framework dependency.
+  markdown: ^7.0.0
   meta: ^1.15.0
 
 dev_dependencies:

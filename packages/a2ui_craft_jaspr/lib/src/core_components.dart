@@ -39,6 +39,10 @@ LocalWidgetLibrary createCoreComponents() {
             )
           : Component.text(text);
     },
+    // Renders a Markdown string (parsed in the core) as headings, paragraphs,
+    // and lists with inline emphasis — structurally, never as raw HTML.
+    'Markdown': (BuildContext context, DataSource source) =>
+        _buildMarkdown(source.v<String>(['text']) ?? ''),
     // Row, Column, and Flex are one builder over a `FlexAxis`: Row/Column pin
     // the axis, Flex reads it from `direction` (DESIGN.md §11).
     'Flex': (BuildContext context, DataSource source) =>
@@ -548,3 +552,55 @@ AlignItems _alignItemsFor(double y) => y < 0
     : y > 0
         ? AlignItems.end
         : AlignItems.center;
+
+/// Builds the `Markdown` primitive from the core's neutral [MarkdownBlock]
+/// model (the Flutter adapter renders the same model with widgets), as DOM
+/// headings/paragraphs/lists with `strong`/`em`/`code`/`a` emphasis — never raw
+/// HTML.
+Component _buildMarkdown(String source) {
+  final List<MarkdownBlock> blocks = parseMarkdown(source);
+  return div(
+    <Component>[for (final MarkdownBlock block in blocks) _mdBlock(block)],
+  );
+}
+
+Component _mdBlock(MarkdownBlock block) => switch (block) {
+      MarkdownHeading(:final int level, :final List<MarkdownSpan> spans) =>
+        _mdHeading(level, _mdInline(spans)),
+      MarkdownParagraph(:final List<MarkdownSpan> spans) => p(_mdInline(spans)),
+      MarkdownList(
+        :final bool ordered,
+        :final List<List<MarkdownSpan>> items
+      ) =>
+        ordered
+            ? ol(<Component>[
+                for (final List<MarkdownSpan> item in items)
+                  li(_mdInline(item)),
+              ])
+            : ul(<Component>[
+                for (final List<MarkdownSpan> item in items)
+                  li(_mdInline(item)),
+              ]),
+    };
+
+Component _mdHeading(int level, List<Component> children) => switch (level) {
+      1 => h1(children),
+      2 => h2(children),
+      3 => h3(children),
+      4 => h4(children),
+      5 => h5(children),
+      _ => h6(children),
+    };
+
+List<Component> _mdInline(List<MarkdownSpan> spans) =>
+    <Component>[for (final MarkdownSpan span in spans) _mdSpan(span)];
+
+Component _mdSpan(MarkdownSpan span) {
+  Component node = Component.text(span.text);
+  if (span.code) node = code(<Component>[node]);
+  if (span.italic) node = em(<Component>[node]);
+  if (span.bold) node = strong(<Component>[node]);
+  final String? href = span.href;
+  if (href != null) node = a(<Component>[node], href: href);
+  return node;
+}

@@ -4,12 +4,12 @@
 
 /// Shared, framework-neutral testing support for A2UI Craft adapters.
 ///
-/// Exposes the core component **catalog** (the contract every adapter must
-/// implement) and the cross-framework **conformance suite** (the shared
-/// behavioral spec each adapter runs against its own renderer). This package is
-/// test-only and not published.
+/// Exposes the **primitives** contract (the set every adapter must implement)
+/// and the cross-framework **conformance suite** (the shared behavioral spec each
+/// adapter runs against its own renderer). This package is test-only and not
+/// published.
 library a2ui_craft_testing;
 
-export 'src/catalog.dart';
+export 'src/primitives.dart';
 export 'src/conformance.dart';
 export 'src/geometry.dart';

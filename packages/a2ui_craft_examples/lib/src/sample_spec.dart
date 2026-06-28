@@ -49,7 +49,7 @@ class SampleSpec {
   /// A short name for the gallery's navigation.
   final String label;
 
-  /// The high-level catalog as RFW template source
+  /// The catalog as RFW template source
   /// (`import core; widget Foo = …;`).
   final String catalogSource;
 

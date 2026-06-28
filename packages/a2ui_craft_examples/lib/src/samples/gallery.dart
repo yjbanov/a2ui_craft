@@ -12,7 +12,7 @@ const List<String> _images = <String>[
   'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=50&h=50&fit=crop',
 ];
 
-/// A high-level `Gallery` widget: the agent passes a list of image URLs and the
+/// A `Gallery` catalog widget: the agent passes a list of image URLs and the
 /// template iterates over them internally (`...for url in args.images`), so the
 /// A2UI payload is a single component.
 SampleSpec gallerySpec(String framework) => SampleSpec(

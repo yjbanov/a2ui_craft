@@ -64,7 +64,7 @@ abstract cheaply, so each adapter vendors its own copy of
    directly). This lets an already-resolved callback be supplied as an argument —
    the A2UI Craft / `a2ui_core` seam, where `a2ui_core`'s `GenericBinder` resolves
    an `action` prop to a `Future<void> Function()` that a template wires onto a
-   low-level `Button`'s `onPressed`. Additive: existing RFW parsed args never carry
+   `Button` primitive's `onPressed`. Additive: existing RFW parsed args never carry
    bare Dart functions (only `AnyEventHandler`/`SetStateHandler` nodes), so the
    branch only matches host-supplied callbacks. Needed for A2UI actions under the
    `a2ui_core` layering (M6); upstream candidate. Design: `DESIGN.md` §10.

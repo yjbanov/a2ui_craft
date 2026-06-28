@@ -6,7 +6,7 @@ import 'package:a2ui_core/a2ui_core.dart';
 
 import '../sample_spec.dart';
 
-/// A `ContactCard` high-level widget, modeled on the A2UI Basic Catalog gallery's
+/// A `ContactCard` catalog widget, modeled on the A2UI Basic Catalog gallery's
 /// Contact Card: a `Card` wrapping a centered `Column` of an avatar `Image`, a
 /// name, a caption title, a `Divider`, and `Icon`+`Text` rows. It exercises the
 /// atoms slice (Text variants, Image variant/fit, Icon, Divider) composed over

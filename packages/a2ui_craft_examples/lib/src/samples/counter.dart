@@ -6,7 +6,7 @@ import 'package:a2ui_core/a2ui_core.dart';
 
 import '../sample_spec.dart';
 
-/// A high-level `Counter` widget. The count lives in the surface's data model;
+/// A `Counter` catalog widget. The count lives in the surface's data model;
 /// pressing the button dispatches `increment`, which reads the current count,
 /// adds one, and writes it back — the bound text re-renders reactively.
 SampleSpec counterSpec(String framework) => SampleSpec(

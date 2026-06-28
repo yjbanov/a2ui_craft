@@ -15,6 +15,26 @@ It is *not* a new language and *not* an ahead-of-time compiler to a wire format.
 We adopt RFW's existing language and runtime essentially as-is, and generalize
 the runtime so it is no longer tied to Flutter.
 
+## Glossary
+
+Two terms recur throughout and are easy to conflate; this document uses them
+precisely (and they replace the older "primitives" / "catalog"):
+
+- **Primitives** — the **low-level** building blocks (`Text`, `Row`, `Box`,
+  `Button`, `Image`, …). They are expressive, cross-framework, and
+  **template-private**: composed *by* templates at build time, never referenced by
+  an agent. In code the primitives are an RFW **`LocalWidgetLibrary`** (we keep
+  RFW's type name); `createCoreComponents()` builds the set and `corePrimitives`
+  pins its contract.
+- **Catalog** — the **high-level**, **agent-facing** set of semantic widgets
+  (`WeatherCard`, `ContactCard`, …) that an A2UI message references at runtime.
+  This is A2UI's own term — the agent speaks to a *catalog*. Each catalog widget is
+  materialized from a **template** that composes primitives. In code this is
+  `a2ui_core`'s `Catalog<ComponentApi>`.
+
+In short: **a catalog widget is a template over primitives.** Templates are the
+bridge between the two.
+
 ## 2. Why this shape (and why not the earlier AOT-to-A2UI idea)
 
 The project briefly explored a new language ("Craft") that would AOT-compile
@@ -55,37 +75,37 @@ doesn't care how a renderer implements them. A2UI Craft slots in cleanly:
 In other words: **A2UI Craft templates are an implementation of an A2UI
 catalog**, as opposed to wrapping native widgets one-for-one.
 
-### The two-level catalog: agent-facing high-level widgets vs. template-private primitives
+### The two-level model: agent-facing catalog widgets vs. template-private primitives
 
 There are **two distinct catalogs**, and conflating them is the central mistake to
 avoid:
 
-1. **Low-level catalog** — a rich set of primitives (`Text`, `Row`, `Column`,
+1. **Primitives** — a rich set of primitives (`Text`, `Row`, `Column`,
    `Button`, `TextField`, `Checkbox`, `Image`, …). This is **never exposed to the
    agent.** A large primitive vocabulary bloats model context (defeating small,
    fast models), and letting an LLM compose primitives at runtime is
    unpredictable and impossible to vet before deployment — which kills high-trust
    business use-cases. Primitives exist to be composed **by templates, at
    design/build time.**
-2. **High-level catalog** — a *small*, vetted set of domain widgets
+2. **Catalog** — a *small*, vetted set of domain widgets
    (`WeatherCard`, `ProductCard`, `FifaStandings`, …) plus a few layout widgets
    (`Grid`, `Carousel`, `List`) that give the agent enough control to arrange
    them for good information architecture. **This is the only catalog A2UI
    references at runtime:** small context, low latency, predictable output, each
-   widget pre-vetted. **Every high-level widget is materialized from a template.**
+   widget pre-vetted. **Every catalog widget is materialized from a template.**
 
-**Templates (RFW) are the bridge between the two levels.** A high-level widget is
-authored once as an RFW template that composes the low-level catalog (and may
-reuse other high-level widgets — e.g. a `ProductList` template using `ProductCard`
+**Templates (RFW) are the bridge between the two levels.** A catalog widget is
+authored once as an RFW template that composes the primitives (and may
+reuse other catalog widgets — e.g. a `ProductList` template using `ProductCard`
 — but that is the template's private business; an agent can equally place a bare
-`ProductCard`). Authoring high-level widgets as templates — rather than
+`ProductCard`). Authoring catalog widgets as templates — rather than
 hand-writing each one natively per framework — is exactly what buys cross-framework
 reuse: the same template renders on Flutter and Jaspr. **This is the core of H1,
 and the reason RFW is load-bearing here** even as the A2UI protocol/data layer
 moves to `a2ui_core` (§10).
 
-A2UI operates **only** on the high-level catalog. The bridge maps an A2UI
-high-level component to its template; the template composes the low-level catalog.
+A2UI operates **only** on the catalog. The bridge maps an A2UI
+catalog component to its template; the template composes the primitives.
 §6 covers how that composition is rendered and kept correct under partial updates,
 and the concrete template layer; §10 covers how `a2ui_core` layers above it.
 
@@ -97,7 +117,7 @@ under A2UI's id-addressed, incremental updates — is the subject of §6.
 ### Bias to templatize
 
 Whenever a chunk of UI *can* be authored once as a template, it should be —
-collapsing a tree of A2UI nodes into a single high-level widget is the core value
+collapsing a tree of A2UI nodes into a single catalog widget is the core value
 this project delivers. It moves complexity off the wire (and out of the agent) to
 build time: the agent emits one `component="ContactCard"` plus data instead of a
 dozen nested layout/text/image nodes. That buys **less for the agent to reason
@@ -239,9 +259,9 @@ behavior.
 Two mechanisms in `packages/a2ui_craft_testing` turn the contract above into
 automated checks:
 
-- **Catalog manifest (`coreCatalog`)** — the canonical set of core component
+- **Primitives set (`corePrimitives`)** — the canonical set of core component
   names. Each adapter has a contract test asserting its
-  `createCoreComponents().widgets.keys` equals `coreCatalog`, so no adapter
+  `createCoreComponents().widgets.keys` equals `corePrimitives`, so no adapter
   silently gains or drops a component.
 - **Conformance suite (`runCoreComponentConformance`)** — a single,
   framework-neutral behavioral spec. Each adapter runs it against its own
@@ -418,17 +438,17 @@ sibling component's A2UI-id key.
 
 ### The template layer: what A2UI references, and what the bridge targets
 
-Per the two-level catalog (§2), **A2UI components reference high-level widgets,
+Per the two-level model (§2), **A2UI components reference catalog widgets,
 each backed by an RFW template**; the bridge maps a component to its template, and
-the template composes the low-level catalog.
+the template composes the primitives.
 
-Low-level catalog — an RFW `LocalWidgetLibrary`, implemented per framework:
+Primitives — an RFW `LocalWidgetLibrary`, implemented per framework:
 
 ```
 core: Text, Row, Column, Button, Image, TextField, Checkbox, …
 ```
 
-High-level catalog — an RFW `RemoteWidgetLibrary`, authored once and vetted at
+Catalog — an RFW `RemoteWidgetLibrary`, authored once and vetted at
 build time (`import core;`):
 
 ```
@@ -444,7 +464,7 @@ widget ProductCard = Column(children: [
 widget Grid = Column(children: args.children);
 ```
 
-An A2UI message references only high-level names; a component's props are the
+An A2UI message references only catalog names; a component's props are the
 template's `args`, and a layout widget's `children` are child component ids:
 
 ```
@@ -452,7 +472,7 @@ template's `args`, and a layout widget's `children` are child component ids:
 { "id": "p1", "component": "ProductCard", "title": …, "imageUrl": … }
 ```
 
-Rendering is exactly the M1–M4 machinery, re-pointed at the high-level library:
+Rendering is exactly the M1–M4 machinery, re-pointed at the catalog library:
 the `p1` adapter (keyed by its id) renders `buildNode(ConstructorCall('ProductCard',
 {…props…}), scope: catalogLib)`; `'ProductCard'` resolves to the **template**,
 which imports and composes `core`. `Grid`'s `args.children` receive the child
@@ -463,11 +483,11 @@ updates.
 **catalog-agnostic** — `_buildComponent` maps a component's props to `args` **by
 name** (`children`/`child` are structural slots by key; an `{event}`→`EventHandler`,
 a `{path}`→data binding, else literal), with no per-type knowledge — and
-`A2uiToRfwAdapter` takes a configurable `scope` (the high-level catalog library).
-A high-level template then maps those args onto the low-level catalog (e.g.
+`A2uiToRfwAdapter` takes a configurable `scope` (the catalog library).
+A catalog template then maps those args onto the primitives (e.g.
 `widget Tappable = Button(onPressed: args.action, …)`). The conformance suite and
 the Jaspr example now render A2UI components (`Stack`/`Label`/`Tappable`) against a
-real high-level catalog over `core`. Validated bottom-up: `template_layer_spike_test`
+real catalog over `core`. Validated bottom-up: `template_layer_spike_test`
 proves the runtime mechanics (named-template composition, host-widget injection
 through `args.children`, `EventHandler`-as-arg) with **no runtime changes**;
 `runA2uiConformance` proves the end-to-end bridge path on both adapters.
@@ -516,7 +536,7 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
       identically by both adapters; single `tool/check.sh` entrypoint; CI;
       `LICENSE` + `VENDORED.md` provenance.
 - [~] **H2:** the cross-platform core component/type library. **Started:** the
-      component contract (`coreCatalog`) and the cross-framework behavioral
+      component contract (`corePrimitives`) and the cross-framework behavioral
       conformance harness (`runCoreComponentConformance` + `CraftTester`) are in
       place, validated on the seed components. **Next:** the framework-neutral
       type/style model (the `argument_decoders` replacement) and growing the
@@ -552,7 +572,7 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
         `args` by name; `children`/`child` structural; `{event}`/`{path}` by
         shape) and `A2uiToRfwAdapter` takes a configurable `scope`. Conformance +
         the Jaspr example render A2UI components (`Stack`/`Label`/`Tappable`)
-        against a real high-level catalog over `core`. Covered by
+        against a real catalog over `core`. Covered by
         `template_layer_spike_test` (runtime mechanics: named-template
         composition, host-widget injection through `args.children`,
         `EventHandler`-as-arg) and `runA2uiConformance` (end-to-end, both adapters).
@@ -572,7 +592,7 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
         owns the component/data lifecycle, incl. `deleteSurface`). Reactivity is now
         component-granular (a `GenericBinder` resolvedProps signal per component).
         functions/`formatString`, `checks`, and theme are delivered by `a2ui_core` and
-        available to the high-level catalog. Two-way setter wiring (editable inputs)
+        available to the catalog. Two-way setter wiring (editable inputs)
         remains follow-on. Verified by the rewritten cross-adapter
         `runA2uiConformance`, the bridge `A2uiComponentBinding` tests, the custom-
         catalog reorder test, and the `a2ui_core` seam spike. (M1 & M2 are
@@ -581,7 +601,7 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
         (Greeting, Counter, Profile Card, Image Gallery) that demonstrates the
         two-level model concretely: each agent-facing widget (`Greeting`,
         `Counter`, `ProfileCard`, `Gallery`) is a **vetted RFW template** composing
-        low-level `core` primitives (incl. `Image`/`Icon`/`Divider`/`ScrollView`/
+        `core` primitives (incl. `Image`/`Icon`/`Divider`/`ScrollView`/
         `Card`, added unprefixed alongside `Text`/`Row`/`Column`/`Button`), so the
         A2UI payloads only **compose** those templates with a few props — e.g.
         `Column(children: [ProfileCard(name, avatarUrl, bio), …])`, or a single
@@ -615,7 +635,7 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
         messages, render the `root` adapter) and its gallery shell; the Flutter and
         Jaspr galleries render the *same* specs. This is a second proof of H1 — one
         set of sample definitions drives two genuinely different rendering engines.
-  - [x] **Two-way binding (editable inputs).** Added low-level `TextField` and
+  - [x] **Two-way binding (editable inputs).** Added the `TextField` and
         `Checkbox` core components (both adapters). The write-back path needed **no
         new plumbing**: `a2ui_core`'s `GenericBinder` already resolves a `setX`
         callback for a `{path}`-bound prop, and the runtime's resolved-callback
@@ -629,12 +649,12 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
         free-text *entry* is exercised on Flutter; the cross-framework write-back
         contract is proven via the checkbox (a value-free toggle) plus the shared
         setter path. A `Form` sample demonstrates both inputs in the gallery.
-  - [~] **Then** — grow the **low-level** catalog into a capable primitive
-        vocabulary (§11): the high-level catalog is the app developer's job,
+  - [~] **Then** — grow the **primitives** into a capable vocabulary
+        (§11): the catalog is the app developer's job,
         authored *as templates over* these primitives. Approach decided —
         constrained common model + value-type vocabulary + geometry conformance.
         **First slice landed:** see the `Flex` vertical slice below.
-- [~] **H2 type/style model + capable low-level catalog (§11).** Build the
+- [~] **H2 type/style model + capable primitives (§11).** Build the
       framework-neutral value-type vocabulary (the `argument_decoders`
       replacement — `Dimension`/`Color`/`EdgeInsets`/alignment/`TextStyle`),
       sharpen conformance to geometry-with-tolerance, and grow the catalog
@@ -708,7 +728,7 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
 - **`a2ui_core` seam (§10):** with `a2ui_core` resolving props to concrete values
   fed as template `args`, reactivity becomes component-granular (whole-component
   rebuild) rather than per-binding. Open: is that granularity acceptable for the
-  high-level catalog (likely yes — small vetted widgets), and how exactly do
+  catalog (likely yes — small vetted widgets), and how exactly do
   template-internal inputs wire back to `a2ui_core`'s two-way setters?
 
 ## 10. Layering with `a2ui_core` (planned direction)
@@ -724,22 +744,22 @@ stays on RFW.
 ### The stack
 
 ```
-A2UI message (high-level component refs + data + functions/checks)
+A2UI message (catalog component refs + data + functions/checks)
   │  a2ui_core: MessageProcessor + DataModel + GenericBinder
   ▼  → resolved props (concrete scalars), id'd child tree, action callbacks, two-way setters
   │  bridge (thin): component name → RFW template; resolved props → template ARGS;
   │                 inject child adapters; wire callbacks → events
   ▼
   │  RFW: buildNode(ConstructorCall(templateName, {args, children:[adapters]}), scope: catalogLib)
-  │       template composes the LOW-level catalog (args.* / internal ...for / switch)
+  │       template composes the primitives (args.* / internal ...for / switch)
   ▼
-Flutter / Jaspr low-level widgets
+Flutter / Jaspr primitives
 ```
 
 ### Why this is the right division
 
-RFW is the **build-time template engine** that materializes high-level widgets
-from low-level primitives, once, cross-framework (§2). `a2ui_core` is the
+RFW is the **build-time template engine** that materializes catalog widgets
+from primitives, once, cross-framework (§2). `a2ui_core` is the
 **runtime A2UI layer** — protocol, data, and the value-level computation RFW
 deliberately lacks (functions/`formatString`, `checks`, two-way binding, theme;
 RFW's AST has no function/expression node). Building those on RFW would duplicate
@@ -768,10 +788,10 @@ a template as **args** — not data references. Consequences:
 | A2UI data (`DynamicContent`) + M4 data-path (`_applyDataUpdate`/`_descend`/`_assign`/`_segment`) | **delete** → `a2ui_core` `DataModel` |
 | functions/`formatString`, `checks`, two-way setters, theme, `deleteSurface` (+ the map-growth leak) | **don't build** → `a2ui_core` provides |
 | RFW runtime: `buildNode`, host-injection, keyed `_Widget`, `Loop`, `args`, `Switch` (M1/M2) | **keep** |
-| low-level `core_components` catalog | **keep** |
+| `core_components` primitives | **keep** |
 | per-id adapter tree (M3) | **keep, re-rooted** on `a2ui_core`'s component tree + `resolvedProps` signals |
 | the bridge | **keep, thin** — name→template, args feed, child injection, event wiring |
-| high-level template `RemoteWidgetLibrary` | **build** (the missing layer, §6 / M5) |
+| catalog template `RemoteWidgetLibrary` | **build** (the missing layer, §6 / M5) |
 
 M1–M4 are not wasted: they are the template-rendering plumbing. Only the
 protocol/data/binding half of the bridge is delegated.
@@ -798,7 +818,7 @@ protocol/data/binding half of the bridge is delegated.
     `preact_signals`-`subscribe` → `setState` bridge → only the affected card's
     adapter rebuilds (guard-verified: disabling the bridge fails the update test).
   - **Action seam proven.** `GenericBinder` resolves an `action` prop to a Dart
-    `Future<void> Function()`; a template wires it to a low-level `Button`'s
+    `Future<void> Function()`; a template wires it to a `Button` primitive's
     `onPressed`; clicking dispatches an `A2uiClientAction` (name + context) back
     through `a2ui_core`. This required **one small additive runtime affordance** —
     `handler<T>`/`voidHandler` now accept an already-resolved `Function` arg
@@ -820,55 +840,55 @@ protocol/data/binding half of the bridge is delegated.
   pinned once the team cuts a release. Two-way setters for editable inputs are
   now wired (see the roadmap entry in §8).
 
-## 11. The low-level catalog: a constrained common model
+## 11. The primitives: a constrained common model
 
-This section defines the approach for growing the low-level catalog (the
+This section defines the approach for growing the primitives (the
 `LocalWidgetLibrary` / "core" library) from today's seed into a **capable**
 primitive vocabulary. It is the concrete plan for **H2** (§3) and supersedes the
 "see §9" placeholders for the type/style model.
 
 ### Why this is the load-bearing library
 
-The low-level catalog is the framework's **instruction set**. Per the two-level
+The primitives are the framework's **instruction set**. Per the two-level
 model (§2), app developers **compose it into templates** to build their own
-high-level, domain-specific catalogs — and they can also **extend and replace** it
+domain-specific catalogs — and they can also **extend and replace** it
 with bespoke or brand-styled widgets ("Extensible by design", below). So our job
-is not to ship a high-level catalog, nor an exhaustive one: it is to ship a
+is not to ship a catalog, nor an exhaustive one: it is to ship a
 **strong, broadly-useful, cross-framework default** — expressive enough to build
-most high-level catalogs, and extensible where it isn't. Two requirements pull
+most catalogs, and extensible where it isn't. Two requirements pull
 against each other:
 
 - **Expressiveness** — it must scale to a wide variety of use-cases, because each
-  app's high-level catalog is unique.
+  app's catalog is unique.
 - **Cross-framework identity** — a primitive must behave the same whether a
   template is rendered by Flutter or Jaspr (§5). Every primitive we add multiplies
   the surface where the two can silently diverge.
 
 ### Not a copy of A2UI's basic catalog
 
-The low-level catalog is **not** A2UI's [Basic
+The primitives are **not** A2UI's [Basic
 Catalog](https://a2ui.org/specification/v1_0/catalogs/basic/catalog.json)
 re-implemented 1:1. That catalog is caught **between** the two worlds (§2) and
-serves neither cleanly: several of its components bake in **opinionated, high-level
-layout** that a primitive should not impose. Its `TextField` and `CheckBox` bundle
+serves neither cleanly: several of its components bake in **opinionated layout**
+that a primitive should not impose. Its `TextField` and `CheckBox` bundle
 a `label` with a fixed arrangement (label above the field; label beside the box);
 its `ChoicePicker` is an entire composite (options, single/multi-select, chips,
 filtering). Those are template decisions wearing a primitive's clothing — exactly
 the in-between mismatch this layer fixes.
 
-So our low-level controls are the **bare parts** — a text input, a checkbox, a
+So our controls (as primitives) are the **bare parts** — a text input, a checkbox, a
 radio — the way Flutter's material/cupertino libraries expose them. Label
 placement, option lists, and selection grouping are composed **in templates**,
 where they belong and where they can differ per design without changing the
-primitive (a labeled field or a choice picker is then itself a high-level
+primitive (a labeled field or a choice picker is then itself a catalog
 template). This is the general move (§2's *bias to templatize*): keep each
 primitive minimal and cross-framework, and templatize the opinionated composition.
-We therefore borrow A2UI's catalog as a **coverage target** — what the high-level
+We therefore borrow A2UI's catalog as a **coverage target** — what the catalog
 templates must be able to express — not as the shape of the primitives themselves.
 
-### Extensible by design: sub- and super-setting the catalog
+### Extensible by design: sub- and super-setting the primitives
 
-The catalog we ship is a **default, not a closed set**. Real apps must be able to
+The primitives we ship are a **default, not a closed set**. Real apps must be able to
 **super-set** it (add widgets) and **sub-set** it (replace widgets), for two needs
 that don't go away:
 
@@ -879,7 +899,7 @@ that don't go away:
   primitives are broadly reusable as-is; controls are the frequent replacement
   target.
 
-#### Considered and rejected: an HTML/CSS-expressive catalog
+#### Considered and rejected: an HTML/CSS-expressive primitive set
 
 The alternative is to make our primitive set so expressive you can build anything
 by composing it (effectively "HTML/CSS in a box"), and never need to replace a
@@ -900,11 +920,11 @@ widget. We reject that:
   consistent.
 
 So extension and replacement are **first-class and must be ergonomic**, not an
-afterthought. Mechanically this is a short step from where we are: the catalog is
-already a `LocalWidgetLibrary` (a name→builder map), so super-setting is adding
+afterthought. Mechanically this is a short step from where we are: the primitives
+are already a `LocalWidgetLibrary` (a name→builder map), so super-setting is adding
 entries and sub-setting is overriding them; what's missing is an ergonomic
 compose/override API and clear registration. This is the **structured form of §3's
-"drop to the raw framework" escape hatch** — applied at the catalog level instead
+"drop to the raw framework" escape hatch** — applied at the primitive level instead
 of abandoning the engine.
 
 #### Where the contract still bites
@@ -919,7 +939,7 @@ app": **theming** (the deferred H2 layer — restyle *our* control via tokens) f
 the light-touch case, and **replacement** (swap in a native or bespoke control) for
 the heavy case.
 
-This also **relieves pressure on the catalog's breadth** (Pillar D): because apps
+This also **relieves pressure on the primitives' breadth** (Pillar D): because apps
 extend and replace, our core need not chase every widget or every styling knob. We
 aim for a strong, broadly-useful default — especially the **layout spine** (the
 most reusable, least-restyled part) and the common controls — and let extension
@@ -927,7 +947,7 @@ cover the long tail.
 
 ### Why the seed won't scale as-is
 
-The catalog began as two hand-written files (`core_components.dart` ×2) whose
+The primitives began as two hand-written files (`core_components.dart` ×2) whose
 headers said they "deliberately mirror, component-for-component" each other, with
 `runCoreComponentConformance` — coarse "is this text visible?" probes — as the only
 thing holding them together. That is fine for a handful of demo widgets, but it
@@ -937,7 +957,7 @@ does not scale:
   constraint-based (constraints down, sizes up; explicit `mainAxisSize`/`Expanded`);
   the DOM is the CSS box model (flow, margin collapse, `height:auto` vs.
   `width:100%` defaults, intrinsic sizing). Mirroring two native implementations
-  by hand means the defaults diverge silently as the catalog grows.
+  by hand means the defaults diverge silently as the primitives grow.
 - **Coarse probes can't see layout divergence.** "Is this text visible?" passes
   even when a `Row` lays out completely differently on the two sides. The gap
   between "tests green" and "actually identical" widens with every widget.
@@ -962,13 +982,13 @@ defines.
 
 ### The decision: a constrained common model, flexbox-shaped
 
-The load-bearing choice is *whose layout model the catalog's contract speaks*.
+The load-bearing choice is *whose layout model the primitives' contract speaks*.
 Three options were considered: **Flutter-canonical** (Jaspr emulates Flutter's
 constraint protocol in CSS — doesn't scale; intrinsic sizing is very hard to fake),
 **CSS-canonical** (Flutter emulates flow layout and margin collapse — same problem
 mirrored), and a **constrained common model** that both adapters render natively.
 We choose the **constrained common model**: a small layout algebra that is cheap
-and faithful on *both* sides. The catalog is therefore **neither "Flutter widgets"
+and faithful on *both* sides. The primitives are therefore **neither "Flutter widgets"
 nor "HTML elements"** — it is its own vocabulary that each adapter maps down.
 
 This is tractable because **flexbox is the one layout model both sides already
@@ -1027,19 +1047,19 @@ crib for the `Flex`/`Dimension` vocabulary, and it is third-party validation tha
 flexbox is the right spine. It may also serve as a **test-time geometry oracle**
 for layout-only fixtures (Pillar C) — but not as a shipped dependency.
 
-### Pillar A — the catalog is a *specification*, not parallel implementations
+### Pillar A — the primitives are a *specification*, not parallel implementations
 
 There is **one framework-neutral source of truth** per primitive: its prop names,
 their value types and defaults, and its behavioral semantics stated concretely
 enough to test. Both adapters implement *against* that spec; neither adapter's code
-is the contract. `coreCatalog` is the embryo of this — it pins the *set of names* —
+is the contract. `corePrimitives` is the embryo of this — it pins the *set of names* —
 and it grows into the real contract by also pinning props, types, and semantics.
 The header comment "deliberately mirrors the other adapter" is replaced by "implements
 the spec"; the spec, not a sibling file, is what each adapter answers to.
 
 ### Pillar B — a shared value-type vocabulary (the H2 type model)
 
-The catalog needs a small set of cross-framework value types, each with one
+The primitives need a small set of cross-framework value types, each with one
 canonical representation that every adapter maps down. This is the
 framework-neutral replacement for RFW's intensely Flutter-specific
 `argument_decoders` (§9), and the foundation theming later plugs into:
@@ -1118,7 +1138,7 @@ to end on both adapters, before going wide.
 
 > **Status: noted, not yet designed.** This section records a requirement so it is
 > not forgotten. The actual threat model and mechanisms are future work, orthogonal
-> to the low-level catalog (§11) and not designed in this pass.
+> to the primitives (§11) and not designed in this pass.
 
 A2UI is built for **secure, trusted agentic experiences**. Its security rests on
 the ephemerally-loaded payload being **declarative data, not code**: A2UI Transport

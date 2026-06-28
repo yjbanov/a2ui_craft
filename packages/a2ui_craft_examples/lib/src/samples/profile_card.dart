@@ -11,7 +11,7 @@ const String _avatar1 =
 const String _avatar2 =
     'https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=50&h=50&fit=crop';
 
-/// A high-level `ProfileCard` widget — a template composing `Card`, `Image`,
+/// A `ProfileCard` catalog widget — a template composing `Card`, `Image`,
 /// `Row`, `Text`, `Icon`, and `Divider`. The agent passes a name/avatar/bio and
 /// arranges several of them with the layout `Column`.
 SampleSpec profileCardSpec(String framework) => SampleSpec(

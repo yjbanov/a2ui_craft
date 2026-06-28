@@ -8,11 +8,11 @@ import 'package:jaspr/jaspr.dart';
 import 'package:jaspr_test/jaspr_test.dart';
 
 // M5 spike (DESIGN.md §6 "template layer") — Jaspr parity with the Flutter
-// spike. Proves the two-level catalog renders via the M1-M4 machinery
-// re-pointed at a high-level template library:
+// spike. Proves the two-level model renders via the M1-M4 machinery
+// re-pointed at a catalog template library:
 //
-// - Low-level catalog: `core` (Text/Row/Column/Button) — the primitives.
-// - High-level catalog: `catalog`, an RFW RemoteWidgetLibrary authored over
+// - Primitives: `core` (Text/Row/Column/Button) — the primitives.
+// - Catalog: `catalog`, an RFW RemoteWidgetLibrary authored over
 //   `core`. Props become template `args`; a layout widget's `children` are
 //   injected host components.
 //
@@ -51,7 +51,7 @@ class _AdHoc extends StatelessComponent {
 }
 
 void main() {
-  testComponents('a high-level template composes low-level widgets from args', (
+  testComponents('a catalog template composes primitives from args', (
     ComponentTester tester,
   ) async {
     final Runtime runtime = _runtime();
@@ -103,8 +103,7 @@ void main() {
     expect(find.text('beta'), findsOneComponent);
   });
 
-  testComponents('a layout template composes high-level templates as children',
-      (
+  testComponents('a layout template composes catalog templates as children', (
     ComponentTester tester,
   ) async {
     final Runtime runtime = _runtime();
@@ -143,7 +142,7 @@ void main() {
     expect(find.text(r'$14.99'), findsOneComponent);
   });
 
-  testComponents('a template wires an EventHandler arg to a low-level widget', (
+  testComponents('a template wires an EventHandler arg to a primitive', (
     ComponentTester tester,
   ) async {
     final Runtime runtime = _runtime();

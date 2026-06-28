@@ -9,7 +9,7 @@ import 'package:a2ui_craft_examples/a2ui_craft_examples.dart';
 import 'package:a2ui_craft_jaspr/a2ui_craft_jaspr.dart';
 import 'package:jaspr/jaspr.dart';
 
-/// The library name the sample's high-level catalog is registered under. Each
+/// The library name the sample's catalog is registered under. Each
 /// sample owns its own [Runtime], so they can all reuse this name.
 const LibraryName _catalogName = LibraryName(<String>['catalog']);
 

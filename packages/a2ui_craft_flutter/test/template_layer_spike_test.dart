@@ -7,11 +7,11 @@ import 'package:a2ui_craft_flutter/a2ui_craft_flutter.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-// M5 spike (DESIGN.md §6 "template layer"): prove the two-level catalog renders
-// via the M1-M4 machinery re-pointed at a high-level template library.
+// M5 spike (DESIGN.md §6 "template layer"): prove the two-level model renders
+// via the M1-M4 machinery re-pointed at a catalog template library.
 //
-// - Low-level catalog: `core` (Text/Row/Column/Button) — the primitives.
-// - High-level catalog: `catalog`, an RFW RemoteWidgetLibrary authored over
+// - Primitives: `core` (Text/Row/Column/Button) — the primitives.
+// - Catalog: `catalog`, an RFW RemoteWidgetLibrary authored over
 //   `core`. A2UI would reference these names; props become template `args`,
 //   and a layout widget's `children` are injected host widgets.
 //
@@ -57,7 +57,7 @@ Widget _host(Runtime runtime, ConstructorCall node) {
 }
 
 void main() {
-  testWidgets('a high-level template composes low-level widgets from args', (
+  testWidgets('a catalog template composes primitives from args', (
     WidgetTester tester,
   ) async {
     final Runtime runtime = _runtime();
@@ -97,12 +97,12 @@ void main() {
     expect(find.text('beta'), findsOneWidget);
   });
 
-  testWidgets('a layout template composes high-level templates as children', (
+  testWidgets('a layout template composes catalog templates as children', (
     WidgetTester tester,
   ) async {
     final Runtime runtime = _runtime();
 
-    // Render each ProductCard (a high-level template) to a host widget, then
+    // Render each ProductCard (a catalog template) to a host widget, then
     // inject them as a layout template's children — the two-level stack.
     await tester.pumpWidget(
       Directionality(
@@ -142,7 +142,7 @@ void main() {
     expect(find.text(r'$14.99'), findsOneWidget);
   });
 
-  testWidgets('a template wires an EventHandler arg to a low-level widget', (
+  testWidgets('a template wires an EventHandler arg to a primitive', (
     WidgetTester tester,
   ) async {
     final Runtime runtime = _runtime();

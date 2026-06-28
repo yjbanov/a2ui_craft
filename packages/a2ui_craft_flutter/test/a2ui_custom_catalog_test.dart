@@ -37,7 +37,7 @@ class _ProbeState extends State<_Probe> {
   Widget build(BuildContext context) => Text('${widget.label}#$_id');
 }
 
-/// The RFW low-level catalog: a container plus two stateful leaf types. The
+/// The RFW primitives: a container plus two stateful leaf types. The
 /// adapter resolves names against `core`, so the catalog is registered there.
 LocalWidgetLibrary _customCatalog() {
   return LocalWidgetLibrary(<String, LocalWidgetBuilder>{
@@ -81,7 +81,7 @@ class _ProbeBApi extends ComponentApi {
   Schema get schema => Schema.object(properties: {});
 }
 
-Catalog<ComponentApi> _coreCatalog() => Catalog<ComponentApi>(
+Catalog<ComponentApi> _corePrimitives() => Catalog<ComponentApi>(
       id: 'custom',
       components: [_ColumnApi(), _ProbeAApi(), _ProbeBApi()],
     );
@@ -109,7 +109,7 @@ void main() {
       _probeCreations = 0;
       final Runtime runtime = Runtime()..update(_core, _customCatalog());
       final MessageProcessor<ComponentApi> processor =
-          MessageProcessor<ComponentApi>(catalogs: [_coreCatalog()]);
+          MessageProcessor<ComponentApi>(catalogs: [_corePrimitives()]);
       processor.processMessages(_messages(<Object?>['pa', 'pb']));
       final SurfaceModel<ComponentApi> surface =
           processor.groupModel.getSurface('custom')!;

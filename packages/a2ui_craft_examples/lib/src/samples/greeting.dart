@@ -6,7 +6,7 @@ import 'package:a2ui_core/a2ui_core.dart';
 
 import '../sample_spec.dart';
 
-/// A high-level `Greeting` widget: the agent supplies a title, a data-bound
+/// A `Greeting` catalog widget: the agent supplies a title, a data-bound
 /// message, and a button; the template builds the whole subtree. Pressing the
 /// button dispatches `greet`, which updates the bound message.
 SampleSpec greetingSpec(String framework) => SampleSpec(

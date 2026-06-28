@@ -7,10 +7,10 @@ import 'package:a2ui_craft/a2ui_craft.dart';
 import 'package:json_schema_builder/json_schema_builder.dart';
 import 'package:test/test.dart';
 
-/// The high-level demo catalog used by [runA2uiConformance], authored as RFW
-/// templates over the low-level `core` library. A2UI components reference these
-/// names; each template maps the component's props (`args`) onto the low-level
-/// catalog. Adapters parse this with `parseLibraryFile` and register it under
+/// The demo **catalog** used by [runA2uiConformance], authored as RFW templates
+/// over the `core` primitives. A2UI components reference these names; each
+/// template maps the component's props (`args`) onto the primitives. Adapters
+/// parse this with `parseLibraryFile` and register it under
 /// [a2uiDemoCatalogName], then render A2UI components with that as their scope.
 const String a2uiDemoCatalogSource = '''
 import core;
@@ -309,7 +309,7 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
     final DynamicContent data = DynamicContent();
     data.update('name', 'Ada');
     data.update('agree', true);
-    // The low-level TextField is the bare input — no label. A label is a
+    // The TextField primitive is the bare input — no label. A label is a
     // template's choice, composed as a sibling Text (DESIGN.md §2 / §11).
     await tester.mount('''
       import core;

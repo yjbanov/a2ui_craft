@@ -19,8 +19,8 @@ import 'package:a2ui_craft/a2ui_craft.dart';
 ///
 /// Reactivity is **component-granular**: a change to this component's properties
 /// or to any data it binds fires [addListener] once, and the adapter rebuilds
-/// the whole component (not per-binding). For the small, vetted high-level
-/// catalog this is the right granularity.
+/// the whole component (not per-binding). For the small, vetted catalog this is
+/// the right granularity.
 class A2uiComponentBinding {
   /// Binds component [id] in [surface], resolving the component's bindings
   /// relative to [basePath] (the JSON Pointer of the enclosing data scope; `/`
@@ -49,7 +49,7 @@ class A2uiComponentBinding {
   /// `null` if the component has not been ingested yet.
   Map<String, dynamic>? get resolvedProps => _binder?.resolvedProps.value;
 
-  /// The component's catalog type (the high-level template name), or `null` if
+  /// The component's catalog type (the catalog template name), or `null` if
   /// the component has not been ingested yet.
   String? get type => surface.componentsModel.get(id)?.type;
 
@@ -174,8 +174,7 @@ Set<String> _componentIdProps(Map<String, Object?> schemaValue) {
 /// value is a plain id string, which becomes one injected child sharing the
 /// owner's data scope ([basePath]). The bridge stays **catalog-agnostic**: it
 /// knows no widget's arg schema (that is the template's concern); props map to
-/// args by name, and a high-level template maps those args onto the low-level
-/// catalog.
+/// args by name, and a catalog template maps those args onto the primitives.
 DynamicMap a2uiArgsFromProps(
   Map<String, dynamic> props,
   Object Function(ChildNode child) injectChild, {

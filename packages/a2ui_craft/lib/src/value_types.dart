@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-/// Framework-neutral value types for the low-level catalog.
+/// Framework-neutral value types for the primitives.
 ///
 /// A small set of types — sizing ([Dimension]), the flex [FlexAxis] and
 /// alignments ([MainAxisAlign]/[CrossAxisAlign]), edge [Insets], and [Rgba]
@@ -145,7 +145,7 @@ final class FlexDimension extends Dimension {
 
 /// The axis a [Flex] lays its children along.
 ///
-/// `Row`/`Column` in the catalog are a `Flex` plus this.
+/// `Row`/`Column` are a `Flex` plus this.
 enum FlexAxis {
   /// Children are laid out left-to-right (a `Row`).
   horizontal,

@@ -15,7 +15,7 @@ import 'runtime.dart';
 /// The host widget tree mirrors the A2UI component tree: one keyed adapter per
 /// component id. The adapter owns an [A2uiComponentBinding] (which wraps
 /// `a2ui_core`'s `GenericBinder`), rebuilding when the component's resolved props
-/// change. It renders the component's high-level template via [Runtime.buildNode]
+/// change. It renders the component's catalog template via [Runtime.buildNode]
 /// against [scope], feeding resolved props as template args and injecting a child
 /// adapter for each structural [ChildNode] slot.
 ///
@@ -48,8 +48,8 @@ class A2uiToRfwAdapter extends StatefulWidget {
   /// the surface root, or the item path when nested inside a `ChildList`.
   final String basePath;
 
-  /// The library whose names the component resolves against — the **high-level
-  /// catalog** (which imports the low-level `core` library).
+  /// The library whose names the component resolves against — the **catalog**
+  /// (which imports the `core` primitives).
   final LibraryName scope;
 
   @override

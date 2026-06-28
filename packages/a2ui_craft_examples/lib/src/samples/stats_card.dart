@@ -6,7 +6,7 @@ import 'package:a2ui_core/a2ui_core.dart';
 
 import '../sample_spec.dart';
 
-/// A `StatsCard` high-level widget, modeled on the gallery's activity/stats
+/// A `StatsCard` catalog widget, modeled on the gallery's activity/stats
 /// cards: a titled `Card` with a `Divider`, a `Row` of stat `Column`s
 /// (value + caption), and a `Slider` showing progress toward a goal. Exercises
 /// the atoms (`Text` variants, `Icon`, `Divider`) plus the new `Slider`

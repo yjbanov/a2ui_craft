@@ -21,7 +21,7 @@ import 'package:a2ui_craft_jaspr/a2ui_craft_jaspr.dart';
 import 'package:jaspr_test/jaspr_test.dart';
 import 'package:json_schema_builder/json_schema_builder.dart';
 
-/// A high-level catalog authored as RFW templates over `core`.
+/// A catalog authored as RFW templates over `core`.
 const String _catalogSource = '''
 import core;
 

@@ -71,9 +71,9 @@ belongs in the core.
    runtime differences are node type, lifecycle host, and leaf rendering.
 4. Adding or changing a **core component** is governed by
    `packages/a2ui_craft_testing`:
-   - Update the catalog manifest (`coreCatalog`) — the canonical set of component
+   - Update the primitives set (`corePrimitives`) — the canonical set of primitive
      names every adapter must implement. A per-adapter contract test
-     (`test/catalog_contract_test.dart`) asserts each adapter implements exactly
+     (`test/primitives_contract_test.dart`) asserts each adapter implements exactly
      it.
    - Add behavior to the shared conformance suite (`runCoreComponentConformance`,
      driven through the framework-neutral `CraftTester`), **not** to one adapter's

@@ -20,6 +20,7 @@ const List<IconData> _icons = <IconData>[
   Icons.add,
   Icons.crop_square,
   Icons.contact_page,
+  Icons.bar_chart,
   Icons.person,
   Icons.image,
   Icons.edit_note,

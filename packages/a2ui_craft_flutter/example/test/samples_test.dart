@@ -69,6 +69,15 @@ void main() {
     expect(find.text('London, UK'), findsOneWidget);
   });
 
+  testWidgets('Stats Card renders its stats and a slider',
+      (WidgetTester tester) async {
+    await _pump(tester, statsCardSpec('Flutter'));
+    expect(find.text("Today's Activity"), findsOneWidget);
+    expect(find.text('8,420'), findsOneWidget);
+    expect(find.text('kcal'), findsOneWidget);
+    expect(find.byType(Slider), findsOneWidget);
+  });
+
   testWidgets('Profile Card renders a Column of ProfileCard templates',
       (WidgetTester tester) async {
     await mockNetworkImagesFor(() async {

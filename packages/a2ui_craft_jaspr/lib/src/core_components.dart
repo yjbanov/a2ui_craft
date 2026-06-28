@@ -222,8 +222,37 @@ LocalWidgetLibrary createCoreComponents() {
             : <String, EventCallback>{'click': (_) => onChanged()},
       );
     },
+    // A bare numeric slider (no label — that is a template's choice). Two-way
+    // bound: `onChanged` is a2ui_core's setter for the bound `value`.
+    'Slider': (BuildContext context, DataSource source) {
+      final double min = _numArg(source, 'min') ?? 0.0;
+      final double max = _numArg(source, 'max') ?? 1.0;
+      final double value = (_numArg(source, 'value') ?? min).clamp(min, max);
+      final int? steps = source.v<int>(['steps']);
+      // Read the raw string value and parse it, so we don't depend on the DOM
+      // value being pre-typed.
+      final onChanged = source.handler<ValueChanged<String>>(
+        ['onChanged'],
+        (HandlerTrigger trigger) => (String v) =>
+            trigger(<String, Object?>{'value': double.tryParse(v) ?? min}),
+      );
+      return input<String>(
+        type: InputType.range,
+        value: '$value',
+        attributes: <String, String>{
+          'min': '$min',
+          'max': '$max',
+          if (steps != null && steps > 0) 'step': '${(max - min) / steps}',
+        },
+        onInput: onChanged,
+      );
+    },
   });
 }
+
+/// Reads a numeric argument, accepting an int or double literal.
+double? _numArg(DataSource source, String key) =>
+    source.v<double>([key]) ?? source.v<int>([key])?.toDouble();
 
 /// Builds a `Flex` (and thus `Row`/`Column`) from the catalog spec, mapping the
 /// framework-neutral value types onto a CSS flex container.

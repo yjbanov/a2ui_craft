@@ -10,6 +10,7 @@ import 'samples/form.dart';
 import 'samples/gallery.dart';
 import 'samples/greeting.dart';
 import 'samples/profile_card.dart';
+import 'samples/stats_card.dart';
 
 /// All sample specs, in gallery order, labelled for the given [framework] (used
 /// where a sample shows which engine is rendering it, e.g. the greeting title).
@@ -18,6 +19,7 @@ List<SampleSpec> sampleSpecs(String framework) => <SampleSpec>[
       counterSpec(framework),
       boxesSpec(framework),
       contactCardSpec(framework),
+      statsCardSpec(framework),
       profileCardSpec(framework),
       gallerySpec(framework),
       formSpec(framework),

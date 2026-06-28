@@ -34,4 +34,5 @@ const Set<String> coreCatalog = <String>{
   'TextField',
   'Checkbox',
   'Radio',
+  'Slider',
 };

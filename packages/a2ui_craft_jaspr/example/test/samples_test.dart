@@ -48,6 +48,15 @@ void main() {
     expect(find.text('London, UK'), findsOneComponent);
   });
 
+  testComponents('Stats Card renders its stats and a slider',
+      (ComponentTester tester) async {
+    await _pump(tester, statsCardSpec('Jaspr'));
+    expect(find.text("Today's Activity"), findsOneComponent);
+    expect(find.text('8,420'), findsOneComponent);
+    expect(find.text('kcal'), findsOneComponent);
+    expect(find.tag('input'), findsOneComponent); // the range slider
+  });
+
   testComponents('Profile Card renders a Column of ProfileCard templates',
       (ComponentTester tester) async {
     await _pump(tester, profileCardSpec('Jaspr'));

@@ -165,8 +165,33 @@ LocalWidgetLibrary createCoreComponents() {
         ),
       );
     },
+    // A bare numeric slider (no label — that is a template's choice). Two-way
+    // bound: `onChanged` is a2ui_core's setter for the bound `value`.
+    'Slider': (BuildContext context, DataSource source) {
+      final double min = _numArg(source, 'min') ?? 0.0;
+      final double max = _numArg(source, 'max') ?? 1.0;
+      final double value = (_numArg(source, 'value') ?? min).clamp(min, max);
+      final int? steps = source.v<int>(['steps']);
+      final ValueChanged<double>? onChanged =
+          source.handler<ValueChanged<double>>(
+        ['onChanged'],
+        (HandlerTrigger trigger) =>
+            (double v) => trigger(<String, Object?>{'value': v}),
+      );
+      return Slider(
+        min: min,
+        max: max,
+        value: value,
+        divisions: (steps != null && steps > 0) ? steps : null,
+        onChanged: onChanged,
+      );
+    },
   });
 }
+
+/// Reads a numeric argument, accepting an int or double literal.
+double? _numArg(DataSource source, String key) =>
+    source.v<double>([key]) ?? source.v<int>([key])?.toDouble();
 
 /// Builds a `Flex` (and thus `Row`/`Column`) from the catalog spec, mapping the
 /// framework-neutral value types onto Flutter's `Flex`.

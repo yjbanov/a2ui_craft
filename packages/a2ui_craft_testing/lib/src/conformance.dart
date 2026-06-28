@@ -338,6 +338,18 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
     expect(dispatched, <String>['picked']);
   });
 
+  driver.defineTest('Slider mounts with its bound value', (
+    CraftTester tester,
+  ) async {
+    final DynamicContent data = DynamicContent();
+    data.update('volume', 0.5);
+    await tester.mount('''
+      import core;
+      widget root = Slider(value: data.volume, min: 0.0, max: 1.0, steps: 10);
+    ''', data: data);
+    // The bare slider mounts and binds without crashing.
+  });
+
   driver.defineTest('Button dispatches its event only when activated', (
     CraftTester tester,
   ) async {

@@ -19,3 +19,4 @@ export 'src/samples/form.dart';
 export 'src/samples/gallery.dart';
 export 'src/samples/greeting.dart';
 export 'src/samples/profile_card.dart';
+export 'src/samples/stats_card.dart';

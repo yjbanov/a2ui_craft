@@ -301,6 +301,47 @@ void main() {
     expect(find.text('Solana'), findsOneComponent);
   });
 
+  testComponents('Formatted Text renders the field label and result',
+      (ComponentTester tester) async {
+    await _pump(tester, formattedTextSpec('Jaspr'));
+    expect(find.text('Type something:'), findsOneComponent);
+    expect(find.text('Formatted output:'), findsOneComponent);
+    expect(find.text('You typed: hello'), findsOneComponent);
+  });
+
+  testComponents('Incremental renders one restaurant card per item',
+      (ComponentTester tester) async {
+    await _pump(tester, incrementalSpec('Jaspr'));
+    expect(find.text('The Golden Fork'), findsOneComponent); // first `...for`
+    expect(find.text('Spice Route'), findsOneComponent); // last `...for`
+  });
+
+  testComponents('Complex Layout renders the heading and side-by-side fields',
+      (ComponentTester tester) async {
+    await _pump(tester, complexLayoutSpec('Jaspr'));
+    expect(find.text('User Profile Form'), findsOneComponent); // Heading
+    expect(find.text('First Name'), findsOneComponent);
+    expect(find.text('Last Name'), findsOneComponent);
+    expect(find.text('Please fill out all fields.'), findsOneComponent);
+  });
+
+  testComponents('Email Compose renders headers, body, and actions',
+      (ComponentTester tester) async {
+    await _pump(tester, emailComposeSpec('Jaspr'));
+    expect(find.text('Q4 Revenue Forecast'), findsOneComponent);
+    expect(find.text('alex@acme.com'), findsOneComponent);
+    expect(find.text('Send email'), findsOneComponent);
+  });
+
+  testComponents('Calendar Day renders the day, events, and actions',
+      (ComponentTester tester) async {
+    await _pump(tester, calendarDaySpec('Jaspr'));
+    expect(find.text('28'), findsOneComponent); // Heading day number
+    expect(
+        find.text('Q1 roadmap review'), findsOneComponent); // a `...for` event
+    expect(find.text('Add to calendar'), findsOneComponent);
+  });
+
   testComponents('the gallery app mounts and shows the first sample',
       (ComponentTester tester) async {
     tester.pumpComponent(App());

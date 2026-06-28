@@ -346,6 +346,46 @@ void main() {
     expect(find.text('Solana'), findsOneWidget);
   });
 
+  testWidgets('Formatted Text renders the field label and result',
+      (WidgetTester tester) async {
+    await _pump(tester, formattedTextSpec('Flutter'));
+    expect(find.text('Type something:'), findsOneWidget);
+    expect(find.text('Formatted output:'), findsOneWidget);
+    expect(find.text('You typed: hello'), findsOneWidget);
+  });
+
+  testWidgets('Incremental renders one restaurant card per item',
+      (WidgetTester tester) async {
+    await _pump(tester, incrementalSpec('Flutter'));
+    expect(find.text('The Golden Fork'), findsOneWidget); // first `...for`
+    expect(find.text('Spice Route'), findsOneWidget); // last `...for`
+  });
+
+  testWidgets('Complex Layout renders the heading and side-by-side fields',
+      (WidgetTester tester) async {
+    await _pump(tester, complexLayoutSpec('Flutter'));
+    expect(find.text('User Profile Form'), findsOneWidget); // Heading
+    expect(find.text('First Name'), findsOneWidget);
+    expect(find.text('Last Name'), findsOneWidget);
+    expect(find.text('Please fill out all fields.'), findsOneWidget);
+  });
+
+  testWidgets('Email Compose renders headers, body, and actions',
+      (WidgetTester tester) async {
+    await _pump(tester, emailComposeSpec('Flutter'));
+    expect(find.text('Q4 Revenue Forecast'), findsOneWidget);
+    expect(find.text('alex@acme.com'), findsOneWidget);
+    expect(find.text('Send email'), findsOneWidget);
+  });
+
+  testWidgets('Calendar Day renders the day, events, and actions',
+      (WidgetTester tester) async {
+    await _pump(tester, calendarDaySpec('Flutter'));
+    expect(find.text('28'), findsOneWidget); // Heading day number
+    expect(find.text('Q1 roadmap review'), findsOneWidget); // a `...for` event
+    expect(find.text('Add to calendar'), findsOneWidget);
+  });
+
   testWidgets('the gallery app mounts and shows the first sample',
       (WidgetTester tester) async {
     await tester.pumpWidget(const GalleryApp());

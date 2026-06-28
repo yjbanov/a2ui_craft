@@ -5,19 +5,24 @@
 import 'sample_spec.dart';
 import 'samples/account_balance.dart';
 import 'samples/boxes.dart';
+import 'samples/calendar_day.dart';
 import 'samples/chat_message.dart';
 import 'samples/child_list_template.dart';
 import 'samples/coffee_order.dart';
+import 'samples/complex_layout.dart';
 import 'samples/contact_card.dart';
 import 'samples/countdown_timer.dart';
 import 'samples/counter.dart';
 import 'samples/credit_card.dart';
+import 'samples/email_compose.dart';
 import 'samples/event_detail.dart';
 import 'samples/financial_data_grid.dart';
 import 'samples/flight_status.dart';
 import 'samples/form.dart';
+import 'samples/formatted_text.dart';
 import 'samples/gallery.dart';
 import 'samples/greeting.dart';
+import 'samples/incremental.dart';
 import 'samples/interactive_button.dart';
 import 'samples/layout.dart';
 import 'samples/login_form.dart';
@@ -78,4 +83,9 @@ List<SampleSpec> sampleSpecs(String framework) => <SampleSpec>[
       workoutSummarySpec(framework),
       trackListSpec(framework),
       financialDataGridSpec(framework),
+      formattedTextSpec(framework),
+      incrementalSpec(framework),
+      complexLayoutSpec(framework),
+      emailComposeSpec(framework),
+      calendarDaySpec(framework),
     ];

@@ -52,6 +52,11 @@ const List<IconData> _icons = <IconData>[
   Icons.fitness_center,
   Icons.queue_music,
   Icons.table_chart,
+  Icons.text_format,
+  Icons.playlist_add,
+  Icons.dynamic_form,
+  Icons.email,
+  Icons.calendar_today,
 ];
 
 /// A simple gallery shell that shows one [Sample] at a time. Each sample is

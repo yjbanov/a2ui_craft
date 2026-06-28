@@ -758,12 +758,13 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
       Player (14), Event Detail (17), Step Counter (23), Countdown (28), User
       Profile (08), Chat (12, `...for` messages), Workout (16), Track List (18,
       `...for` + `Expanded`), Financial Data Grid (33, `weight` → `Expanded(flex:)`
-      columns). All tested on both adapters.
-    - **Templatizable, not yet authored (10):** 00_complex-layout,
-      00_formatted-text, 00_incremental, 02_email-compose, 03_calendar-day,
-      09_login-form, 25_contact-card, 27_stats-card, 31_incremental-dashboard,
-      32_advanced-form-validator (layout only — see below). (25/27 overlap the
-      existing hand-authored Contact/Stats cards.)
+      columns), Formatted Text (00), Incremental (00, `...for` cards), Complex
+      Layout (00, `weight` → `Expanded` fields), Email Compose (02), Calendar Day
+      (03, `...for` events). All tested on both adapters.
+    - **Templatizable, not yet authored (5):** 09_login-form,
+      31_incremental-dashboard, 32_advanced-form-validator (layout only — see
+      below), plus 25_contact-card / 27_stats-card, which are **already covered**
+      by the existing hand-authored Contact/Stats card samples (not re-vendored).
     - **Blocked — missing primitives (7 examples, 5 primitives):**
       - **`Modal`** (29_movie-card, 36_modal) — an overlay/dialog surface. Needs
         an overlay primitive; on Flutter a routed/`OverlayEntry` layer, on the web

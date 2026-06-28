@@ -58,15 +58,16 @@ cd packages/a2ui_craft_jaspr/example && jaspr serve   # run the Jaspr example
 Cross-framework behavior is verified by `packages/a2ui_craft_testing`: a
 framework-neutral **conformance suite** (`runCoreComponentConformance`) that each
 adapter runs against its own renderer through a `CraftTester`, plus a
-**primitives contract** (`corePrimitives`) pinning the set. Behavioral identity is
-the bar, not pixel identity. When you add or change a primitive, extend the shared
-primitives set + conformance suite — not a single adapter's test (see
+**core-primitives contract** (`corePrimitives`) pinning the standard set. Behavioral identity is
+the bar, not pixel identity. When you add or change a core primitive, extend the
+shared core primitives + conformance suite — not a single adapter's test (see
 [`DESIGN.md` §5](DESIGN.md) and the `a2ui-craft-adapters` skill).
 
-> Terminology (see `DESIGN.md`'s Glossary): **primitives** are the low-level,
-> template-private building blocks (RFW `LocalWidgetLibrary`; `createCoreComponents`
-> builds them, `corePrimitives` pins the set); the **catalog** is the high-level,
-> agent-facing set of templates over them.
+> Terminology (see `DESIGN.md`'s Glossary): a **primitive** is a low-level,
+> template-private building block (one entry in an RFW `LocalWidgetLibrary`). The
+> **core primitives** (`createCoreComponents`; `corePrimitives` pins the contract)
+> are the *standard* set we ship; apps may also register custom primitives. The
+> **catalog** is the high-level, agent-facing set of templates over primitives.
 
 ## Code style
 
@@ -120,6 +121,7 @@ Current scope is **Flutter + Jaspr, Dart-only**. The cross-platform core
 component/type library ("H2" in `DESIGN.md`) is **in progress**, built as a
 constrained common model (see `DESIGN.md` §11): the `Flex` and `Box` slices —
 value types, explicit sizing, and geometry conformance — have landed, and the
-primitives grow depth-first from there. The older seed primitives outside that
-work remain **minimal harness fixtures**. Grow the primitives as a task calls for
-it; don't start unrelated large efforts (a third framework, theming) unsolicited.
+core primitives grow depth-first from there. The older seed primitives outside
+that work remain **minimal harness fixtures**. Grow the core primitives as a task
+calls for it; don't start unrelated large efforts (a third framework, theming)
+unsolicited.

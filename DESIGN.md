@@ -17,23 +17,30 @@ the runtime so it is no longer tied to Flutter.
 
 ## Glossary
 
-Two terms recur throughout and are easy to conflate; this document uses them
-precisely (and they replace the older "primitives" / "catalog"):
+These terms recur throughout and are easy to conflate; this document uses them
+precisely ("primitive" and "catalog" replace the older "low-level catalog" /
+"high-level catalog"):
 
-- **Primitives** — the **low-level** building blocks (`Text`, `Row`, `Box`,
-  `Button`, `Image`, …). They are expressive, cross-framework, and
-  **template-private**: composed *by* templates at build time, never referenced by
-  an agent. In code the primitives are an RFW **`LocalWidgetLibrary`** (we keep
-  RFW's type name); `createCoreComponents()` builds the set and `corePrimitives`
-  pins its contract.
+- **Primitive** — a single **low-level** building block available to template code
+  (`Text`, `Row`, `Box`, `Button`, `Image`, …): one entry in an RFW
+  **`LocalWidgetLibrary`**. Primitives are expressive, cross-framework, and
+  **template-private** — composed *by* templates at build time, never referenced
+  by an agent. A primitive may come from the **core primitives** we ship *or* be a
+  **custom primitive** an app defines (apps super-set and sub-set the core set —
+  see §11 "Extensible by design").
+- **Core primitives** — the **standard** primitive set A2UI Craft ships (the
+  base/standard primitives). `createCoreComponents()` builds them and
+  `corePrimitives` pins the contract every adapter must implement. Unqualified,
+  "primitives" means the general category; "core primitives" means specifically our
+  shipped set.
 - **Catalog** — the **high-level**, **agent-facing** set of semantic widgets
   (`WeatherCard`, `ContactCard`, …) that an A2UI message references at runtime.
   This is A2UI's own term — the agent speaks to a *catalog*. Each catalog widget is
   materialized from a **template** that composes primitives. In code this is
   `a2ui_core`'s `Catalog<ComponentApi>`.
 
-In short: **a catalog widget is a template over primitives.** Templates are the
-bridge between the two.
+In short: **a catalog widget is a template over primitives** — and the primitives
+it composes are the core primitives plus any custom ones the app registers.
 
 ## 2. Why this shape (and why not the earlier AOT-to-A2UI idea)
 
@@ -649,7 +656,7 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
         free-text *entry* is exercised on Flutter; the cross-framework write-back
         contract is proven via the checkbox (a value-free toggle) plus the shared
         setter path. A `Form` sample demonstrates both inputs in the gallery.
-  - [~] **Then** — grow the **primitives** into a capable vocabulary
+  - [~] **Then** — grow the **core primitives** into a capable vocabulary
         (§11): the catalog is the app developer's job,
         authored *as templates over* these primitives. Approach decided —
         constrained common model + value-type vocabulary + geometry conformance.
@@ -840,7 +847,7 @@ protocol/data/binding half of the bridge is delegated.
   pinned once the team cuts a release. Two-way setters for editable inputs are
   now wired (see the roadmap entry in §8).
 
-## 11. The primitives: a constrained common model
+## 11. The core primitives: a constrained common model
 
 This section defines the approach for growing the primitives (the
 `LocalWidgetLibrary` / "core" library) from today's seed into a **capable**
@@ -849,7 +856,7 @@ primitive vocabulary. It is the concrete plan for **H2** (§3) and supersedes th
 
 ### Why this is the load-bearing library
 
-The primitives are the framework's **instruction set**. Per the two-level
+The core primitives are the framework's **instruction set**. Per the two-level
 model (§2), app developers **compose it into templates** to build their own
 domain-specific catalogs — and they can also **extend and replace** it
 with bespoke or brand-styled widgets ("Extensible by design", below). So our job
@@ -866,7 +873,7 @@ against each other:
 
 ### Not a copy of A2UI's basic catalog
 
-The primitives are **not** A2UI's [Basic
+The core primitives are **not** A2UI's [Basic
 Catalog](https://a2ui.org/specification/v1_0/catalogs/basic/catalog.json)
 re-implemented 1:1. That catalog is caught **between** the two worlds (§2) and
 serves neither cleanly: several of its components bake in **opinionated layout**
@@ -888,7 +895,7 @@ templates must be able to express — not as the shape of the primitives themsel
 
 ### Extensible by design: sub- and super-setting the primitives
 
-The primitives we ship are a **default, not a closed set**. Real apps must be able to
+The core primitives we ship are a **default, not a closed set**. Real apps must be able to
 **super-set** it (add widgets) and **sub-set** it (replace widgets), for two needs
 that don't go away:
 
@@ -947,7 +954,7 @@ cover the long tail.
 
 ### Why the seed won't scale as-is
 
-The primitives began as two hand-written files (`core_components.dart` ×2) whose
+The core primitives began as two hand-written files (`core_components.dart` ×2) whose
 headers said they "deliberately mirror, component-for-component" each other, with
 `runCoreComponentConformance` — coarse "is this text visible?" probes — as the only
 thing holding them together. That is fine for a handful of demo widgets, but it
@@ -988,7 +995,7 @@ constraint protocol in CSS — doesn't scale; intrinsic sizing is very hard to f
 **CSS-canonical** (Flutter emulates flow layout and margin collapse — same problem
 mirrored), and a **constrained common model** that both adapters render natively.
 We choose the **constrained common model**: a small layout algebra that is cheap
-and faithful on *both* sides. The primitives are therefore **neither "Flutter widgets"
+and faithful on *both* sides. The core primitives are therefore **neither "Flutter widgets"
 nor "HTML elements"** — it is its own vocabulary that each adapter maps down.
 
 This is tractable because **flexbox is the one layout model both sides already
@@ -1059,7 +1066,7 @@ the spec"; the spec, not a sibling file, is what each adapter answers to.
 
 ### Pillar B — a shared value-type vocabulary (the H2 type model)
 
-The primitives need a small set of cross-framework value types, each with one
+The core primitives need a small set of cross-framework value types, each with one
 canonical representation that every adapter maps down. This is the
 framework-neutral replacement for RFW's intensely Flutter-specific
 `argument_decoders` (§9), and the foundation theming later plugs into:

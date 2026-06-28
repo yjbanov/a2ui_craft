@@ -7,7 +7,7 @@ import 'package:a2ui_craft_testing/a2ui_craft_testing.dart';
 import 'package:jaspr_test/jaspr_test.dart';
 
 void main() {
-  test('implements exactly the primitives set (no more, no less)', () {
+  test('implements exactly the core primitives (no more, no less)', () {
     final Set<String> implemented = createCoreComponents().widgets.keys.toSet();
     expect(implemented, corePrimitives);
   });

@@ -38,6 +38,8 @@ class _AppState extends State<App> {
             width: Unit.pixels(200),
             padding: Padding.all(Unit.pixels(20)),
             border: Border.all(color: Colors.blue, width: Unit.pixels(1)),
+            // Scroll the nav when the sample list exceeds the viewport height.
+            overflow: Overflow.auto,
           ),
           [
             for (var i = 0; i < _specs.length; i++) ...[

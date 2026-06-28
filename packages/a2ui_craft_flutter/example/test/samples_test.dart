@@ -134,6 +134,65 @@ void main() {
     expect(tester.widget<Checkbox>(find.byType(Checkbox)).value, isTrue);
   });
 
+  // --- Templatized A2UI Basic Catalog gallery examples. ---
+
+  testWidgets('Simple Text renders the templatized text',
+      (WidgetTester tester) async {
+    await _pump(tester, simpleTextSpec('Flutter'));
+    expect(find.text('Hello, Minimal Catalog!'), findsOneWidget);
+  });
+
+  testWidgets('Login Form renders title, field labels, and submit',
+      (WidgetTester tester) async {
+    await _pump(tester, loginFormSpec('Flutter'));
+    expect(find.text('Login'), findsOneWidget);
+    expect(find.text('Username'), findsOneWidget);
+    expect(find.text('Password'), findsOneWidget);
+    expect(find.text('Sign In'), findsOneWidget);
+  });
+
+  testWidgets('Weather renders the temperature, location, and forecast',
+      (WidgetTester tester) async {
+    await _pump(tester, weatherSpec('Flutter'));
+    expect(find.text('72°'), findsOneWidget);
+    expect(find.text('Austin, TX'), findsOneWidget);
+    expect(find.text('Mon'), findsOneWidget); // a `...for` forecast day
+    expect(find.text('Fri'), findsOneWidget);
+  });
+
+  testWidgets('Product Card renders name, price, and call-to-action',
+      (WidgetTester tester) async {
+    await _pump(tester, productCardSpec('Flutter'));
+    expect(find.text('Wireless Headphones Pro'), findsOneWidget);
+    expect(find.text(r'$199.99'), findsOneWidget);
+    expect(find.text('Add to Cart'), findsOneWidget);
+  });
+
+  testWidgets('Restaurant Card renders name, cuisine, and rating',
+      (WidgetTester tester) async {
+    await _pump(tester, restaurantCardSpec('Flutter'));
+    expect(find.text('The Italian Kitchen'), findsOneWidget);
+    expect(find.text('Italian • Pasta • Wine Bar'), findsOneWidget);
+    expect(find.text('4.8'), findsOneWidget);
+  });
+
+  testWidgets('Account Balance renders the balance and action buttons',
+      (WidgetTester tester) async {
+    await _pump(tester, accountBalanceSpec('Flutter'));
+    expect(find.text('Primary Checking'), findsOneWidget);
+    expect(find.text(r'$12,458.32'), findsOneWidget);
+    expect(find.text('Transfer'), findsOneWidget);
+    expect(find.text('Pay Bill'), findsOneWidget);
+  });
+
+  testWidgets('Shipping Status renders the templated step rows',
+      (WidgetTester tester) async {
+    await _pump(tester, shippingStatusSpec('Flutter'));
+    expect(find.text('Package Status'), findsOneWidget);
+    expect(find.text('Order Placed'), findsOneWidget); // first `...for` step
+    expect(find.text('Delivered'), findsOneWidget); // last `...for` step
+  });
+
   testWidgets('the gallery app mounts and shows the first sample',
       (WidgetTester tester) async {
     await tester.pumpWidget(const GalleryApp());

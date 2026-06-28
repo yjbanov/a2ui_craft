@@ -89,6 +89,65 @@ void main() {
     expect(find.tag('input'), findsNComponents(2));
   });
 
+  // --- Templatized A2UI Basic Catalog gallery examples. ---
+
+  testComponents('Simple Text renders the templatized text',
+      (ComponentTester tester) async {
+    await _pump(tester, simpleTextSpec('Jaspr'));
+    expect(find.text('Hello, Minimal Catalog!'), findsOneComponent);
+  });
+
+  testComponents('Login Form renders title, field labels, and submit',
+      (ComponentTester tester) async {
+    await _pump(tester, loginFormSpec('Jaspr'));
+    expect(find.text('Login'), findsOneComponent);
+    expect(find.text('Username'), findsOneComponent);
+    expect(find.text('Password'), findsOneComponent);
+    expect(find.text('Sign In'), findsOneComponent);
+  });
+
+  testComponents('Weather renders the temperature, location, and forecast',
+      (ComponentTester tester) async {
+    await _pump(tester, weatherSpec('Jaspr'));
+    expect(find.text('72°'), findsOneComponent);
+    expect(find.text('Austin, TX'), findsOneComponent);
+    expect(find.text('Mon'), findsOneComponent); // a `...for` forecast day
+    expect(find.text('Fri'), findsOneComponent);
+  });
+
+  testComponents('Product Card renders name, price, and call-to-action',
+      (ComponentTester tester) async {
+    await _pump(tester, productCardSpec('Jaspr'));
+    expect(find.text('Wireless Headphones Pro'), findsOneComponent);
+    expect(find.text(r'$199.99'), findsOneComponent);
+    expect(find.text('Add to Cart'), findsOneComponent);
+  });
+
+  testComponents('Restaurant Card renders name, cuisine, and rating',
+      (ComponentTester tester) async {
+    await _pump(tester, restaurantCardSpec('Jaspr'));
+    expect(find.text('The Italian Kitchen'), findsOneComponent);
+    expect(find.text('Italian • Pasta • Wine Bar'), findsOneComponent);
+    expect(find.text('4.8'), findsOneComponent);
+  });
+
+  testComponents('Account Balance renders the balance and action buttons',
+      (ComponentTester tester) async {
+    await _pump(tester, accountBalanceSpec('Jaspr'));
+    expect(find.text('Primary Checking'), findsOneComponent);
+    expect(find.text(r'$12,458.32'), findsOneComponent);
+    expect(find.text('Transfer'), findsOneComponent);
+    expect(find.text('Pay Bill'), findsOneComponent);
+  });
+
+  testComponents('Shipping Status renders the templated step rows',
+      (ComponentTester tester) async {
+    await _pump(tester, shippingStatusSpec('Jaspr'));
+    expect(find.text('Package Status'), findsOneComponent);
+    expect(find.text('Order Placed'), findsOneComponent); // first `...for` step
+    expect(find.text('Delivered'), findsOneComponent); // last `...for` step
+  });
+
   testComponents('the gallery app mounts and shows the first sample',
       (ComponentTester tester) async {
     tester.pumpComponent(App());

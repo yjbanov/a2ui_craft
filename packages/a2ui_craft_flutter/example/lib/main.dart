@@ -25,6 +25,14 @@ const List<IconData> _icons = <IconData>[
   Icons.person,
   Icons.image,
   Icons.edit_note,
+  // Templatized A2UI gallery examples.
+  Icons.notes,
+  Icons.login,
+  Icons.wb_sunny,
+  Icons.shopping_bag,
+  Icons.restaurant,
+  Icons.account_balance_wallet,
+  Icons.local_shipping,
 ];
 
 /// A simple gallery shell that shows one [Sample] at a time. Each sample is
@@ -46,18 +54,30 @@ class _GalleryAppState extends State<GalleryApp> {
       home: Scaffold(
         body: Row(
           children: [
-            NavigationRail(
-              selectedIndex: _index,
-              onDestinationSelected: (int index) =>
-                  setState(() => _index = index),
-              labelType: NavigationRailLabelType.all,
-              destinations: <NavigationRailDestination>[
-                for (var i = 0; i < _specs.length; i++)
-                  NavigationRailDestination(
-                    icon: Icon(_icons[i]),
-                    label: Text(_specs[i].label),
+            // The rail scrolls: with many samples the destinations exceed the
+            // viewport height, and NavigationRail does not scroll on its own.
+            LayoutBuilder(
+              builder: (BuildContext context, BoxConstraints constraints) =>
+                  SingleChildScrollView(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: IntrinsicHeight(
+                    child: NavigationRail(
+                      selectedIndex: _index,
+                      onDestinationSelected: (int index) =>
+                          setState(() => _index = index),
+                      labelType: NavigationRailLabelType.all,
+                      destinations: <NavigationRailDestination>[
+                        for (var i = 0; i < _specs.length; i++)
+                          NavigationRailDestination(
+                            icon: Icon(_icons[i]),
+                            label: Text(_specs[i].label),
+                          ),
+                      ],
+                    ),
                   ),
-              ],
+                ),
+              ),
             ),
             const VerticalDivider(thickness: 1, width: 1),
             Expanded(

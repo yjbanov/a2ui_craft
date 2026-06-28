@@ -57,6 +57,9 @@ const List<IconData> _icons = <IconData>[
   Icons.dynamic_form,
   Icons.email,
   Icons.calendar_today,
+  Icons.login,
+  Icons.dashboard_customize,
+  Icons.fact_check,
 ];
 
 /// A simple gallery shell that shows one [Sample] at a time. Each sample is

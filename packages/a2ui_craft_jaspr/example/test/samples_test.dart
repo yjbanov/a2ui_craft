@@ -342,6 +342,32 @@ void main() {
     expect(find.text('Add to calendar'), findsOneComponent);
   });
 
+  testComponents('Sign In renders the welcome heading, fields, and links',
+      (ComponentTester tester) async {
+    await _pump(tester, signInSpec('Jaspr'));
+    expect(find.text('Welcome back'), findsOneComponent); // Heading
+    expect(find.text('Email'), findsOneComponent);
+    expect(find.text('Sign in'), findsOneComponent);
+    expect(find.text('Sign up'), findsOneComponent);
+  });
+
+  testComponents('Dashboard renders the heading and both panels',
+      (ComponentTester tester) async {
+    await _pump(tester, incrementalDashboardSpec('Jaspr'));
+    expect(find.text('System Dashboard'), findsOneComponent); // Heading
+    expect(find.text('Analytics are ready.'), findsOneComponent);
+    expect(
+        find.text('System boot complete.'), findsOneComponent); // `...for` log
+  });
+
+  testComponents('Form Validator renders fields, terms, and submit',
+      (ComponentTester tester) async {
+    await _pump(tester, formValidatorSpec('Jaspr'));
+    expect(find.text('Email Address'), findsOneComponent);
+    expect(find.text('I agree to the terms and conditions'), findsOneComponent);
+    expect(find.text('Submit Registration'), findsOneComponent);
+  });
+
   testComponents('the gallery app mounts and shows the first sample',
       (ComponentTester tester) async {
     tester.pumpComponent(App());

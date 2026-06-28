@@ -386,6 +386,32 @@ void main() {
     expect(find.text('Add to calendar'), findsOneWidget);
   });
 
+  testWidgets('Sign In renders the welcome heading, fields, and links',
+      (WidgetTester tester) async {
+    await _pump(tester, signInSpec('Flutter'));
+    expect(find.text('Welcome back'), findsOneWidget); // Heading
+    expect(find.text('Email'), findsOneWidget);
+    expect(find.text('Sign in'), findsOneWidget);
+    expect(find.text('Sign up'), findsOneWidget);
+  });
+
+  testWidgets('Dashboard renders the heading and both panels',
+      (WidgetTester tester) async {
+    await _pump(tester, incrementalDashboardSpec('Flutter'));
+    expect(find.text('System Dashboard'), findsOneWidget); // Heading
+    expect(find.text('Analytics are ready.'), findsOneWidget);
+    expect(
+        find.text('System boot complete.'), findsOneWidget); // a `...for` log
+  });
+
+  testWidgets('Form Validator renders fields, terms, and submit',
+      (WidgetTester tester) async {
+    await _pump(tester, formValidatorSpec('Flutter'));
+    expect(find.text('Email Address'), findsOneWidget);
+    expect(find.text('I agree to the terms and conditions'), findsOneWidget);
+    expect(find.text('Submit Registration'), findsOneWidget);
+  });
+
   testWidgets('the gallery app mounts and shows the first sample',
       (WidgetTester tester) async {
     await tester.pumpWidget(const GalleryApp());

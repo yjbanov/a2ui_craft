@@ -739,16 +739,23 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
         for composed/domain widgets, a direct mapping for primitive-shaped or
         bespoke ones — chosen per component, not by a blanket "every component → a
         primitive" rule.
-  - [~] **Templatizing the A2UI Basic Catalog gallery examples.** Each of the
-        spec's 42 example surfaces (`specification/v1_0/catalogs/basic/examples`)
-        is reproduced as a hand-authored **Craft template** over the primitives —
-        the "bias to templatize" thesis at gallery scale. Key moves: format
+  - [x] **Templatizing the A2UI Basic Catalog gallery examples.** Every spec
+        example surface (`specification/v1_0/catalogs/basic/examples`) that our
+        primitives can express is reproduced as a hand-authored **Craft template**
+        over the primitives — the "bias to templatize" thesis at gallery scale.
+        **Done:** all 34 templatizable examples (every one that doesn't need a
+        missing primitive); the 7 remaining are blocked on `Modal`/`Tabs`/
+        `ChoicePicker`/`DateTimeInput`/`AudioPlayer` (below). Key moves: format
         functions (`formatCurrency`/`formatDate`/…) are *not* a blocker, since a
         template renders strings and the agent supplies already-formatted data;
         A2UI's `children: {path, componentId}` child-list templating is expressed
-        directly as a `...for` loop over an array arg. Demo screens scroll the nav
-        so the gallery scales.
-    - **Landed (26):** Simple Text (00), Interactive Button (00), Login Form (00,
+        directly as a `...for` loop over an array arg; A2UI's `weight` (flex-grow)
+        maps to the `Expanded(flex:)` primitive; label-bearing controls
+        (`TextField`/`CheckBox`) become small templates over the bare input + a
+        `Text`/`Heading`; and form validation `checks` are behavior, not layout
+        (the templates reproduce appearance). Demo screens scroll the nav so the
+        gallery scales.
+    - **Landed (34):** Simple Text (00), Interactive Button (00), Login Form (00,
       labelled fields as a template over the bare input), Row Layout (00), Weather
       (04, `...for` forecast), Product Card (05), Restaurant Card (20), Account
       Balance (15), Shipping Status (21, `...for` step rows), Flight Status (01),
@@ -760,11 +767,10 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
       `...for` + `Expanded`), Financial Data Grid (33, `weight` → `Expanded(flex:)`
       columns), Formatted Text (00), Incremental (00, `...for` cards), Complex
       Layout (00, `weight` → `Expanded` fields), Email Compose (02), Calendar Day
-      (03, `...for` events). All tested on both adapters.
-    - **Templatizable, not yet authored (5):** 09_login-form,
-      31_incremental-dashboard, 32_advanced-form-validator (layout only — see
-      below), plus 25_contact-card / 27_stats-card, which are **already covered**
-      by the existing hand-authored Contact/Stats card samples (not re-vendored).
+      (03, `...for` events), Sign In (09), Dashboard (31, `Expanded` panels +
+      `...for` logs), Form Validator (32, `CheckBox`+label template). All tested on
+      both adapters. (25_contact-card / 27_stats-card are **already covered** by
+      the existing hand-authored Contact/Stats card samples, not re-vendored.)
     - **Blocked — missing primitives (7 examples, 5 primitives):**
       - **`Modal`** (29_movie-card, 36_modal) — an overlay/dialog surface. Needs
         an overlay primitive; on Flutter a routed/`OverlayEntry` layer, on the web

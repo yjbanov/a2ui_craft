@@ -19,10 +19,12 @@ import 'samples/event_detail.dart';
 import 'samples/financial_data_grid.dart';
 import 'samples/flight_status.dart';
 import 'samples/form.dart';
+import 'samples/form_validator.dart';
 import 'samples/formatted_text.dart';
 import 'samples/gallery.dart';
 import 'samples/greeting.dart';
 import 'samples/incremental.dart';
+import 'samples/incremental_dashboard.dart';
 import 'samples/interactive_button.dart';
 import 'samples/layout.dart';
 import 'samples/login_form.dart';
@@ -35,6 +37,7 @@ import 'samples/purchase_complete.dart';
 import 'samples/restaurant_card.dart';
 import 'samples/row_layout.dart';
 import 'samples/shipping_status.dart';
+import 'samples/sign_in.dart';
 import 'samples/simple_text.dart';
 import 'samples/sports_player.dart';
 import 'samples/stats_card.dart';
@@ -88,4 +91,7 @@ List<SampleSpec> sampleSpecs(String framework) => <SampleSpec>[
       complexLayoutSpec(framework),
       emailComposeSpec(framework),
       calendarDaySpec(framework),
+      signInSpec(framework),
+      incrementalDashboardSpec(framework),
+      formValidatorSpec(framework),
     ];

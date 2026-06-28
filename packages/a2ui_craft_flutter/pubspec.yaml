@@ -21,3 +21,5 @@ dev_dependencies:
   # The custom-catalog test defines its own a2ui_core component schemas.
   json_schema_builder: any
   lints: ^4.0.0
+  # The gallery render test mounts an example whose Image has a real network URL.
+  network_image_mock: ^2.1.1

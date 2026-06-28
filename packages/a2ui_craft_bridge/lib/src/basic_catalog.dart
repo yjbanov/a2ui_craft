@@ -36,8 +36,14 @@ const LibraryName basicCatalogScope = LibraryName(<String>['core']);
 /// resolved props) to a primitive [ConstructorCall].
 ///
 /// Child slots (`child`/`children`) are already-injected host nodes in [args] and
-/// pass through unchanged; only scalar/style props are renamed, and A2UI's layout
-/// defaults (`align` → `stretch`) are applied when absent.
+/// pass through unchanged; only scalar/style props are renamed.
+///
+/// A2UI's schema declares the cross-axis default (`align`) as `stretch`, but a
+/// `stretch` cross-axis is invalid for a `Row` whose height is unbounded (e.g. a
+/// `Row` nested in a `Column`), so a blanket default would crash real surfaces.
+/// We therefore do **not** inject it: an absent `align` falls through to the
+/// primitive's safe `center` default. This matches the genui reference Flutter
+/// renderer, which likewise maps an absent `align` to `start`, not `stretch`.
 ConstructorCall a2uiBasicCatalogCall(String type, DynamicMap args) {
   switch (type) {
     case 'Row':
@@ -47,15 +53,12 @@ ConstructorCall a2uiBasicCatalogCall(String type, DynamicMap args) {
         _remap(args, const <String, String>{
           'justify': 'mainAxisAlignment',
           'align': 'crossAxisAlignment',
-        }, const <String, Object?>{
-          'crossAxisAlignment': 'stretch'
         }),
       );
     case 'List':
       return ConstructorCall(
         'List',
-        _remap(args, const <String, String>{'align': 'crossAxisAlignment'},
-            const <String, Object?>{'crossAxisAlignment': 'stretch'}),
+        _remap(args, const <String, String>{'align': 'crossAxisAlignment'}),
       );
     case 'Icon':
       return ConstructorCall(
@@ -69,14 +72,9 @@ ConstructorCall a2uiBasicCatalogCall(String type, DynamicMap args) {
   }
 }
 
-/// Returns [args] with keys in [rename] renamed, starting from [defaults] (which
-/// fill in only when the corresponding source key is absent).
-DynamicMap _remap(
-  DynamicMap args,
-  Map<String, String> rename, [
-  Map<String, Object?> defaults = const <String, Object?>{},
-]) {
-  final DynamicMap out = <String, Object?>{...defaults};
+/// Returns [args] with keys in [rename] renamed (other keys pass through).
+DynamicMap _remap(DynamicMap args, Map<String, String> rename) {
+  final DynamicMap out = <String, Object?>{};
   args.forEach((String key, Object? value) {
     out[rename[key] ?? key] = value;
   });
@@ -85,13 +83,19 @@ DynamicMap _remap(
 
 /// The `a2ui_core` [Catalog] for the supported A2UI Basic Catalog components, so
 /// a `MessageProcessor` can ingest real Basic-Catalog surfaces (resolving which
-/// props are data-bound, actions, or child slots).
+/// props are data-bound, actions, functions, or child slots).
 ///
 /// Hand-written for the supported subset rather than loaded from the real
 /// `catalog.json` (whose full-URL `$ref`s and `allOf`/`unevaluatedProperties`
 /// shape the bridge's `loadCatalog` does not target).
+///
+/// Registers [FormatStringFunction] — the one A2UI text function the pinned
+/// `a2ui_core` ships. The Basic Catalog's other functions (`formatCurrency`,
+/// `formatNumber`, `formatDate`, `pluralize`) have no implementation here yet, so
+/// surfaces that call them throw on resolution; see DESIGN.md's gap list.
 Catalog<ComponentApi> a2uiBasicCatalog() => Catalog<ComponentApi>(
       id: basicCatalogId,
+      functions: <FunctionImplementation>[FormatStringFunction()],
       components: <ComponentApi>[
         _Comp('Card', <String, Schema>{'child': CommonSchemas.componentId},
             <String>['child']),

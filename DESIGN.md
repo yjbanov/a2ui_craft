@@ -685,11 +685,33 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
         name→glyph subset), `Divider` (`axis`), and `List`, with behavioral +
         geometry conformance. Proven end-to-end by rendering the gallery's
         **Contact Card** surface as a Craft template on both adapters.
-  - [ ] **Next (toward the gallery):** controls/forms (`Slider`, `ChoicePicker`,
-        `TextField` variants, `CheckBox` label) — verifying `a2ui_core` supplies
-        the validation/format functions — then the stateful/overlay components
-        (`Tabs`, `Modal`, `DateTimeInput`). The cross-cutting `weight` (flex-grow
-        on any Row/Column child) and theming are still open. `Stack`/`Grid` later.
+  - [x] **Real-gallery render harness.** Rather than hand-authored templates, we
+        render the spec's **actual example JSON** (vendored verbatim from
+        `specification/v1_0/catalogs/basic/examples`) end-to-end on both adapters.
+        The key simplifier: A2UI's Basic Catalog names its components the same as
+        our primitives, so a surface renders **directly against `core`** via a
+        small prop transform (`a2uiBasicCatalogCall`: `justify`/`align` →
+        `mainAxisAlignment`/`crossAxisAlignment`, `name` → `icon`, `action` →
+        `onPressed`) plumbed through the adapter's `mapComponent` hook — no
+        template indirection. Landed examples: **Row Layout** (layout), **Sports
+        Player** (nested `path` data-binding, no functions), **Formatted Text**
+        (`formatString`). This is the forcing function for the gap list below; it
+        already surfaced one real bug — A2UI's schema default `align: stretch`
+        crashes a `Row` with unbounded height, so the transform omits it (matching
+        the genui reference renderer, which also defaults absent `align` to a
+        non-stretch value).
+  - [ ] **Next — the gap list this harness surfaced (to render the rest):**
+        - **Functions.** The pinned `a2ui_core` ships only `formatString`. The
+          card examples additionally need `formatCurrency`, `formatNumber`,
+          `formatDate`, and `pluralize` (e.g. Product Card, Stats Card, Weather) —
+          unimplemented upstream, so surfaces that call them throw on resolution.
+        - **Composite controls.** `TextField`/`CheckBox`/`Slider` carry an
+          opinionated `label`; the core primitives are bare (label dropped). The
+          label-bearing controls are a small catalog **template** over the bare
+          primitive + a `Text` (per §2 "Bias to templatize").
+        - **`weight`** (flex-grow on any Row/Column child) — cross-cutting, still
+          open. Theming, and the stateful/overlay components (`Tabs`, `Modal`,
+          `DateTimeInput`), remain after. `Stack`/`Grid` later.
 - [ ] Prove the state-model axis with a third, non-Flutter-like framework.
 - [ ] **Security: uphold A2UI's secure-by-design promise (§12).** When templates
       are delivered ephemerally, treat them as untrusted input: add engine-level

@@ -22,10 +22,18 @@ void main() {
       expect(c.arguments['children'], isEmpty); // child slot passes through
     });
 
-    test('align defaults to stretch (A2UI default) when absent', () {
+    test('absent align is not forced (falls through to the primitive default)',
+        () {
+      // A2UI's schema default is `stretch`, but a `stretch` cross-axis crashes a
+      // Row with unbounded height, so the transform injects no default and lets
+      // the primitive apply its safe `center`. See a2uiBasicCatalogCall's doc.
       final ConstructorCall c = a2uiBasicCatalogCall(
           'Column', <String, Object?>{'children': <Object?>[]});
-      expect(c.arguments['crossAxisAlignment'], 'stretch');
+      expect(c.arguments.containsKey('crossAxisAlignment'), isFalse);
+    });
+
+    test('a2uiBasicCatalog registers the formatString function', () {
+      expect(a2uiBasicCatalog().functions.containsKey('formatString'), isTrue);
     });
 
     test('Icon maps name->icon, Button maps action->onPressed', () {

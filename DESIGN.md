@@ -778,8 +778,9 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
         (already primitives) once grouping/selection state is modeled.
       - **`DateTimeInput`** (07_task-card, 30) — a date/time control. Needs a
         platform input primitive (Flutter pickers; web `<input type=date/time>`).
-      - **`AudioPlayer`** (26_podcast-episode) — transport + scrubber. Like
-        `Video` (currently a stub), a media primitive; low priority.
+      - **`AudioPlayer`** (26_podcast-episode) — transport + scrubber. A media
+        capability, like `Video` — both belong in **`extended_primitives`** (see
+        below), not the core set.
     - **Notes / fidelity gaps:** `Text` is plain by design; rich content uses the
       dedicated **`Markdown`** primitive (see above), so the heading/emphasis
       markers A2UI puts in `Text` are honored where a sample opts into `Markdown`.
@@ -790,6 +791,26 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
       templates over the bare input + a `Text`. Cross-cutting `weight` (flex-grow)
       and theming remain open. (The pinned `a2ui_core` implements only
       `formatString`; baking formatted data sidesteps the rest.)
+- [ ] **`extended_primitives` — keep the core dependency-light.** The **core
+      primitive set is the universal, dependency-light vocabulary** every adapter
+      on every target can implement cheaply (layout, text, `Heading`, `Image`,
+      `Icon`, inputs, …). Lightweight *pure-Dart* logic deps are acceptable in the
+      core (e.g. the `markdown` parser — no platform code, runs everywhere). But
+      **heavy, platform-specific capabilities** — `Video`/`AudioPlayer` (a media
+      plugin per platform; just `<video>`/`<audio>` on the web), maps, payment,
+      camera, file/image picker, sign-in providers, vector graphics, charts —
+      drag in big optional dependencies and belong in a **separate, opt-in
+      `extended_primitives` library** that brings its own deps, so an app that
+      doesn't use video never pays for `video_player`.
+  - [x] **Removed the `Video` stub from the core set.** It was a fake (a black
+        box) carrying contract weight while promising a capability the core can't
+        honor dependency-free. No sample used it. It returns — implemented for
+        real — once `extended_primitives` exists.
+  - [ ] **Stand up `extended_primitives` when the first real heavy primitive
+        lands** (a working `Video`, or `Modal`/maps) — not before (an empty
+        library is its own smell). Design note for then: a surface may reference a
+        component the host didn't load, so the runtime must **degrade gracefully**
+        (unknown component → placeholder/skip, never crash).
 - [ ] Prove the state-model axis with a third, non-Flutter-like framework.
 - [ ] **Security: uphold A2UI's secure-by-design promise (§12).** When templates
       are delivered ephemerally, treat them as untrusted input: add engine-level
@@ -1068,10 +1089,11 @@ does not scale:
 - **Coarse probes can't see layout divergence.** "Is this text visible?" passes
   even when a `Row` lays out completely differently on the two sides. The gap
   between "tests green" and "actually identical" widens with every widget.
-- **Hand-mirrored implementations drift in telling ways.** The seed `Video` is a
-  stub box on Flutter but a real `<video>` on Jaspr; the seed `Card` hard-codes its
-  padding and shadow independently on each side. Nothing coarse catches the
-  mismatch.
+- **Hand-mirrored implementations drift in telling ways.** The seed `Card`
+  hard-codes its padding and shadow independently on each side; the now-removed
+  `Video` was a stub box on Flutter but a real `<video>` on Jaspr — drift nothing
+  coarse catches (and a reason a heavy capability like video belongs in
+  `extended_primitives`, not the core, §8).
 
 So the task is not "write more widgets like these." It is to **establish a
 contract that makes the adapters converge by construction, and sharpen the
@@ -1084,8 +1106,9 @@ defines.
 > contract, and **geometry conformance** runs on both adapters against real layout
 > (`RenderBox` / `getBoundingClientRect`), so divergence is *caught* rather than
 > invisible. The headers that once said "deliberately mirror" now say "implements
-> the spec." The not-yet-converged tail is the remaining seed components — `Card`,
-> `Video`, `AudioPlayer` — which still need to be brought onto the contract.
+> the spec." The not-yet-converged tail is the remaining seed components — chiefly
+> `Card` — which still need to be brought onto the contract. (`Video`/`AudioPlayer`
+> are deferred to `extended_primitives` rather than the core set, §8.)
 
 ### The decision: a constrained common model, flexbox-shaped
 

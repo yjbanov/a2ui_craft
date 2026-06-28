@@ -176,17 +176,6 @@ LocalWidgetLibrary createCoreComponents() {
         ),
       );
     },
-    'Video': (BuildContext context, DataSource source) {
-      // Stub for Video since we don't have video_player plugin
-      return Container(
-        color: Colors.black,
-        height: 200,
-        width: double.infinity,
-        child: const Center(
-          child: Icon(Icons.play_circle_outline, color: Colors.white, size: 48),
-        ),
-      );
-    },
     // The bare text input — no label. Label placement is a template's choice
     // (see DESIGN.md §2 "Bias to templatize" / §11), composed as a separate Text.
     'TextField': (BuildContext context, DataSource source) {

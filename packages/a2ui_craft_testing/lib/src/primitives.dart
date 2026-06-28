@@ -37,7 +37,6 @@ const Set<String> corePrimitives = <String>{
   'Divider',
   'ScrollView',
   'Card',
-  'Video',
   'TextField',
   'Checkbox',
   'Radio',

@@ -326,9 +326,9 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
   driver.defineTest('ScrollView and Card render their nested child content', (
     CraftTester tester,
   ) async {
-    // ScrollView and Card are single-child containers, and Video is a stub.
-    // Assert the child subtree actually renders *through* them — not merely
-    // "doesn't crash". (Image/Icon/Divider are covered by the atoms case above.)
+    // ScrollView and Card are single-child containers. Assert the child subtree
+    // actually renders *through* them — not merely "doesn't crash".
+    // (Image/Icon/Divider are covered by the atoms case above.)
     await tester.mount('''
       import core;
       widget root = ScrollView(
@@ -337,7 +337,6 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
             children: [
               Text(text: "card body"),
               Divider(),
-              Video(url: "https://example.com/video.mp4"),
             ],
           ),
         ),

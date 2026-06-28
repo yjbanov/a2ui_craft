@@ -261,13 +261,6 @@ LocalWidgetLibrary createCoreComponents() {
         ],
       );
     },
-    'Video': (BuildContext context, DataSource source) {
-      final String? url = source.v<String>(['url']);
-      if (url == null || url.isEmpty) {
-        return div([]);
-      }
-      return video(src: url, controls: true, []);
-    },
     // The bare text input — no label. Label placement is a template's choice
     // (see DESIGN.md §2 "Bias to templatize" / §11), composed as a separate Text.
     'TextField': (BuildContext context, DataSource source) {

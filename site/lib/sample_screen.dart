@@ -274,7 +274,7 @@ class _SampleScreenState extends State<SampleScreen> {
     return FlutterEmbedView(
       key: ValueKey<String>('flutter-$_renderKey'),
       styles: Styles(raw: <String, String>{
-        'width': '480px',
+        'width': '100%',
         'height': '640px',
         'border': '1px solid #eee',
         'border-radius': '10px',

@@ -833,8 +833,13 @@ widget SimpleText = Text(text: args.text);
     template: r'''
 import core;
 
+// `width: "fill"` gives the column cross-axis space so `crossAxisAlignment:
+// center` actually centers (a hug-width column has nothing to center within).
+// Without it the two adapters diverge: Jaspr's hug cross resolves to CSS `auto`
+// and fills the parent (centering shows), while Flutter hugs to its widest child
+// and sits at the start (centering is a no-op).
 widget InteractiveButton = Column(crossAxisAlignment: "center",
-  mainAxisAlignment: "center", gap: 12.0, children: [
+  mainAxisAlignment: "center", width: "fill", gap: 12.0, children: [
     Text(text: args.prompt),
     Button(child: Text(text: args.label)),
   ]);

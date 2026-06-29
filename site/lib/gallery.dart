@@ -1,0 +1,62 @@
+// Copyright 2013 The Flutter Authors
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+import 'package:a2ui_craft_examples/a2ui_craft_examples.dart';
+import 'package:jaspr/dom.dart';
+import 'package:jaspr/jaspr.dart';
+import 'package:jaspr_router/jaspr_router.dart';
+
+/// The landing screen: a grid of sample cards. Clicking one routes to its
+/// dedicated sample screen.
+class GalleryScreen extends StatelessComponent {
+  const GalleryScreen({super.key});
+
+  @override
+  Component build(BuildContext context) {
+    return div(
+      styles: Styles(raw: <String, String>{
+        'max-width': '1100px',
+        'margin': '0 auto',
+        'padding': '32px 20px',
+        'font-family': 'system-ui, -apple-system, sans-serif',
+      }),
+      [
+        h1(
+            styles: Styles(raw: <String, String>{'margin': '0 0 4px'}),
+            [text('A2UI Craft')]),
+        p(
+          styles: Styles(raw: <String, String>{'color': '#555', 'margin': '0'}),
+          [
+            text('One UI protocol, two rendering engines. Open a sample, flip '
+                'it between Flutter and Jaspr, and edit its template, schema, '
+                'and messages live.'),
+          ],
+        ),
+        div(
+          styles: Styles(raw: <String, String>{
+            'display': 'grid',
+            'grid-template-columns': 'repeat(auto-fill, minmax(180px, 1fr))',
+            'gap': '12px',
+            'margin-top': '28px',
+          }),
+          [
+            for (final RawSample s in rawSamples)
+              div(
+                styles: Styles(raw: <String, String>{
+                  'border': '1px solid #e0e0e0',
+                  'border-radius': '10px',
+                  'padding': '16px',
+                  'cursor': 'pointer',
+                  'background': '#fff',
+                  'transition': 'box-shadow .15s, border-color .15s',
+                }),
+                events: events(onClick: () => context.push('/sample/${s.id}')),
+                [text(s.label)],
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+}

@@ -11,6 +11,11 @@ cd "$(dirname "$0")/.."
 
 step() { printf '\n\033[1m==> %s\033[0m\n' "$1"; }
 
+step "Enable repo git hooks (test-presence gate)"
+# Idempotent: points git at tool/hooks so the commit-msg test gate is active
+# for everyone who runs the gate (core.hooksPath is local, not cloned).
+git config core.hooksPath tool/hooks
+
 step "Resolve workspace (flutter pub get)"
 flutter pub get
 

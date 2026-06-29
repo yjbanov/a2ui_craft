@@ -460,3 +460,33 @@ void runLayoutGeometryConformance(CraftGeometryDriver driver) {
     },
   );
 }
+
+/// The shared **geometric** specification for the `Card` container.
+///
+/// Pins that `Card` is **spacing-neutral and identical across adapters**: its
+/// only inset is the 16px content padding, with no framework-default margin.
+/// Flutter's Material `Card` defaults to `margin: EdgeInsets.all(4)`, which the
+/// Jaspr `Card` (a plain div) has no equivalent for; the adapter zeroes it so a
+/// layout's spacing (a `Column` `gap`) is the single source of inter-card space.
+/// This guards the fix in the profile-card work — a regression (the 4px margin
+/// returning) turns it red on Flutter.
+void runCardGeometryConformance(CraftGeometryDriver driver) {
+  driver.defineTest(
+    'Card adds no framework-default margin (content inset is padding only)',
+    (CraftGeometryTester tester) async {
+      await tester.mountTemplate('''
+        import core;
+        widget root = Box(key: "box", width: 100.0, height: 100.0,
+          child: Card(key: "card",
+            child: Box(key: "inner", width: 20.0, height: 20.0)));
+      ''');
+      final CraftRect box = await tester.rectOf('box');
+      final CraftRect inner = await tester.rectOf('inner');
+      // The content is inset from the box by the Card's 16px padding only — no
+      // extra framework margin. (Material's default 4px Card margin would inset
+      // it to 20.)
+      expect(inner.left - box.left, closeTo(16, _tol));
+      expect(inner.top - box.top, closeTo(16, _tol));
+    },
+  );
+}

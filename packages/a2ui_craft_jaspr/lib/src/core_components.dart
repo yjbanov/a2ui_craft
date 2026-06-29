@@ -213,7 +213,20 @@ LocalWidgetLibrary createCoreComponents() {
           const <Component>[],
         );
       }
-      return hr();
+      // `align-self: stretch` spans the parent's cross extent without forcing it
+      // wider (it contributes ~0 to intrinsic sizing), mirroring Flutter's
+      // `Divider`, which fills the column's resolved cross size. A plain <hr>
+      // instead inherits `align-items` (e.g. `center`) and collapses to a dot.
+      return div(
+        styles: Styles(raw: <String, String>{
+          'align-self': 'stretch',
+          'height': '1px',
+          'border': 'none',
+          'margin': '0',
+          'background-color': 'rgba(0, 0, 0, 0.12)',
+        }),
+        const <Component>[],
+      );
     },
     'ScrollView': (BuildContext context, DataSource source) {
       return div(
@@ -362,6 +375,21 @@ Component _buildFlex(DataSource source, FlexAxis axis) {
   final Dimension height = Dimension.decode(_dimRaw(source, ['height']));
   final bool horizontal = axis == FlexAxis.horizontal;
 
+  // The main axis hugs to content (`fit-content`). The cross axis, when it hugs,
+  // is left to CSS `auto` rather than `fit-content`: as a block-level flex this
+  // fills the parent's cross size (so a fixed-width ancestor like `Box(width:)`
+  // reaches a `fill` descendant, and a full-bleed `Divider` spans the card),
+  // while a flex *item* (e.g. a `Stat` column inside a `Row`) still shrink-wraps.
+  // This mirrors how Flutter's constraints carry a bounded cross extent down to
+  // its children, which a rigid `fit-content` would sever.
+  final Dimension mainDim = horizontal ? width : height;
+  final Dimension crossDim = horizontal ? height : width;
+  final String mainExtent = _cssExtent(mainDim);
+  final String? crossExtent =
+      crossDim is HugDimension ? null : _cssExtent(crossDim);
+  final String widthCss = horizontal ? mainExtent : (crossExtent ?? 'auto');
+  final String heightCss = horizontal ? (crossExtent ?? 'auto') : mainExtent;
+
   return div(
     styles: Styles(
       display: Display.flex,
@@ -369,8 +397,8 @@ Component _buildFlex(DataSource source, FlexAxis axis) {
       justifyContent: _toJustify(main),
       alignItems: _toAlign(cross),
       raw: <String, String>{
-        'width': _cssExtent(width),
-        'height': _cssExtent(height),
+        'width': widthCss,
+        'height': heightCss,
         if (gap > 0) 'gap': '${_px(gap)}px',
       },
     ),

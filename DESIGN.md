@@ -811,6 +811,21 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
         **preloaded at page start** (`FlutterEmbedView.preload()`), as a lazy
         first-toggle load fails. The fixed built-in primitive set is a known
         limitation (DartPad-style dynamic primitives are out of scope).
+  - [x] **Cross-axis hug sizing — defer to the parent (`auto`), not
+        `fit-content`.** Surfaced by the Contact Card and Stats Card rendering
+        differently on the two adapters. Root cause: Flutter carries a bounded
+        cross extent *down* through hug intermediaries, so a `fill` child (a
+        `width:"fill"` Row inside a `Box(width:300)`) or a full-bleed `Divider`
+        raises the column to the available width; CSS `fit-content` severs that —
+        it collapses to content and a `100%`/greedy descendant can't expand it.
+        Fix: the Jaspr `Flex` keeps `fit-content` on the **main** axis but leaves
+        the **cross** axis to CSS `auto`, which fills a block parent (so the fixed
+        ancestor reaches `fill` descendants) yet still shrink-wraps when the flex
+        is itself a flex *item* (e.g. a `Stat` column in a `Row`) — matching
+        Flutter's constraint flow. The `Divider` also gets `align-self: stretch`
+        so it spans the parent's cross extent (contributing ~0 to it) instead of
+        collapsing under `align-items: center`. Geometry-with-tolerance
+        conformance stays green; both samples now match across adapters.
 - [ ] **`extended_primitives` — keep the core dependency-light.** The **core
       primitive set is the universal, dependency-light vocabulary** every adapter
       on every target can implement cheaply (layout, text, `Heading`, `Image`,

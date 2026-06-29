@@ -15,7 +15,7 @@
         {
           "id": "root",
           "component": "MusicPlayer",
-          "albumArt": "https://example.com/album.jpg",
+          "albumArt": "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=300&h=300&fit=crop",
           "title": "Blinding Lights",
           "artist": "The Weeknd",
           "currentTime": "1:48",

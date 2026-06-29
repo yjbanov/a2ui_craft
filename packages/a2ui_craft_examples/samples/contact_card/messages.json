@@ -17,7 +17,7 @@
           "component": "ContactCard",
           "name": "Ada Lovelace",
           "title": "Mathematician",
-          "avatar": "https://example.com/ada.jpg",
+          "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop",
           "phone": "+1 555 0100",
           "email": "ada@example.com",
           "location": "London, UK"

@@ -411,7 +411,7 @@ widget ContactCard = Card(
           "component": "ContactCard",
           "name": "Ada Lovelace",
           "title": "Mathematician",
-          "avatar": "https://example.com/ada.jpg",
+          "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop",
           "phone": "+1 555 0100",
           "email": "ada@example.com",
           "location": "London, UK"
@@ -1148,7 +1148,7 @@ widget ProductCard = Card(child: Column(gap: 8.0, children: [
         {
           "id": "root",
           "component": "ProductCard",
-          "imageUrl": "https://example.com/headphones.jpg",
+          "imageUrl": "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&h=200&fit=crop",
           "name": "Wireless Headphones Pro",
           "stars": "★★★★★",
           "reviews": "(2,847 reviews)",
@@ -1242,7 +1242,7 @@ widget RestaurantCard = Card(child: Column(gap: 8.0, children: [
         {
           "id": "root",
           "component": "RestaurantCard",
-          "image": "https://example.com/restaurant.jpg",
+          "image": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=300&h=150&fit=crop",
           "name": "The Italian Kitchen",
           "priceRange": "$$$",
           "cuisine": "Italian • Pasta • Wine Bar",
@@ -1616,7 +1616,7 @@ widget PurchaseComplete = Card(child: Column(crossAxisAlignment: "center",
           "id": "root",
           "component": "PurchaseComplete",
           "title": "Purchase Complete",
-          "productImage": "https://example.com/headphones.jpg",
+          "productImage": "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=100&h=100&fit=crop",
           "productName": "Wireless Headphones Pro",
           "price": "$199.99",
           "delivery": "Arrives Dec 18 - Dec 20",
@@ -2024,7 +2024,7 @@ widget MusicPlayer = Card(child: Column(crossAxisAlignment: "center", gap: 8.0,
         {
           "id": "root",
           "component": "MusicPlayer",
-          "albumArt": "https://example.com/album.jpg",
+          "albumArt": "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=300&h=300&fit=crop",
           "title": "Blinding Lights",
           "artist": "The Weeknd",
           "currentTime": "1:48",
@@ -2208,7 +2208,7 @@ widget SportsPlayer = Card(child: Column(crossAxisAlignment: "center", gap: 8.0,
         {
           "id": "root",
           "component": "SportsPlayer",
-          "image": "https://example.com/player.jpg",
+          "image": "https://images.unsplash.com/photo-1546519638-68e109498ffc?w=200&h=200&fit=crop",
           "name": "Marcus Johnson",
           "number": "#23",
           "team": "LA Lakers",
@@ -2625,7 +2625,7 @@ widget UserProfile = Card(child: Column(crossAxisAlignment: "center", gap: 8.0,
         {
           "id": "root",
           "component": "UserProfile",
-          "avatar": "https://example.com/sarah.jpg",
+          "avatar": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop",
           "name": "Sarah Chen",
           "username": "@sarahchen",
           "bio": "Product Designer at Tech Co. Creating delightful experiences.",
@@ -2710,13 +2710,13 @@ widget ChatMessage = Card(child: Column(gap: 8.0, children: [
           "channelName": "project-updates",
           "messages": [
             {
-              "avatar": "https://example.com/mike.jpg",
+              "avatar": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop",
               "username": "Mike Chen",
               "time": "10:32 AM",
               "text": "Just pushed the new API changes. Ready for review."
             },
             {
-              "avatar": "https://example.com/sarah.jpg",
+              "avatar": "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=40&h=40&fit=crop",
               "username": "Sarah Kim",
               "time": "10:45 AM",
               "text": "Great! I'll take a look after standup."
@@ -2880,21 +2880,21 @@ widget TrackList = Card(child: Column(crossAxisAlignment: "stretch", gap: 8.0,
           "tracks": [
             {
               "number": "1",
-              "art": "https://example.com/track1.jpg",
+              "art": "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=50&h=50&fit=crop",
               "title": "Weightless",
               "artist": "Marconi Union",
               "duration": "8:09"
             },
             {
               "number": "2",
-              "art": "https://example.com/track2.jpg",
+              "art": "https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=50&h=50&fit=crop",
               "title": "Clair de Lune",
               "artist": "Debussy",
               "duration": "5:12"
             },
             {
               "number": "3",
-              "art": "https://example.com/track3.jpg",
+              "art": "https://images.unsplash.com/photo-1507838153414-b4b713384a76?w=50&h=50&fit=crop",
               "title": "Ambient Light",
               "artist": "Brian Eno",
               "duration": "6:45"

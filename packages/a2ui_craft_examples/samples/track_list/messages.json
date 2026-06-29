@@ -19,21 +19,21 @@
           "tracks": [
             {
               "number": "1",
-              "art": "https://example.com/track1.jpg",
+              "art": "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=50&h=50&fit=crop",
               "title": "Weightless",
               "artist": "Marconi Union",
               "duration": "8:09"
             },
             {
               "number": "2",
-              "art": "https://example.com/track2.jpg",
+              "art": "https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=50&h=50&fit=crop",
               "title": "Clair de Lune",
               "artist": "Debussy",
               "duration": "5:12"
             },
             {
               "number": "3",
-              "art": "https://example.com/track3.jpg",
+              "art": "https://images.unsplash.com/photo-1507838153414-b4b713384a76?w=50&h=50&fit=crop",
               "title": "Ambient Light",
               "artist": "Brian Eno",
               "duration": "6:45"

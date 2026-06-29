@@ -16,7 +16,7 @@
           "id": "root",
           "component": "PurchaseComplete",
           "title": "Purchase Complete",
-          "productImage": "https://example.com/headphones.jpg",
+          "productImage": "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=100&h=100&fit=crop",
           "productName": "Wireless Headphones Pro",
           "price": "$199.99",
           "delivery": "Arrives Dec 18 - Dec 20",

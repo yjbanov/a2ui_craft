@@ -15,7 +15,7 @@
         {
           "id": "root",
           "component": "SportsPlayer",
-          "image": "https://example.com/player.jpg",
+          "image": "https://images.unsplash.com/photo-1546519638-68e109498ffc?w=200&h=200&fit=crop",
           "name": "Marcus Johnson",
           "number": "#23",
           "team": "LA Lakers",

@@ -170,6 +170,12 @@ LocalWidgetLibrary createCoreComponents() {
     },
     'Card': (BuildContext context, DataSource source) {
       return Card(
+        // Material's `Card` defaults to `margin: EdgeInsets.all(4)`, which the
+        // Jaspr `Card` (a plain div) has no equivalent for — it would add an
+        // invisible 4px inset (and ~8px between stacked cards) on Flutter only.
+        // Zero it so the primitive is spacing-neutral on both adapters; spacing
+        // between cards is the layout's job (a `Column` `gap`).
+        margin: EdgeInsets.zero,
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: source.child(['child']),

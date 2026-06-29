@@ -574,6 +574,8 @@ widget ProfileCard = Card(child: Column(children: [
         {
           "id": "root",
           "component": "Column",
+          "crossAxisAlignment": "stretch",
+          "gap": 8.0,
           "children": [
             "p1",
             "p2"

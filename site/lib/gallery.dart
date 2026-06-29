@@ -42,18 +42,26 @@ class GalleryScreen extends StatelessComponent {
             'margin-top': '28px',
           }),
           [
+            // A real anchor (jaspr_router's Link → `<a href>`), not a div with a
+            // click handler: anchors are natively tappable on mobile (a bare div's
+            // synthesized click is unreliable there) and accessible — focusable,
+            // keyboard-activatable, open-in-new-tab — while still doing
+            // client-side navigation.
             for (final RawSample s in rawSamples)
-              div(
+              Link(
+                to: '/sample/${s.id}',
                 styles: Styles(raw: <String, String>{
+                  'display': 'block',
                   'border': '1px solid #e0e0e0',
                   'border-radius': '10px',
                   'padding': '16px',
                   'cursor': 'pointer',
                   'background': '#fff',
+                  'color': 'inherit',
+                  'text-decoration': 'none',
                   'transition': 'box-shadow .15s, border-color .15s',
                 }),
-                events: events(onClick: () => context.push('/sample/${s.id}')),
-                [Component.text(s.label)],
+                child: Component.text(s.label),
               ),
           ],
         ),

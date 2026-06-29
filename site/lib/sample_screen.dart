@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 import 'dart:convert';
+import 'dart:js_interop';
 
 import 'package:a2ui_core/a2ui_core.dart';
 import 'package:a2ui_craft_examples/a2ui_craft_examples.dart';
@@ -11,12 +12,26 @@ import 'package:jaspr/dom.dart';
 import 'package:jaspr/jaspr.dart';
 import 'package:jaspr_flutter_embed/jaspr_flutter_embed.dart';
 import 'package:jaspr_router/jaspr_router.dart';
+import 'package:web/web.dart' as web;
 
 import 'flutter_host.dart';
+
+/// Width of the editor sidebar when open, in CSS px. Subtracted from the
+/// viewport to decide whether the preview pane is wide enough for side-by-side.
+const int _editorWidth = 420;
+
+/// Minimum preview-pane width (viewport minus the editor) to show the Jaspr and
+/// Flutter renders side by side. Below it, the two collapse into a Jaspr/Flutter
+/// tab toggle.
+const int _sideBySideMin = 800;
 
 /// One sample on its own screen: a toolbar (back, title, edit, Jaspr/Flutter
 /// toggle) over the rendered surface and an action log, with an optional editor
 /// sidebar for the template / schema / messages with live Preview.
+///
+/// When the preview pane (viewport minus the editor) is at least
+/// [_sideBySideMin] wide, the Jaspr and Flutter renders show side by side;
+/// otherwise they collapse into a tab toggle.
 class SampleScreen extends StatefulComponent {
   const SampleScreen({required this.id, super.key});
 
@@ -34,6 +49,7 @@ class _SampleScreenState extends State<SampleScreen> {
 
   String _framework = 'Jaspr';
   bool _editorOpen = false;
+  bool _wide = false;
   int _renderKey = 0;
   String? _error;
   final List<String> _log = <String>[];
@@ -50,6 +66,34 @@ class _SampleScreenState extends State<SampleScreen> {
   // The embedded Flutter widget is memoized so an action-log rebuild doesn't
   // tear down and re-run the Flutter surface; it is recreated only on Preview.
   Object? _flutterWidget;
+
+  JSFunction? _resizeListener;
+
+  @override
+  void initState() {
+    super.initState();
+    _wide = _computeWide();
+    _resizeListener = ((web.Event _) => _updateLayout()).toJS;
+    web.window.addEventListener('resize', _resizeListener);
+  }
+
+  @override
+  void dispose() {
+    if (_resizeListener != null) {
+      web.window.removeEventListener('resize', _resizeListener);
+    }
+    super.dispose();
+  }
+
+  bool _computeWide() {
+    final int avail = web.window.innerWidth - (_editorOpen ? _editorWidth : 0);
+    return avail >= _sideBySideMin;
+  }
+
+  void _updateLayout() {
+    final bool wide = _computeWide();
+    if (wide != _wide) setState(() => _wide = wide);
+  }
 
   void _onAction(A2uiClientAction a) {
     setState(() {
@@ -135,35 +179,97 @@ class _SampleScreenState extends State<SampleScreen> {
         'display': 'flex',
         'flex-direction': 'column',
         'min-width': '0',
-        'overflow': 'auto',
       }),
       [
         div(
-          styles: Styles(raw: <String, String>{'padding': '24px', 'flex': '1'}),
-          [_renderArea()],
+          styles: Styles(raw: <String, String>{
+            'flex': '1',
+            'display': 'flex',
+            'min-height': '0',
+          }),
+          [_previewPanes()],
         ),
         _logPanel(),
       ],
     );
   }
 
-  Component _renderArea() {
-    if (_framework == 'Jaspr') {
-      final SampleSpec spec = SampleSpec.fromData(
-        label: _raw.label,
-        template: _template,
-        schemaJson: _schema,
-        messagesJson: _messages,
-        framework: 'Jaspr',
-      );
-      return SampleView(
-        key: ValueKey<String>('jaspr-$_renderKey'),
-        template: spec.catalogSource,
-        schema: spec.catalogSchema,
-        messages: spec.messages,
-        onAction: _onAction,
+  /// Side-by-side Jaspr + Flutter panes when wide; otherwise the single active
+  /// (tab-selected) render.
+  Component _previewPanes() {
+    if (_wide) {
+      return div(
+        styles: Styles(raw: <String, String>{
+          'flex': '1',
+          'display': 'flex',
+          'min-width': '0',
+        }),
+        [
+          _pane('Jaspr', _jasprView(), borderRight: true),
+          _pane('Flutter', _flutterView(), borderRight: false),
+        ],
       );
     }
+    return _pane(
+      _framework,
+      _framework == 'Jaspr' ? _jasprView() : _flutterView(),
+      borderRight: false,
+    );
+  }
+
+  /// A labeled, independently scrolling render column.
+  Component _pane(String label, Component child, {required bool borderRight}) {
+    return div(
+      styles: Styles(raw: <String, String>{
+        'flex': '1',
+        'min-width': '0',
+        'display': 'flex',
+        'flex-direction': 'column',
+        if (borderRight) 'border-right': '1px solid #eee',
+      }),
+      [
+        div(
+          styles: Styles(raw: <String, String>{
+            'font': '600 11px system-ui',
+            'letter-spacing': '.05em',
+            'text-transform': 'uppercase',
+            'color': '#888',
+            'padding': '8px 24px',
+            'border-bottom': '1px solid #f0f0f0',
+          }),
+          [Component.text(label)],
+        ),
+        div(
+          styles: Styles(raw: <String, String>{
+            'flex': '1',
+            'min-height': '0',
+            'overflow': 'auto',
+            'padding': '24px',
+          }),
+          [child],
+        ),
+      ],
+    );
+  }
+
+  Component _jasprView() {
+    final SampleSpec spec = SampleSpec.fromData(
+      label: _raw.label,
+      template: _template,
+      schemaJson: _schema,
+      messagesJson: _messages,
+      framework: 'Jaspr',
+    );
+    return SampleView(
+      key: ValueKey<String>('jaspr-$_renderKey'),
+      template: spec.catalogSource,
+      schema: spec.catalogSchema,
+      messages: spec.messages,
+      onAction: _onAction,
+    );
+  }
+
+  Component _flutterView() {
     _flutterWidget ??= _makeFlutterWidget();
     return FlutterEmbedView(
       key: ValueKey<String>('flutter-$_renderKey'),
@@ -230,12 +336,18 @@ class _SampleScreenState extends State<SampleScreen> {
           [Component.text(_raw.label)],
         ),
         button(
-          onClick: () => setState(() => _editorOpen = !_editorOpen),
+          onClick: () => setState(() {
+            _editorOpen = !_editorOpen;
+            _wide = _computeWide();
+          }),
           styles: _btn(_editorOpen),
           [Component.text('✎ Code')],
         ),
-        _toggle('Jaspr'),
-        _toggle('Flutter'),
+        // When wide, both renders show at once, so the tab toggle is hidden.
+        if (!_wide) ...<Component>[
+          _toggle('Jaspr'),
+          _toggle('Flutter'),
+        ],
       ],
     );
   }
@@ -249,7 +361,7 @@ class _SampleScreenState extends State<SampleScreen> {
   Component _editor() {
     return div(
       styles: Styles(raw: <String, String>{
-        'width': '420px',
+        'width': '${_editorWidth}px',
         'border-left': '1px solid #eee',
         'display': 'flex',
         'flex-direction': 'column',

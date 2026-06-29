@@ -40,3 +40,10 @@ There is intentionally **no deployment config** in this repo.
   (`lib/flutter_host.dart` is the only file that imports `package:flutter`).
 - The Flutter engine is preloaded at page start (`web/main.dart`), because the
   deferred Flutter library fails to load if triggered lazily on first toggle.
+- The sample screen is responsive: when the preview pane (the viewport minus the
+  editor sidebar, when open) is at least 800px wide, the Jaspr and Flutter
+  renders show **side by side**; below that they collapse into a Jaspr/Flutter
+  **tab toggle**. The breakpoint is computed in Dart from a `resize` listener
+  (`lib/sample_screen.dart`) rather than a CSS media query, so it can account for
+  the editor's width and avoid mounting the Flutter engine in tab mode unless the
+  Flutter tab is selected.

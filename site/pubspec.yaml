@@ -19,6 +19,7 @@ dependencies:
   jaspr: ^0.23.1
   jaspr_flutter_embed: any
   jaspr_router: any
+  web: ^1.0.0
 
 dev_dependencies:
   build_runner: ^2.15.0

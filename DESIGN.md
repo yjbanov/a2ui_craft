@@ -846,6 +846,33 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
         library is its own smell). Design note for then: a surface may reference a
         component the host didn't load, so the runtime must **degrade gracefully**
         (unknown component → placeholder/skip, never crash).
+- [ ] **Systematic cross-adapter geometry testing for whole samples (Ahem test
+      mode).** Today's parity net is the **abstract geometry-with-tolerance
+      conformance** (`a2ui_craft_testing`): fixed-size, text-free fixtures,
+      asserted exactly on both adapters' real layout. It is deliberately text-free
+      because Flutter (its test font) and the browser shape real fonts
+      differently. Interim strategy — sufficient for now — is to **distill every
+      spotted cross-adapter divergence into a minimal fixture case** (as the Stats
+      Card / Contact Card hug-sizing fix did) and to use the **demo site's
+      side-by-side Jaspr/Flutter view as the manual gate** when adding a sample
+      ("looks right on both" is part of done). The follow-up is to pin *whole
+      samples* (not just hand-built fixtures) geometrically across adapters. The
+      chosen approach — **one** golden variant, not a stopgap — is an **Ahem-style
+      test font** (every glyph a statically sized em box) forced on both renderers,
+      so text-driven layout becomes deterministic and a *single* shared golden per
+      sample can be compared on both adapters with tight tolerance. Prior art makes
+      this low-risk: Flutter widget tests pass across mobile and web with Ahem at
+      tight tolerances **including the old HTML-renderer era, where the browser did
+      all text shaping** — the exact Flutter-vs-browser boundary we have. Effort is
+      a ~1–2 day spike (load Ahem via `@font-face` in the headless-Chrome harness;
+      pin `font-size`/`line-height` against Flutter's `StrutStyle`; the Flutter
+      test font is already Ahem-equivalent), **not** a re-creation of Flutter's
+      test infrastructure. Deliberately deferred: golden harnesses pay off against
+      a *stable* surface, and the primitive set + layout model are still moving
+      (the cross-axis sizing model changed recently); build this once they settle
+      and the sample count outgrows side-by-side eyeballing — and explicitly
+      **avoid** standing up a loose per-adapter golden first (two golden variants
+      is the thing to not do).
 - [ ] Prove the state-model axis with a third, non-Flutter-like framework.
 - [ ] **Security: uphold A2UI's secure-by-design promise (§12).** When templates
       are delivered ephemerally, treat them as untrusted input: add engine-level

@@ -32,3 +32,8 @@ jaspr:
   # Embed Flutter (via jaspr_flutter_embed) so a sample can render on the Flutter
   # adapter inside the Jaspr host.
   flutter: embedded
+
+flutter:
+  # Bundle the Material Icons font into the embedded Flutter build so `Icon`
+  # glyphs render instead of tofu boxes (mirrors the Flutter example app).
+  uses-material-design: true

@@ -27,6 +27,10 @@ The static bundle is self-contained (the Jaspr app, the compiled Flutter engine,
 and `canvaskit/`). Serving it from a plain static file server works for the
 landing page and in-app navigation; deep links to a sample route need an SPA
 rewrite (serve `index.html` for unknown paths) — `jaspr serve` already does this.
+`web/index.html` sets `<base href="/">` so that once `index.html` is served for a
+deep path like `/sample/contact_card`, its relative assets (`main.dart.js`,
+`flutter_bootstrap.js`, the Flutter assets) still load from the site root instead
+of being requested under `/sample/`.
 
 There is intentionally **no deployment config** in this repo.
 

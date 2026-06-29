@@ -5,7 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="scaffolded-by" content="https://github.com/schultek/jaspr" />
 
+    <!-- Resolve all asset URLs from the site root, so deep links like
+         /sample/contact_card still load main.dart.js, flutter_bootstrap.js, and
+         the Flutter assets (which would otherwise be requested under /sample/). -->
+    <base href="/" />
+
     <title>A2UI Craft</title>
+
+    <!-- Material Icons web font, so the Jaspr `Icon` ligatures (class
+         "material-icons") render as glyphs instead of literal text. -->
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons"
+      rel="stylesheet"
+    />
 
     <!-- The generated CSS (all @css declarations from your components). -->
     <link rel="stylesheet" href="main.css" />

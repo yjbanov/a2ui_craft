@@ -797,6 +797,20 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
       templates over the bare input + a `Text`. Cross-cutting `weight` (flex-grow)
       and theming remain open. (The pinned `a2ui_core` implements only
       `formatString`; baking formatted data sidesteps the rest.)
+  - [x] **Demo site (`site/`).** A single Jaspr web app — *with Flutter embedded*
+        (`jaspr_flutter_embed`) — to browse the samples, flip each between the
+        Jaspr and Flutter renderers, and open/edit its template/schema/messages
+        with a live preview. Prerequisites that landed with it: samples became
+        **code-free data trios** (`samples/<id>/{template.craft,schema.json,
+        messages.json}`, the single source of truth, baked to a zero-IO constants
+        file by `tool/gen_samples.dart`, decoded by `SampleSpec.fromData`); the
+        per-framework renderer was extracted into each adapter as a reusable
+        `SampleView`; and a generic **action log** replaced per-sample Dart action
+        handlers. Built and served locally (`jaspr serve`); no deployment config
+        in-repo. Key embed gotcha, recorded: the deferred Flutter engine must be
+        **preloaded at page start** (`FlutterEmbedView.preload()`), as a lazy
+        first-toggle load fails. The fixed built-in primitive set is a known
+        limitation (DartPad-style dynamic primitives are out of scope).
 - [ ] **`extended_primitives` — keep the core dependency-light.** The **core
       primitive set is the universal, dependency-light vocabulary** every adapter
       on every target can implement cheaply (layout, text, `Heading`, `Image`,

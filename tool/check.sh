@@ -47,6 +47,9 @@ step "Analyze: a2ui_craft_flutter"
 step "Analyze: a2ui_craft_flutter/example"
 (cd packages/a2ui_craft_flutter/example && flutter analyze)
 
+step "Analyze: site (Jaspr demo site with embedded Flutter)"
+(cd site && dart analyze)
+
 step "Analyze: tool/testing (repo-wide checks)"
 (cd tool/testing && dart analyze)
 

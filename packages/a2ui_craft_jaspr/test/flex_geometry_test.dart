@@ -73,6 +73,7 @@ class _JasprGeometryDriver implements CraftGeometryDriver {
 
 void main() {
   runFlexGeometryConformance(_JasprGeometryDriver());
+  runCrossAxisSizingGeometryConformance(_JasprGeometryDriver());
   runBoxGeometryConformance(_JasprGeometryDriver());
   runAtomGeometryConformance(_JasprGeometryDriver());
   runLayoutGeometryConformance(_JasprGeometryDriver());

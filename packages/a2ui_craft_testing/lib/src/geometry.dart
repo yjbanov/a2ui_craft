@@ -206,6 +206,63 @@ void runFlexGeometryConformance(CraftGeometryDriver driver) {
   );
 }
 
+/// The shared **geometric** specification for **cross-axis hug sizing** — how a
+/// `Flex` that hugs its cross axis resolves its extent when a bounded ancestor
+/// and a cross-filling child are in play.
+///
+/// This guards the parity decision that a hug cross axis defers to the parent's
+/// constraints (Flutter carries a bounded cross extent down; the Jaspr adapter
+/// uses CSS `auto`, not `fit-content`) rather than collapsing to content. Both
+/// fixtures pass on Flutter and *failed* on the prior Jaspr `fit-content` model,
+/// so a regression of either — the cross-axis sizing or the stretch `Divider` —
+/// turns this red. These were the Stats Card / Contact Card divergences.
+void runCrossAxisSizingGeometryConformance(CraftGeometryDriver driver) {
+  driver.defineTest(
+    'a fill child reaches a fixed-width ancestor through a hug column',
+    (CraftGeometryTester tester) async {
+      await tester.mountTemplate('''
+        import core;
+        widget root = Box(key: "box", width: 200.0, height: 100.0,
+          child: Column(key: "col", children: [
+            Row(key: "fill", width: "fill", height: 20.0, children: [
+              SizedBox(key: "a", width: 10.0, height: 20.0),
+            ]),
+          ])
+        );
+      ''');
+      // The column hugs (no explicit cross extent), but the fixed 200-wide Box
+      // must reach the `fill` Row through it: the column resolves to 200 and the
+      // Row fills it — it does not collapse to the 10-wide content.
+      expect((await tester.rectOf('col')).width, closeTo(200, _tol));
+      expect((await tester.rectOf('fill')).width, closeTo(200, _tol));
+    },
+  );
+
+  driver.defineTest(
+    'a Divider spans a hug column and center uses the resolved width',
+    (CraftGeometryTester tester) async {
+      await tester.mountTemplate('''
+        import core;
+        widget root = Box(key: "box", width: 120.0,
+          child: Column(key: "col", crossAxisAlignment: "center", children: [
+            SizedBox(key: "wide", width: 40.0, height: 20.0),
+            Divider(key: "div"),
+            SizedBox(key: "narrow", width: 20.0, height: 20.0),
+          ])
+        );
+      ''');
+      // The column fills the 120-wide Box; the Divider spans that full width
+      // (it does not collapse), and the 20-wide child centers within 120 (offset
+      // (120-20)/2 = 50) — not within a content-collapsed width.
+      final CraftRect col = await tester.rectOf('col');
+      expect(col.width, closeTo(120, _tol));
+      expect((await tester.rectOf('div')).width, closeTo(120, _tol));
+      expect(
+          (await tester.rectOf('narrow')).left - col.left, closeTo(50, _tol));
+    },
+  );
+}
+
 /// The shared **geometric** specification for the `Box` primitive (size +
 /// padding + margin on the constrained common model).
 ///

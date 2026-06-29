@@ -14,3 +14,4 @@ export 'src/a2ui_to_rfw_adapter.dart';
 export 'src/core_components.dart';
 export 'src/remote_component.dart';
 export 'src/runtime.dart';
+export 'src/sample_view.dart';

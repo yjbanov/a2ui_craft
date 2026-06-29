@@ -24,11 +24,12 @@ class GalleryScreen extends StatelessComponent {
       [
         h1(
             styles: Styles(raw: <String, String>{'margin': '0 0 4px'}),
-            [text('A2UI Craft')]),
+            [Component.text('A2UI Craft')]),
         p(
           styles: Styles(raw: <String, String>{'color': '#555', 'margin': '0'}),
           [
-            text('One UI protocol, two rendering engines. Open a sample, flip '
+            Component.text(
+                'One UI protocol, two rendering engines. Open a sample, flip '
                 'it between Flutter and Jaspr, and edit its template, schema, '
                 'and messages live.'),
           ],
@@ -52,7 +53,7 @@ class GalleryScreen extends StatelessComponent {
                   'transition': 'box-shadow .15s, border-color .15s',
                 }),
                 events: events(onClick: () => context.push('/sample/${s.id}')),
-                [text(s.label)],
+                [Component.text(s.label)],
               ),
           ],
         ),

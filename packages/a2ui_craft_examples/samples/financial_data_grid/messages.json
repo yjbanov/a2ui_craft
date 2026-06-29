@@ -1,0 +1,45 @@
+[
+  {
+    "version": "v0.9",
+    "createSurface": {
+      "surfaceId": "demo",
+      "catalogId": "demo",
+      "sendDataModel": false
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateComponents": {
+      "surfaceId": "demo",
+      "components": [
+        {
+          "id": "root",
+          "component": "FinancialGrid",
+          "assets": [
+            {
+              "name": "Bitcoin",
+              "symbol": "BTC",
+              "price": "$43,500.25",
+              "change": "+1.2%",
+              "marketCap": "$850.0B"
+            },
+            {
+              "name": "Ethereum",
+              "symbol": "ETH",
+              "price": "$2,250.50",
+              "change": "-0.5%",
+              "marketCap": "$270.0B"
+            },
+            {
+              "name": "Solana",
+              "symbol": "SOL",
+              "price": "$95.80",
+              "change": "+5.4%",
+              "marketCap": "$40.0B"
+            }
+          ]
+        }
+      ]
+    }
+  }
+]

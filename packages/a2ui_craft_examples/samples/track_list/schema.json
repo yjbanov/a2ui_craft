@@ -1,0 +1,18 @@
+{
+  "catalogId": "demo",
+  "components": {
+    "TrackList": {
+      "properties": {
+        "playlistName": {
+          "$ref": "DynamicString"
+        },
+        "tracks": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  }
+}

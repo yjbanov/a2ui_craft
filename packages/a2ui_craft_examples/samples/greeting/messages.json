@@ -1,0 +1,43 @@
+[
+  {
+    "version": "v0.9",
+    "createSurface": {
+      "surfaceId": "demo",
+      "catalogId": "demo",
+      "sendDataModel": false
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateDataModel": {
+      "surfaceId": "demo",
+      "path": "/",
+      "value": {
+        "greeting": "Press the button."
+      }
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateComponents": {
+      "surfaceId": "demo",
+      "components": [
+        {
+          "id": "root",
+          "component": "Greeting",
+          "title": "A2UI Craft × {{framework}}",
+          "message": {
+            "path": "/greeting"
+          },
+          "buttonLabel": "Say hi",
+          "action": {
+            "event": {
+              "name": "greet",
+              "context": {}
+            }
+          }
+        }
+      ]
+    }
+  }
+]

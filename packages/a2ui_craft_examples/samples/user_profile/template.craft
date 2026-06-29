@@ -1,0 +1,22 @@
+import core;
+
+widget Stat = Column(crossAxisAlignment: "center", gap: 2.0, children: [
+  Text(text: args.value),
+  Text(text: args.label, variant: "caption"),
+]);
+
+widget UserProfile = Card(child: Column(crossAxisAlignment: "center", gap: 8.0,
+  children: [
+    Image(url: args.avatar, variant: "avatar", fit: "cover"),
+    Column(crossAxisAlignment: "center", gap: 2.0, children: [
+      Heading(text: args.name, level: 2),
+      Text(text: args.username, variant: "caption"),
+    ]),
+    Text(text: args.bio),
+    Row(mainAxisAlignment: "spaceAround", width: "fill", children: [
+      Stat(value: args.followers, label: "Followers"),
+      Stat(value: args.following, label: "Following"),
+      Stat(value: args.posts, label: "Posts"),
+    ]),
+    Button(child: Text(text: args.followText)),
+  ]));

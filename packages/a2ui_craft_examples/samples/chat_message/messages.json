@@ -1,0 +1,37 @@
+[
+  {
+    "version": "v0.9",
+    "createSurface": {
+      "surfaceId": "demo",
+      "catalogId": "demo",
+      "sendDataModel": false
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateComponents": {
+      "surfaceId": "demo",
+      "components": [
+        {
+          "id": "root",
+          "component": "ChatMessage",
+          "channelName": "project-updates",
+          "messages": [
+            {
+              "avatar": "https://example.com/mike.jpg",
+              "username": "Mike Chen",
+              "time": "10:32 AM",
+              "text": "Just pushed the new API changes. Ready for review."
+            },
+            {
+              "avatar": "https://example.com/sarah.jpg",
+              "username": "Sarah Kim",
+              "time": "10:45 AM",
+              "text": "Great! I'll take a look after standup."
+            }
+          ]
+        }
+      ]
+    }
+  }
+]

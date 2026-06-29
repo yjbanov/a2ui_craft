@@ -1,0 +1,21 @@
+{
+  "catalogId": "demo",
+  "components": {
+    "CreditCard": {
+      "properties": {
+        "cardType": {
+          "$ref": "DynamicString"
+        },
+        "cardNumber": {
+          "$ref": "DynamicString"
+        },
+        "holderName": {
+          "$ref": "DynamicString"
+        },
+        "expiryDate": {
+          "$ref": "DynamicString"
+        }
+      }
+    }
+  }
+}

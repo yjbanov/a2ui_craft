@@ -1,0 +1,60 @@
+[
+  {
+    "version": "v0.9",
+    "createSurface": {
+      "surfaceId": "demo",
+      "catalogId": "demo",
+      "sendDataModel": false
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateDataModel": {
+      "surfaceId": "demo",
+      "path": "/",
+      "value": {
+        "name": "",
+        "agree": false
+      }
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateComponents": {
+      "surfaceId": "demo",
+      "components": [
+        {
+          "id": "root",
+          "component": "Stack",
+          "children": [
+            "field",
+            "greeting",
+            "toggle"
+          ]
+        },
+        {
+          "id": "field",
+          "component": "Field",
+          "label": "Your name",
+          "value": {
+            "path": "/name"
+          }
+        },
+        {
+          "id": "greeting",
+          "component": "Label",
+          "text": {
+            "path": "/name"
+          }
+        },
+        {
+          "id": "toggle",
+          "component": "Toggle",
+          "value": {
+            "path": "/agree"
+          }
+        }
+      ]
+    }
+  }
+]

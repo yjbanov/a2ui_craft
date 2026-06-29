@@ -1,0 +1,17 @@
+import core;
+
+widget Unit = Column(crossAxisAlignment: "center", gap: 2.0, children: [
+  Text(text: args.value),
+  Text(text: args.label, variant: "caption"),
+]);
+
+widget CountdownTimer = Card(child: Column(crossAxisAlignment: "center",
+  gap: 8.0, children: [
+    Heading(text: args.eventName, level: 2),
+    Row(mainAxisAlignment: "spaceAround", width: "fill", children: [
+      Unit(value: args.days, label: "Days"),
+      Unit(value: args.hours, label: "Hours"),
+      Unit(value: args.minutes, label: "Minutes"),
+    ]),
+    Text(text: args.targetDate),
+  ]));

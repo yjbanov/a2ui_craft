@@ -1,0 +1,15 @@
+{
+  "catalogId": "demo",
+  "components": {
+    "Gallery": {
+      "properties": {
+        "images": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

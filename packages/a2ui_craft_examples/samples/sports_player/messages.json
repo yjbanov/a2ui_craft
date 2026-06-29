@@ -1,0 +1,32 @@
+[
+  {
+    "version": "v0.9",
+    "createSurface": {
+      "surfaceId": "demo",
+      "catalogId": "demo",
+      "sendDataModel": false
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateComponents": {
+      "surfaceId": "demo",
+      "components": [
+        {
+          "id": "root",
+          "component": "SportsPlayer",
+          "image": "https://example.com/player.jpg",
+          "name": "Marcus Johnson",
+          "number": "#23",
+          "team": "LA Lakers",
+          "stat1Value": "28.4",
+          "stat1Label": "PPG",
+          "stat2Value": "7.2",
+          "stat2Label": "RPG",
+          "stat3Value": "6.8",
+          "stat3Label": "APG"
+        }
+      ]
+    }
+  }
+]

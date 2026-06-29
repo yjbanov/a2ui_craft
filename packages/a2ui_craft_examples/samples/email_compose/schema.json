@@ -1,0 +1,30 @@
+{
+  "catalogId": "demo",
+  "components": {
+    "EmailCompose": {
+      "properties": {
+        "from": {
+          "$ref": "DynamicString"
+        },
+        "to": {
+          "$ref": "DynamicString"
+        },
+        "subject": {
+          "$ref": "DynamicString"
+        },
+        "greeting": {
+          "$ref": "DynamicString"
+        },
+        "body": {
+          "$ref": "DynamicString"
+        },
+        "closing": {
+          "$ref": "DynamicString"
+        },
+        "signature": {
+          "$ref": "DynamicString"
+        }
+      }
+    }
+  }
+}

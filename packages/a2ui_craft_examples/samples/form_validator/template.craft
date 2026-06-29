@@ -1,0 +1,19 @@
+import core;
+
+widget Labelled = Column(gap: 4.0, children: [
+  Text(text: args.label, variant: "caption"),
+  TextField(value: args.value),
+]);
+
+widget FormValidator = Card(child: Column(crossAxisAlignment: "stretch",
+  gap: 10.0, children: [
+    Text(text: args.welcome),
+    Labelled(label: args.emailLabel, value: args.email),
+    Labelled(label: args.phoneLabel, value: args.phone),
+    Labelled(label: args.zipLabel, value: args.zip),
+    Row(gap: 8.0, crossAxisAlignment: "center", children: [
+      Checkbox(value: args.agree),
+      Expanded(child: Text(text: args.termsLabel, variant: "caption")),
+    ]),
+    Button(child: Text(text: args.submitLabel)),
+  ]));

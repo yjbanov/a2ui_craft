@@ -1,0 +1,15 @@
+import core;
+
+widget AccountBalance = Card(child: Column(gap: 8.0, children: [
+  Row(gap: 8.0, crossAxisAlignment: "center", children: [
+    Icon(icon: "payment"),
+    Text(text: args.accountName),
+  ]),
+  Text(text: args.balance),
+  Text(text: args.lastUpdated, variant: "caption"),
+  Divider(),
+  Row(gap: 12.0, children: [
+    Button(child: Text(text: args.transferLabel)),
+    Button(child: Text(text: args.payLabel)),
+  ]),
+]));

@@ -1,0 +1,30 @@
+{
+  "catalogId": "demo",
+  "components": {
+    "FlightStatus": {
+      "properties": {
+        "flightNumber": {
+          "$ref": "DynamicString"
+        },
+        "date": {
+          "$ref": "DynamicString"
+        },
+        "origin": {
+          "$ref": "DynamicString"
+        },
+        "destination": {
+          "$ref": "DynamicString"
+        },
+        "departure": {
+          "$ref": "DynamicString"
+        },
+        "status": {
+          "$ref": "DynamicString"
+        },
+        "arrival": {
+          "$ref": "DynamicString"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,44 @@
+[
+  {
+    "version": "v0.9",
+    "createSurface": {
+      "surfaceId": "demo",
+      "catalogId": "demo",
+      "sendDataModel": false
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateComponents": {
+      "surfaceId": "demo",
+      "components": [
+        {
+          "id": "root",
+          "component": "Incremental",
+          "restaurants": [
+            {
+              "title": "The Golden Fork",
+              "subtitle": "Fine Dining & Spirits",
+              "address": "123 Gastronomy Lane"
+            },
+            {
+              "title": "Ocean's Bounty",
+              "subtitle": "Fresh Daily Seafood",
+              "address": "456 Shoreline Dr"
+            },
+            {
+              "title": "Pizzeria Roma",
+              "subtitle": "Authentic Wood-Fired Pizza",
+              "address": "789 Napoli Way"
+            },
+            {
+              "title": "Spice Route",
+              "subtitle": "Exotic Flavors from the East",
+              "address": "101 Silk Road St"
+            }
+          ]
+        }
+      ]
+    }
+  }
+]

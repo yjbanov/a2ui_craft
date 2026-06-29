@@ -1,0 +1,5 @@
+import core;
+
+widget Gallery = ScrollView(child: Column(children: [
+  ...for url in args.images: Image(url: url),
+]));

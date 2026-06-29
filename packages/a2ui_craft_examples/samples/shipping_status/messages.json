@@ -1,0 +1,43 @@
+[
+  {
+    "version": "v0.9",
+    "createSurface": {
+      "surfaceId": "demo",
+      "catalogId": "demo",
+      "sendDataModel": false
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateComponents": {
+      "surfaceId": "demo",
+      "components": [
+        {
+          "id": "root",
+          "component": "ShippingStatus",
+          "title": "Package Status",
+          "trackingNumber": "Tracking: 1Z999AA10123456784",
+          "eta": "Estimated delivery: Today by 8 PM",
+          "steps": [
+            {
+              "icon": "check",
+              "label": "Order Placed"
+            },
+            {
+              "icon": "check",
+              "label": "Shipped"
+            },
+            {
+              "icon": "send",
+              "label": "Out for Delivery"
+            },
+            {
+              "icon": "check",
+              "label": "Delivered"
+            }
+          ]
+        }
+      ]
+    }
+  }
+]

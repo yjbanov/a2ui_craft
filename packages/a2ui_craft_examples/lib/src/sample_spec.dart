@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:convert';
+
 import 'package:a2ui_core/a2ui_core.dart';
 
 /// The `a2ui_core` catalog id and surface id the samples' messages reference.
@@ -45,6 +47,42 @@ class SampleSpec {
     required this.messages,
     this.onAction,
   });
+
+  /// Decodes a sample from its three **code-free data files**: the RFW
+  /// [template] (a `.craft` source string), the component API [schemaJson]
+  /// (a JSON Schema catalog document), and [messagesJson] (a JSON array of A2UI
+  /// messages). This is the inverse of authoring a sample in Dart — the site and
+  /// the example apps build every built-in sample this way, and the site's editor
+  /// rebuilds an edited sample with it for live preview.
+  ///
+  /// A `{{framework}}` token in any of the three strings is replaced with
+  /// [framework] when given (so a sample can show which engine renders it).
+  /// [onAction] is supplied by the host (e.g. the site's action log); the data
+  /// files carry no action logic.
+  factory SampleSpec.fromData({
+    required String label,
+    required String template,
+    required String schemaJson,
+    required String messagesJson,
+    String? framework,
+    void Function(A2uiClientAction action, SampleHost host)? onAction,
+  }) {
+    String sub(String s) =>
+        framework == null ? s : s.replaceAll('{{framework}}', framework);
+    final Map<String, Object?> schema =
+        jsonDecode(sub(schemaJson)) as Map<String, Object?>;
+    final List<A2uiMessage> messages = <A2uiMessage>[
+      for (final Object? m in jsonDecode(sub(messagesJson)) as List<Object?>)
+        A2uiMessage.fromJson(m as Map<String, dynamic>),
+    ];
+    return SampleSpec(
+      label: label,
+      catalogSource: sub(template),
+      catalogSchema: schema,
+      messages: messages,
+      onAction: onAction,
+    );
+  }
 
   /// A short name for the gallery's navigation.
   final String label;

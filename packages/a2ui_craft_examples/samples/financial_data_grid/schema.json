@@ -1,0 +1,15 @@
+{
+  "catalogId": "demo",
+  "components": {
+    "FinancialGrid": {
+      "properties": {
+        "assets": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  }
+}

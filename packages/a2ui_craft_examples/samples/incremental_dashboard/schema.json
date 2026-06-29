@@ -1,0 +1,27 @@
+{
+  "catalogId": "demo",
+  "components": {
+    "Dashboard": {
+      "properties": {
+        "title": {
+          "$ref": "DynamicString"
+        },
+        "analyticsTitle": {
+          "$ref": "DynamicString"
+        },
+        "analyticsText": {
+          "$ref": "DynamicString"
+        },
+        "logsTitle": {
+          "$ref": "DynamicString"
+        },
+        "logs": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  }
+}

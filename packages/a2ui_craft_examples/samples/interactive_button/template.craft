@@ -1,0 +1,7 @@
+import core;
+
+widget InteractiveButton = Column(crossAxisAlignment: "center",
+  mainAxisAlignment: "center", gap: 12.0, children: [
+    Text(text: args.prompt),
+    Button(child: Text(text: args.label)),
+  ]);

@@ -1,0 +1,27 @@
+[
+  {
+    "version": "v0.9",
+    "createSurface": {
+      "surfaceId": "demo",
+      "catalogId": "demo",
+      "sendDataModel": false
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateComponents": {
+      "surfaceId": "demo",
+      "components": [
+        {
+          "id": "root",
+          "component": "AccountBalance",
+          "accountName": "Primary Checking",
+          "balance": "$12,458.32",
+          "lastUpdated": "Updated just now",
+          "transferLabel": "Transfer",
+          "payLabel": "Pay Bill"
+        }
+      ]
+    }
+  }
+]

@@ -1,0 +1,38 @@
+[
+  {
+    "version": "v0.9",
+    "createSurface": {
+      "surfaceId": "demo",
+      "catalogId": "demo",
+      "sendDataModel": false
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateComponents": {
+      "surfaceId": "demo",
+      "components": [
+        {
+          "id": "root",
+          "component": "CalendarDay",
+          "dayName": "Sunday",
+          "dayNumber": "28",
+          "events": [
+            {
+              "title": "Lunch",
+              "time": "12:00 - 12:45 PM"
+            },
+            {
+              "title": "Q1 roadmap review",
+              "time": "1:00 - 2:00 PM"
+            },
+            {
+              "title": "Team standup",
+              "time": "3:30 - 4:00 PM"
+            }
+          ]
+        }
+      ]
+    }
+  }
+]

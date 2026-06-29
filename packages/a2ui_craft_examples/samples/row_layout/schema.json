@@ -1,0 +1,15 @@
+{
+  "catalogId": "demo",
+  "components": {
+    "RowLayout": {
+      "properties": {
+        "left": {
+          "$ref": "DynamicString"
+        },
+        "right": {
+          "$ref": "DynamicString"
+        }
+      }
+    }
+  }
+}

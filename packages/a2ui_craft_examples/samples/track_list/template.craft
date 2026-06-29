@@ -1,0 +1,22 @@
+import core;
+
+widget TrackList = Card(child: Column(crossAxisAlignment: "stretch", gap: 8.0,
+  children: [
+    Row(gap: 6.0, crossAxisAlignment: "center", children: [
+      Icon(icon: "play"),
+      Heading(text: args.playlistName, level: 3),
+    ]),
+    Divider(),
+    Column(gap: 8.0, children: [
+      ...for track in args.tracks: Row(gap: 8.0, crossAxisAlignment: "center",
+        children: [
+          Text(text: track.number, variant: "caption"),
+          Image(url: track.art, variant: "avatar", fit: "cover"),
+          Expanded(child: Column(gap: 2.0, children: [
+            Text(text: track.title),
+            Text(text: track.artist, variant: "caption"),
+          ])),
+          Text(text: track.duration, variant: "caption"),
+        ]),
+    ]),
+  ]));

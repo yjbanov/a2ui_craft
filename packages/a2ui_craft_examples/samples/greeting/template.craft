@@ -1,0 +1,7 @@
+import core;
+
+widget Greeting = Column(children: [
+  Text(text: args.title),
+  Text(text: args.message),
+  Button(onPressed: args.action, child: Text(text: args.buttonLabel)),
+]);

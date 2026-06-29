@@ -1,0 +1,39 @@
+{
+  "catalogId": "demo",
+  "components": {
+    "FormValidator": {
+      "properties": {
+        "welcome": {
+          "$ref": "DynamicString"
+        },
+        "emailLabel": {
+          "$ref": "DynamicString"
+        },
+        "email": {
+          "$ref": "DynamicString"
+        },
+        "phoneLabel": {
+          "$ref": "DynamicString"
+        },
+        "phone": {
+          "$ref": "DynamicString"
+        },
+        "zipLabel": {
+          "$ref": "DynamicString"
+        },
+        "zip": {
+          "$ref": "DynamicString"
+        },
+        "agree": {
+          "$ref": "DynamicBoolean"
+        },
+        "termsLabel": {
+          "$ref": "DynamicString"
+        },
+        "submitLabel": {
+          "$ref": "DynamicString"
+        }
+      }
+    }
+  }
+}

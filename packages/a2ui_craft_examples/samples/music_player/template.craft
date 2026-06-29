@@ -1,0 +1,20 @@
+import core;
+
+widget MusicPlayer = Card(child: Column(crossAxisAlignment: "center", gap: 8.0,
+  children: [
+    Image(url: args.albumArt, variant: "mediumFeature", fit: "cover"),
+    Column(crossAxisAlignment: "center", gap: 2.0, children: [
+      Heading(text: args.title, level: 2),
+      Text(text: args.artist, variant: "caption"),
+    ]),
+    Slider(value: 0.45, min: 0.0, max: 1.0),
+    Row(mainAxisAlignment: "spaceBetween", width: "fill", children: [
+      Text(text: args.currentTime, variant: "caption"),
+      Text(text: args.totalTime, variant: "caption"),
+    ]),
+    Row(mainAxisAlignment: "center", gap: 16.0, children: [
+      Button(child: Icon(icon: "skipPrevious")),
+      Button(child: Icon(icon: args.playIcon)),
+      Button(child: Icon(icon: "skipNext")),
+    ]),
+  ]));

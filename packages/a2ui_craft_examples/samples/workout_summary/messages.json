@@ -1,0 +1,27 @@
+[
+  {
+    "version": "v0.9",
+    "createSurface": {
+      "surfaceId": "demo",
+      "catalogId": "demo",
+      "sendDataModel": false
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateComponents": {
+      "surfaceId": "demo",
+      "components": [
+        {
+          "id": "root",
+          "component": "WorkoutSummary",
+          "title": "Workout Complete",
+          "duration": "32:15",
+          "calories": "385",
+          "distance": "5.2 km",
+          "date": "Monday, Dec 15 at 7:30 AM"
+        }
+      ]
+    }
+  }
+]

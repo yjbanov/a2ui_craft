@@ -1,0 +1,16 @@
+import core;
+
+widget ContactCard = Card(
+  child: Column(crossAxisAlignment: "center", gap: 8.0, children: [
+    Image(url: args.avatar, variant: "avatar", fit: "cover"),
+    Text(text: args.name),
+    Text(text: args.title, variant: "caption"),
+    Divider(),
+    Column(gap: 6.0, children: [
+      Row(gap: 8.0, children: [Icon(icon: "phone"), Text(text: args.phone)]),
+      Row(gap: 8.0, children: [Icon(icon: "email"), Text(text: args.email)]),
+      Row(gap: 8.0,
+          children: [Icon(icon: "location"), Text(text: args.location)]),
+    ]),
+  ]),
+);

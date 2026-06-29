@@ -1,0 +1,37 @@
+import core;
+
+widget CoffeeOrder = Card(child: Column(gap: 8.0, children: [
+  Row(gap: 6.0, crossAxisAlignment: "center", children: [
+    Icon(icon: "favorite"),
+    Text(text: args.storeName),
+  ]),
+  Column(gap: 6.0, children: [
+    ...for item in args.items: Row(mainAxisAlignment: "spaceBetween",
+      crossAxisAlignment: "start", width: "fill", children: [
+        Column(children: [
+          Text(text: item.name),
+          Text(text: item.size, variant: "caption"),
+        ]),
+        Text(text: item.price),
+      ]),
+  ]),
+  Divider(),
+  Column(gap: 4.0, children: [
+    Row(mainAxisAlignment: "spaceBetween", width: "fill", children: [
+      Text(text: "Subtotal", variant: "caption"),
+      Text(text: args.subtotal),
+    ]),
+    Row(mainAxisAlignment: "spaceBetween", width: "fill", children: [
+      Text(text: "Tax", variant: "caption"),
+      Text(text: args.tax),
+    ]),
+    Row(mainAxisAlignment: "spaceBetween", width: "fill", children: [
+      Text(text: "Total"),
+      Text(text: args.total),
+    ]),
+  ]),
+  Row(gap: 12.0, children: [
+    Button(child: Text(text: "Purchase")),
+    Button(child: Text(text: "Add to cart")),
+  ]),
+]));

@@ -1,0 +1,21 @@
+{
+  "catalogId": "demo",
+  "components": {
+    "CalendarDay": {
+      "properties": {
+        "dayName": {
+          "$ref": "DynamicString"
+        },
+        "dayNumber": {
+          "$ref": "DynamicString"
+        },
+        "events": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  }
+}

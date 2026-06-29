@@ -1,0 +1,29 @@
+[
+  {
+    "version": "v0.9",
+    "createSurface": {
+      "surfaceId": "demo",
+      "catalogId": "demo",
+      "sendDataModel": false
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateComponents": {
+      "surfaceId": "demo",
+      "components": [
+        {
+          "id": "root",
+          "component": "ProductCard",
+          "imageUrl": "https://example.com/headphones.jpg",
+          "name": "Wireless Headphones Pro",
+          "stars": "★★★★★",
+          "reviews": "(2,847 reviews)",
+          "price": "$199.99",
+          "originalPrice": "$249.99",
+          "cta": "Add to Cart"
+        }
+      ]
+    }
+  }
+]

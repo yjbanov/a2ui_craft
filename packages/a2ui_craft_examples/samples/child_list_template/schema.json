@@ -1,0 +1,18 @@
+{
+  "catalogId": "demo",
+  "components": {
+    "ItemList": {
+      "properties": {
+        "title": {
+          "$ref": "DynamicString"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  }
+}

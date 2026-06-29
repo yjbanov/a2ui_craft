@@ -1,0 +1,21 @@
+{
+  "catalogId": "demo",
+  "components": {
+    "Greeting": {
+      "properties": {
+        "title": {
+          "$ref": "DynamicString"
+        },
+        "message": {
+          "$ref": "DynamicString"
+        },
+        "buttonLabel": {
+          "$ref": "DynamicString"
+        },
+        "action": {
+          "$ref": "Action"
+        }
+      }
+    }
+  }
+}

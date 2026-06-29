@@ -1,0 +1,7 @@
+import core;
+
+widget RowLayout = Row(mainAxisAlignment: "spaceBetween",
+  crossAxisAlignment: "center", width: "fill", children: [
+    Text(text: args.left),
+    Text(text: args.right, variant: "caption"),
+  ]);

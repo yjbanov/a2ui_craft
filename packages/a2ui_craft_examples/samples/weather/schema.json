@@ -1,0 +1,27 @@
+{
+  "catalogId": "demo",
+  "components": {
+    "Weather": {
+      "properties": {
+        "tempHigh": {
+          "$ref": "DynamicString"
+        },
+        "tempLow": {
+          "$ref": "DynamicString"
+        },
+        "location": {
+          "$ref": "DynamicString"
+        },
+        "description": {
+          "$ref": "DynamicString"
+        },
+        "forecast": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  }
+}

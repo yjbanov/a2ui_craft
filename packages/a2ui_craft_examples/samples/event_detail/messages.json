@@ -1,0 +1,28 @@
+[
+  {
+    "version": "v0.9",
+    "createSurface": {
+      "surfaceId": "demo",
+      "catalogId": "demo",
+      "sendDataModel": false
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateComponents": {
+      "surfaceId": "demo",
+      "components": [
+        {
+          "id": "root",
+          "component": "EventDetail",
+          "title": "Product Launch Meeting",
+          "time": "Fri, Dec 19 • 2:00 PM - 3:30 PM",
+          "location": "Conference Room A, Building 2",
+          "description": "Review final product specs and marketing materials before the Q1 launch.",
+          "acceptLabel": "Accept",
+          "declineLabel": "Decline"
+        }
+      ]
+    }
+  }
+]

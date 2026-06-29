@@ -1,0 +1,15 @@
+{
+  "catalogId": "demo",
+  "components": {
+    "MarkdownText": {
+      "properties": {
+        "title": {
+          "$ref": "DynamicString"
+        },
+        "content": {
+          "$ref": "DynamicString"
+        }
+      }
+    }
+  }
+}

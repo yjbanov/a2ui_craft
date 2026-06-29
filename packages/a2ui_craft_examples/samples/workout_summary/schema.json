@@ -1,0 +1,24 @@
+{
+  "catalogId": "demo",
+  "components": {
+    "WorkoutSummary": {
+      "properties": {
+        "title": {
+          "$ref": "DynamicString"
+        },
+        "duration": {
+          "$ref": "DynamicString"
+        },
+        "calories": {
+          "$ref": "DynamicString"
+        },
+        "distance": {
+          "$ref": "DynamicString"
+        },
+        "date": {
+          "$ref": "DynamicString"
+        }
+      }
+    }
+  }
+}

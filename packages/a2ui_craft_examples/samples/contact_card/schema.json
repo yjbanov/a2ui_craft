@@ -1,0 +1,27 @@
+{
+  "catalogId": "demo",
+  "components": {
+    "ContactCard": {
+      "properties": {
+        "name": {
+          "$ref": "DynamicString"
+        },
+        "title": {
+          "$ref": "DynamicString"
+        },
+        "avatar": {
+          "$ref": "DynamicString"
+        },
+        "phone": {
+          "$ref": "DynamicString"
+        },
+        "email": {
+          "$ref": "DynamicString"
+        },
+        "location": {
+          "$ref": "DynamicString"
+        }
+      }
+    }
+  }
+}

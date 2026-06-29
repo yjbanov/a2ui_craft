@@ -1,0 +1,26 @@
+[
+  {
+    "version": "v0.9",
+    "createSurface": {
+      "surfaceId": "demo",
+      "catalogId": "demo",
+      "sendDataModel": false
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateComponents": {
+      "surfaceId": "demo",
+      "components": [
+        {
+          "id": "root",
+          "component": "CreditCard",
+          "cardType": "VISA",
+          "cardNumber": "•••• •••• •••• 4242",
+          "holderName": "SARAH JOHNSON",
+          "expiryDate": "09/27"
+        }
+      ]
+    }
+  }
+]

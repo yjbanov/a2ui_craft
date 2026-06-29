@@ -1,0 +1,24 @@
+import core;
+
+widget Stat = Column(crossAxisAlignment: "center", gap: 2.0, children: [
+  Text(text: args.value),
+  Text(text: args.label, variant: "caption"),
+]);
+
+widget SportsPlayer = Card(child: Column(crossAxisAlignment: "center", gap: 8.0,
+  children: [
+    Image(url: args.image, variant: "avatar", fit: "cover"),
+    Column(crossAxisAlignment: "center", gap: 2.0, children: [
+      Heading(text: args.name, level: 2),
+      Row(gap: 8.0, crossAxisAlignment: "center", children: [
+        Text(text: args.number),
+        Text(text: args.team, variant: "caption"),
+      ]),
+    ]),
+    Divider(),
+    Row(mainAxisAlignment: "spaceAround", width: "fill", children: [
+      Stat(value: args.stat1Value, label: args.stat1Label),
+      Stat(value: args.stat2Value, label: args.stat2Label),
+      Stat(value: args.stat3Value, label: args.stat3Label),
+    ]),
+  ]));

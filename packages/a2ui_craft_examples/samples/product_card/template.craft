@@ -1,0 +1,15 @@
+import core;
+
+widget ProductCard = Card(child: Column(gap: 8.0, children: [
+  Image(url: args.imageUrl, variant: "mediumFeature", fit: "cover"),
+  Text(text: args.name),
+  Row(gap: 6.0, crossAxisAlignment: "center", children: [
+    Text(text: args.stars),
+    Text(text: args.reviews, variant: "caption"),
+  ]),
+  Row(gap: 8.0, crossAxisAlignment: "center", children: [
+    Text(text: args.price),
+    Text(text: args.originalPrice, variant: "caption"),
+  ]),
+  Button(child: Text(text: args.cta)),
+]));

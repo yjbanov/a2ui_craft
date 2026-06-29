@@ -1,0 +1,13 @@
+import core;
+
+widget Labelled = Column(gap: 4.0, children: [
+  Text(text: args.label, variant: "caption"),
+  TextField(value: args.value),
+]);
+
+widget FormattedText = Column(crossAxisAlignment: "stretch", gap: 8.0,
+  children: [
+    Labelled(label: args.inputLabel, value: args.inputValue),
+    Text(text: args.resultLabel, variant: "caption"),
+    Text(text: args.result),
+  ]);

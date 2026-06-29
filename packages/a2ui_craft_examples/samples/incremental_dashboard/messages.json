@@ -1,0 +1,37 @@
+[
+  {
+    "version": "v0.9",
+    "createSurface": {
+      "surfaceId": "demo",
+      "catalogId": "demo",
+      "sendDataModel": false
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateComponents": {
+      "surfaceId": "demo",
+      "components": [
+        {
+          "id": "root",
+          "component": "Dashboard",
+          "title": "System Dashboard",
+          "analyticsTitle": "Analytics",
+          "analyticsText": "Analytics are ready.",
+          "logsTitle": "Logs",
+          "logs": [
+            {
+              "message": "System boot complete."
+            },
+            {
+              "message": "All services healthy."
+            },
+            {
+              "message": "Waiting for user input."
+            }
+          ]
+        }
+      ]
+    }
+  }
+]

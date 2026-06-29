@@ -1,0 +1,26 @@
+import core;
+
+widget PurchaseComplete = Card(child: Column(crossAxisAlignment: "center",
+  gap: 8.0, children: [
+    Icon(icon: "check"),
+    Text(text: args.title),
+    Row(gap: 10.0, crossAxisAlignment: "center", children: [
+      Image(url: args.productImage, variant: "smallFeature", fit: "cover"),
+      Column(gap: 2.0, children: [
+        Text(text: args.productName),
+        Text(text: args.price),
+      ]),
+    ]),
+    Divider(),
+    Column(gap: 4.0, children: [
+      Row(gap: 6.0, crossAxisAlignment: "center", children: [
+        Icon(icon: "arrowForward"),
+        Text(text: args.delivery),
+      ]),
+      Row(gap: 6.0, children: [
+        Text(text: "Sold by:", variant: "caption"),
+        Text(text: args.seller),
+      ]),
+    ]),
+    Button(child: Text(text: args.cta)),
+  ]));

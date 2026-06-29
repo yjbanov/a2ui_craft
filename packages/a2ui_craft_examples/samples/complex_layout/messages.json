@@ -1,0 +1,28 @@
+[
+  {
+    "version": "v0.9",
+    "createSurface": {
+      "surfaceId": "demo",
+      "catalogId": "demo",
+      "sendDataModel": false
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateComponents": {
+      "surfaceId": "demo",
+      "components": [
+        {
+          "id": "root",
+          "component": "ComplexLayout",
+          "title": "User Profile Form",
+          "firstLabel": "First Name",
+          "firstValue": "",
+          "lastLabel": "Last Name",
+          "lastValue": "",
+          "footer": "Please fill out all fields."
+        }
+      ]
+    }
+  }
+]

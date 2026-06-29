@@ -1,0 +1,13 @@
+import core;
+
+widget ItemList = Card(child: Column(crossAxisAlignment: "stretch", gap: 8.0,
+  children: [
+    Text(text: args.title),
+    List(direction: "vertical", children: [
+      ...for item in args.items: Row(gap: 4.0, children: [
+        Text(text: item.name),
+        Text(text: " - Qty: "),
+        Text(text: item.quantity),
+      ]),
+    ]),
+  ]));

@@ -1,0 +1,23 @@
+import core;
+
+widget Labelled = Column(gap: 4.0, children: [
+  Text(text: args.label, variant: "caption"),
+  TextField(value: args.value),
+]);
+
+widget SignIn = Card(child: Column(crossAxisAlignment: "stretch", gap: 10.0,
+  children: [
+    Column(crossAxisAlignment: "center", gap: 2.0, children: [
+      Heading(text: args.title, level: 2),
+      Text(text: args.subtitle, variant: "caption"),
+    ]),
+    Labelled(label: args.emailLabel, value: args.email),
+    Labelled(label: args.passwordLabel, value: args.password),
+    Button(child: Text(text: args.submitLabel)),
+    Divider(),
+    Row(mainAxisAlignment: "center", gap: 6.0, crossAxisAlignment: "center",
+      children: [
+        Text(text: args.signupPrompt, variant: "caption"),
+        Button(child: Text(text: args.signupLabel)),
+      ]),
+  ]));

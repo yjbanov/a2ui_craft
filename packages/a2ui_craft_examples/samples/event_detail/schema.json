@@ -1,0 +1,27 @@
+{
+  "catalogId": "demo",
+  "components": {
+    "EventDetail": {
+      "properties": {
+        "title": {
+          "$ref": "DynamicString"
+        },
+        "time": {
+          "$ref": "DynamicString"
+        },
+        "location": {
+          "$ref": "DynamicString"
+        },
+        "description": {
+          "$ref": "DynamicString"
+        },
+        "acceptLabel": {
+          "$ref": "DynamicString"
+        },
+        "declineLabel": {
+          "$ref": "DynamicString"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "catalogId": "demo",
+  "components": {
+    "FormattedText": {
+      "properties": {
+        "inputLabel": {
+          "$ref": "DynamicString"
+        },
+        "inputValue": {
+          "$ref": "DynamicString"
+        },
+        "resultLabel": {
+          "$ref": "DynamicString"
+        },
+        "result": {
+          "$ref": "DynamicString"
+        }
+      }
+    }
+  }
+}

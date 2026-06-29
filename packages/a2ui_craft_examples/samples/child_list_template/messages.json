@@ -1,0 +1,37 @@
+[
+  {
+    "version": "v0.9",
+    "createSurface": {
+      "surfaceId": "demo",
+      "catalogId": "demo",
+      "sendDataModel": false
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateComponents": {
+      "surfaceId": "demo",
+      "components": [
+        {
+          "id": "root",
+          "component": "ItemList",
+          "title": "Dynamic Item List",
+          "items": [
+            {
+              "name": "Apple",
+              "quantity": "10"
+            },
+            {
+              "name": "Banana",
+              "quantity": "5"
+            },
+            {
+              "name": "Cherry",
+              "quantity": "20"
+            }
+          ]
+        }
+      ]
+    }
+  }
+]

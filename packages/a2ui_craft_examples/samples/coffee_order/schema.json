@@ -1,0 +1,27 @@
+{
+  "catalogId": "demo",
+  "components": {
+    "CoffeeOrder": {
+      "properties": {
+        "storeName": {
+          "$ref": "DynamicString"
+        },
+        "subtotal": {
+          "$ref": "DynamicString"
+        },
+        "tax": {
+          "$ref": "DynamicString"
+        },
+        "total": {
+          "$ref": "DynamicString"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,46 @@
+[
+  {
+    "version": "v0.9",
+    "createSurface": {
+      "surfaceId": "demo",
+      "catalogId": "demo",
+      "sendDataModel": false
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateComponents": {
+      "surfaceId": "demo",
+      "components": [
+        {
+          "id": "root",
+          "component": "TrackList",
+          "playlistName": "Focus Flow",
+          "tracks": [
+            {
+              "number": "1",
+              "art": "https://example.com/track1.jpg",
+              "title": "Weightless",
+              "artist": "Marconi Union",
+              "duration": "8:09"
+            },
+            {
+              "number": "2",
+              "art": "https://example.com/track2.jpg",
+              "title": "Clair de Lune",
+              "artist": "Debussy",
+              "duration": "5:12"
+            },
+            {
+              "number": "3",
+              "art": "https://example.com/track3.jpg",
+              "title": "Ambient Light",
+              "artist": "Brian Eno",
+              "duration": "6:45"
+            }
+          ]
+        }
+      ]
+    }
+  }
+]

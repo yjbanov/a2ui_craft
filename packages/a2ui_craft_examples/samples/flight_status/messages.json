@@ -1,0 +1,29 @@
+[
+  {
+    "version": "v0.9",
+    "createSurface": {
+      "surfaceId": "demo",
+      "catalogId": "demo",
+      "sendDataModel": false
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateComponents": {
+      "surfaceId": "demo",
+      "components": [
+        {
+          "id": "root",
+          "component": "FlightStatus",
+          "flightNumber": "OS 87",
+          "date": "Mon, Dec 15",
+          "origin": "Vienna",
+          "destination": "New York",
+          "departure": "10:15 AM",
+          "status": "On Time",
+          "arrival": "2:30 PM"
+        }
+      ]
+    }
+  }
+]

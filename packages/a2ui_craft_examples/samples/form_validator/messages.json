@@ -1,0 +1,32 @@
+[
+  {
+    "version": "v0.9",
+    "createSurface": {
+      "surfaceId": "demo",
+      "catalogId": "demo",
+      "sendDataModel": false
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateComponents": {
+      "surfaceId": "demo",
+      "components": [
+        {
+          "id": "root",
+          "component": "FormValidator",
+          "welcome": "Hello! Today is Monday, December 15.",
+          "emailLabel": "Email Address",
+          "email": "",
+          "phoneLabel": "Phone Number",
+          "phone": "",
+          "zipLabel": "Zip Code",
+          "zip": "",
+          "agree": false,
+          "termsLabel": "I agree to the terms and conditions",
+          "submitLabel": "Submit Registration"
+        }
+      ]
+    }
+  }
+]

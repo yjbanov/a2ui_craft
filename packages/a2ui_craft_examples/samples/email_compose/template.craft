@@ -1,0 +1,24 @@
+import core;
+
+widget Field = Column(gap: 1.0, children: [
+  Text(text: args.label, variant: "caption"),
+  Text(text: args.value),
+]);
+
+widget EmailCompose = SizedBox(width: 360.0, child: Card(child: Column(
+  crossAxisAlignment: "stretch", gap: 6.0, children: [
+    Field(label: "FROM", value: args.from),
+    Field(label: "TO", value: args.to),
+    Field(label: "SUBJECT", value: args.subject),
+    Divider(),
+    Column(gap: 6.0, children: [
+      Text(text: args.greeting),
+      Text(text: args.body),
+      Text(text: args.closing),
+      Text(text: args.signature),
+    ]),
+    Row(gap: 12.0, children: [
+      Button(child: Text(text: "Send email")),
+      Button(child: Text(text: "Discard")),
+    ]),
+  ])));

@@ -1,0 +1,15 @@
+{
+  "catalogId": "demo",
+  "components": {
+    "Incremental": {
+      "properties": {
+        "restaurants": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  }
+}

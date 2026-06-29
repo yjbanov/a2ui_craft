@@ -1,0 +1,37 @@
+{
+  "catalogId": "demo",
+  "components": {
+    "Labelled": {
+      "properties": {
+        "label": {
+          "$ref": "DynamicString"
+        },
+        "value": {
+          "$ref": "DynamicString"
+        }
+      }
+    },
+    "LoginForm": {
+      "properties": {
+        "title": {
+          "$ref": "DynamicString"
+        },
+        "usernameLabel": {
+          "$ref": "DynamicString"
+        },
+        "username": {
+          "$ref": "DynamicString"
+        },
+        "passwordLabel": {
+          "$ref": "DynamicString"
+        },
+        "password": {
+          "$ref": "DynamicString"
+        },
+        "submitLabel": {
+          "$ref": "DynamicString"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "catalogId": "demo",
+  "components": {
+    "Stat": {
+      "properties": {
+        "value": {
+          "$ref": "DynamicString"
+        },
+        "label": {
+          "$ref": "DynamicString"
+        }
+      }
+    },
+    "StepCounter": {
+      "properties": {
+        "title": {
+          "$ref": "DynamicString"
+        },
+        "steps": {
+          "$ref": "DynamicString"
+        },
+        "goal": {
+          "$ref": "DynamicString"
+        },
+        "distance": {
+          "$ref": "DynamicString"
+        },
+        "calories": {
+          "$ref": "DynamicString"
+        }
+      }
+    }
+  }
+}

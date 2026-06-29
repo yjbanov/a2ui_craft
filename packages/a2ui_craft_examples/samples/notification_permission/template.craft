@@ -1,0 +1,12 @@
+import core;
+
+widget NotificationPermission = Card(child: Column(crossAxisAlignment: "center",
+  gap: 8.0, children: [
+    Icon(icon: args.icon),
+    Heading(text: args.title, level: 2),
+    Text(text: args.description),
+    Row(mainAxisAlignment: "center", gap: 12.0, children: [
+      Button(child: Text(text: args.acceptLabel)),
+      Button(child: Text(text: args.declineLabel)),
+    ]),
+  ]));

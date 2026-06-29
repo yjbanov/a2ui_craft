@@ -1,0 +1,27 @@
+[
+  {
+    "version": "v0.9",
+    "createSurface": {
+      "surfaceId": "demo",
+      "catalogId": "demo",
+      "sendDataModel": false
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateComponents": {
+      "surfaceId": "demo",
+      "components": [
+        {
+          "id": "root",
+          "component": "CountdownTimer",
+          "eventName": "Product Launch",
+          "days": "14",
+          "hours": "08",
+          "minutes": "32",
+          "targetDate": "January 15, 2025"
+        }
+      ]
+    }
+  }
+]

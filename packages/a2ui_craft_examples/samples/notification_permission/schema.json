@@ -1,0 +1,24 @@
+{
+  "catalogId": "demo",
+  "components": {
+    "NotificationPermission": {
+      "properties": {
+        "icon": {
+          "$ref": "DynamicString"
+        },
+        "title": {
+          "$ref": "DynamicString"
+        },
+        "description": {
+          "$ref": "DynamicString"
+        },
+        "acceptLabel": {
+          "$ref": "DynamicString"
+        },
+        "declineLabel": {
+          "$ref": "DynamicString"
+        }
+      }
+    }
+  }
+}

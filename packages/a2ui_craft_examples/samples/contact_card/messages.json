@@ -1,0 +1,28 @@
+[
+  {
+    "version": "v0.9",
+    "createSurface": {
+      "surfaceId": "demo",
+      "catalogId": "demo",
+      "sendDataModel": false
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateComponents": {
+      "surfaceId": "demo",
+      "components": [
+        {
+          "id": "root",
+          "component": "ContactCard",
+          "name": "Ada Lovelace",
+          "title": "Mathematician",
+          "avatar": "https://example.com/ada.jpg",
+          "phone": "+1 555 0100",
+          "email": "ada@example.com",
+          "location": "London, UK"
+        }
+      ]
+    }
+  }
+]

@@ -1,0 +1,7 @@
+import core;
+
+widget MarkdownText = Card(child: Column(crossAxisAlignment: "stretch",
+  gap: 8.0, children: [
+    Text(text: args.title),
+    Markdown(text: args.content),
+  ]));

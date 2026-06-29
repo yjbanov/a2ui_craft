@@ -1,0 +1,29 @@
+[
+  {
+    "version": "v0.9",
+    "createSurface": {
+      "surfaceId": "demo",
+      "catalogId": "demo",
+      "sendDataModel": false
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateComponents": {
+      "surfaceId": "demo",
+      "components": [
+        {
+          "id": "root",
+          "component": "PurchaseComplete",
+          "title": "Purchase Complete",
+          "productImage": "https://example.com/headphones.jpg",
+          "productName": "Wireless Headphones Pro",
+          "price": "$199.99",
+          "delivery": "Arrives Dec 18 - Dec 20",
+          "seller": "TechStore Official",
+          "cta": "View Order Details"
+        }
+      ]
+    }
+  }
+]

@@ -1,0 +1,26 @@
+[
+  {
+    "version": "v0.9",
+    "createSurface": {
+      "surfaceId": "demo",
+      "catalogId": "demo",
+      "sendDataModel": false
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateComponents": {
+      "surfaceId": "demo",
+      "components": [
+        {
+          "id": "root",
+          "component": "StatsCard",
+          "title": "Today's Activity",
+          "steps": "8,420",
+          "calories": "612",
+          "minutes": "47"
+        }
+      ]
+    }
+  }
+]

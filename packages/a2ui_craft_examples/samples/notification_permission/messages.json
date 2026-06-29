@@ -1,0 +1,27 @@
+[
+  {
+    "version": "v0.9",
+    "createSurface": {
+      "surfaceId": "demo",
+      "catalogId": "demo",
+      "sendDataModel": false
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateComponents": {
+      "surfaceId": "demo",
+      "components": [
+        {
+          "id": "root",
+          "component": "NotificationPermission",
+          "icon": "notifications",
+          "title": "Enable notifications",
+          "description": "Get alerts for order status changes",
+          "acceptLabel": "Yes",
+          "declineLabel": "No"
+        }
+      ]
+    }
+  }
+]

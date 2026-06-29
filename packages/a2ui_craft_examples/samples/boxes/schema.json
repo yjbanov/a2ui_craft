@@ -1,0 +1,8 @@
+{
+  "catalogId": "demo",
+  "components": {
+    "Boxes": {
+      "properties": {}
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "catalogId": "demo",
+  "components": {
+    "SimpleText": {
+      "properties": {
+        "text": {
+          "$ref": "DynamicString"
+        }
+      }
+    }
+  }
+}

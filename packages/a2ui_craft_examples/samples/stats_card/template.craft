@@ -1,0 +1,21 @@
+import core;
+
+widget Stat = Column(crossAxisAlignment: "center", children: [
+  Text(text: args.value),
+  Text(text: args.label, variant: "caption"),
+]);
+
+widget StatsCard = Box(width: 300.0, child: Card(child: Column(gap: 12.0, children: [
+  Row(mainAxisAlignment: "spaceBetween", width: "fill", children: [
+    Text(text: args.title),
+    Icon(icon: "favorite"),
+  ]),
+  Divider(),
+  Row(mainAxisAlignment: "spaceAround", width: "fill", children: [
+    Stat(value: args.steps, label: "steps"),
+    Stat(value: args.calories, label: "kcal"),
+    Stat(value: args.minutes, label: "min"),
+  ]),
+  Text(text: "Daily goal: 70%", variant: "caption"),
+  Slider(value: 70.0, min: 0.0, max: 100.0),
+])));

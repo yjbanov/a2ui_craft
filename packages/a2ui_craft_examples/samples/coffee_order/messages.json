@@ -1,0 +1,38 @@
+[
+  {
+    "version": "v0.9",
+    "createSurface": {
+      "surfaceId": "demo",
+      "catalogId": "demo",
+      "sendDataModel": false
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateComponents": {
+      "surfaceId": "demo",
+      "components": [
+        {
+          "id": "root",
+          "component": "CoffeeOrder",
+          "storeName": "Sunrise Coffee",
+          "subtotal": "$10.70",
+          "tax": "$0.96",
+          "total": "$11.66",
+          "items": [
+            {
+              "name": "Oat Milk Latte",
+              "size": "Grande, Extra Shot",
+              "price": "$6.45"
+            },
+            {
+              "name": "Chocolate Croissant",
+              "size": "Warmed",
+              "price": "$4.25"
+            }
+          ]
+        }
+      ]
+    }
+  }
+]

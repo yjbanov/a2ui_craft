@@ -1,0 +1,33 @@
+import core;
+
+widget Boxes = Column(gap: 20, children: [
+  Text(text: "Here are some nested boxes with margins and padding:"),
+  Box(
+    padding: [20.0, 20.0, 20.0, 20.0],
+    color: "#e2e8f0",
+    child: Box(
+      width: 100.0,
+      height: 100.0,
+      color: "#94a3b8",
+      child: Box(
+        margin: [10.0, 10.0, 10.0, 10.0],
+        width: "fill",
+        height: "fill",
+        color: "#334155",
+        child: Center(
+          child: Text(text: "Center")
+        )
+      )
+    )
+  ),
+  Box(
+    margin: [20.0, 0.0, 0.0, 0.0],
+    padding: [10.0, 10.0, 10.0, 10.0],
+    color: "#cbd5e1",
+    child: Row(gap: 10, children: [
+      Box(width: 50.0, height: 50.0, color: "#ef4444"),
+      Box(width: 50.0, height: 50.0, color: "#10b981"),
+      Box(width: 50.0, height: 50.0, color: "#3b82f6"),
+    ])
+  )
+]);

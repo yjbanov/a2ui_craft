@@ -1,0 +1,18 @@
+{
+  "catalogId": "demo",
+  "components": {
+    "ChatMessage": {
+      "properties": {
+        "channelName": {
+          "$ref": "DynamicString"
+        },
+        "messages": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  }
+}

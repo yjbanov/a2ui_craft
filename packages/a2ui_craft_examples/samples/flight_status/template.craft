@@ -1,0 +1,34 @@
+import core;
+
+widget FlightStatus = Card(child: Column(crossAxisAlignment: "stretch",
+  gap: 8.0, children: [
+    Row(mainAxisAlignment: "spaceBetween", crossAxisAlignment: "center",
+      width: "fill", children: [
+        Row(gap: 6.0, crossAxisAlignment: "center", children: [
+          Icon(icon: "send"),
+          Text(text: args.flightNumber),
+        ]),
+        Text(text: args.date, variant: "caption"),
+      ]),
+    Row(gap: 8.0, mainAxisAlignment: "center", crossAxisAlignment: "center",
+      children: [
+        Text(text: args.origin),
+        Text(text: "→"),
+        Text(text: args.destination),
+      ]),
+    Divider(),
+    Row(mainAxisAlignment: "spaceBetween", width: "fill", children: [
+      Column(crossAxisAlignment: "start", gap: 2.0, children: [
+        Text(text: "Departs", variant: "caption"),
+        Text(text: args.departure),
+      ]),
+      Column(crossAxisAlignment: "center", gap: 2.0, children: [
+        Text(text: "Status", variant: "caption"),
+        Text(text: args.status),
+      ]),
+      Column(crossAxisAlignment: "end", gap: 2.0, children: [
+        Text(text: "Arrives", variant: "caption"),
+        Text(text: args.arrival),
+      ]),
+    ]),
+  ]));

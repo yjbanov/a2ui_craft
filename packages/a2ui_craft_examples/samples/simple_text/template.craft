@@ -1,0 +1,3 @@
+import core;
+
+widget SimpleText = Text(text: args.text);

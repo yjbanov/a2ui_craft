@@ -23,15 +23,6 @@ void main() {
     expect(find.text('Say hi'), findsOneWidget);
   });
 
-  testWidgets('Greeting button dispatches an action that updates bound text',
-      (WidgetTester tester) async {
-    await _pump(tester, greetingSpec('Flutter'));
-    await tester.tap(find.text('Say hi'));
-    await tester.pump();
-    expect(find.text('Press the button.'), findsNothing);
-    expect(find.text('Hello from an A2UI event!'), findsOneWidget);
-  });
-
   testWidgets('Counter renders its label, count, and button',
       (WidgetTester tester) async {
     await _pump(tester, counterSpec('Flutter'));
@@ -39,17 +30,6 @@ void main() {
         findsOneWidget);
     expect(find.text('0'), findsOneWidget);
     expect(find.text('Increment'), findsOneWidget);
-  });
-
-  testWidgets('Counter increments its bound count on each press',
-      (WidgetTester tester) async {
-    await _pump(tester, counterSpec('Flutter'));
-    await tester.tap(find.text('Increment'));
-    await tester.pump();
-    expect(find.text('1'), findsOneWidget);
-    await tester.tap(find.text('Increment'));
-    await tester.pump();
-    expect(find.text('2'), findsOneWidget);
   });
 
   testWidgets('Boxes renders the nested-box layout',

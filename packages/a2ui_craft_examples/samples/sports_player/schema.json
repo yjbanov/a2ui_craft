@@ -1,0 +1,49 @@
+{
+  "catalogId": "demo",
+  "components": {
+    "Stat": {
+      "properties": {
+        "value": {
+          "$ref": "DynamicString"
+        },
+        "label": {
+          "$ref": "DynamicString"
+        }
+      }
+    },
+    "SportsPlayer": {
+      "properties": {
+        "image": {
+          "$ref": "DynamicString"
+        },
+        "name": {
+          "$ref": "DynamicString"
+        },
+        "number": {
+          "$ref": "DynamicString"
+        },
+        "team": {
+          "$ref": "DynamicString"
+        },
+        "stat1Value": {
+          "$ref": "DynamicString"
+        },
+        "stat1Label": {
+          "$ref": "DynamicString"
+        },
+        "stat2Value": {
+          "$ref": "DynamicString"
+        },
+        "stat2Label": {
+          "$ref": "DynamicString"
+        },
+        "stat3Value": {
+          "$ref": "DynamicString"
+        },
+        "stat3Label": {
+          "$ref": "DynamicString"
+        }
+      }
+    }
+  }
+}

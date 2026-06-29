@@ -1,0 +1,42 @@
+{
+  "catalogId": "demo",
+  "components": {
+    "Stack": {
+      "properties": {
+        "children": {
+          "$ref": "ChildList"
+        }
+      },
+      "required": [
+        "children"
+      ]
+    },
+    "Label": {
+      "properties": {
+        "text": {
+          "$ref": "DynamicString"
+        }
+      },
+      "required": [
+        "text"
+      ]
+    },
+    "Field": {
+      "properties": {
+        "label": {
+          "$ref": "DynamicString"
+        },
+        "value": {
+          "$ref": "DynamicString"
+        }
+      }
+    },
+    "Toggle": {
+      "properties": {
+        "value": {
+          "$ref": "DynamicBoolean"
+        }
+      }
+    }
+  }
+}

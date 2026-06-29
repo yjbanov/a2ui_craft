@@ -1,0 +1,28 @@
+{
+  "catalogId": "demo",
+  "components": {
+    "Column": {
+      "properties": {
+        "children": {
+          "$ref": "ChildList"
+        }
+      },
+      "required": [
+        "children"
+      ]
+    },
+    "ProfileCard": {
+      "properties": {
+        "name": {
+          "$ref": "DynamicString"
+        },
+        "avatarUrl": {
+          "$ref": "DynamicString"
+        },
+        "bio": {
+          "$ref": "DynamicString"
+        }
+      }
+    }
+  }
+}

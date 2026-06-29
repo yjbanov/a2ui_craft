@@ -1,0 +1,30 @@
+import core;
+
+widget HeaderRow = Row(crossAxisAlignment: "center", children: [
+  Expanded(flex: 4, child: Text(text: "Asset", variant: "caption")),
+  Expanded(flex: 2, child: Text(text: "Price", variant: "caption")),
+  Expanded(flex: 2, child: Text(text: "24h", variant: "caption")),
+  Expanded(flex: 3, child: Text(text: "Mkt Cap", variant: "caption")),
+]);
+
+widget AssetRow = Row(crossAxisAlignment: "center", children: [
+  Expanded(flex: 4, child: Row(gap: 6.0, crossAxisAlignment: "center",
+    children: [
+      Icon(icon: "payment"),
+      Column(gap: 1.0, children: [
+        Text(text: args.name),
+        Text(text: args.symbol, variant: "caption"),
+      ]),
+    ])),
+  Expanded(flex: 2, child: Text(text: args.price)),
+  Expanded(flex: 2, child: Text(text: args.change)),
+  Expanded(flex: 3, child: Text(text: args.marketCap, variant: "caption")),
+]);
+
+widget FinancialGrid = Card(child: Column(crossAxisAlignment: "stretch",
+  gap: 6.0, children: [
+    HeaderRow(),
+    Divider(),
+    ...for asset in args.assets: AssetRow(name: asset.name, symbol: asset.symbol,
+      price: asset.price, change: asset.change, marketCap: asset.marketCap),
+  ]));

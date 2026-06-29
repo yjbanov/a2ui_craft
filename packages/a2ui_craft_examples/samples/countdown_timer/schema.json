@@ -1,0 +1,34 @@
+{
+  "catalogId": "demo",
+  "components": {
+    "Unit": {
+      "properties": {
+        "value": {
+          "$ref": "DynamicString"
+        },
+        "label": {
+          "$ref": "DynamicString"
+        }
+      }
+    },
+    "CountdownTimer": {
+      "properties": {
+        "eventName": {
+          "$ref": "DynamicString"
+        },
+        "days": {
+          "$ref": "DynamicString"
+        },
+        "hours": {
+          "$ref": "DynamicString"
+        },
+        "minutes": {
+          "$ref": "DynamicString"
+        },
+        "targetDate": {
+          "$ref": "DynamicString"
+        }
+      }
+    }
+  }
+}

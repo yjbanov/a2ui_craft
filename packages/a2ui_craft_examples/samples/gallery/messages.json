@@ -1,0 +1,27 @@
+[
+  {
+    "version": "v0.9",
+    "createSurface": {
+      "surfaceId": "demo",
+      "catalogId": "demo",
+      "sendDataModel": false
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateComponents": {
+      "surfaceId": "demo",
+      "components": [
+        {
+          "id": "root",
+          "component": "Gallery",
+          "images": [
+            "https://images.unsplash.com/photo-1507838153414-b4b713384a76?w=50&h=50&fit=crop",
+            "https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=50&h=50&fit=crop",
+            "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=50&h=50&fit=crop"
+          ]
+        }
+      ]
+    }
+  }
+]

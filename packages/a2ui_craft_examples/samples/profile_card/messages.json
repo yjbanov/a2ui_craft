@@ -1,0 +1,40 @@
+[
+  {
+    "version": "v0.9",
+    "createSurface": {
+      "surfaceId": "demo",
+      "catalogId": "demo",
+      "sendDataModel": false
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateComponents": {
+      "surfaceId": "demo",
+      "components": [
+        {
+          "id": "root",
+          "component": "Column",
+          "children": [
+            "p1",
+            "p2"
+          ]
+        },
+        {
+          "id": "p1",
+          "component": "ProfileCard",
+          "name": "{{framework}} Framework",
+          "avatarUrl": "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=50&h=50&fit=crop",
+          "bio": "Build apps for any screen."
+        },
+        {
+          "id": "p2",
+          "component": "ProfileCard",
+          "name": "Dart",
+          "avatarUrl": "https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=50&h=50&fit=crop",
+          "bio": "A client-optimized language for fast apps on any platform."
+        }
+      ]
+    }
+  }
+]

@@ -1,0 +1,22 @@
+import core;
+
+widget RestaurantCard = Card(child: Column(gap: 8.0, children: [
+  Image(url: args.image, variant: "header", fit: "cover"),
+  Column(gap: 6.0, children: [
+    Row(mainAxisAlignment: "spaceBetween", crossAxisAlignment: "center",
+      width: "fill", children: [
+        Text(text: args.name),
+        Text(text: args.priceRange),
+      ]),
+    Text(text: args.cuisine, variant: "caption"),
+    Row(gap: 6.0, crossAxisAlignment: "center", children: [
+      Icon(icon: "star"),
+      Text(text: args.rating),
+      Text(text: args.reviewCount, variant: "caption"),
+    ]),
+    Row(gap: 12.0, children: [
+      Text(text: args.distance, variant: "caption"),
+      Text(text: args.deliveryTime, variant: "caption"),
+    ]),
+  ]),
+]));

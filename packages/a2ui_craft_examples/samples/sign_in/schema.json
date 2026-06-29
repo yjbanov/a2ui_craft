@@ -1,0 +1,36 @@
+{
+  "catalogId": "demo",
+  "components": {
+    "SignIn": {
+      "properties": {
+        "title": {
+          "$ref": "DynamicString"
+        },
+        "subtitle": {
+          "$ref": "DynamicString"
+        },
+        "emailLabel": {
+          "$ref": "DynamicString"
+        },
+        "email": {
+          "$ref": "DynamicString"
+        },
+        "passwordLabel": {
+          "$ref": "DynamicString"
+        },
+        "password": {
+          "$ref": "DynamicString"
+        },
+        "submitLabel": {
+          "$ref": "DynamicString"
+        },
+        "signupPrompt": {
+          "$ref": "DynamicString"
+        },
+        "signupLabel": {
+          "$ref": "DynamicString"
+        }
+      }
+    }
+  }
+}

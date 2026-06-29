@@ -1,0 +1,28 @@
+[
+  {
+    "version": "v0.9",
+    "createSurface": {
+      "surfaceId": "demo",
+      "catalogId": "demo",
+      "sendDataModel": false
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateComponents": {
+      "surfaceId": "demo",
+      "components": [
+        {
+          "id": "root",
+          "component": "MusicPlayer",
+          "albumArt": "https://example.com/album.jpg",
+          "title": "Blinding Lights",
+          "artist": "The Weeknd",
+          "currentTime": "1:48",
+          "totalTime": "4:22",
+          "playIcon": "pause"
+        }
+      ]
+    }
+  }
+]

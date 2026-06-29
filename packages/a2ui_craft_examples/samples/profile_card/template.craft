@@ -1,0 +1,11 @@
+import core;
+
+widget ProfileCard = Card(child: Column(children: [
+  Image(url: args.avatarUrl),
+  Row(children: [
+    Text(text: args.name),
+    Icon(icon: "check"),
+  ]),
+  Divider(),
+  Text(text: args.bio),
+]));

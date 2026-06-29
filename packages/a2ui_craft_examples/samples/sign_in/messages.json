@@ -1,0 +1,31 @@
+[
+  {
+    "version": "v0.9",
+    "createSurface": {
+      "surfaceId": "demo",
+      "catalogId": "demo",
+      "sendDataModel": false
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateComponents": {
+      "surfaceId": "demo",
+      "components": [
+        {
+          "id": "root",
+          "component": "SignIn",
+          "title": "Welcome back",
+          "subtitle": "Sign in to your account",
+          "emailLabel": "Email",
+          "email": "",
+          "passwordLabel": "Password",
+          "password": "",
+          "submitLabel": "Sign in",
+          "signupPrompt": "Don't have an account?",
+          "signupLabel": "Sign up"
+        }
+      ]
+    }
+  }
+]

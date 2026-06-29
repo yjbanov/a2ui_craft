@@ -1,0 +1,19 @@
+import core;
+
+widget Weather = Card(child: Column(crossAxisAlignment: "center", gap: 6.0,
+  children: [
+    Row(gap: 8.0, children: [
+      Text(text: args.tempHigh),
+      Text(text: args.tempLow, variant: "caption"),
+    ]),
+    Text(text: args.location),
+    Text(text: args.description, variant: "caption"),
+    Row(mainAxisAlignment: "spaceAround", width: "fill", gap: 12.0, children: [
+      ...for day in args.forecast: Column(crossAxisAlignment: "center",
+        gap: 2.0, children: [
+          Text(text: day.name, variant: "caption"),
+          Text(text: day.icon),
+          Text(text: day.temp, variant: "caption"),
+        ]),
+    ]),
+  ]));

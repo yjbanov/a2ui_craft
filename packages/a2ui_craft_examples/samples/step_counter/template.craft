@@ -1,0 +1,21 @@
+import core;
+
+widget Stat = Column(crossAxisAlignment: "center", gap: 2.0, children: [
+  Text(text: args.value),
+  Text(text: args.label, variant: "caption"),
+]);
+
+widget StepCounter = Card(child: Column(crossAxisAlignment: "center", gap: 8.0,
+  children: [
+    Row(gap: 6.0, crossAxisAlignment: "center", children: [
+      Icon(icon: "person"),
+      Heading(text: args.title, level: 3),
+    ]),
+    Text(text: args.steps),
+    Text(text: args.goal, variant: "body"),
+    Divider(),
+    Row(mainAxisAlignment: "spaceAround", width: "fill", children: [
+      Stat(value: args.distance, label: "Distance"),
+      Stat(value: args.calories, label: "Calories"),
+    ]),
+  ]));

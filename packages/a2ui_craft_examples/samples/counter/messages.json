@@ -1,0 +1,43 @@
+[
+  {
+    "version": "v0.9",
+    "createSurface": {
+      "surfaceId": "demo",
+      "catalogId": "demo",
+      "sendDataModel": false
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateDataModel": {
+      "surfaceId": "demo",
+      "path": "/",
+      "value": {
+        "count": "0"
+      }
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateComponents": {
+      "surfaceId": "demo",
+      "components": [
+        {
+          "id": "root",
+          "component": "Counter",
+          "label": "You have pushed the button this many times:",
+          "count": {
+            "path": "/count"
+          },
+          "buttonLabel": "Increment",
+          "action": {
+            "event": {
+              "name": "increment",
+              "context": {}
+            }
+          }
+        }
+      ]
+    }
+  }
+]

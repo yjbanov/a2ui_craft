@@ -17,6 +17,12 @@ flutter pub get
 step "Format check (dart format)"
 dart format --output=none --set-exit-if-changed .
 
+step "Check generated samples are in sync with the data files"
+dart run packages/a2ui_craft_examples/tool/gen_samples.dart
+dart format packages/a2ui_craft_examples/lib/src/generated_samples.g.dart
+git diff --exit-code packages/a2ui_craft_examples/lib/src/generated_samples.g.dart \
+  || { echo "generated_samples.g.dart is stale — run tool/gen_samples.dart and commit."; exit 1; }
+
 step "Analyze: a2ui_craft (core)"
 (cd packages/a2ui_craft && dart analyze)
 
@@ -49,6 +55,9 @@ step "Test: tool/testing (repo-wide checks, e.g. license headers)"
 
 step "Test: a2ui_craft (core)"
 (cd packages/a2ui_craft && dart test)
+
+step "Test: a2ui_craft_examples (code-free sample data pipeline)"
+(cd packages/a2ui_craft_examples && dart test)
 
 step "Test: a2ui_craft_bridge (A2UI translation)"
 (cd packages/a2ui_craft_bridge && dart test)

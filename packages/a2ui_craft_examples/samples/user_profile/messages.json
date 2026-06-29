@@ -1,0 +1,30 @@
+[
+  {
+    "version": "v0.9",
+    "createSurface": {
+      "surfaceId": "demo",
+      "catalogId": "demo",
+      "sendDataModel": false
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateComponents": {
+      "surfaceId": "demo",
+      "components": [
+        {
+          "id": "root",
+          "component": "UserProfile",
+          "avatar": "https://example.com/sarah.jpg",
+          "name": "Sarah Chen",
+          "username": "@sarahchen",
+          "bio": "Product Designer at Tech Co. Creating delightful experiences.",
+          "followers": "12.4K",
+          "following": "892",
+          "posts": "347",
+          "followText": "Follow"
+        }
+      ]
+    }
+  }
+]

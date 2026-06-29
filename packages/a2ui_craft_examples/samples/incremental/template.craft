@@ -1,0 +1,14 @@
+import core;
+
+widget RestaurantItem = Card(child: Column(gap: 4.0, children: [
+  Heading(text: args.title, level: 3),
+  Text(text: args.subtitle, variant: "caption"),
+  Text(text: args.address, variant: "caption"),
+  Button(child: Text(text: "Book now")),
+]));
+
+widget Incremental = Column(crossAxisAlignment: "stretch", gap: 10.0,
+  children: [
+    ...for r in args.restaurants: RestaurantItem(title: r.title,
+      subtitle: r.subtitle, address: r.address),
+  ]);

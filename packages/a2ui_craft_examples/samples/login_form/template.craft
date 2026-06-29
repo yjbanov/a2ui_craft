@@ -1,0 +1,13 @@
+import core;
+
+widget Labelled = Column(gap: 4.0, children: [
+  Text(text: args.label, variant: "caption"),
+  TextField(value: args.value),
+]);
+
+widget LoginForm = Column(gap: 12.0, crossAxisAlignment: "stretch", children: [
+  Text(text: args.title),
+  Labelled(label: args.usernameLabel, value: args.username),
+  Labelled(label: args.passwordLabel, value: args.password),
+  Button(child: Text(text: args.submitLabel)),
+]);

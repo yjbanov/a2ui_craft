@@ -1,0 +1,30 @@
+{
+  "catalogId": "demo",
+  "components": {
+    "PurchaseComplete": {
+      "properties": {
+        "title": {
+          "$ref": "DynamicString"
+        },
+        "productImage": {
+          "$ref": "DynamicString"
+        },
+        "productName": {
+          "$ref": "DynamicString"
+        },
+        "price": {
+          "$ref": "DynamicString"
+        },
+        "delivery": {
+          "$ref": "DynamicString"
+        },
+        "seller": {
+          "$ref": "DynamicString"
+        },
+        "cta": {
+          "$ref": "DynamicString"
+        }
+      }
+    }
+  }
+}

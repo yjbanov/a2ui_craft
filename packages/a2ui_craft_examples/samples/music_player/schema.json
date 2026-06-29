@@ -1,0 +1,27 @@
+{
+  "catalogId": "demo",
+  "components": {
+    "MusicPlayer": {
+      "properties": {
+        "albumArt": {
+          "$ref": "DynamicString"
+        },
+        "title": {
+          "$ref": "DynamicString"
+        },
+        "artist": {
+          "$ref": "DynamicString"
+        },
+        "currentTime": {
+          "$ref": "DynamicString"
+        },
+        "totalTime": {
+          "$ref": "DynamicString"
+        },
+        "playIcon": {
+          "$ref": "DynamicString"
+        }
+      }
+    }
+  }
+}

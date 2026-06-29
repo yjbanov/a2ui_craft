@@ -1,0 +1,24 @@
+{
+  "catalogId": "demo",
+  "components": {
+    "ShippingStatus": {
+      "properties": {
+        "title": {
+          "$ref": "DynamicString"
+        },
+        "trackingNumber": {
+          "$ref": "DynamicString"
+        },
+        "eta": {
+          "$ref": "DynamicString"
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  }
+}

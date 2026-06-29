@@ -1,0 +1,33 @@
+{
+  "catalogId": "demo",
+  "components": {
+    "RestaurantCard": {
+      "properties": {
+        "image": {
+          "$ref": "DynamicString"
+        },
+        "name": {
+          "$ref": "DynamicString"
+        },
+        "priceRange": {
+          "$ref": "DynamicString"
+        },
+        "cuisine": {
+          "$ref": "DynamicString"
+        },
+        "rating": {
+          "$ref": "DynamicString"
+        },
+        "reviewCount": {
+          "$ref": "DynamicString"
+        },
+        "distance": {
+          "$ref": "DynamicString"
+        },
+        "deliveryTime": {
+          "$ref": "DynamicString"
+        }
+      }
+    }
+  }
+}

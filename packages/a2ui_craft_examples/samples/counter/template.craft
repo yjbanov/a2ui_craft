@@ -1,0 +1,7 @@
+import core;
+
+widget Counter = Column(children: [
+  Text(text: args.label),
+  Text(text: args.count),
+  Button(onPressed: args.action, child: Text(text: args.buttonLabel)),
+]);

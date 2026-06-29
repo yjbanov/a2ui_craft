@@ -1,0 +1,27 @@
+{
+  "catalogId": "demo",
+  "components": {
+    "ComplexLayout": {
+      "properties": {
+        "title": {
+          "$ref": "DynamicString"
+        },
+        "firstLabel": {
+          "$ref": "DynamicString"
+        },
+        "firstValue": {
+          "$ref": "DynamicString"
+        },
+        "lastLabel": {
+          "$ref": "DynamicString"
+        },
+        "lastValue": {
+          "$ref": "DynamicString"
+        },
+        "footer": {
+          "$ref": "DynamicString"
+        }
+      }
+    }
+  }
+}

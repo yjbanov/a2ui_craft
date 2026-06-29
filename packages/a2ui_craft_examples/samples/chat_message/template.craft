@@ -1,0 +1,24 @@
+import core;
+
+widget ChatMessage = Card(child: Column(gap: 8.0, children: [
+  Row(gap: 6.0, crossAxisAlignment: "center", children: [
+    Icon(icon: "info"),
+    Heading(text: args.channelName, level: 3),
+  ]),
+  Divider(),
+  Column(gap: 10.0, children: [
+    ...for msg in args.messages: Row(gap: 8.0, crossAxisAlignment: "start",
+      children: [
+        Image(url: msg.avatar, variant: "avatar", fit: "cover"),
+        // A fixed width bounds the message body so it wraps, instead of forcing
+        // the row as wide as the longest line.
+        SizedBox(width: 240.0, child: Column(gap: 2.0, children: [
+          Row(gap: 6.0, crossAxisAlignment: "center", children: [
+            Text(text: msg.username),
+            Text(text: msg.time, variant: "caption"),
+          ]),
+          Text(text: msg.text),
+        ])),
+      ]),
+  ]),
+]));

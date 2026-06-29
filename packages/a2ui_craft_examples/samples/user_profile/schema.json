@@ -1,0 +1,33 @@
+{
+  "catalogId": "demo",
+  "components": {
+    "UserProfile": {
+      "properties": {
+        "avatar": {
+          "$ref": "DynamicString"
+        },
+        "name": {
+          "$ref": "DynamicString"
+        },
+        "username": {
+          "$ref": "DynamicString"
+        },
+        "bio": {
+          "$ref": "DynamicString"
+        },
+        "followers": {
+          "$ref": "DynamicString"
+        },
+        "following": {
+          "$ref": "DynamicString"
+        },
+        "posts": {
+          "$ref": "DynamicString"
+        },
+        "followText": {
+          "$ref": "DynamicString"
+        }
+      }
+    }
+  }
+}

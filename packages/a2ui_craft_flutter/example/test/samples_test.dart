@@ -10,8 +10,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:network_image_mock/network_image_mock.dart';
 
 /// Mounts a shared [SampleSpec] exactly as the gallery does.
+///
+/// Wrapped in [mockNetworkImagesFor] so the samples' `Image` URLs resolve to a
+/// stub instead of hitting the network during the pump (harmless for the
+/// image-free samples).
 Future<void> _pump(WidgetTester tester, SampleSpec spec) {
-  return tester.pumpWidget(MaterialApp(home: Scaffold(body: Sample(spec))));
+  return mockNetworkImagesFor(
+    () => tester.pumpWidget(MaterialApp(home: Scaffold(body: Sample(spec)))),
+  );
 }
 
 void main() {

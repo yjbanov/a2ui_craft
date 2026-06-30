@@ -873,6 +873,19 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
       and the sample count outgrows side-by-side eyeballing — and explicitly
       **avoid** standing up a loose per-adapter golden first (two golden variants
       is the thing to not do).
+  - [x] **Pure-template interactivity proven on both current adapters.** RFW's
+        stateful templates (a `{ field: init }` state map, `set state.x = …`
+        handlers, `switch state.x { … }`) render and react **identically** on
+        Flutter and Jaspr — a tap flips local state and the template re-renders
+        with no host code, no `a2ui_core` data-model round-trip, and no agent in
+        the loop (this is the *client-side* layer of §1, distinct from A2UI's
+        agent-in-the-loop action→data model). Shipped as the `toggle` sample and
+        a both-adapters behavioral conformance case. **Limitation noted:** the
+        RFW expression language has **no arithmetic/operators**, so state changes
+        are literals, references, toggles (`set x = switch x {…}` — there is no
+        `!`), or fixed-case `switch`es; an unbounded counter (`count + 1`) is
+        *not* expressible purely in-template and needs either the A2UI
+        action→data path or a future expression/computation capability.
 - [ ] Prove the state-model axis with a third, non-Flutter-like framework.
 - [ ] **Security: uphold A2UI's secure-by-design promise (§12).** When templates
       are delivered ephemerally, treat them as untrusted input: add engine-level

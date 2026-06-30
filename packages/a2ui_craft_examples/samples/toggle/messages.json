@@ -1,0 +1,24 @@
+[
+  {
+    "version": "v0.9",
+    "createSurface": {
+      "surfaceId": "demo",
+      "catalogId": "demo",
+      "sendDataModel": false
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateComponents": {
+      "surfaceId": "demo",
+      "components": [
+        {
+          "id": "root",
+          "component": "Toggle",
+          "question": "Does this run without host code?",
+          "answer": "Yes — the show/hide is pure template state (RFW `set state` + `switch`), re-rendered identically by the {{framework}} adapter. No Dart, no data-model round-trip, no agent in the loop."
+        }
+      ]
+    }
+  }
+]

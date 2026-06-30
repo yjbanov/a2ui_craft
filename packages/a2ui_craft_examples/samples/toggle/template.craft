@@ -1,0 +1,18 @@
+import core;
+
+// A stateful template — interactivity with no host code. `{ open: false }`
+// declares local state; the button flips it with `set state.open = switch ...`
+// (RFW has no `!` operator, so the flip is a switch); and `switch state.open`
+// chooses what renders. The same template drives both the Flutter and Jaspr
+// renderers identically.
+widget Toggle { open: false } =
+  Card(child: Column(crossAxisAlignment: "start", gap: 8.0, children: [
+    Heading(text: args.question, level: 3),
+    Button(
+      onPressed: set state.open = switch state.open { true: false, default: true },
+      child: Text(
+        text: switch state.open { true: "Hide answer", default: "Show answer" },
+      ),
+    ),
+    Text(text: switch state.open { true: args.answer, default: "" }),
+  ]));

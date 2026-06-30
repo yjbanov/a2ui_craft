@@ -8,6 +8,10 @@
     "label": "Counter"
   },
   {
+    "id": "toggle",
+    "label": "Toggle"
+  },
+  {
     "id": "boxes",
     "label": "Boxes"
   },

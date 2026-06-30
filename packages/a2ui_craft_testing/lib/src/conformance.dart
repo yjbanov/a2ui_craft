@@ -463,6 +463,43 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
       expect(tester.textCount('a'), 1);
     },
   );
+
+  driver.defineTest(
+    'a stateful template toggles its own UI on tap (no host code)',
+    (CraftTester tester) async {
+      // Pure-template interactivity: the widget declares local `state`, a tap
+      // flips it via `set state.x = switch ...` (there is no `!` operator), and
+      // `switch state.x` re-renders. No host/data-model involvement — this is
+      // the RFW state axis, and it must behave identically on every adapter.
+      await tester.mount('''
+        import core;
+        widget root { open: false } = Column(crossAxisAlignment: "start", children: [
+          Button(
+            key: "toggle",
+            onPressed: set state.open = switch state.open { true: false, default: true },
+            child: Text(text: switch state.open { true: "Hide", default: "Show" }),
+          ),
+          Text(text: switch state.open { true: "DETAILS", default: "" }),
+        ]);
+      ''');
+
+      // Closed initially.
+      expect(tester.hasText('Show'), isTrue);
+      expect(tester.hasText('Hide'), isFalse);
+      expect(tester.textCount('DETAILS'), 0);
+
+      // Tap opens it — the template rebuilds from its own state.
+      await tester.activate('toggle');
+      expect(tester.hasText('Hide'), isTrue);
+      expect(tester.hasText('Show'), isFalse);
+      expect(tester.textCount('DETAILS'), 1);
+
+      // Tap again closes it.
+      await tester.activate('toggle');
+      expect(tester.hasText('Show'), isTrue);
+      expect(tester.textCount('DETAILS'), 0);
+    },
+  );
 }
 
 /// The shared behavioral specification for rendering an **A2UI surface**

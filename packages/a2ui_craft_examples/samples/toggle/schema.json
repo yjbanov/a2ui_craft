@@ -1,0 +1,15 @@
+{
+  "catalogId": "demo",
+  "components": {
+    "Toggle": {
+      "properties": {
+        "question": {
+          "$ref": "DynamicString"
+        },
+        "answer": {
+          "$ref": "DynamicString"
+        }
+      }
+    }
+  }
+}

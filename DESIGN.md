@@ -886,6 +886,45 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
         `!`), or fixed-case `switch`es; an unbounded counter (`count + 1`) is
         *not* expressible purely in-template and needs either the A2UI
         action→data path or a future expression/computation capability.
+  - [ ] **Template computation — a two-layer plan.** How does a *template author*
+        (not the agent) express computation like a counter's `count + 1`?
+        Rejected: encoding it in the A2UI transport message — that's authored by
+        the **agent** (an LLM), so it's the wrong trust domain and not
+        author-controlled. The plan:
+        - **Now — standard functions in the template language.** Extend RFW's
+          expression grammar with function calls (`add(state.count, 1)`), backed
+          by a host-provided **template-facing function registry** supplied
+          alongside the `LocalWidgetLibrary` — the same author↔host handshake as
+          the primitive widgets. *functions : computation :: primitives :
+          rendering*: named in the template, implemented per target (one shared
+          pure-Dart lib serves Flutter + Jaspr), and conformance-tested on both
+          (determinism watch-outs: locale/date/rounding/number-format). Functions
+          are **pure** (`args → value`); mutation stays in RFW `set state`/events
+          (so `set state.count = add(state.count, 1)`). Purity is required because
+          value positions re-evaluate reactively. Covers math/string/bool/date.
+        - **Later — ephemeral sandboxed logic.** Business logic that must ship
+          ephemerally (JS/Dart/Kotlin, changing per template load) can't be AOT
+          Dart; it runs in a **strong sandbox** (iframe/webview/web worker) and
+          responds to template **events**. Additive: same `event 'foo' {…}`
+          template syntax, a new registry backend.
+        **Two refinements that pin the design:**
+        - *Trust boundary — separate registries, not one library.* Shared
+          *implementations* are fine, but **exposure = registration is per trust
+          domain**: the template-facing registry (trusted author) is distinct from
+          `a2ui_core`'s agent-facing `Catalog.functions` (untrusted). A function
+          reaching the agent registry is a separate, security-reviewed choice.
+          Functions must be **total** (bad input → null/NaN, never throw), because
+          agent-controlled `data.x` flows into author-written calls — totality is
+          what lets the boundary hold while data crosses it. Invariant: **agent
+          supplies data; the template author supplies computation.**
+        - *Event handlers are always-async, effect-via-data-write.* You can't make
+          async look sync without freezing the surface (observable jank, stalled
+          agent updates, hung-sandbox hangs), so make *every* handler async from
+          day one (local Dart resolves on a microtask; a sandbox over postMessage)
+          — the local→sandbox swap is then unobservable. Handlers communicate only
+          through data-model writes, never a sync return. Pure function
+          *expressions* stay synchronous. This routes through the §12 cancellable
+          scheduler (timeouts/cancellation for free).
 - [ ] Prove the state-model axis with a third, non-Flutter-like framework.
 - [ ] **Security: uphold A2UI's secure-by-design promise (§12).** When templates
       are delivered ephemerally, treat them as untrusted input: add engine-level

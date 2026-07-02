@@ -62,6 +62,7 @@ class _SampleViewState extends State<SampleView> {
     super.initState();
     _runtime = Runtime()
       ..update(_coreName, createCoreComponents())
+      ..registerFunctions(createCoreFunctions())
       ..update(_catalogName, parseLibraryFile(component.template));
     _processor = MessageProcessor<ComponentApi>(
         catalogs: <Catalog<ComponentApi>>[loadCatalog(component.schema)]);

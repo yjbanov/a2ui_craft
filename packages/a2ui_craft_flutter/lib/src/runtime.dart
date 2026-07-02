@@ -17,6 +17,21 @@ import 'package:flutter/widgets.dart';
 typedef LocalWidgetBuilder = Widget Function(
     BuildContext context, DataSource source);
 
+/// Signature of a pure value-function callable from a template.
+///
+/// Functions are the *computation* layer that complements the *rendering* layer
+/// ([LocalWidgetBuilder]): a template writes `name(arg: value, …)` in any value
+/// position — including the right-hand side of a `set state` — and the runtime
+/// resolves the arguments to values, invokes this callback, and substitutes the
+/// returned value.
+///
+/// Implementations MUST be **total**: given unexpected or missing argument
+/// values they return `null` (which resolves to absent, e.g. an empty text)
+/// rather than throwing. This is the trusted, template-author-facing library —
+/// deliberately separate from the agent-facing `a2ui_core` function catalog. See
+/// DESIGN.md (two-layer template-computation plan).
+typedef LocalFunction = Object? Function(DynamicMap arguments);
+
 /// Signature of builders for remote widgets.
 typedef _RemoteWidgetBuilder = _CurriedWidget Function(DynamicMap builderArg);
 
@@ -213,6 +228,30 @@ class LocalWidgetLibrary extends WidgetLibrary {
   }
 }
 
+/// A named collection of pure [LocalFunction]s, registered on a [Runtime] via
+/// [Runtime.registerFunctions].
+///
+/// The template-facing analogue of [LocalWidgetLibrary]: where that supplies the
+/// widgets a template composes, this supplies the functions a template calls in
+/// value positions. Provided by the host in Dart (compiled AOT), so — like the
+/// primitive widgets — the set is fixed for a given host build.
+class LocalFunctionLibrary {
+  /// Create a [LocalFunctionLibrary].
+  ///
+  /// The given map must not change once the object is created.
+  LocalFunctionLibrary(this._functions);
+
+  final Map<String, LocalFunction> _functions;
+
+  /// The functions defined by this library, keyed by the name templates call.
+  ///
+  /// The returned map is an immutable view of the map provided to the
+  /// constructor.
+  UnmodifiableMapView<String, LocalFunction> get functions {
+    return UnmodifiableMapView<String, LocalFunction>(_functions);
+  }
+}
+
 class _ResolvedConstructor {
   const _ResolvedConstructor(this.fullName, this.constructor);
   final FullyQualifiedWidgetName fullName;
@@ -237,6 +276,21 @@ class Runtime extends ChangeNotifier {
 
   final Map<LibraryName, WidgetLibrary> _libraries =
       <LibraryName, WidgetLibrary>{};
+
+  final Map<String, LocalFunction> _functions = <String, LocalFunction>{};
+
+  /// Registers pure value-functions callable from templates (see
+  /// [LocalFunction]), merging them into any already registered.
+  ///
+  /// This is additive: with no functions registered, template evaluation is
+  /// byte-for-byte unchanged — a `name(arg: …)` call is only treated as a
+  /// function when [name] is registered here *and* is not a widget in scope
+  /// (widget names take precedence). Registering functions clears the widget
+  /// cache, mirroring [update].
+  void registerFunctions(LocalFunctionLibrary library) {
+    _functions.addAll(library.functions);
+    _clearCache();
+  }
 
   /// Replace the definitions of the specified library (`name`).
   ///
@@ -587,6 +641,19 @@ class Runtime extends ChangeNotifier {
         stateDepth,
         usedWidgets,
       ) as DynamicMap;
+      // A `name(arg: …)` call parses as a [ConstructorCall] whether it builds a
+      // widget or calls a function. Widgets win: only treat it as a function
+      // when the name is registered *and* is not a widget in scope. The bound
+      // argument nodes are resolved to values (and the function invoked) lazily,
+      // at fetch time, in [_CurriedWidget._resolveFrom].
+      final LocalFunction? function = _functions[node.name];
+      if (function != null &&
+          _findConstructor(
+                  FullyQualifiedWidgetName(context.library, node.name)) ==
+              null) {
+        return _FunctionCall(node.name, function, subArguments)
+          ..propagateSource(node);
+      }
       return _applyConstructorAndBindArguments(
         FullyQualifiedWidgetName(context.library, node.name),
         subArguments,
@@ -724,6 +791,26 @@ typedef _StateResolverCallback = Object Function(
 typedef _WidgetBuilderArgResolverCallback = Object Function(
     List<Object> argKey);
 
+/// A bound call to a registered [LocalFunction] sitting in a value position.
+///
+/// Produced by [Runtime._bindArguments] when a `name(arg: …)` call resolves to a
+/// registered function rather than a widget. [arguments] holds the still-bound
+/// argument nodes (references to args/state/data, or nested [_FunctionCall]s);
+/// [_CurriedWidget._resolveFrom] resolves them to concrete values via
+/// [_CurriedWidget._fix] and then invokes [function], substituting its (total)
+/// result. Resolving through the normal resolvers is what keeps a call reactive
+/// — e.g. `add(a: state.count, b: 1)` re-runs when `state.count` changes.
+class _FunctionCall extends BlobNode {
+  _FunctionCall(this.name, this.function, this.arguments);
+
+  final String name;
+  final LocalFunction function;
+  final DynamicMap arguments;
+
+  @override
+  String toString() => '$name($arguments)';
+}
+
 abstract class _CurriedWidget extends BlobNode {
   const _CurriedWidget(
     this.fullName,
@@ -816,6 +903,13 @@ abstract class _CurriedWidget extends BlobNode {
       return SetStateHandler(
           node.stateReference, _bindLoopVariable(node.value, argument, depth))
         ..propagateSource(node);
+    }
+    if (node is _FunctionCall) {
+      return _FunctionCall(
+        node.name,
+        node.function,
+        _bindLoopVariable(node.arguments, argument, depth) as DynamicMap,
+      )..propagateSource(node);
     }
     return node;
   }
@@ -972,6 +1066,19 @@ abstract class _CurriedWidget extends BlobNode {
           }
         }
         current = value;
+        continue;
+      } else if (current is _FunctionCall) {
+        // Resolve the call's arguments to concrete values (recursing through
+        // these same resolvers, so nested calls and any state/data references
+        // are evaluated and subscribed to), then invoke the function. A total
+        // function returns null for bad input, which resolves to `missing`.
+        final DynamicMap resolvedArguments = _fix(
+          current.arguments,
+          stateResolver,
+          dataResolver,
+          widgetBuilderArgResolver,
+        ) as DynamicMap;
+        current = current.function(resolvedArguments) ?? missing;
         continue;
       } else if (index >= parts.length) {
         // We've reached the end of the line.

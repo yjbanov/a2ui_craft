@@ -28,7 +28,7 @@ LocalWidgetLibrary createCoreComponents() {
       final TextVariant variant =
           TextVariant.parse(source.v<String>(['variant']));
       return Text(
-        source.v<String>(['text']) ?? '',
+        _readText(source, const <Object>['text']),
         style: variant == TextVariant.caption
             ? const TextStyle(fontSize: 12, color: Color(0xFF5F6368))
             : null,
@@ -252,6 +252,55 @@ LocalWidgetLibrary createCoreComponents() {
 /// Reads a numeric argument, accepting an int or double literal.
 double? _numArg(DataSource source, String key) =>
     source.v<double>([key]) ?? source.v<int>([key])?.toDouble();
+
+/// Reads a text-sink argument, coercing a numeric value to its string form.
+///
+/// Templates routinely bind numbers into text sinks — a counter's `count`, a
+/// computed total from a function like `add`. RFW's `v<String>` is strict (a
+/// number reads back as null), so coerce here. Returns '' when the value is
+/// absent (or itself null, e.g. a total function given bad input).
+String _readText(DataSource source, List<Object> key) {
+  return source.v<String>(key) ??
+      source.v<int>(key)?.toString() ??
+      source.v<double>(key)?.toString() ??
+      '';
+}
+
+/// The standard **function library** — the pure, template-author-facing
+/// computation layer that complements [createCoreComponents] (the rendering
+/// layer). Register it on a [Runtime] with [Runtime.registerFunctions].
+///
+/// Each function is **total**: unexpected or missing arguments yield `null`
+/// (rendered as absent) rather than an exception. This is the trusted library
+/// used by template authors, kept deliberately separate from the agent-facing
+/// `a2ui_core` function catalog (see DESIGN.md, two-layer plan).
+LocalFunctionLibrary createCoreFunctions() {
+  return LocalFunctionLibrary(<String, LocalFunction>{
+    // Numeric addition. Accepts int/double (or a numeric string, since data
+    // bindings often carry stringified numbers); returns num, or null if either
+    // operand is not a number.
+    'add': (DynamicMap arguments) {
+      final num? a = _asNum(arguments['a']);
+      final num? b = _asNum(arguments['b']);
+      if (a == null || b == null) {
+        return null;
+      }
+      return a + b;
+    },
+  });
+}
+
+/// Coerces a resolved argument value to a [num]: passes numbers through, parses
+/// numeric strings, and returns null for anything else (keeping functions total).
+num? _asNum(Object? value) {
+  if (value is num) {
+    return value;
+  }
+  if (value is String) {
+    return num.tryParse(value);
+  }
+  return null;
+}
 
 /// Builds the `Markdown` primitive: the core parses the source into a neutral
 /// [MarkdownBlock] model, and this renders it as Flutter widgets (headings,

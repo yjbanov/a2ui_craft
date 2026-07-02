@@ -500,6 +500,32 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
       expect(tester.textCount('DETAILS'), 0);
     },
   );
+
+  driver.defineTest(
+    'a pure function call computes a value in a value position (and stays total)',
+    (CraftTester tester) async {
+      // Function calls reuse the `name(arg: …)` call syntax that also builds
+      // widgets; a name registered as a standard function (here `add`) is
+      // evaluated in any value position instead of built. The numeric result
+      // flows into a Text sink, which coerces it to its string form. Both
+      // adapters register the identical standard function library, so the
+      // computed values — and totality on bad input — must match.
+      await tester.mount('''
+        import core;
+        widget root = Column(children: [
+          Text(text: add(a: 2, b: 3)),
+          Text(text: add(a: add(a: 10, b: 5), b: 100)),
+          Text(text: add(a: "not a number", b: 3)),
+        ]);
+      ''');
+
+      expect(tester.hasText('5'), isTrue); // 2 + 3
+      expect(tester.hasText('115'), isTrue); // nested: (10 + 5) + 100
+      // Total: a non-numeric operand yields null → an absent (empty) text, not a
+      // thrown exception, and the bad input is not rendered.
+      expect(tester.hasText('not a number'), isFalse);
+    },
+  );
 }
 
 /// The shared behavioral specification for rendering an **A2UI surface**

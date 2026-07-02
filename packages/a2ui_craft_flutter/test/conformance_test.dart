@@ -19,6 +19,7 @@ class _FlutterCraftTester implements CraftTester {
 
   final Runtime _runtime = Runtime()
     ..update(const LibraryName(<String>['core']), createCoreComponents())
+    ..registerFunctions(createCoreFunctions())
     ..update(a2uiDemoCatalogName, parseLibraryFile(a2uiDemoCatalogSource));
 
   @override

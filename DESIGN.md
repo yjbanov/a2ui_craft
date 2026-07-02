@@ -926,6 +926,20 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
           outside the behavioral conformance harness).
         - *Math library.* `add`/`subtract`/`multiply`/`divide` (divide-by-zero →
           null, stays total), strict + total, cross-adapter conformance.
+        - *Consolidated + expanded library.* Because the functions are pure and
+          framework-neutral, the whole standard library now lives **once** in
+          `package:a2ui_craft` (`src/functions.dart`) — types, `createCoreFunctions`,
+          and `numberToDisplayString` — rather than being duplicated per adapter;
+          duplication that must stay byte-identical is precisely what threatens
+          the determinism guarantee, so single-sourcing removes the hazard (the
+          runtime *hooks* stay per-adapter). The library now covers: number
+          (`add`/`subtract`/`multiply`/`divide`/`mod`/`min`/`max`/`abs`/`round`/
+          `floor`/`ceil`), comparison→bool (`greaterThan`/`lessThan`/`…OrEqual`,
+          `equals`/`notEquals` — cross-type-safe, no coercion), boolean logic
+          (`and`/`or`/`not`, fed to a `switch` since RFW has no `if`), and string
+          (`concat` — stringifies any operand, `uppercase`/`lowercase`/`trim`/
+          `length`). All strict + total, each with a cross-adapter conformance
+          case (which also guards determinism, e.g. `uppercase` across VM/dart2js).
         - *Determinism watch-out, hit for real.* `(4.0).toString()` is `"4.0"` on
           the Dart VM but `"4"` on dart2js, so `divide(20, 5)` rendered
           differently on Flutter vs Jaspr. Fixed in the number→string coercion:

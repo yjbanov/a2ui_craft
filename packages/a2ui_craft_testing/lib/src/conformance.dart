@@ -598,6 +598,93 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
       expect(tester.textCount('4'), 1);
     },
   );
+
+  driver.defineTest(
+    'the extended number functions compute identically on every adapter',
+    (CraftTester tester) async {
+      // mod/min/max/abs plus the double→int roundings (round/floor/ceil), which
+      // are handy for turning a division result into a whole number. Operands are
+      // chosen so every result is distinct.
+      await tester.mount('''
+        import core;
+        widget root = Column(children: [
+          Text(text: mod(a: 17, b: 5)),
+          Text(text: min(a: 9, b: 4)),
+          Text(text: max(a: 9, b: 4)),
+          Text(text: abs(value: subtract(a: 3, b: 10))),
+          Text(text: round(value: divide(a: 11, b: 2))),
+          Text(text: floor(value: divide(a: 11, b: 2))),
+          Text(text: ceil(value: divide(a: 11, b: 4))),
+        ]);
+      ''');
+
+      expect(tester.hasText('2'), isTrue); // 17 mod 5
+      expect(tester.hasText('4'), isTrue); // min(9, 4)
+      expect(tester.hasText('9'), isTrue); // max(9, 4)
+      expect(tester.hasText('7'), isTrue); // abs(3 - 10)
+      expect(tester.hasText('6'), isTrue); // round(5.5)
+      expect(tester.hasText('5'), isTrue); // floor(5.5)
+      expect(tester.hasText('3'), isTrue); // ceil(2.75)
+    },
+  );
+
+  driver.defineTest(
+    'comparison and boolean logic functions drive a switch on every adapter',
+    (CraftTester tester) async {
+      // Comparison/logic functions return a boolean, which is meant to feed a
+      // `switch` (RFW has no `if`); a bare boolean in a Text sink renders empty.
+      // Also covers cross-type equality (5 ≠ "5", no coercion) and nesting a
+      // comparison inside `and`.
+      await tester.mount('''
+        import core;
+        widget root = Column(children: [
+          Text(text: switch greaterThan(a: 5, b: 3) { true: "gt-yes", default: "gt-no" }),
+          Text(text: switch lessThan(a: 5, b: 3) { true: "lt-yes", default: "lt-no" }),
+          Text(text: switch greaterThanOrEqual(a: 3, b: 3) { true: "gte-yes", default: "gte-no" }),
+          Text(text: switch equals(a: "x", b: "x") { true: "eq-yes", default: "eq-no" }),
+          Text(text: switch equals(a: 5, b: "5") { true: "cross-yes", default: "cross-no" }),
+          Text(text: switch and(a: true, b: greaterThan(a: 2, b: 1)) { true: "and-yes", default: "and-no" }),
+          Text(text: switch or(a: false, b: false) { true: "or-yes", default: "or-no" }),
+          Text(text: switch not(value: false) { true: "not-yes", default: "not-no" }),
+        ]);
+      ''');
+
+      expect(tester.hasText('gt-yes'), isTrue); // 5 > 3
+      expect(tester.hasText('lt-no'), isTrue); // 5 < 3 is false
+      expect(tester.hasText('gte-yes'), isTrue); // 3 >= 3
+      expect(tester.hasText('eq-yes'), isTrue); // "x" == "x"
+      expect(tester.hasText('cross-no'), isTrue); // 5 != "5" (no coercion)
+      expect(tester.hasText('and-yes'), isTrue); // true && (2 > 1)
+      expect(tester.hasText('or-no'), isTrue); // false || false is false
+      expect(tester.hasText('not-yes'), isTrue); // !false
+    },
+  );
+
+  driver.defineTest(
+    'the string functions compute identically on every adapter',
+    (CraftTester tester) async {
+      // concat accepts any operand (a nested number is stringified the same way
+      // a Text sink would render it); the rest require a string and are total.
+      await tester.mount('''
+        import core;
+        widget root = Column(children: [
+          Text(text: concat(a: "Hello, ", b: "World")),
+          Text(text: uppercase(value: "abc")),
+          Text(text: lowercase(value: "XYZ")),
+          Text(text: trim(value: "  spaced  ")),
+          Text(text: length(value: "hello")),
+          Text(text: concat(a: "n=", b: add(a: 2, b: 3))),
+        ]);
+      ''');
+
+      expect(tester.hasText('Hello, World'), isTrue);
+      expect(tester.hasText('ABC'), isTrue);
+      expect(tester.hasText('xyz'), isTrue);
+      expect(tester.hasText('spaced'), isTrue); // trimmed
+      expect(tester.hasText('5'), isTrue); // length("hello")
+      expect(tester.hasText('n=5'), isTrue); // concat stringifies the number 5
+    },
+  );
 }
 
 /// The shared behavioral specification for rendering an **A2UI surface**

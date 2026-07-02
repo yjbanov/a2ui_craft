@@ -126,14 +126,73 @@ String numberToDisplayString(num value) {
 /// agent-facing `a2ui_core` function catalog (see DESIGN.md, two-layer plan).
 LocalFunctionLibrary createCoreFunctions() {
   return LocalFunctionLibrary(<String, LocalFunction>{
-    // Basic arithmetic over int/double operands. Division by zero has no
+    // Arithmetic (number, number → number). Division/modulo by zero has no
     // numeric result → null (stays total).
     'add': _binaryNumber((num a, num b) => a + b),
     'subtract': _binaryNumber((num a, num b) => a - b),
     'multiply': _binaryNumber((num a, num b) => a * b),
     'divide': _binaryNumber((num a, num b) => b == 0 ? null : a / b),
+    'mod': _binaryNumber((num a, num b) => b == 0 ? null : a % b),
+    'min': _binaryNumber((num a, num b) => a <= b ? a : b),
+    'max': _binaryNumber((num a, num b) => a >= b ? a : b),
+
+    // Unary number (number → number). round/floor/ceil return an int.
+    'abs': _unaryNumber((num a) => a.abs()),
+    'round': _unaryNumber((num a) => a.round()),
+    'floor': _unaryNumber((num a) => a.floor()),
+    'ceil': _unaryNumber((num a) => a.ceil()),
+
+    // Numeric comparison (number, number → boolean).
+    'greaterThan': _numberComparison((num a, num b) => a > b),
+    'lessThan': _numberComparison((num a, num b) => a < b),
+    'greaterThanOrEqual': _numberComparison((num a, num b) => a >= b),
+    'lessThanOrEqual': _numberComparison((num a, num b) => a <= b),
+
+    // Equality (any, any → boolean). Cross-type compares are false (5 ≠ "5");
+    // no coercion. Total — always a boolean.
+    'equals': _equality(wantEqual: true),
+    'notEquals': _equality(wantEqual: false),
+
+    // Boolean logic (boolean … → boolean). Operands are pre-resolved, so there
+    // is nothing to short-circuit.
+    'and': _binaryBoolean((bool a, bool b) => a && b),
+    'or': _binaryBoolean((bool a, bool b) => a || b),
+    'not': _unaryBoolean((bool value) => !value),
+
+    // Strings. `concat` stringifies each operand (numbers via
+    // [numberToDisplayString], booleans as "true"/"false", anything absent as
+    // ""), so it accepts any value; the rest require a string.
+    'concat': _concat(),
+    'uppercase': _unaryString((String s) => s.toUpperCase()),
+    'lowercase': _unaryString((String s) => s.toLowerCase()),
+    'trim': _unaryString((String s) => s.trim()),
+    'length': _stringLength(),
   });
 }
+
+// --- Argument schemas -------------------------------------------------------
+
+const Map<String, FunctionArgType> _twoNumbers = <String, FunctionArgType>{
+  'a': FunctionArgType.number,
+  'b': FunctionArgType.number,
+};
+const Map<String, FunctionArgType> _oneNumber = <String, FunctionArgType>{
+  'value': FunctionArgType.number,
+};
+const Map<String, FunctionArgType> _twoAny = <String, FunctionArgType>{
+  'a': FunctionArgType.any,
+  'b': FunctionArgType.any,
+};
+const Map<String, FunctionArgType> _twoBooleans = <String, FunctionArgType>{
+  'a': FunctionArgType.boolean,
+  'b': FunctionArgType.boolean,
+};
+const Map<String, FunctionArgType> _oneBoolean = <String, FunctionArgType>{
+  'value': FunctionArgType.boolean,
+};
+const Map<String, FunctionArgType> _oneString = <String, FunctionArgType>{
+  'value': FunctionArgType.string,
+};
 
 // --- Number helpers ---------------------------------------------------------
 
@@ -147,10 +206,7 @@ num? _asNumber(Object? value) => value is num ? value : null;
 /// null (e.g. divide-by-zero) — yields null (an absent result).
 LocalFunction _binaryNumber(num? Function(num a, num b) combine) {
   return LocalFunction(
-    arguments: const <String, FunctionArgType>{
-      'a': FunctionArgType.number,
-      'b': FunctionArgType.number,
-    },
+    arguments: _twoNumbers,
     implementation: (DynamicMap arguments) {
       final num? a = _asNumber(arguments['a']);
       final num? b = _asNumber(arguments['b']);
@@ -160,4 +216,122 @@ LocalFunction _binaryNumber(num? Function(num a, num b) combine) {
       return combine(a, b);
     },
   );
+}
+
+/// Builds a unary numeric [LocalFunction] from [compute]. Total: a non-numeric
+/// operand yields null.
+LocalFunction _unaryNumber(num? Function(num value) compute) {
+  return LocalFunction(
+    arguments: _oneNumber,
+    implementation: (DynamicMap arguments) {
+      final num? value = _asNumber(arguments['value']);
+      return value == null ? null : compute(value);
+    },
+  );
+}
+
+/// Builds a numeric comparison ((number, number) → boolean). Total: a
+/// non-numeric operand yields null.
+LocalFunction _numberComparison(bool Function(num a, num b) compare) {
+  return LocalFunction(
+    arguments: _twoNumbers,
+    implementation: (DynamicMap arguments) {
+      final num? a = _asNumber(arguments['a']);
+      final num? b = _asNumber(arguments['b']);
+      if (a == null || b == null) {
+        return null;
+      }
+      return compare(a, b);
+    },
+  );
+}
+
+// --- Equality & boolean logic ----------------------------------------------
+
+/// Builds `equals`/`notEquals`. Uses Dart `==`, so operands of different types
+/// are unequal and numbers are not coerced. Total — always returns a boolean.
+LocalFunction _equality({required bool wantEqual}) {
+  return LocalFunction(
+    arguments: _twoAny,
+    implementation: (DynamicMap arguments) =>
+        (arguments['a'] == arguments['b']) == wantEqual,
+  );
+}
+
+/// Builds a binary boolean [LocalFunction]. Total: a non-boolean operand yields
+/// null.
+LocalFunction _binaryBoolean(bool Function(bool a, bool b) combine) {
+  return LocalFunction(
+    arguments: _twoBooleans,
+    implementation: (DynamicMap arguments) {
+      final Object? a = arguments['a'];
+      final Object? b = arguments['b'];
+      return (a is bool && b is bool) ? combine(a, b) : null;
+    },
+  );
+}
+
+/// Builds a unary boolean [LocalFunction]. Total: a non-boolean operand yields
+/// null.
+LocalFunction _unaryBoolean(bool Function(bool value) compute) {
+  return LocalFunction(
+    arguments: _oneBoolean,
+    implementation: (DynamicMap arguments) {
+      final Object? value = arguments['value'];
+      return value is bool ? compute(value) : null;
+    },
+  );
+}
+
+// --- String helpers ---------------------------------------------------------
+
+/// Builds a unary string transform. Total: a non-string operand yields null.
+LocalFunction _unaryString(String Function(String value) transform) {
+  return LocalFunction(
+    arguments: _oneString,
+    implementation: (DynamicMap arguments) {
+      final Object? value = arguments['value'];
+      return value is String ? transform(value) : null;
+    },
+  );
+}
+
+/// `length`: the number of UTF-16 code units in a string. Total: a non-string
+/// operand yields null.
+LocalFunction _stringLength() {
+  return LocalFunction(
+    arguments: _oneString,
+    implementation: (DynamicMap arguments) {
+      final Object? value = arguments['value'];
+      return value is String ? value.length : null;
+    },
+  );
+}
+
+/// `concat`: joins two operands as display strings (see [_stringifyOperand]).
+/// Accepts any values and always returns a string, so it is convenient for
+/// building labels from a mix of text and computed numbers.
+LocalFunction _concat() {
+  return LocalFunction(
+    arguments: _twoAny,
+    implementation: (DynamicMap arguments) =>
+        '${_stringifyOperand(arguments['a'])}${_stringifyOperand(arguments['b'])}',
+  );
+}
+
+/// Renders a value the way `concat` (and a Text sink) would: a string as-is, a
+/// number via [numberToDisplayString], a boolean as "true"/"false", and anything
+/// absent or non-scalar (null, an unresolved binding, a list/map) as an empty
+/// string.
+String _stringifyOperand(Object? value) {
+  if (value is String) {
+    return value;
+  }
+  if (value is num) {
+    return numberToDisplayString(value);
+  }
+  if (value is bool) {
+    return value ? 'true' : 'false';
+  }
+  return '';
 }

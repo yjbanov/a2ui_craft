@@ -886,6 +886,26 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
         `!`), or fixed-case `switch`es; an unbounded counter (`count + 1`) is
         *not* expressible purely in-template and needs either the A2UI
         action→data path or a future expression/computation capability.
+  - [x] **Template functions — read-side slice (`add`).** First delivery of the
+        two-layer plan below: a template can call a host-provided pure function
+        in any value position, e.g. `Text(text: add(a: 2, b: 3))` → "5". No
+        grammar change — `name(arg: …)` already parses as a `ConstructorCall`;
+        the runtime treats it as a function when the name is in a **template-
+        facing `LocalFunctionLibrary`** and is *not* a widget in scope (widgets
+        win). Bound arg nodes resolve through the normal resolvers, so calls
+        stay reactive and nest. Guarded: an empty registry is byte-for-byte
+        unchanged. `createCoreFunctions()` ships a total `add`; `Text` coerces a
+        numeric value to its string form. **Strict + total, no coercion:** a
+        numeric function takes numbers only — a string in a numeric position is
+        a type error yielding null (an absent result), *not* a silently parsed
+        number (no JS-style `"5"→5`). Totality (null, never throw) is scoped to
+        keeping wrong-typed **untrusted data** from crashing the UI; it is *not*
+        a license to guess at author intent. An "earlier, useful error" for
+        author type-mistakes belongs in future argument-schema validation (which
+        can also tell a literal from a binding). Both adapters + a conformance
+        case (incl. a `test-the-test` no-coercion guard). *Still missing from
+        "Now" below:* set-state calls (the numeric counter), and the wider
+        math/string/bool/date library behind a written spec.
   - [ ] **Template computation — a two-layer plan.** How does a *template author*
         (not the agent) express computation like a counter's `count + 1`?
         Rejected: encoding it in the A2UI transport message — that's authored by

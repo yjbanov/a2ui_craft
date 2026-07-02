@@ -276,12 +276,11 @@ String _readText(DataSource source, List<Object> key) {
 /// `a2ui_core` function catalog (see DESIGN.md, two-layer plan).
 LocalFunctionLibrary createCoreFunctions() {
   return LocalFunctionLibrary(<String, LocalFunction>{
-    // Numeric addition. Accepts int/double (or a numeric string, since data
-    // bindings often carry stringified numbers); returns num, or null if either
-    // operand is not a number.
+    // Numeric addition over int/double operands. Returns their sum, or null if
+    // either operand is not a number.
     'add': (DynamicMap arguments) {
-      final num? a = _asNum(arguments['a']);
-      final num? b = _asNum(arguments['b']);
+      final num? a = _numOrNull(arguments['a']);
+      final num? b = _numOrNull(arguments['b']);
       if (a == null || b == null) {
         return null;
       }
@@ -290,17 +289,16 @@ LocalFunctionLibrary createCoreFunctions() {
   });
 }
 
-/// Coerces a resolved argument value to a [num]: passes numbers through, parses
-/// numeric strings, and returns null for anything else (keeping functions total).
-num? _asNum(Object? value) {
-  if (value is num) {
-    return value;
-  }
-  if (value is String) {
-    return num.tryParse(value);
-  }
-  return null;
-}
+/// Reads a resolved function argument as a [num], returning null for any
+/// non-numeric value.
+///
+/// Numeric functions are **strict** about types — a string in a numeric
+/// position is a type error, not a value to coerce (we deliberately avoid
+/// JS-style `"5" + 3 == "53"`/`8` surprises that silently hide author bugs). It
+/// is also **total**: rather than throwing, bad input yields null (an absent
+/// result), so wrong-typed *data* arriving from the untrusted agent degrades
+/// gracefully instead of crashing the UI. See DESIGN.md (two-layer plan).
+num? _numOrNull(Object? value) => value is num ? value : null;
 
 /// Builds the `Markdown` primitive: the core parses the source into a neutral
 /// [MarkdownBlock] model, and this renders it as Flutter widgets (headings,

@@ -515,15 +515,17 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
         widget root = Column(children: [
           Text(text: add(a: 2, b: 3)),
           Text(text: add(a: add(a: 10, b: 5), b: 100)),
-          Text(text: add(a: "not a number", b: 3)),
+          Text(text: add(a: "5", b: 3)),
         ]);
       ''');
 
       expect(tester.hasText('5'), isTrue); // 2 + 3
       expect(tester.hasText('115'), isTrue); // nested: (10 + 5) + 100
-      // Total: a non-numeric operand yields null → an absent (empty) text, not a
-      // thrown exception, and the bad input is not rendered.
-      expect(tester.hasText('not a number'), isFalse);
+      // Strict + total: the String "5" is a type error, not silently coerced to
+      // the number 5, so the third call yields null → an absent (empty) text and
+      // the result is NOT 8. This guards against JS-style string→number coercion
+      // (which would render "8"), and proves bad input degrades without crashing.
+      expect(tester.hasText('8'), isFalse);
     },
   );
 }

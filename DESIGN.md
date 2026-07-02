@@ -987,6 +987,90 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
           through data-model writes, never a sync return. Pure function
           *expressions* stay synchronous. This routes through the §12 cancellable
           scheduler (timeouts/cancellation for free).
+  - [ ] **Ephemeral theming / design systems — a research note.** *Problem.*
+        Because templates compose the host's *local* primitives, they inherit the
+        host app's look for free (Flutter `Theme.of` / the CSS cascade). That
+        covers the common case — a template that should *blend into* its host —
+        and we keep it as the zero-config default. It fails the case the user
+        raised: the template author and the host app are **different developers
+        who want to brand their UI separately**. The author needs to ship a
+        design system *with* their templates. Critically it must load
+        **ephemerally** — over the network like the template `.craft`, the A2UI
+        messages, and the data — because it is not part of the AOT-compiled host.
+        - **Key decomposition — what can be ephemeral.** A design system is not
+          one thing; split it by what must be compiled vs. what can be data:
+          1. **Design tokens** (semantic colors, a typography scale, a spacing
+             rhythm, radii/shape, elevation) — pure **data**. Serializes to JSON;
+             loads ephemerally like anything else. *This is the missing piece.*
+          2. **Component styling / variants** (a "primary, pill-shaped button") —
+             largely **already solved** by the catalog layer: a branded component
+             is a *template* over primitives (`widget BrandButton = Box(…)`),
+             which already loads ephemerally. The tokens just supply the values
+             those component-templates reference.
+          3. **Primitive render code** (a genuinely new painted widget) and
+             **novel interaction behaviors** (custom gestures/animations) — these
+             **cannot** be ephemeral (same limit as custom primitives; they are
+             the "Later — ephemeral sandboxed logic" layer above). This is the
+             honest boundary: ephemeral theming governs **appearance + composition**,
+             not new rendering or behavior. Analogy: the browser engine
+             (primitives) is fixed and compiled; CSS (tokens/rules) loads
+             ephemerally and drives appearance. A design system here *is* the
+             stylesheet.
+        - **The transport already exists.** A2UI's `createSurface` message
+          carries an opaque `theme` map (`a2ui_core`'s `CreateSurfaceMessage.theme`,
+          `Map<String, dynamic>?`), passed through uninterpreted for the *client*
+          to apply — an ephemeral theme channel we currently ignore. So a token
+          set can ride the existing A2UI transport with no new plumbing; a
+          template can also **bundle** its canonical theme (a 4th trio file,
+          `theme.json`) as the author-owned brand.
+        - **Ownership vs. the trust boundary.** Unlike computation, a theme is
+          *data*, not code, so agent-supplied theme is not a security problem —
+          but it is a **control** problem, the same one functions had: the A2UI
+          transport is agent-authored, so a theme that arrives *only* via
+          `createSurface` is the agent's choice, not the template author's brand.
+          Resolution: the author-bundled theme is the canonical design system;
+          `createSurface.theme` is an **override/augmentation** channel (dark
+          mode, host-brand injection, user preference). Proposed precedence
+          (lowest→highest): host defaults → author design system → runtime/agent
+          `createSurface.theme` → explicit per-widget props. Each layer is a
+          partial map that **cascades** over the one below, so an author overrides
+          only their brand color and inherits the rest — never all-or-nothing.
+        - **How tokens reach primitives.** Two complementary paths, mirroring CSS:
+          (a) *ambient/default* — the runtime holds the resolved active theme and
+          each primitive reads its role default from it when a prop is unset (an
+          unstyled `Button` picks up `theme.color.primary`, like the cascade);
+          (b) *explicit* — a token is referenceable in a template value position
+          like a binding (`Box(color: theme.color.primary)`, `var(--primary)`),
+          for custom compositions. (a) makes an unstyled template themed
+          automatically; (b) gives authors precise control. Both resolve through
+          the same framework-neutral value machinery the primitives already use
+          (colors, `Dimension`, alignments), so this extends — not replaces — §11.
+        - **Cross-adapter determinism.** The token schema is framework-neutral
+          (like the existing value types); each adapter maps a token to its native
+          styling (a color → `Color`/CSS color; a type token → `TextStyle`/CSS
+          font; spacing/shape → the proven `Dimension` path). Token *application*
+          is deterministic (same token → same declared intent on both); pixel
+          identity is explicitly **not** the goal (§5, and the Ahem/golden note),
+          semantic identity is. A "theming conformance" dimension can reuse the
+          geometry-harness pattern (assert a token lands on a primitive on both
+          adapters — e.g. resolved padding/colour via `getRect`/inspection).
+        - **Totality.** A theme is untrusted-shaped ephemeral data, so parsing is
+          total: an unknown/malformed token falls back to the layer below (host
+          default), never throws — the same discipline as the function library.
+        - **Phased plan (launch-and-iterate).** (0, today) host inheritance,
+          kept as default. (1) a framework-neutral `ThemeData` token schema + a
+          minimal semantic set (colour roles, type scale, spacing) that primitives
+          read ambiently with host fallback, loaded from a bundled `theme.json`
+          *and* `createSurface.theme`, with cross-adapter theming conformance.
+          (2) explicit token references in templates. (3) richer style slots /
+          variants + branded component-templates in the catalog. (4) anything
+          needing new render code or behavior defers to the sandboxed-code layer.
+        - *Open questions:* the exact semantic-token vocabulary (lean on Material
+          3 / a small role set?); whether dark mode is a second token map or a
+          mode flag the tokens switch on; how much per-primitive style surface to
+          expose before it becomes "reimplement CSS"; and whether token resolution
+          should be reactive (a `setTheme` message re-themes a live surface) —
+          likely yes, riding the existing reactive resolution path.
 - [ ] Prove the state-model axis with a third, non-Flutter-like framework.
 - [ ] **Security: uphold A2UI's secure-by-design promise (§12).** When templates
       are delivered ephemerally, treat them as untrusted input: add engine-level

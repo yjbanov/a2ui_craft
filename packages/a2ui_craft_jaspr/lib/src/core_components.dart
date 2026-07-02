@@ -377,71 +377,10 @@ String _readText(DataSource source, List<Object> key) {
   }
   final double? number = source.v<double>(key);
   if (number != null) {
-    return (number.isFinite && number == number.roundToDouble())
-        ? number.toInt().toString()
-        : number.toString();
+    return numberToDisplayString(number);
   }
   return '';
 }
-
-/// The standard **function library** — the pure, template-author-facing
-/// computation layer that complements [createCoreComponents] (the rendering
-/// layer). Register it on a [Runtime] with [Runtime.registerFunctions].
-///
-/// Each function is **total**: unexpected or missing arguments yield `null`
-/// (rendered as absent) rather than an exception. This is the trusted library
-/// used by template authors, kept deliberately separate from the agent-facing
-/// `a2ui_core` function catalog (see DESIGN.md, two-layer plan).
-///
-/// Kept identical to the Flutter adapter's `createCoreFunctions` so a template
-/// computes the same values on both.
-LocalFunctionLibrary createCoreFunctions() {
-  return LocalFunctionLibrary(<String, LocalFunction>{
-    // Basic arithmetic over int/double operands.
-    'add': _binaryNumberFunction((num a, num b) => a + b),
-    'subtract': _binaryNumberFunction((num a, num b) => a - b),
-    'multiply': _binaryNumberFunction((num a, num b) => a * b),
-    // Division by zero has no numeric result → null (stays total).
-    'divide': _binaryNumberFunction((num a, num b) => b == 0 ? null : a / b),
-  });
-}
-
-/// The argument schema shared by the binary numeric functions: two required
-/// numbers, `a` and `b`.
-const Map<String, FunctionArgType> _binaryNumberArgs =
-    <String, FunctionArgType>{
-  'a': FunctionArgType.number,
-  'b': FunctionArgType.number,
-};
-
-/// Builds a binary numeric [LocalFunction] from [combine].
-///
-/// Total by construction: a non-numeric operand — or a [combine] that returns
-/// null (e.g. divide-by-zero) — yields null (an absent result) rather than
-/// throwing. Types are **strict**: a string in a numeric position is a type
-/// error, not silently coerced (no JS-style `"5" + 3 == 8`); an author's literal
-/// mistake is caught at bind time by the schema, and a wrong-typed runtime
-/// binding degrades here via [_numOrNull]. See DESIGN.md (two-layer plan).
-///
-/// Kept identical to the Flutter adapter's implementation so a template computes
-/// the same values on both.
-LocalFunction _binaryNumberFunction(num? Function(num a, num b) combine) {
-  return LocalFunction(
-    arguments: _binaryNumberArgs,
-    implementation: (DynamicMap arguments) {
-      final num? a = _numOrNull(arguments['a']);
-      final num? b = _numOrNull(arguments['b']);
-      if (a == null || b == null) {
-        return null;
-      }
-      return combine(a, b);
-    },
-  );
-}
-
-/// Reads a resolved function argument as a [num], returning null for any
-/// non-numeric value (no coercion; see [_binaryNumberFunction]).
-num? _numOrNull(Object? value) => value is num ? value : null;
 
 /// Builds a `Flex` (and thus `Row`/`Column`) from the catalog spec, mapping the
 /// framework-neutral value types onto a CSS flex container.

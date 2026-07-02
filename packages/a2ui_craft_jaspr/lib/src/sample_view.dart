@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 import 'package:a2ui_core/a2ui_core.dart';
-import 'package:a2ui_craft/a2ui_craft.dart' show LibraryName, parseLibraryFile;
+import 'package:a2ui_craft/a2ui_craft.dart'
+    show LibraryName, createCoreFunctions, parseLibraryFile;
 import 'package:a2ui_craft_bridge/a2ui_craft_bridge.dart';
 import 'package:jaspr/jaspr.dart';
 

@@ -12,6 +12,7 @@ library a2ui_craft;
 
 export 'src/binary.dart';
 export 'src/content.dart';
+export 'src/functions.dart';
 export 'src/markdown.dart';
 export 'src/model.dart';
 export 'src/text.dart';

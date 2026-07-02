@@ -18,73 +18,11 @@ typedef VoidCallback = void Function();
 typedef LocalWidgetBuilder = Component Function(
     BuildContext context, DataSource source);
 
-/// Signature of a pure value-function's implementation (see [LocalFunction]).
-///
-/// Implementations MUST be **total**: given unexpected or missing argument
-/// values they return `null` (which resolves to absent, e.g. an empty text)
-/// rather than throwing. Totality is what lets wrong-typed *runtime* data (e.g.
-/// an agent-supplied binding) degrade instead of crashing; author *literal*
-/// type-mistakes are caught earlier, at bind time, by the [LocalFunction.arguments]
-/// schema (in debug).
-typedef LocalFunctionImplementation = Object? Function(DynamicMap arguments);
-
-/// The value type a [LocalFunction] argument accepts.
-///
-/// Used to validate a call's *literal* arguments at bind time (in debug): a
-/// literal of the wrong type is an author mistake and is reported early. A bound
-/// argument (a data/state/args reference or a nested call) is resolved at
-/// runtime — possibly from agent-controlled data — so its type is not (and must
-/// not be) enforced statically; [LocalFunctionImplementation] totality handles a
-/// bad runtime value.
-enum FunctionArgType {
-  /// An int or double.
-  number,
-
-  /// A string.
-  string,
-
-  /// A bool.
-  boolean;
-
-  /// Whether [value] satisfies this type.
-  bool accepts(Object? value) => switch (this) {
-        FunctionArgType.number => value is num,
-        FunctionArgType.string => value is String,
-        FunctionArgType.boolean => value is bool,
-      };
-
-  /// A human-readable name for error messages.
-  String get label => switch (this) {
-        FunctionArgType.number => 'a number',
-        FunctionArgType.string => 'a string',
-        FunctionArgType.boolean => 'a boolean',
-      };
-}
-
-/// A pure value-function callable from a template, plus the schema of the
-/// arguments it accepts.
-///
-/// Functions are the *computation* layer that complements the *rendering* layer
-/// ([LocalWidgetBuilder]): a template writes `name(arg: value, …)` in any value
-/// position — including the right-hand side of a `set state` — and the runtime
-/// resolves the arguments to values, invokes [implementation], and substitutes
-/// the returned value.
-///
-/// This is the trusted, template-author-facing shape — deliberately separate
-/// from the agent-facing `a2ui_core` function catalog. See DESIGN.md (two-layer
-/// template-computation plan).
-class LocalFunction {
-  /// Creates a function with the given [arguments] schema and [implementation].
-  const LocalFunction({required this.arguments, required this.implementation});
-
-  /// The accepted arguments, keyed by name. Every listed argument is required;
-  /// declaring an argument both names it (so an unknown name is rejected) and
-  /// types it (so a wrong-typed literal is rejected) at bind time in debug.
-  final Map<String, FunctionArgType> arguments;
-
-  /// The (total) computation. See [LocalFunctionImplementation].
-  final LocalFunctionImplementation implementation;
-}
+// The template function types ([LocalFunction], [LocalFunctionLibrary],
+// [FunctionArgType], [LocalFunctionImplementation]) and the standard library
+// ([createCoreFunctions]) are framework-neutral and defined once in
+// `package:a2ui_craft` (src/functions.dart); this adapter imports them so a
+// template computes identical values on every adapter.
 
 /// Signature of builders for remote widgets.
 typedef _RemoteWidgetBuilder = _CurriedWidget Function(DynamicMap builderArg);
@@ -279,30 +217,6 @@ class LocalWidgetLibrary extends WidgetLibrary {
   ///  * [createCoreWidgets], a function that creates a [Map] of local widgets.
   UnmodifiableMapView<String, LocalWidgetBuilder> get widgets {
     return UnmodifiableMapView<String, LocalWidgetBuilder>(_widgets);
-  }
-}
-
-/// A named collection of pure [LocalFunction]s, registered on a [Runtime] via
-/// [Runtime.registerFunctions].
-///
-/// The template-facing analogue of [LocalWidgetLibrary]: where that supplies the
-/// widgets a template composes, this supplies the functions a template calls in
-/// value positions. Provided by the host in Dart (compiled AOT), so — like the
-/// primitive widgets — the set is fixed for a given host build.
-class LocalFunctionLibrary {
-  /// Create a [LocalFunctionLibrary].
-  ///
-  /// The given map must not change once the object is created.
-  LocalFunctionLibrary(this._functions);
-
-  final Map<String, LocalFunction> _functions;
-
-  /// The functions defined by this library, keyed by the name templates call.
-  ///
-  /// The returned map is an immutable view of the map provided to the
-  /// constructor.
-  UnmodifiableMapView<String, LocalFunction> get functions {
-    return UnmodifiableMapView<String, LocalFunction>(_functions);
   }
 }
 

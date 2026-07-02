@@ -17,20 +17,73 @@ import 'package:flutter/widgets.dart';
 typedef LocalWidgetBuilder = Widget Function(
     BuildContext context, DataSource source);
 
-/// Signature of a pure value-function callable from a template.
+/// Signature of a pure value-function's implementation (see [LocalFunction]).
+///
+/// Implementations MUST be **total**: given unexpected or missing argument
+/// values they return `null` (which resolves to absent, e.g. an empty text)
+/// rather than throwing. Totality is what lets wrong-typed *runtime* data (e.g.
+/// an agent-supplied binding) degrade instead of crashing; author *literal*
+/// type-mistakes are caught earlier, at bind time, by the [LocalFunction.arguments]
+/// schema (in debug).
+typedef LocalFunctionImplementation = Object? Function(DynamicMap arguments);
+
+/// The value type a [LocalFunction] argument accepts.
+///
+/// Used to validate a call's *literal* arguments at bind time (in debug): a
+/// literal of the wrong type is an author mistake and is reported early. A bound
+/// argument (a data/state/args reference or a nested call) is resolved at
+/// runtime — possibly from agent-controlled data — so its type is not (and must
+/// not be) enforced statically; [LocalFunctionImplementation] totality handles a
+/// bad runtime value.
+enum FunctionArgType {
+  /// An int or double.
+  number,
+
+  /// A string.
+  string,
+
+  /// A bool.
+  boolean;
+
+  /// Whether [value] satisfies this type.
+  bool accepts(Object? value) => switch (this) {
+        FunctionArgType.number => value is num,
+        FunctionArgType.string => value is String,
+        FunctionArgType.boolean => value is bool,
+      };
+
+  /// A human-readable name for error messages.
+  String get label => switch (this) {
+        FunctionArgType.number => 'a number',
+        FunctionArgType.string => 'a string',
+        FunctionArgType.boolean => 'a boolean',
+      };
+}
+
+/// A pure value-function callable from a template, plus the schema of the
+/// arguments it accepts.
 ///
 /// Functions are the *computation* layer that complements the *rendering* layer
 /// ([LocalWidgetBuilder]): a template writes `name(arg: value, …)` in any value
 /// position — including the right-hand side of a `set state` — and the runtime
-/// resolves the arguments to values, invokes this callback, and substitutes the
-/// returned value.
+/// resolves the arguments to values, invokes [implementation], and substitutes
+/// the returned value.
 ///
-/// Implementations MUST be **total**: given unexpected or missing argument
-/// values they return `null` (which resolves to absent, e.g. an empty text)
-/// rather than throwing. This is the trusted, template-author-facing library —
-/// deliberately separate from the agent-facing `a2ui_core` function catalog. See
-/// DESIGN.md (two-layer template-computation plan).
-typedef LocalFunction = Object? Function(DynamicMap arguments);
+/// This is the trusted, template-author-facing shape — deliberately separate
+/// from the agent-facing `a2ui_core` function catalog. See DESIGN.md (two-layer
+/// template-computation plan).
+class LocalFunction {
+  /// Creates a function with the given [arguments] schema and [implementation].
+  const LocalFunction({required this.arguments, required this.implementation});
+
+  /// The accepted arguments, keyed by name. Every listed argument is required;
+  /// declaring an argument both names it (so an unknown name is rejected) and
+  /// types it (so a wrong-typed literal is rejected) at bind time in debug.
+  final Map<String, FunctionArgType> arguments;
+
+  /// The (total) computation. See [LocalFunctionImplementation].
+  final LocalFunctionImplementation implementation;
+}
 
 /// Signature of builders for remote widgets.
 typedef _RemoteWidgetBuilder = _CurriedWidget Function(DynamicMap builderArg);
@@ -651,7 +704,11 @@ class Runtime extends ChangeNotifier {
           _findConstructor(
                   FullyQualifiedWidgetName(context.library, node.name)) ==
               null) {
-        return _FunctionCall(node.name, function, subArguments)
+        assert(() {
+          _debugValidateFunctionArguments(node.name, function, subArguments);
+          return true;
+        }());
+        return _FunctionCall(node.name, function.implementation, subArguments)
           ..propagateSource(node);
       }
       return _applyConstructorAndBindArguments(
@@ -769,6 +826,44 @@ class Runtime extends ChangeNotifier {
     assert(node is! WidgetDeclaration);
     return node;
   }
+
+  /// Debug-only validation of a function call's *bound* arguments against its
+  /// schema. Throws a [RemoteFlutterWidgetsException] describing the first
+  /// problem: an unknown argument name, a missing required argument, or a
+  /// **literal** argument of the wrong type.
+  ///
+  /// Only literal values are type-checked. A bound argument (any [BlobNode] —
+  /// e.g. `data.x`, `state.y`, `args.z`, or a nested call) resolves at runtime,
+  /// possibly from agent-controlled data, so enforcing its type here would both
+  /// be impossible (the value isn't known yet) and wrong (untrusted data must
+  /// degrade via totality, not crash). This catches the author's mistakes while
+  /// leaving the trust boundary intact. Compiled out in release builds.
+  void _debugValidateFunctionArguments(
+    String name,
+    LocalFunction function,
+    DynamicMap boundArguments,
+  ) {
+    for (final String argName in boundArguments.keys) {
+      if (!function.arguments.containsKey(argName)) {
+        throw RemoteFlutterWidgetsException(
+            'Function "$name" does not accept an argument named "$argName". '
+            'Accepted: ${function.arguments.keys.join(", ")}.');
+      }
+    }
+    for (final MapEntry<String, FunctionArgType> arg
+        in function.arguments.entries) {
+      if (!boundArguments.containsKey(arg.key)) {
+        throw RemoteFlutterWidgetsException(
+            'Function "$name" is missing required argument "${arg.key}".');
+      }
+      final Object? value = boundArguments[arg.key];
+      if (value is! BlobNode && !arg.value.accepts(value)) {
+        throw RemoteFlutterWidgetsException(
+            'Function "$name" argument "${arg.key}" expects ${arg.value.label}, '
+            'but got ${value.runtimeType} ($value).');
+      }
+    }
+  }
 }
 
 // Internal structure to represent the result of indexing into a list.
@@ -804,7 +899,7 @@ class _FunctionCall extends BlobNode {
   _FunctionCall(this.name, this.function, this.arguments);
 
   final String name;
-  final LocalFunction function;
+  final LocalFunctionImplementation function;
   final DynamicMap arguments;
 
   @override

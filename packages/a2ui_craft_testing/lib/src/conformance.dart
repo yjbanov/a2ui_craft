@@ -509,22 +509,30 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
       // evaluated in any value position instead of built. The numeric result
       // flows into a Text sink, which coerces it to its string form. Both
       // adapters register the identical standard function library, so the
-      // computed values — and totality on bad input — must match.
+      // computed values — and totality on bad runtime input — must match.
+      //
+      // The third row exercises *runtime* totality: `data.numeric` is a binding
+      // (only known at runtime, possibly agent-controlled), so it is not checked
+      // at bind time; a wrong-typed literal is instead a bind-time error, covered
+      // per-adapter in each adapter's function-call tests.
+      final DynamicContent data = DynamicContent();
+      data.update('numeric', '5'); // a numeric-looking String arriving as data
       await tester.mount('''
         import core;
         widget root = Column(children: [
           Text(text: add(a: 2, b: 3)),
           Text(text: add(a: add(a: 10, b: 5), b: 100)),
-          Text(text: add(a: "5", b: 3)),
+          Text(text: add(a: data.numeric, b: 3)),
         ]);
-      ''');
+      ''', data: data);
 
       expect(tester.hasText('5'), isTrue); // 2 + 3
       expect(tester.hasText('115'), isTrue); // nested: (10 + 5) + 100
-      // Strict + total: the String "5" is a type error, not silently coerced to
-      // the number 5, so the third call yields null → an absent (empty) text and
-      // the result is NOT 8. This guards against JS-style string→number coercion
-      // (which would render "8"), and proves bad input degrades without crashing.
+      // Strict + total: the bound String "5" is not silently coerced to the
+      // number 5, so the third call yields null → an absent (empty) text and the
+      // result is NOT 8. This guards against JS-style string→number coercion
+      // (which would render "8"), and proves wrong-typed data degrades without
+      // crashing.
       expect(tester.hasText('8'), isFalse);
     },
   );
@@ -560,6 +568,34 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
       await tester.activate('inc');
       expect(tester.hasText('2'), isTrue);
       expect(tester.hasText('1'), isFalse);
+    },
+  );
+
+  driver.defineTest(
+    'the standard math functions compute identically on every adapter',
+    (CraftTester tester) async {
+      // The rest of the basic arithmetic set beyond `add`. Determinism across
+      // adapters is the point: same operands → same rendered result. Division
+      // yields a double (20 / 5 = 4.0), but the text coercion renders a whole
+      // value without a trailing ".0" so it reads "4" identically on the Dart VM
+      // (Flutter) and dart2js (Jaspr), which disagree on `(4.0).toString()`.
+      await tester.mount('''
+        import core;
+        widget root = Column(children: [
+          Text(text: subtract(a: 10, b: 4)),
+          Text(text: multiply(a: 6, b: 7)),
+          Text(text: divide(a: 20, b: 5)),
+          Text(text: divide(a: 1, b: 0)),
+        ]);
+      ''');
+
+      expect(tester.hasText('6'), isTrue); // 10 - 4
+      expect(tester.hasText('42'), isTrue); // 6 * 7
+      expect(tester.hasText('4'), isTrue); // 20 / 5 → 4.0, rendered as "4"
+      // Divide-by-zero has no numeric result → null → absent (no crash). Only
+      // the three results above render; nothing shows for the 4th (and "4"
+      // appears once — not also from "42").
+      expect(tester.textCount('4'), 1);
     },
   );
 }

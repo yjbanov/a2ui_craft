@@ -903,9 +903,37 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
         a license to guess at author intent. An "earlier, useful error" for
         author type-mistakes belongs in future argument-schema validation (which
         can also tell a literal from a binding). Both adapters + a conformance
-        case (incl. a `test-the-test` no-coercion guard). *Still missing from
-        "Now" below:* set-state calls (the numeric counter), and the wider
-        math/string/bool/date library behind a written spec.
+        case (incl. a `test-the-test` no-coercion guard).
+  - [x] **Template functions — set-state, argument-schema validation, and the
+        rest of basic math.** Completes the "Now" layer's mechanics:
+        - *Set-state calls.* `set state.count = add(a: state.count, b: 1)` — a
+          call on a `set state` right-hand side — drives the `counter` sample,
+          which now counts **purely in-template** (was an agent-in-the-loop
+          `increment` event nothing handled, so it never counted). No new runtime
+          code: the read-side resolution already covered the set-state leaf.
+          Conformance taps 0→1→2; both example apps tap the real sample through
+          the full A2UI-surface/adapter path.
+        - *Argument-schema validation.* Each `LocalFunction` now carries an
+          argument schema (`{name: FunctionArgType}`). At bind time, in **debug
+          only** (an `assert`), a call is checked: unknown argument name, missing
+          required argument, or a **literal** of the wrong type throws a
+          descriptive error — the "earlier, useful error" for author mistakes.
+          Only *literals* are checked; a **binding** (`data.x`, `state.y`, a
+          nested call — any `BlobNode`) is skipped, because its value is
+          runtime/agent-controlled and must degrade via totality, not crash. This
+          is the literal-vs-binding distinction the trust boundary requires,
+          tested per-adapter (framework exception plumbing differs, so it lives
+          outside the behavioral conformance harness).
+        - *Math library.* `add`/`subtract`/`multiply`/`divide` (divide-by-zero →
+          null, stays total), strict + total, cross-adapter conformance.
+        - *Determinism watch-out, hit for real.* `(4.0).toString()` is `"4.0"` on
+          the Dart VM but `"4"` on dart2js, so `divide(20, 5)` rendered
+          differently on Flutter vs Jaspr. Fixed in the number→string coercion:
+          an integer-valued double renders with no trailing `.0` on every
+          platform. (Non-integer double formatting is otherwise consistent across
+          VM/dart2js; only the whole-value ".0" differed.) A concrete instance of
+          the "number-format" determinism note below — the shared coercion is the
+          right layer to enforce it.
   - [ ] **Template computation — a two-layer plan.** How does a *template author*
         (not the agent) express computation like a counter's `count + 1`?
         Rejected: encoding it in the A2UI transport message — that's authored by

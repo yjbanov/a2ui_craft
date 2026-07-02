@@ -361,11 +361,27 @@ double? _numArg(DataSource source, String key) =>
 /// computed total from a function like `add`. RFW's `v<String>` is strict (a
 /// number reads back as null), so coerce here. Returns '' when the value is
 /// absent (or itself null, e.g. a total function given bad input).
+///
+/// An integer-valued double is rendered without a trailing `.0` so the result is
+/// identical on every adapter: the Dart VM and dart2js disagree on
+/// `(4.0).toString()` ("4.0" vs "4"), which would otherwise make `divide(20, 5)`
+/// (and any whole-valued computation) render differently on Flutter vs Jaspr.
 String _readText(DataSource source, List<Object> key) {
-  return source.v<String>(key) ??
-      source.v<int>(key)?.toString() ??
-      source.v<double>(key)?.toString() ??
-      '';
+  final String? string = source.v<String>(key);
+  if (string != null) {
+    return string;
+  }
+  final int? integer = source.v<int>(key);
+  if (integer != null) {
+    return integer.toString();
+  }
+  final double? number = source.v<double>(key);
+  if (number != null) {
+    return (number.isFinite && number == number.roundToDouble())
+        ? number.toInt().toString()
+        : number.toString();
+  }
+  return '';
 }
 
 /// The standard **function library** — the pure, template-author-facing
@@ -381,28 +397,50 @@ String _readText(DataSource source, List<Object> key) {
 /// computes the same values on both.
 LocalFunctionLibrary createCoreFunctions() {
   return LocalFunctionLibrary(<String, LocalFunction>{
-    // Numeric addition over int/double operands. Returns their sum, or null if
-    // either operand is not a number.
-    'add': (DynamicMap arguments) {
+    // Basic arithmetic over int/double operands.
+    'add': _binaryNumberFunction((num a, num b) => a + b),
+    'subtract': _binaryNumberFunction((num a, num b) => a - b),
+    'multiply': _binaryNumberFunction((num a, num b) => a * b),
+    // Division by zero has no numeric result → null (stays total).
+    'divide': _binaryNumberFunction((num a, num b) => b == 0 ? null : a / b),
+  });
+}
+
+/// The argument schema shared by the binary numeric functions: two required
+/// numbers, `a` and `b`.
+const Map<String, FunctionArgType> _binaryNumberArgs =
+    <String, FunctionArgType>{
+  'a': FunctionArgType.number,
+  'b': FunctionArgType.number,
+};
+
+/// Builds a binary numeric [LocalFunction] from [combine].
+///
+/// Total by construction: a non-numeric operand — or a [combine] that returns
+/// null (e.g. divide-by-zero) — yields null (an absent result) rather than
+/// throwing. Types are **strict**: a string in a numeric position is a type
+/// error, not silently coerced (no JS-style `"5" + 3 == 8`); an author's literal
+/// mistake is caught at bind time by the schema, and a wrong-typed runtime
+/// binding degrades here via [_numOrNull]. See DESIGN.md (two-layer plan).
+///
+/// Kept identical to the Flutter adapter's implementation so a template computes
+/// the same values on both.
+LocalFunction _binaryNumberFunction(num? Function(num a, num b) combine) {
+  return LocalFunction(
+    arguments: _binaryNumberArgs,
+    implementation: (DynamicMap arguments) {
       final num? a = _numOrNull(arguments['a']);
       final num? b = _numOrNull(arguments['b']);
       if (a == null || b == null) {
         return null;
       }
-      return a + b;
+      return combine(a, b);
     },
-  });
+  );
 }
 
 /// Reads a resolved function argument as a [num], returning null for any
-/// non-numeric value.
-///
-/// Numeric functions are **strict** about types — a string in a numeric
-/// position is a type error, not a value to coerce (we deliberately avoid
-/// JS-style `"5" + 3 == "53"`/`8` surprises that silently hide author bugs). It
-/// is also **total**: rather than throwing, bad input yields null (an absent
-/// result), so wrong-typed *data* arriving from the untrusted agent degrades
-/// gracefully instead of crashing the UI. See DESIGN.md (two-layer plan).
+/// non-numeric value (no coercion; see [_binaryNumberFunction]).
 num? _numOrNull(Object? value) => value is num ? value : null;
 
 /// Builds a `Flex` (and thus `Row`/`Column`) from the catalog spec, mapping the

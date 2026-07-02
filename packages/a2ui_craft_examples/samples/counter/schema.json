@@ -6,14 +6,8 @@
         "label": {
           "$ref": "DynamicString"
         },
-        "count": {
-          "$ref": "DynamicString"
-        },
         "buttonLabel": {
           "$ref": "DynamicString"
-        },
-        "action": {
-          "$ref": "Action"
         }
       }
     }

@@ -528,6 +528,40 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
       expect(tester.hasText('8'), isFalse);
     },
   );
+
+  driver.defineTest(
+    'a set-state handler computes its next value with a function (counter)',
+    (CraftTester tester) async {
+      // The other half of the function slice: a function call on the right-hand
+      // side of `set state`. A counter is the canonical case RFW alone cannot
+      // express — its expression language has no `+` operator — so `count + 1`
+      // becomes `add(a: state.count, b: 1)`. Each tap recomputes and stores the
+      // next count purely in-template (no host code, no data-model round-trip,
+      // no agent), and both adapters must count identically. `count` is a real
+      // number in state; the Text sink coerces it to its string form.
+      await tester.mount('''
+        import core;
+        widget root { count: 0 } = Column(children: [
+          Text(text: state.count),
+          Button(
+            key: "inc",
+            onPressed: set state.count = add(a: state.count, b: 1),
+            child: Text(text: "Increment"),
+          ),
+        ]);
+      ''');
+
+      expect(tester.hasText('0'), isTrue);
+
+      await tester.activate('inc');
+      expect(tester.hasText('1'), isTrue);
+      expect(tester.hasText('0'), isFalse);
+
+      await tester.activate('inc');
+      expect(tester.hasText('2'), isTrue);
+      expect(tester.hasText('1'), isFalse);
+    },
+  );
 }
 
 /// The shared behavioral specification for rendering an **A2UI surface**

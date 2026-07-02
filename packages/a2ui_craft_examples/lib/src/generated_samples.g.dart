@@ -124,10 +124,18 @@ widget Greeting = Column(children: [
     template: r'''
 import core;
 
-widget Counter = Column(children: [
+// A counter that counts purely in-template: local `count` state, incremented by
+// `set state.count = add(...)`. RFW has no `+` operator, so the `+ 1` is a call
+// to the standard `add` function. No host code, no data-model round-trip, and no
+// agent in the loop — the same behavior on every adapter (see DESIGN.md, the
+// template-functions slice).
+widget Counter { count: 0 } = Column(children: [
   Text(text: args.label),
-  Text(text: args.count),
-  Button(onPressed: args.action, child: Text(text: args.buttonLabel)),
+  Text(text: state.count),
+  Button(
+    onPressed: set state.count = add(a: state.count, b: 1),
+    child: Text(text: args.buttonLabel),
+  ),
 ]);
 ''',
     schema: r'''
@@ -139,14 +147,8 @@ widget Counter = Column(children: [
         "label": {
           "$ref": "DynamicString"
         },
-        "count": {
-          "$ref": "DynamicString"
-        },
         "buttonLabel": {
           "$ref": "DynamicString"
-        },
-        "action": {
-          "$ref": "Action"
         }
       }
     }
@@ -165,16 +167,6 @@ widget Counter = Column(children: [
   },
   {
     "version": "v0.9",
-    "updateDataModel": {
-      "surfaceId": "demo",
-      "path": "/",
-      "value": {
-        "count": "0"
-      }
-    }
-  },
-  {
-    "version": "v0.9",
     "updateComponents": {
       "surfaceId": "demo",
       "components": [
@@ -182,16 +174,7 @@ widget Counter = Column(children: [
           "id": "root",
           "component": "Counter",
           "label": "You have pushed the button this many times:",
-          "count": {
-            "path": "/count"
-          },
-          "buttonLabel": "Increment",
-          "action": {
-            "event": {
-              "name": "increment",
-              "context": {}
-            }
-          }
+          "buttonLabel": "Increment"
         }
       ]
     }

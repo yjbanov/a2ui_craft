@@ -29,13 +29,20 @@ void main() {
     expect(find.text('Say hi'), findsOneWidget);
   });
 
-  testWidgets('Counter renders its label, count, and button',
+  testWidgets('Counter counts up purely in-template (state + add)',
       (WidgetTester tester) async {
     await _pump(tester, counterSpec('Flutter'));
     expect(find.text('You have pushed the button this many times:'),
         findsOneWidget);
     expect(find.text('0'), findsOneWidget);
     expect(find.text('Increment'), findsOneWidget);
+
+    // Tapping increments `count` in-template via `set state.count =
+    // add(count, 1)` — no host code — through the full A2UI-surface/adapter path.
+    await tester.tap(find.text('Increment'));
+    await tester.pump();
+    expect(find.text('1'), findsOneWidget);
+    expect(find.text('0'), findsNothing);
   });
 
   testWidgets('Boxes renders the nested-box layout',

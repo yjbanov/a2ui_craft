@@ -22,13 +22,20 @@ void main() {
     expect(find.text('Say hi'), findsOneComponent);
   });
 
-  testComponents('Counter renders its label, count, and button',
+  testComponents('Counter counts up purely in-template (state + add)',
       (ComponentTester tester) async {
     await _pump(tester, counterSpec('Jaspr'));
     expect(find.text('You have pushed the button this many times:'),
         findsOneComponent);
     expect(find.text('0'), findsOneComponent);
     expect(find.text('Increment'), findsOneComponent);
+
+    // Clicking increments `count` in-template via `set state.count =
+    // add(count, 1)` — no host code — through the full A2UI-surface/adapter path.
+    await tester.click(find.tag('button'));
+    await tester.pump();
+    expect(find.text('1'), findsOneComponent);
+    expect(find.text('0'), findsNothing);
   });
 
   testComponents('Boxes renders the nested-box layout',

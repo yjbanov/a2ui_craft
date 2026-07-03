@@ -156,13 +156,16 @@ void main() {
     expect(find.text('4.8'), findsOneComponent);
   });
 
-  testComponents('Account Balance renders the balance and action buttons',
+  testComponents('Account Balance renders the computed balance and actions',
       (ComponentTester tester) async {
+    // Render-smoke: the numeric balance renders as dollars (÷100); the
+    // deposit/withdraw buttons mount. The arithmetic is exercised on Flutter and
+    // in conformance.
     await _pump(tester, accountBalanceSpec('Jaspr'));
     expect(find.text('Primary Checking'), findsOneComponent);
-    expect(find.text(r'$12,458.32'), findsOneComponent);
-    expect(find.text('Transfer'), findsOneComponent);
-    expect(find.text('Pay Bill'), findsOneComponent);
+    expect(find.text(r'$12458.32'), findsOneComponent);
+    expect(find.text(r'Deposit $50'), findsOneComponent);
+    expect(find.text(r'Withdraw $20'), findsOneComponent);
   });
 
   testComponents('Shipping Status renders the templated step rows',
@@ -197,12 +200,17 @@ void main() {
     expect(find.text('View Order Details'), findsOneComponent);
   });
 
-  testComponents('Coffee Order renders items and total',
+  testComponents('Coffee Order renders line items, steppers, and the total',
       (ComponentTester tester) async {
+    // Render-smoke: both items, their line totals, and the summed order total
+    // render; the per-line steppers mount. The arithmetic runs on Flutter and in
+    // conformance.
     await _pump(tester, coffeeOrderSpec('Jaspr'));
     expect(find.text('Sunrise Coffee'), findsOneComponent);
-    expect(find.text('Oat Milk Latte'), findsOneComponent); // a `...for` item
-    expect(find.text(r'$11.66'), findsOneComponent);
+    expect(find.text('Oat Milk Latte'), findsOneComponent);
+    expect(find.text(r'$6'), findsOneComponent); // line 1
+    expect(find.text(r'$10'), findsOneComponent); // total
+    expect(find.tag('button'), findsNComponents(5)); // 2×(− +) + Checkout
   });
 
   testComponents('Credit Card renders the brand, holder, and expiry',

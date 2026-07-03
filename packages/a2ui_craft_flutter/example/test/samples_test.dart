@@ -205,13 +205,19 @@ void main() {
     expect(find.text('4.8'), findsOneWidget);
   });
 
-  testWidgets('Account Balance renders the balance and action buttons',
+  testWidgets('Account Balance deposits and withdraws, recomputing the balance',
       (WidgetTester tester) async {
     await _pump(tester, accountBalanceSpec('Flutter'));
     expect(find.text('Primary Checking'), findsOneWidget);
-    expect(find.text(r'$12,458.32'), findsOneWidget);
-    expect(find.text('Transfer'), findsOneWidget);
-    expect(find.text('Pay Bill'), findsOneWidget);
+    expect(find.text(r'$12458.32'), findsOneWidget); // 1245832 cents / 100
+
+    await tester.tap(find.text(r'Deposit $50'));
+    await tester.pump();
+    expect(find.text(r'$12508.32'), findsOneWidget); // +5000 cents
+
+    await tester.tap(find.text(r'Withdraw $20'));
+    await tester.pump();
+    expect(find.text(r'$12488.32'), findsOneWidget); // -2000 cents
   });
 
   testWidgets('Shipping Status renders the templated step rows',
@@ -246,12 +252,20 @@ void main() {
     expect(find.text('View Order Details'), findsOneWidget);
   });
 
-  testWidgets('Coffee Order renders items and total',
+  testWidgets('Coffee Order steps line quantities and sums the total',
       (WidgetTester tester) async {
     await _pump(tester, coffeeOrderSpec('Flutter'));
     expect(find.text('Sunrise Coffee'), findsOneWidget);
-    expect(find.text('Oat Milk Latte'), findsOneWidget); // a `...for` item
-    expect(find.text(r'$11.66'), findsOneWidget);
+    expect(find.text('Oat Milk Latte'), findsOneWidget);
+    expect(find.text(r'$6'), findsOneWidget); // line 1 (6 * 1)
+    expect(find.text(r'$10'), findsOneWidget); // total (6 + 4)
+
+    // Raise the first item's quantity: its line total and the order total both
+    // recompute (multiply for the line, add for the sum).
+    await tester.tap(find.text('+').first);
+    await tester.pump();
+    expect(find.text(r'$12'), findsOneWidget); // line 1 (6 * 2)
+    expect(find.text(r'$16'), findsOneWidget); // total (12 + 4)
   });
 
   testWidgets('Credit Card renders the brand, holder, and expiry',

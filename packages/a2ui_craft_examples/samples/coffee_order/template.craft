@@ -1,37 +1,51 @@
 import core;
 
-widget CoffeeOrder = Card(child: Column(gap: 8.0, children: [
+// One cart line: name, size, a −/+ quantity stepper, and a live line total. The
+// quantity comes from the parent's state (so the parent can sum the lines) and
+// the stepper handlers are passed in, so the line widget itself is stateless.
+widget Line = Row(mainAxisAlignment: "spaceBetween", crossAxisAlignment: "center",
+  width: "fill", children: [
+    Column(children: [
+      Text(text: args.name),
+      Text(text: args.size, variant: "caption"),
+    ]),
+    Row(gap: 10.0, crossAxisAlignment: "center", children: [
+      Button(onPressed: args.dec, child: Text(text: "−")),
+      Text(text: args.qty),
+      Button(onPressed: args.inc, child: Text(text: "+")),
+      Text(text: args.lineTotal),
+    ]),
+  ]);
+
+// An interactive coffee order. Each item's quantity is local state; the parent
+// holds both quantities so it can sum the line totals into the order total, all
+// with the math functions (multiply for a line, add for the sum, max to clamp a
+// quantity at zero). Prices are whole dollars.
+widget CoffeeOrder { qty1: 1, qty2: 1 } = Card(child: Column(gap: 8.0, children: [
   Row(gap: 6.0, crossAxisAlignment: "center", children: [
     Icon(icon: "favorite"),
     Text(text: args.storeName),
   ]),
-  Column(gap: 6.0, children: [
-    ...for item in args.items: Row(mainAxisAlignment: "spaceBetween",
-      crossAxisAlignment: "start", width: "fill", children: [
-        Column(children: [
-          Text(text: item.name),
-          Text(text: item.size, variant: "caption"),
-        ]),
-        Text(text: item.price),
-      ]),
-  ]),
+  Line(
+    name: args.name1,
+    size: args.size1,
+    qty: state.qty1,
+    dec: set state.qty1 = max(a: subtract(a: state.qty1, b: 1), b: 0),
+    inc: set state.qty1 = add(a: state.qty1, b: 1),
+    lineTotal: concat(a: "$", b: multiply(a: args.price1, b: state.qty1))),
+  Line(
+    name: args.name2,
+    size: args.size2,
+    qty: state.qty2,
+    dec: set state.qty2 = max(a: subtract(a: state.qty2, b: 1), b: 0),
+    inc: set state.qty2 = add(a: state.qty2, b: 1),
+    lineTotal: concat(a: "$", b: multiply(a: args.price2, b: state.qty2))),
   Divider(),
-  Column(gap: 4.0, children: [
-    Row(mainAxisAlignment: "spaceBetween", width: "fill", children: [
-      Text(text: "Subtotal", variant: "caption"),
-      Text(text: args.subtotal),
-    ]),
-    Row(mainAxisAlignment: "spaceBetween", width: "fill", children: [
-      Text(text: "Tax", variant: "caption"),
-      Text(text: args.tax),
-    ]),
-    Row(mainAxisAlignment: "spaceBetween", width: "fill", children: [
-      Text(text: "Total"),
-      Text(text: args.total),
-    ]),
+  Row(mainAxisAlignment: "spaceBetween", width: "fill", children: [
+    Text(text: "Total"),
+    Text(text: concat(a: "$", b: add(
+      a: multiply(a: args.price1, b: state.qty1),
+      b: multiply(a: args.price2, b: state.qty2)))),
   ]),
-  Row(gap: 12.0, children: [
-    Button(child: Text(text: "Purchase")),
-    Button(child: Text(text: "Add to cart")),
-  ]),
+  Button(child: Text(text: "Checkout")),
 ]));

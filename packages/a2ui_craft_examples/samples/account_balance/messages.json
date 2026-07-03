@@ -16,10 +16,7 @@
           "id": "root",
           "component": "AccountBalance",
           "accountName": "Primary Checking",
-          "balance": "$12,458.32",
-          "lastUpdated": "Updated just now",
-          "transferLabel": "Transfer",
-          "payLabel": "Pay Bill"
+          "lastUpdated": "Updated just now"
         }
       ]
     }

@@ -1,15 +1,25 @@
 import core;
 
-widget AccountBalance = Card(child: Column(gap: 8.0, children: [
-  Row(gap: 8.0, crossAxisAlignment: "center", children: [
-    Icon(icon: "payment"),
-    Text(text: args.accountName),
-  ]),
-  Text(text: args.balance),
-  Text(text: args.lastUpdated, variant: "caption"),
-  Divider(),
-  Row(gap: 12.0, children: [
-    Button(child: Text(text: args.transferLabel)),
-    Button(child: Text(text: args.payLabel)),
-  ]),
-]));
+// An interactive account card. `balance` (in cents) is local state; the two
+// buttons deposit and withdraw, computing the new balance with the math
+// functions — a withdrawal is clamped at zero with `max`. The balance renders as
+// dollars via divide-by-100.
+widget AccountBalance { balance: 1245832 } = Card(child: Column(gap: 8.0,
+  children: [
+    Row(gap: 8.0, crossAxisAlignment: "center", children: [
+      Icon(icon: "payment"),
+      Text(text: args.accountName),
+    ]),
+    Heading(text: concat(a: "$", b: divide(a: state.balance, b: 100)), level: 2),
+    Text(text: args.lastUpdated, variant: "caption"),
+    Divider(),
+    Row(gap: 12.0, children: [
+      Button(
+        onPressed: set state.balance = add(a: state.balance, b: 5000),
+        child: Text(text: "Deposit $50")),
+      Button(
+        onPressed:
+          set state.balance = max(a: subtract(a: state.balance, b: 2000), b: 0),
+        child: Text(text: "Withdraw $20")),
+    ]),
+  ]));

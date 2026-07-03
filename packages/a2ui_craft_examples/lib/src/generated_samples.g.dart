@@ -1516,19 +1516,29 @@ widget RestaurantCard = Card(child: Column(gap: 8.0, children: [
     template: r'''
 import core;
 
-widget AccountBalance = Card(child: Column(gap: 8.0, children: [
-  Row(gap: 8.0, crossAxisAlignment: "center", children: [
-    Icon(icon: "payment"),
-    Text(text: args.accountName),
-  ]),
-  Text(text: args.balance),
-  Text(text: args.lastUpdated, variant: "caption"),
-  Divider(),
-  Row(gap: 12.0, children: [
-    Button(child: Text(text: args.transferLabel)),
-    Button(child: Text(text: args.payLabel)),
-  ]),
-]));
+// An interactive account card. `balance` (in cents) is local state; the two
+// buttons deposit and withdraw, computing the new balance with the math
+// functions — a withdrawal is clamped at zero with `max`. The balance renders as
+// dollars via divide-by-100.
+widget AccountBalance { balance: 1245832 } = Card(child: Column(gap: 8.0,
+  children: [
+    Row(gap: 8.0, crossAxisAlignment: "center", children: [
+      Icon(icon: "payment"),
+      Text(text: args.accountName),
+    ]),
+    Heading(text: concat(a: "$", b: divide(a: state.balance, b: 100)), level: 2),
+    Text(text: args.lastUpdated, variant: "caption"),
+    Divider(),
+    Row(gap: 12.0, children: [
+      Button(
+        onPressed: set state.balance = add(a: state.balance, b: 5000),
+        child: Text(text: "Deposit $50")),
+      Button(
+        onPressed:
+          set state.balance = max(a: subtract(a: state.balance, b: 2000), b: 0),
+        child: Text(text: "Withdraw $20")),
+    ]),
+  ]));
 ''',
     schema: r'''
 {
@@ -1539,16 +1549,7 @@ widget AccountBalance = Card(child: Column(gap: 8.0, children: [
         "accountName": {
           "$ref": "DynamicString"
         },
-        "balance": {
-          "$ref": "DynamicString"
-        },
         "lastUpdated": {
-          "$ref": "DynamicString"
-        },
-        "transferLabel": {
-          "$ref": "DynamicString"
-        },
-        "payLabel": {
           "$ref": "DynamicString"
         }
       }
@@ -1575,10 +1576,7 @@ widget AccountBalance = Card(child: Column(gap: 8.0, children: [
           "id": "root",
           "component": "AccountBalance",
           "accountName": "Primary Checking",
-          "balance": "$12,458.32",
-          "lastUpdated": "Updated just now",
-          "transferLabel": "Transfer",
-          "payLabel": "Pay Bill"
+          "lastUpdated": "Updated just now"
         }
       ]
     }
@@ -1888,40 +1886,54 @@ widget PurchaseComplete = Card(child: Column(crossAxisAlignment: "center",
     template: r'''
 import core;
 
-widget CoffeeOrder = Card(child: Column(gap: 8.0, children: [
+// One cart line: name, size, a −/+ quantity stepper, and a live line total. The
+// quantity comes from the parent's state (so the parent can sum the lines) and
+// the stepper handlers are passed in, so the line widget itself is stateless.
+widget Line = Row(mainAxisAlignment: "spaceBetween", crossAxisAlignment: "center",
+  width: "fill", children: [
+    Column(children: [
+      Text(text: args.name),
+      Text(text: args.size, variant: "caption"),
+    ]),
+    Row(gap: 10.0, crossAxisAlignment: "center", children: [
+      Button(onPressed: args.dec, child: Text(text: "−")),
+      Text(text: args.qty),
+      Button(onPressed: args.inc, child: Text(text: "+")),
+      Text(text: args.lineTotal),
+    ]),
+  ]);
+
+// An interactive coffee order. Each item's quantity is local state; the parent
+// holds both quantities so it can sum the line totals into the order total, all
+// with the math functions (multiply for a line, add for the sum, max to clamp a
+// quantity at zero). Prices are whole dollars.
+widget CoffeeOrder { qty1: 1, qty2: 1 } = Card(child: Column(gap: 8.0, children: [
   Row(gap: 6.0, crossAxisAlignment: "center", children: [
     Icon(icon: "favorite"),
     Text(text: args.storeName),
   ]),
-  Column(gap: 6.0, children: [
-    ...for item in args.items: Row(mainAxisAlignment: "spaceBetween",
-      crossAxisAlignment: "start", width: "fill", children: [
-        Column(children: [
-          Text(text: item.name),
-          Text(text: item.size, variant: "caption"),
-        ]),
-        Text(text: item.price),
-      ]),
-  ]),
+  Line(
+    name: args.name1,
+    size: args.size1,
+    qty: state.qty1,
+    dec: set state.qty1 = max(a: subtract(a: state.qty1, b: 1), b: 0),
+    inc: set state.qty1 = add(a: state.qty1, b: 1),
+    lineTotal: concat(a: "$", b: multiply(a: args.price1, b: state.qty1))),
+  Line(
+    name: args.name2,
+    size: args.size2,
+    qty: state.qty2,
+    dec: set state.qty2 = max(a: subtract(a: state.qty2, b: 1), b: 0),
+    inc: set state.qty2 = add(a: state.qty2, b: 1),
+    lineTotal: concat(a: "$", b: multiply(a: args.price2, b: state.qty2))),
   Divider(),
-  Column(gap: 4.0, children: [
-    Row(mainAxisAlignment: "spaceBetween", width: "fill", children: [
-      Text(text: "Subtotal", variant: "caption"),
-      Text(text: args.subtotal),
-    ]),
-    Row(mainAxisAlignment: "spaceBetween", width: "fill", children: [
-      Text(text: "Tax", variant: "caption"),
-      Text(text: args.tax),
-    ]),
-    Row(mainAxisAlignment: "spaceBetween", width: "fill", children: [
-      Text(text: "Total"),
-      Text(text: args.total),
-    ]),
+  Row(mainAxisAlignment: "spaceBetween", width: "fill", children: [
+    Text(text: "Total"),
+    Text(text: concat(a: "$", b: add(
+      a: multiply(a: args.price1, b: state.qty1),
+      b: multiply(a: args.price2, b: state.qty2)))),
   ]),
-  Row(gap: 12.0, children: [
-    Button(child: Text(text: "Purchase")),
-    Button(child: Text(text: "Add to cart")),
-  ]),
+  Button(child: Text(text: "Checkout")),
 ]));
 ''',
     schema: r'''
@@ -1933,20 +1945,23 @@ widget CoffeeOrder = Card(child: Column(gap: 8.0, children: [
         "storeName": {
           "$ref": "DynamicString"
         },
-        "subtotal": {
+        "name1": {
           "$ref": "DynamicString"
         },
-        "tax": {
+        "size1": {
           "$ref": "DynamicString"
         },
-        "total": {
+        "price1": {
+          "type": "integer"
+        },
+        "name2": {
           "$ref": "DynamicString"
         },
-        "items": {
-          "type": "array",
-          "items": {
-            "type": "object"
-          }
+        "size2": {
+          "$ref": "DynamicString"
+        },
+        "price2": {
+          "type": "integer"
         }
       }
     }
@@ -1972,21 +1987,12 @@ widget CoffeeOrder = Card(child: Column(gap: 8.0, children: [
           "id": "root",
           "component": "CoffeeOrder",
           "storeName": "Sunrise Coffee",
-          "subtotal": "$10.70",
-          "tax": "$0.96",
-          "total": "$11.66",
-          "items": [
-            {
-              "name": "Oat Milk Latte",
-              "size": "Grande, Extra Shot",
-              "price": "$6.45"
-            },
-            {
-              "name": "Chocolate Croissant",
-              "size": "Warmed",
-              "price": "$4.25"
-            }
-          ]
+          "name1": "Oat Milk Latte",
+          "size1": "Grande",
+          "price1": 6,
+          "name2": "Chocolate Croissant",
+          "size2": "Warmed",
+          "price2": 4
         }
       ]
     }

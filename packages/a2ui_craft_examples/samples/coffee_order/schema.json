@@ -6,20 +6,23 @@
         "storeName": {
           "$ref": "DynamicString"
         },
-        "subtotal": {
+        "name1": {
           "$ref": "DynamicString"
         },
-        "tax": {
+        "size1": {
           "$ref": "DynamicString"
         },
-        "total": {
+        "price1": {
+          "type": "integer"
+        },
+        "name2": {
           "$ref": "DynamicString"
         },
-        "items": {
-          "type": "array",
-          "items": {
-            "type": "object"
-          }
+        "size2": {
+          "$ref": "DynamicString"
+        },
+        "price2": {
+          "type": "integer"
         }
       }
     }

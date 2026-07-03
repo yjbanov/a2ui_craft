@@ -16,21 +16,12 @@
           "id": "root",
           "component": "CoffeeOrder",
           "storeName": "Sunrise Coffee",
-          "subtotal": "$10.70",
-          "tax": "$0.96",
-          "total": "$11.66",
-          "items": [
-            {
-              "name": "Oat Milk Latte",
-              "size": "Grande, Extra Shot",
-              "price": "$6.45"
-            },
-            {
-              "name": "Chocolate Croissant",
-              "size": "Warmed",
-              "price": "$4.25"
-            }
-          ]
+          "name1": "Oat Milk Latte",
+          "size1": "Grande",
+          "price1": 6,
+          "name2": "Chocolate Croissant",
+          "size2": "Warmed",
+          "price2": 4
         }
       ]
     }

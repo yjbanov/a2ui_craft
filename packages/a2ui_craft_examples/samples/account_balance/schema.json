@@ -6,16 +6,7 @@
         "accountName": {
           "$ref": "DynamicString"
         },
-        "balance": {
-          "$ref": "DynamicString"
-        },
         "lastUpdated": {
-          "$ref": "DynamicString"
-        },
-        "transferLabel": {
-          "$ref": "DynamicString"
-        },
-        "payLabel": {
           "$ref": "DynamicString"
         }
       }

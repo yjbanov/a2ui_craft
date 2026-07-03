@@ -42,7 +42,7 @@ LocalWidgetLibrary createCoreComponents() {
       return Semantics(
         headingLevel: level,
         child: Text(
-          source.v<String>(['text']) ?? '',
+          _readText(source, const <Object>['text']),
           style: _mdHeadingStyle(level),
         ),
       );

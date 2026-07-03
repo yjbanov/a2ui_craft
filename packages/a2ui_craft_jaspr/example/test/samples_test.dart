@@ -38,6 +38,20 @@ void main() {
     expect(find.text('0'), findsNothing);
   });
 
+  testComponents('Calculator renders its keypad and display',
+      (ComponentTester tester) async {
+    // Render-smoke: the calculator's 16-key grid and its display mount on Jaspr.
+    // The compute logic (multi-set-state + switch + the math functions) is proven
+    // cross-adapter in the conformance suite, so this need only prove the sample
+    // builds here; Flutter's example test exercises the full 7 + 3 = 10 path.
+    await _pump(tester, calculatorSpec('Jaspr'));
+    expect(find.text('7'), findsOneComponent);
+    expect(find.text('÷'), findsOneComponent);
+    expect(find.text('C'), findsOneComponent);
+    expect(find.text('='), findsOneComponent);
+    expect(find.tag('button'), findsNComponents(16));
+  });
+
   testComponents('Boxes renders the nested-box layout',
       (ComponentTester tester) async {
     await _pump(tester, boxesSpec('Jaspr'));

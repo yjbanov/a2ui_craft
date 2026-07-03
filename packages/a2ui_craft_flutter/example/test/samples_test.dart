@@ -45,6 +45,27 @@ void main() {
     expect(find.text('0'), findsNothing);
   });
 
+  testWidgets('Calculator computes in-template (7 + 3 = 10)',
+      (WidgetTester tester) async {
+    await _pump(tester, calculatorSpec('Flutter'));
+    // The keypad and the initial display render.
+    expect(find.text('7'), findsOneWidget);
+    expect(find.text('='), findsOneWidget);
+    // Two zeros initially: the display (starts at 0) and the "0" key.
+    expect(find.text('0'), findsNWidgets(2));
+
+    // 7, +, 3, = → 10, all via state + the standard math functions.
+    await tester.tap(find.text('7'));
+    await tester.pump();
+    await tester.tap(find.text('+'));
+    await tester.pump();
+    await tester.tap(find.text('3'));
+    await tester.pump();
+    await tester.tap(find.text('='));
+    await tester.pump();
+    expect(find.text('10'), findsOneWidget);
+  });
+
   testWidgets('Boxes renders the nested-box layout',
       (WidgetTester tester) async {
     await _pump(tester, boxesSpec('Flutter'));

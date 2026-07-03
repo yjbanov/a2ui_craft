@@ -47,7 +47,7 @@ LocalWidgetLibrary createCoreComponents() {
       return _mdHeading(
         level,
         <Component>[
-          Component.text(source.v<String>(['text']) ?? '')
+          Component.text(_readText(source, const <Object>['text']))
         ],
       );
     },

@@ -1,0 +1,132 @@
+import core;
+
+// A four-function calculator computed entirely in-template — no host code, no
+// data-model round-trip, no agent. It leans on the standard math functions (RFW
+// has no arithmetic operators) plus local state:
+//
+//   display — the operand currently being typed
+//   acc     — the accumulated result of the pending operation
+//   op      — the pending operator ("add"/"subtract"/"multiply"/"divide", or "")
+//
+// A digit key appends by `display * 10 + d`. An operator key commits the pending
+// operation into `acc` (a `switch` over `op` picks the right function), remembers
+// the new operator, and clears `display` for the next operand — three state
+// writes in one press. Equals applies the pending operation. It behaves
+// identically on the Flutter and Jaspr adapters.
+
+// One key: a button showing [label] that runs [press] (a `set state`, or a list
+// of them). The handler is passed in as an arg, so the state stays on the
+// Calculator and the key itself is stateless.
+widget Key = Button(
+  onPressed: args.press,
+  child: Box(
+    width: 46.0,
+    height: 44.0,
+    color: args.color,
+    child: Center(child: Text(text: args.label)),
+  ),
+);
+
+widget Calculator { display: 0, acc: 0, op: "" } = Card(child: Column(
+  crossAxisAlignment: "center",
+  gap: 6.0,
+  children: [
+    // Display: the current operand, right-aligned.
+    Box(
+      width: 202.0,
+      padding: [10.0, 12.0, 10.0, 12.0],
+      color: "#f1f5f9",
+      child: Row(mainAxisAlignment: "end", width: "fill", children: [
+        Heading(text: state.display, level: 2),
+      ]),
+    ),
+    Row(gap: 6.0, children: [
+      Key(label: "7", color: "#e2e8f0",
+        press: set state.display = add(a: multiply(a: state.display, b: 10), b: 7)),
+      Key(label: "8", color: "#e2e8f0",
+        press: set state.display = add(a: multiply(a: state.display, b: 10), b: 8)),
+      Key(label: "9", color: "#e2e8f0",
+        press: set state.display = add(a: multiply(a: state.display, b: 10), b: 9)),
+      Key(label: "÷", color: "#cbd5e1", press: [
+        set state.acc = switch state.op {
+          "add": add(a: state.acc, b: state.display),
+          "subtract": subtract(a: state.acc, b: state.display),
+          "multiply": multiply(a: state.acc, b: state.display),
+          "divide": divide(a: state.acc, b: state.display),
+          default: state.display
+        },
+        set state.op = "divide",
+        set state.display = 0,
+      ]),
+    ]),
+    Row(gap: 6.0, children: [
+      Key(label: "4", color: "#e2e8f0",
+        press: set state.display = add(a: multiply(a: state.display, b: 10), b: 4)),
+      Key(label: "5", color: "#e2e8f0",
+        press: set state.display = add(a: multiply(a: state.display, b: 10), b: 5)),
+      Key(label: "6", color: "#e2e8f0",
+        press: set state.display = add(a: multiply(a: state.display, b: 10), b: 6)),
+      Key(label: "×", color: "#cbd5e1", press: [
+        set state.acc = switch state.op {
+          "add": add(a: state.acc, b: state.display),
+          "subtract": subtract(a: state.acc, b: state.display),
+          "multiply": multiply(a: state.acc, b: state.display),
+          "divide": divide(a: state.acc, b: state.display),
+          default: state.display
+        },
+        set state.op = "multiply",
+        set state.display = 0,
+      ]),
+    ]),
+    Row(gap: 6.0, children: [
+      Key(label: "1", color: "#e2e8f0",
+        press: set state.display = add(a: multiply(a: state.display, b: 10), b: 1)),
+      Key(label: "2", color: "#e2e8f0",
+        press: set state.display = add(a: multiply(a: state.display, b: 10), b: 2)),
+      Key(label: "3", color: "#e2e8f0",
+        press: set state.display = add(a: multiply(a: state.display, b: 10), b: 3)),
+      Key(label: "−", color: "#cbd5e1", press: [
+        set state.acc = switch state.op {
+          "add": add(a: state.acc, b: state.display),
+          "subtract": subtract(a: state.acc, b: state.display),
+          "multiply": multiply(a: state.acc, b: state.display),
+          "divide": divide(a: state.acc, b: state.display),
+          default: state.display
+        },
+        set state.op = "subtract",
+        set state.display = 0,
+      ]),
+    ]),
+    Row(gap: 6.0, children: [
+      Key(label: "C", color: "#fca5a5", press: [
+        set state.display = 0,
+        set state.acc = 0,
+        set state.op = "",
+      ]),
+      Key(label: "0", color: "#e2e8f0",
+        press: set state.display = multiply(a: state.display, b: 10)),
+      Key(label: "=", color: "#86efac", press: [
+        set state.display = switch state.op {
+          "add": add(a: state.acc, b: state.display),
+          "subtract": subtract(a: state.acc, b: state.display),
+          "multiply": multiply(a: state.acc, b: state.display),
+          "divide": divide(a: state.acc, b: state.display),
+          default: state.display
+        },
+        set state.op = "",
+        set state.acc = 0,
+      ]),
+      Key(label: "+", color: "#cbd5e1", press: [
+        set state.acc = switch state.op {
+          "add": add(a: state.acc, b: state.display),
+          "subtract": subtract(a: state.acc, b: state.display),
+          "multiply": multiply(a: state.acc, b: state.display),
+          "divide": divide(a: state.acc, b: state.display),
+          default: state.display
+        },
+        set state.op = "add",
+        set state.display = 0,
+      ]),
+    ]),
+  ],
+));

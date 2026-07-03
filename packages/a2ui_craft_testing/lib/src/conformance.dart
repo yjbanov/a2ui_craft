@@ -214,11 +214,15 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
         widget root = Column(children: [
           Heading(text: "Top Heading"),
           Heading(text: "Subsection", level: 2),
+          Heading(text: add(a: 40, b: 2), level: 3),
         ]);
       ''');
 
       expect(tester.hasText('Top Heading'), isTrue); // default level 1
       expect(tester.hasText('Subsection'), isTrue); // explicit level 2
+      // Like Text, a Heading coerces a numeric value to its string form — a
+      // computed number can title a section (and a calculator's display).
+      expect(tester.hasText('42'), isTrue);
     },
   );
 
@@ -568,6 +572,43 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
       await tester.activate('inc');
       expect(tester.hasText('2'), isTrue);
       expect(tester.hasText('1'), isFalse);
+    },
+  );
+
+  driver.defineTest(
+    'a button applies a list of set-state handlers in one press',
+    (CraftTester tester) async {
+      // A single control can carry a *list* of `set state` handlers, all applied
+      // on one activation. Each handler's value is computed against the state as
+      // of the last build, so they don't interfere — here `a` and `b` advance
+      // independently. This is what lets a richer control (e.g. a calculator's
+      // operator key) update several state fields atomically, so both adapters
+      // must apply the whole list.
+      await tester.mount('''
+        import core;
+        widget root { a: 0, b: 0 } = Column(children: [
+          Text(text: state.a),
+          Text(text: state.b),
+          Button(
+            key: "bump",
+            onPressed: [
+              set state.a = add(a: state.a, b: 1),
+              set state.b = add(a: state.b, b: 10),
+            ],
+            child: Text(text: "Bump"),
+          ),
+        ]);
+      ''');
+
+      expect(tester.textCount('0'), 2); // a and b both 0
+
+      await tester.activate('bump');
+      expect(tester.hasText('1'), isTrue); // a: 0 -> 1
+      expect(tester.hasText('10'), isTrue); // b: 0 -> 10
+
+      await tester.activate('bump');
+      expect(tester.hasText('2'), isTrue); // a: 1 -> 2
+      expect(tester.hasText('20'), isTrue); // b: 10 -> 20
     },
   );
 

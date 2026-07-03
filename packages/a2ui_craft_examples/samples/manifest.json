@@ -12,6 +12,10 @@
     "label": "Toggle"
   },
   {
+    "id": "calculator",
+    "label": "Calculator"
+  },
+  {
     "id": "boxes",
     "label": "Boxes"
   },

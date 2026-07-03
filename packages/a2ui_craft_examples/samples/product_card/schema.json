@@ -15,8 +15,8 @@
         "reviews": {
           "$ref": "DynamicString"
         },
-        "price": {
-          "$ref": "DynamicString"
+        "unitPrice": {
+          "type": "integer"
         },
         "originalPrice": {
           "$ref": "DynamicString"

@@ -136,12 +136,16 @@ void main() {
     expect(find.text('Fri'), findsOneComponent);
   });
 
-  testComponents('Product Card renders name, price, and call-to-action',
+  testComponents('Product Card renders name, computed price, and stepper',
       (ComponentTester tester) async {
+    // Render-smoke: the numeric unit price flows through and the total renders
+    // (unit price and qty-1 total are both "$199.99"); the stepper's buttons
+    // mount. The stepper arithmetic is exercised on Flutter and in conformance.
     await _pump(tester, productCardSpec('Jaspr'));
     expect(find.text('Wireless Headphones Pro'), findsOneComponent);
-    expect(find.text(r'$199.99'), findsOneComponent);
+    expect(find.text(r'$199.99'), findsNComponents(2));
     expect(find.text('Add to Cart'), findsOneComponent);
+    expect(find.tag('button'), findsNComponents(3)); // − , + , Add to Cart
   });
 
   testComponents('Restaurant Card renders name, cuisine, and rating',
@@ -258,12 +262,19 @@ void main() {
     expect(find.text('Accept'), findsOneComponent);
   });
 
-  testComponents('Step Counter renders the heading, steps, and stats',
+  testComponents('Step Counter logs steps and derives metrics via functions',
       (ComponentTester tester) async {
     await _pump(tester, stepCounterSpec('Jaspr'));
-    expect(find.text("Today's Steps"), findsOneComponent); // Heading
-    expect(find.text('8,432'), findsOneComponent);
+    expect(find.text("Today's Activity"), findsOneComponent); // Heading
     expect(find.text('Distance'), findsOneComponent);
+    expect(find.text('Log 500 steps'), findsOneComponent);
+
+    // One button (Log 500 steps): clicking recomputes the derived metrics.
+    await tester.click(find.tag('button'));
+    await tester.pump();
+    expect(find.text('500'), findsOneComponent); // steps
+    expect(find.text('0.25 mi'), findsOneComponent); // 500 / 2000
+    expect(find.text('20'), findsOneComponent); // round(500 * 0.04)
   });
 
   testComponents('Countdown renders the event heading and units',

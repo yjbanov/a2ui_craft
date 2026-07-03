@@ -1,6 +1,11 @@
 import core;
 
-widget ProductCard = Card(child: Column(gap: 8.0, children: [
+// An interactive product card. `qty` is local state; a stepper (− / +) adjusts it
+// (clamped at 1 with `max`), and the line total is computed live from a numeric
+// unit price with the math functions: multiply by the quantity, then divide by
+// 100 to render cents as dollars. Prices are integer cents so the arithmetic is
+// exact; the single divide-by-100 formats the dollars.
+widget ProductCard { qty: 1 } = Card(child: Column(gap: 8.0, children: [
   Image(url: args.imageUrl, variant: "mediumFeature", fit: "cover"),
   Text(text: args.name),
   Row(gap: 6.0, crossAxisAlignment: "center", children: [
@@ -8,8 +13,27 @@ widget ProductCard = Card(child: Column(gap: 8.0, children: [
     Text(text: args.reviews, variant: "caption"),
   ]),
   Row(gap: 8.0, crossAxisAlignment: "center", children: [
-    Text(text: args.price),
+    Text(text: concat(a: "$", b: divide(a: args.unitPrice, b: 100))),
     Text(text: args.originalPrice, variant: "caption"),
+  ]),
+  Divider(),
+  Row(mainAxisAlignment: "spaceBetween", crossAxisAlignment: "center",
+    width: "fill", children: [
+      Text(text: "Quantity", variant: "caption"),
+      Row(gap: 12.0, crossAxisAlignment: "center", children: [
+        Button(
+          onPressed: set state.qty = max(a: subtract(a: state.qty, b: 1), b: 1),
+          child: Text(text: "−")),
+        Text(text: state.qty),
+        Button(
+          onPressed: set state.qty = add(a: state.qty, b: 1),
+          child: Text(text: "+")),
+      ]),
+    ]),
+  Row(mainAxisAlignment: "spaceBetween", width: "fill", children: [
+    Text(text: "Total"),
+    Text(text: concat(a: "$",
+      b: divide(a: multiply(a: args.unitPrice, b: state.qty), b: 100))),
   ]),
   Button(child: Text(text: args.cta)),
 ]));

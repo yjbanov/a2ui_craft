@@ -1313,7 +1313,12 @@ widget Weather = Card(child: Column(crossAxisAlignment: "center", gap: 6.0,
     template: r'''
 import core;
 
-widget ProductCard = Card(child: Column(gap: 8.0, children: [
+// An interactive product card. `qty` is local state; a stepper (− / +) adjusts it
+// (clamped at 1 with `max`), and the line total is computed live from a numeric
+// unit price with the math functions: multiply by the quantity, then divide by
+// 100 to render cents as dollars. Prices are integer cents so the arithmetic is
+// exact; the single divide-by-100 formats the dollars.
+widget ProductCard { qty: 1 } = Card(child: Column(gap: 8.0, children: [
   Image(url: args.imageUrl, variant: "mediumFeature", fit: "cover"),
   Text(text: args.name),
   Row(gap: 6.0, crossAxisAlignment: "center", children: [
@@ -1321,8 +1326,27 @@ widget ProductCard = Card(child: Column(gap: 8.0, children: [
     Text(text: args.reviews, variant: "caption"),
   ]),
   Row(gap: 8.0, crossAxisAlignment: "center", children: [
-    Text(text: args.price),
+    Text(text: concat(a: "$", b: divide(a: args.unitPrice, b: 100))),
     Text(text: args.originalPrice, variant: "caption"),
+  ]),
+  Divider(),
+  Row(mainAxisAlignment: "spaceBetween", crossAxisAlignment: "center",
+    width: "fill", children: [
+      Text(text: "Quantity", variant: "caption"),
+      Row(gap: 12.0, crossAxisAlignment: "center", children: [
+        Button(
+          onPressed: set state.qty = max(a: subtract(a: state.qty, b: 1), b: 1),
+          child: Text(text: "−")),
+        Text(text: state.qty),
+        Button(
+          onPressed: set state.qty = add(a: state.qty, b: 1),
+          child: Text(text: "+")),
+      ]),
+    ]),
+  Row(mainAxisAlignment: "spaceBetween", width: "fill", children: [
+    Text(text: "Total"),
+    Text(text: concat(a: "$",
+      b: divide(a: multiply(a: args.unitPrice, b: state.qty), b: 100))),
   ]),
   Button(child: Text(text: args.cta)),
 ]));
@@ -1345,8 +1369,8 @@ widget ProductCard = Card(child: Column(gap: 8.0, children: [
         "reviews": {
           "$ref": "DynamicString"
         },
-        "price": {
-          "$ref": "DynamicString"
+        "unitPrice": {
+          "type": "integer"
         },
         "originalPrice": {
           "$ref": "DynamicString"
@@ -1381,7 +1405,7 @@ widget ProductCard = Card(child: Column(gap: 8.0, children: [
           "name": "Wireless Headphones Pro",
           "stars": "★★★★★",
           "reviews": "(2,847 reviews)",
-          "price": "$199.99",
+          "unitPrice": 19999,
           "originalPrice": "$249.99",
           "cta": "Add to Cart"
         }
@@ -2549,19 +2573,38 @@ widget Stat = Column(crossAxisAlignment: "center", gap: 2.0, children: [
   Text(text: args.label, variant: "caption"),
 ]);
 
-widget StepCounter = Card(child: Column(crossAxisAlignment: "center", gap: 8.0,
+// An interactive step tracker. `steps` is local state; everything else is
+// *derived* from it with the standard math functions — progress toward a
+// 10,000-step goal (steps × 100 ÷ 10,000, capped at 100 with `min`), distance
+// (steps ÷ 2,000 miles), and calories (steps × 0.04, rounded). Tapping
+// "Log 500 steps" bumps the state and the whole card recomputes, identically on
+// every adapter.
+widget StepCounter { steps: 0 } = Card(child: Column(
+  crossAxisAlignment: "center",
+  gap: 8.0,
   children: [
     Row(gap: 6.0, crossAxisAlignment: "center", children: [
       Icon(icon: "person"),
       Heading(text: args.title, level: 3),
     ]),
-    Text(text: args.steps),
-    Text(text: args.goal, variant: "body"),
+    Heading(text: state.steps, level: 1),
+    Text(
+      text: concat(
+        a: min(a: divide(a: multiply(a: state.steps, b: 100), b: 10000), b: 100),
+        b: "% of 10,000 step goal"),
+      variant: "caption"),
     Divider(),
     Row(mainAxisAlignment: "spaceAround", width: "fill", children: [
-      Stat(value: args.distance, label: "Distance"),
-      Stat(value: args.calories, label: "Calories"),
+      Stat(
+        value: concat(a: divide(a: state.steps, b: 2000), b: " mi"),
+        label: "Distance"),
+      Stat(
+        value: round(value: multiply(a: state.steps, b: 0.04)),
+        label: "Calories"),
     ]),
+    Button(
+      onPressed: set state.steps = add(a: state.steps, b: 500),
+      child: Text(text: "Log 500 steps")),
   ]));
 ''',
     schema: r'''
@@ -2581,18 +2624,6 @@ widget StepCounter = Card(child: Column(crossAxisAlignment: "center", gap: 8.0,
     "StepCounter": {
       "properties": {
         "title": {
-          "$ref": "DynamicString"
-        },
-        "steps": {
-          "$ref": "DynamicString"
-        },
-        "goal": {
-          "$ref": "DynamicString"
-        },
-        "distance": {
-          "$ref": "DynamicString"
-        },
-        "calories": {
           "$ref": "DynamicString"
         }
       }
@@ -2618,11 +2649,7 @@ widget StepCounter = Card(child: Column(crossAxisAlignment: "center", gap: 8.0,
         {
           "id": "root",
           "component": "StepCounter",
-          "title": "Today's Steps",
-          "steps": "8,432",
-          "goal": "84% of 10,000 goal",
-          "distance": "3.8 mi",
-          "calories": "312"
+          "title": "Today's Activity"
         }
       ]
     }

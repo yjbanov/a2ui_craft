@@ -174,12 +174,27 @@ void main() {
     expect(find.text('Fri'), findsOneWidget);
   });
 
-  testWidgets('Product Card renders name, price, and call-to-action',
+  testWidgets('Product Card steps quantity and computes the line total',
       (WidgetTester tester) async {
     await _pump(tester, productCardSpec('Flutter'));
     expect(find.text('Wireless Headphones Pro'), findsOneWidget);
-    expect(find.text(r'$199.99'), findsOneWidget);
+    // Unit price and total (qty 1) both render from the numeric unitPrice.
+    expect(find.text(r'$199.99'), findsNWidgets(2));
     expect(find.text('Add to Cart'), findsOneWidget);
+
+    // "+" raises the quantity; the total recomputes (unitPrice × qty ÷ 100).
+    await tester.tap(find.text('+'));
+    await tester.pump();
+    expect(find.text('2'), findsOneWidget); // qty
+    expect(find.text(r'$399.98'), findsOneWidget); // 19999 * 2 / 100
+
+    // "−" lowers it, and is clamped at 1 by `max`.
+    await tester.tap(find.text('−'));
+    await tester.pump();
+    await tester.tap(find.text('−'));
+    await tester.pump();
+    expect(find.text('1'), findsOneWidget); // clamped, not 0
+    expect(find.text(r'$199.99'), findsNWidgets(2));
   });
 
   testWidgets('Restaurant Card renders name, cuisine, and rating',
@@ -296,12 +311,21 @@ void main() {
     expect(find.text('Accept'), findsOneWidget);
   });
 
-  testWidgets('Step Counter renders the heading, steps, and stats',
+  testWidgets('Step Counter logs steps and derives metrics via functions',
       (WidgetTester tester) async {
     await _pump(tester, stepCounterSpec('Flutter'));
-    expect(find.text("Today's Steps"), findsOneWidget); // Heading
-    expect(find.text('8,432'), findsOneWidget);
+    expect(find.text("Today's Activity"), findsOneWidget); // Heading
     expect(find.text('Distance'), findsOneWidget);
+    expect(find.text('Log 500 steps'), findsOneWidget);
+
+    // Logging bumps `steps` state; distance/calories/progress are all recomputed
+    // from it with the math functions (÷, ×, min, concat, round).
+    await tester.tap(find.text('Log 500 steps'));
+    await tester.pump();
+    expect(find.text('500'), findsOneWidget); // steps
+    expect(find.text('0.25 mi'), findsOneWidget); // 500 / 2000
+    expect(find.text('20'), findsOneWidget); // round(500 * 0.04)
+    expect(find.text('5% of 10,000 step goal'), findsOneWidget);
   });
 
   testWidgets('Countdown renders the event heading and units',

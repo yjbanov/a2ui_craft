@@ -15,18 +15,6 @@
       "properties": {
         "title": {
           "$ref": "DynamicString"
-        },
-        "steps": {
-          "$ref": "DynamicString"
-        },
-        "goal": {
-          "$ref": "DynamicString"
-        },
-        "distance": {
-          "$ref": "DynamicString"
-        },
-        "calories": {
-          "$ref": "DynamicString"
         }
       }
     }

@@ -987,7 +987,36 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
           through data-model writes, never a sync return. Pure function
           *expressions* stay synchronous. This routes through the §12 cancellable
           scheduler (timeouts/cancellation for free).
-  - [ ] **Ephemeral theming / design systems.** Extracted to its own section — see §13. A design system is a *template-author* concern, so it must load in the author's ephemeral channel (bundled with the templates), not the agent's message channel; §13 works through the trust model, the token/catalog decomposition, the cascade, and the hard sub-problems.
+  - [ ] **Ephemeral theming / design systems (§13).** Design settled: the
+        trust model (author's channel, never the agent's), the **W3C DTCG token
+        format**, the cascade, explicit-never-implicit theming, and the project
+        bundle (§13.9); prior-art survey under `research/theming/`.
+        Implementation plan — thin end-to-end slices, each conformance-tested
+        on both adapters before the next begins:
+        - [ ] **1. Runtime DTCG parser + resolver** in `a2ui_craft` (shared by
+          both adapters — §13.6 determinism by construction): parse (groups →
+          dot-paths, `$type` inheritance down groups, aliases recorded) →
+          resolve (layer merge for mode overlays, alias dereference with cycle
+          detection) → typed total reads (`color` / `dimension` / `number`
+          first, accepting both the 2025.10 object forms and the legacy string
+          forms). Total throughout: malformed token → null → fallback, never
+          throw.
+        - [ ] **2. Explicit token references** — the `theme.` scope (§13.4) on
+          both adapters; `Box(color: theme.color.action)` renders the token's
+          color on Flutter + Jaspr, pinned by a conformance case. Decides the
+          scope-vs-function syntax question at the smallest surface.
+        - [ ] **3. Ambient role-defaults** — semantic contract v1 (small
+          neutral role set with surface/foreground pairing, §13.4): primitives
+          read their roles when props are unset, fall back to the host default
+          when the theme omits a role; theming-conformance dimension started.
+        - [ ] **4. Default theme** — open-source base `.tokens.json` + mode
+          overlays (light / dark / high-contrast); host-supplied n-ary mode
+          input; reactive re-theme of a live surface. Explicit, never implicit
+          (§13.5).
+        - [ ] **5. Project bundle (§13.9)** — theme as the 4th sample-trio
+          file, then the project manifest (name, catalog id, theme reference,
+          mode wiring); the demo site loads projects; agent-optional
+          (canned-message mini-app mode).
 - [ ] Prove the state-model axis with a third, non-Flutter-like framework.
 - [ ] **Security: uphold A2UI's secure-by-design promise (§12).** When templates
       are delivered ephemerally, treat them as untrusted input: add engine-level
@@ -1531,12 +1560,15 @@ upstream-RFW contribution — any host running untrusted RFW wants resource limi
 Revisit this when ephemeral template delivery (or a security review of the
 ephemeral surface) is on the table.
 
-## 13. Theming & design systems (a research direction)
+## 13. Theming & design systems
 
-> **Status: exploratory.** Nothing here is built. This supersedes an earlier
-> drive-by roadmap note (which pointed at the wrong channel — see §13.2). The
-> trust model (§13.2) and the ephemeral transport (§13.5) are the load-bearing
-> decisions to settle before implementing.
+> **Status: design settled; implementation starting.** The direction below came
+> out of a prior-art survey — W3C DTCG, Material 3, the web token systems, the
+> native platforms — written up under `research/theming/`. This supersedes an
+> earlier drive-by roadmap note (which pointed at the wrong channel — see
+> §13.2). The load-bearing decisions: the trust model (§13.2), adopting the
+> **W3C DTCG token format** (§13.3), and the ephemeral transport (§13.5). The
+> slice-by-slice implementation plan is embedded in the §8 roadmap.
 
 ### 13.1 The problem
 
@@ -1590,9 +1622,20 @@ data, and most of it turns out to be ephemeral-capable already:
 1. **Design tokens** — named values: a palette, semantic colour roles, a type
    scale, a spacing rhythm, radii/shape, elevation. Pure **data**; serializes to
    JSON; loads ephemerally like anything else. *This is the genuinely missing
-   piece.* (Design systems layer these: **primitive** tokens — `blue/500` — and
-   **semantic** tokens — `color.action → blue/500`. Re-skinning is remapping the
-   semantic layer over the primitive one, so the indirection is worth keeping.)
+   piece.* **Format: the W3C DTCG Design Tokens format** (`.tokens.json`, core
+   module stable as of 2025.10) — adopted as-is for interop with Figma / Tokens
+   Studio / Style Dictionary rather than inventing our own; its **aliases**
+   (`"{color.base.blue}"`) are exactly the primitive→semantic split below. The
+   entire DTCG ecosystem is *build-time* (compilers baking tokens into apps),
+   and our requirement is *runtime* interpretation of ephemerally-loaded tokens
+   — so we adopt the **format, not the tooling**, and write a small total
+   runtime parser + resolver in `a2ui_craft`, shared by both adapters
+   (`research/theming/DESIGN_TOKENS.md`). (Design systems layer these:
+   **primitive** tokens — `blue/500` — and **semantic** tokens — `color.action
+   → blue/500`. Re-skinning is remapping the semantic layer over the primitive
+   one, so the indirection is worth keeping. Mature systems add a third,
+   *component* tier — `button.background → color.action`; for us that tier *is*
+   item 2 below: branded catalog templates.)
 2. **Component styling / variants** — "our button is pill-shaped with our accent."
    **Already the author's job, already ephemeral:** a branded component is a
    *catalog template* over primitives (`widget Button = Box(color: …, radius: …,
@@ -1635,16 +1678,48 @@ reference scope reads best but likely needs a parser touch (unlike the function
 work, which reused `ConstructorCall`); a function-style `token(name: "color.brand")`
 reuses the function machinery we just built but strains "functions are pure" (a
 token reader depends on ambient theme, not only its args). Leaning toward a real
-scope; to be decided.
+scope; to be decided at the smallest surface (roadmap slice 2).
+
+**The semantic contract.** DTCG standardizes token *structure*, never *meaning*
+— nothing in the format says a button uses `color.action`. The fixed set of
+token paths each primitive reads for its ambient role-defaults is therefore the
+one piece of "standard" we author ourselves: a small, versioned contract living
+in `a2ui_craft` next to the primitive spec (§11), documented by the default
+theme (§13.5). Direction from the prior-art survey: a *small neutral* role set
+with surface/foreground pairing (shadcn-shaped), M3-name-compatible where that
+costs nothing, plus a *named* type scale — small + intent-named beats large +
+appearance-named (unanimous across Apple / M3 / shadcn / Radix).
+
+**No selectors — a deliberate divergence from CSS.** A CSS stylesheet can
+*target* arbitrary elements from the outside; our theme cannot. Tokens select
+nothing — primitives *pull* their roles from the contract. Anything
+selector-shaped ("all buttons inside cards look different") is a **branded
+catalog template** (§13.3, item 2), not a theme feature. This is the guard rail
+against the "reimplement CSS in JSON" cliff (§13.7).
 
 ### 13.5 The ephemeral transport
 
 The theme artifact travels in the **author's** channel: bundled with the template
-package (for the demo, a 4th trio file `theme.json` next to `template.craft` /
-`schema.json`; in production, served from the author's origin with the rest of the
-bundle). The **host** supplies render-time configuration only — the active mode
-(dark/light), and optionally a host-brand base layer to seed the cascade. Nothing
-here rides an agent message.
+package (for the demo, a 4th trio file next to `template.craft` / `schema.json`;
+in production, served from the author's origin with the rest of the bundle — the
+project, §13.9). Concretely, a theme is a **base DTCG `.tokens.json` plus
+per-mode overlay files** (each independently a valid DTCG document), with the
+mode wiring declared in **project config** — *ours*, not the token files —
+because DTCG's own multi-mode answer (the Resolver Module) is an unstable
+preview draft; we mirror its model (sets + modifier contexts + resolution order)
+behind our own config so we can conform when it stabilizes. The **host**
+supplies render-time configuration only — the active mode, and optionally a
+host-brand base layer to seed the cascade. The mode input is **n-ary** (light /
+dark / their high-contrast variants), not a boolean — accessibility modes are
+first-class axes alongside dark (the Apple/M3 lesson) — though v1 ships
+light/dark first. Nothing here rides an agent message.
+
+**Theming is explicit, never implicit.** A project *names* its theme; a project
+with no theme gets today's behavior — blend into the host (§13.1). We ship an
+open-source **default theme** (light, dark, and high-contrast modes) that themes
+the standard primitives; it is the starter kit for custom themes, the reference
+documentation of the semantic contract, and the theming-conformance fixture —
+but the runtime never applies it unasked, so embedded surfaces keep blending in.
 
 Proposed cascade (lowest → highest precedence): **host defaults → author design
 system → host render-time config (mode / injected brand) → explicit per-widget
@@ -1680,10 +1755,14 @@ default), never throws — the same discipline as the function library.
   platform. Ephemeral font *files* are large binary assets and their own hard
   problem (like ephemeral code). v1: reference fonts by name, host-resolved
   (bundled or system); ephemeral `@font-face`-style loading is later.
-- **Token vocabulary.** Lean on an established role set (Material 3's colour
-  roles / type scale) or define a minimal neutral one? Affects how cleanly existing
-  design systems map on.
-- **Dark mode.** A second token map, or a mode flag the semantic layer switches on?
+- **Token vocabulary — answered (§13.4):** a small neutral role set with
+  surface/foreground pairing, M3-name-compatible where obvious; the semantic
+  contract is ours to author and version.
+- **Dark mode — answered (§13.5):** neither a second vocabulary nor a bare
+  flag — the semantic layer selects a different value per **n-ary mode input**
+  (light / dark / high-contrast), the shape CSS `light-dark()`, Panda condition
+  tokens, DTCG resolver modifiers, and M3 `isDark` all converge on
+  (`research/theming/PRIOR_ART.md` §B.3). Role names never change across modes.
 - **How much per-component style surface** to expose before this becomes
   "reimplement CSS in JSON." The catalog-template escape hatch (§13.3, item 2) is
   the pressure-release valve — keep the token set small and push bespoke styling
@@ -1691,15 +1770,44 @@ default), never throws — the same discipline as the function library.
 
 ### 13.8 Phased plan (launch-and-iterate)
 
+The executable slice-by-slice plan (with per-slice acceptance) is embedded in
+the §8 roadmap. In outline:
+
 0. **(today)** Host inheritance — kept as the zero-config default / base layer.
-1. A framework-neutral `ThemeData` token schema + a **minimal** semantic set
-   (colour roles, a type scale, a spacing unit) that primitives read **ambiently
-   with host fallback**, loaded from the **author-bundled** theme. Cross-adapter
-   theming conformance from the start.
-2. **Explicit token references** in templates (the `theme.` scope).
-3. **Branded component templates** in the catalog referencing tokens, plus a
-   slightly richer role set.
-4. The **hard sub-problems**: Jaspr style isolation, host render-time config
-   (dark mode / injected brand), font handling.
-- **Later:** anything needing new render code or behavior → the sandboxed-code
-  layer, not theming.
+1. **Runtime DTCG parser + resolver** in `a2ui_craft` (shared, total).
+2. **Explicit token references** in templates (the `theme.` scope) — the thin
+   end-to-end slice, conformance-pinned on both adapters.
+3. **Ambient role-defaults** — the semantic contract v1; primitives read their
+   roles with host fallback; theming-conformance dimension started.
+4. **The default theme** (light / dark / high-contrast) + the host mode input;
+   reactive re-theme of a live surface.
+5. **The project bundle** (§13.9) — theme as the 4th trio file, then the
+   manifest. Branded component templates referencing tokens ride along once
+   slice 2 lands (they're just templates).
+- **Later:** the hard sub-problems (Jaspr style isolation, injected host brand,
+  font handling); anything needing new render code or behavior → the
+  sandboxed-code layer, not theming.
+
+### 13.9 The A2UI Craft project (the ephemeral bundle)
+
+The unit that travels the author's channel deserves a name: an **A2UI Craft
+project** is a self-contained, *ephemerally loadable* bundle of everything a
+template author ships — catalog templates (`.craft`), their A2UI bindings
+(component schema), a theme (§13.5), and config (a small manifest: name, catalog
+id, theme reference, mode wiring). Being ephemeral, it contains **data only** —
+no code; ephemeral business logic (§8's sandboxed-logic layer) gets a manifest
+slot *later*, empty for now.
+
+A project is **agent-optional**. The runtime loads a project and renders it,
+exposing hooks to connect an A2UI transport for agentic experiences — but a
+project can equally ship a canned message stream and run as a **mini-app**
+embedded in a host with no agent at all. The demo samples prove this shape
+already: each `samples/<id>/` trio (`template.craft` + `schema.json` +
+`messages.json`) is a proto-project whose `messages.json` *is* a canned stream,
+and the demo site is a project loader in embryo. The migration path is
+incremental: add the theme as a 4th trio file, then promote trio + manifest into
+the project format.
+
+Sequencing note: the manifest is deliberately designed *last* (slice 5) —
+container after contents, so the theme file's real shape informs the config that
+wires it.

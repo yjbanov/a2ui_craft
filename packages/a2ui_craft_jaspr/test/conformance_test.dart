@@ -69,6 +69,12 @@ class _JasprCraftTester implements CraftTester {
   int textCount(String text) => find.text(text).evaluate().length;
 
   @override
+  int buttonCount(String label) => find
+      .ancestor(of: find.text(label), matching: find.tag('button'))
+      .evaluate()
+      .length;
+
+  @override
   Future<void> activate(String key) {
     final Key k = ValueKey<String>(key);
     return _tester.click(find.byKey(k));

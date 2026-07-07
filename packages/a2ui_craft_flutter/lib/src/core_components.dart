@@ -67,8 +67,8 @@ LocalWidgetLibrary createCoreComponents() {
     },
     'Button': (BuildContext context, DataSource source) {
       final VoidCallback? onPressed = source.voidHandler(['onPressed']);
-      return GestureDetector(
-        onTap: onPressed,
+      return _CoreButton(
+        onPressed: onPressed,
         child: source.child(['child']),
       );
     },
@@ -218,12 +218,7 @@ LocalWidgetLibrary createCoreComponents() {
     'Radio': (BuildContext context, DataSource source) {
       final bool selected = source.v<bool>(['selected']) ?? false;
       final VoidCallback? onChanged = source.voidHandler(['onChanged']);
-      return GestureDetector(
-        onTap: onChanged,
-        child: Icon(
-          selected ? Icons.radio_button_checked : Icons.radio_button_off,
-        ),
-      );
+      return _CoreRadio(selected: selected, onChanged: onChanged);
     },
     // A bare numeric slider (no label — that is a template's choice). Two-way
     // bound: `onChanged` is a2ui_core's setter for the bound `value`.
@@ -584,6 +579,97 @@ CrossAxisAlignment _toCrossAxisAlignment(CrossAxisAlign a) => switch (a) {
       CrossAxisAlign.end => CrossAxisAlignment.end,
       CrossAxisAlign.stretch => CrossAxisAlignment.stretch,
     };
+
+/// The look-free pressable behind the `Button` primitive.
+///
+/// Matches the Jaspr adapter's native `<button>`: announces a **button role**
+/// whose accessible name merges from the child, exposes the enabled/disabled
+/// state, participates in focus traversal, and activates from the keyboard
+/// (Space/Enter arrive as [ActivateIntent]/[ButtonActivateIntent] via the
+/// app-level default shortcuts). Appearance stays the child's job (DESIGN.md
+/// §2, bias to templatize) — this widget paints nothing.
+class _CoreButton extends StatelessWidget {
+  const _CoreButton({required this.onPressed, required this.child});
+
+  final VoidCallback? onPressed;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool enabled = onPressed != null;
+    return MergeSemantics(
+      child: Semantics(
+        button: true,
+        enabled: enabled,
+        child: FocusableActionDetector(
+          enabled: enabled,
+          actions: <Type, Action<Intent>>{
+            ActivateIntent: CallbackAction<ActivateIntent>(
+              onInvoke: (ActivateIntent intent) {
+                onPressed!();
+                return null;
+              },
+            ),
+            ButtonActivateIntent: CallbackAction<ButtonActivateIntent>(
+              onInvoke: (ButtonActivateIntent intent) {
+                onPressed!();
+                return null;
+              },
+            ),
+          },
+          child: GestureDetector(onTap: onPressed, child: child),
+        ),
+      ),
+    );
+  }
+}
+
+/// The radio glyph behind the `Radio` primitive, with the semantics the bare
+/// `GestureDetector` + `Icon` lacked: a checked/unchecked state in a mutually
+/// exclusive group, enabled/disabled, focus, and keyboard activation — parity
+/// with the Jaspr adapter's native `<input type=radio>`. (The glyph itself is
+/// still the interim rendering; see the TODO at the registration site.)
+class _CoreRadio extends StatelessWidget {
+  const _CoreRadio({required this.selected, required this.onChanged});
+
+  final bool selected;
+  final VoidCallback? onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool enabled = onChanged != null;
+    return MergeSemantics(
+      child: Semantics(
+        checked: selected,
+        inMutuallyExclusiveGroup: true,
+        enabled: enabled,
+        child: FocusableActionDetector(
+          enabled: enabled,
+          actions: <Type, Action<Intent>>{
+            ActivateIntent: CallbackAction<ActivateIntent>(
+              onInvoke: (ActivateIntent intent) {
+                onChanged!();
+                return null;
+              },
+            ),
+            ButtonActivateIntent: CallbackAction<ButtonActivateIntent>(
+              onInvoke: (ButtonActivateIntent intent) {
+                onChanged!();
+                return null;
+              },
+            ),
+          },
+          child: GestureDetector(
+            onTap: onChanged,
+            child: Icon(
+              selected ? Icons.radio_button_checked : Icons.radio_button_off,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 /// A text field that reflects an externally-bound [value] (without clobbering
 /// the cursor mid-edit) and reports edits through [onChanged] — the two halves

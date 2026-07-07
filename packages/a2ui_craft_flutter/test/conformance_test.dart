@@ -75,6 +75,13 @@ class _FlutterCraftTester implements CraftTester {
   int textCount(String text) => find.text(text).evaluate().length;
 
   @override
+  int buttonCount(String label) => find.semantics
+      .byPredicate(
+          (node) => node.flagsCollection.isButton && node.label == label)
+      .evaluate()
+      .length;
+
+  @override
   Future<void> activate(String key) async {
     await _tester.tap(find.byKey(ValueKey<String>(key)));
     await _tester.pump();
@@ -95,7 +102,17 @@ class _FlutterConformanceDriver implements CraftConformanceDriver {
   ) {
     testWidgets(
       description,
-      (WidgetTester tester) => body(_FlutterCraftTester(tester)),
+      (WidgetTester tester) async {
+        // Semantics stays on for every case: the suite probes the a11y tree
+        // (CraftTester.buttonCount), and the handle must be released before
+        // the test ends.
+        final semantics = tester.ensureSemantics();
+        try {
+          await body(_FlutterCraftTester(tester));
+        } finally {
+          semantics.dispose();
+        }
+      },
     );
   }
 }

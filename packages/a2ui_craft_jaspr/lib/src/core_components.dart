@@ -77,6 +77,11 @@ LocalWidgetLibrary createCoreComponents() {
     'Button': (BuildContext context, DataSource source) {
       final onPressed = source.voidHandler(['onPressed']);
       return button(
+        // `type=button` opts out of implicit form submission; `disabled` keeps
+        // a handler-less button out of the tab order and announced as disabled
+        // — parity with the Flutter adapter's Semantics(enabled: false).
+        type: ButtonType.button,
+        disabled: onPressed == null,
         onClick: onPressed == null ? null : () => onPressed(),
         [
           source.child(['child'])

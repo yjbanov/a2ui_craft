@@ -119,6 +119,12 @@ abstract interface class CraftTester {
   /// The number of currently displayed text nodes whose content equals [text].
   int textCount(String text);
 
+  /// The number of elements exposing a **button role** to assistive technology
+  /// whose accessible name is [label] — Flutter: semantics nodes flagged as
+  /// buttons; Jaspr: rendered `<button>` elements. Plain text never counts;
+  /// this probes the accessibility contract, not the visuals.
+  int buttonCount(String label);
+
   /// Activates (taps/clicks) the interactive element carrying the given
   /// component `key`.
   Future<void> activate(String key);
@@ -777,6 +783,34 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
       await tester.pump();
       expect(tester.hasText('#FF111111'), isTrue);
       expect(tester.hasText('#FFFFFFFF'), isFalse);
+    },
+  );
+
+  driver.defineTest(
+    'Button announces a button role, named by its child, on and off',
+    (CraftTester tester) async {
+      // The primitive is look-free (the child is the appearance — branding is
+      // a catalog template's job), but the *accessibility* contract is the
+      // primitive's: a button role whose accessible name derives from the
+      // child, and an explicit disabled state when there is no handler.
+      // Flutter merges the child into a button semantics node; Jaspr renders a
+      // native <button> — same announcement either way.
+      await tester.mount('''
+        import core;
+        widget root = Column(children: [
+          Button(onPressed: event "press" {}, child: Text(text: "Press me")),
+          Button(child: Text(text: "Unavailable")),
+          Text(text: "Press me"),
+        ]);
+      ''');
+
+      // Exactly the button announces the role — the identical plain text
+      // sibling never does.
+      expect(tester.buttonCount('Press me'), 1);
+      expect(tester.textCount('Press me'), 2);
+      // A handler-less button still announces as a (disabled) button rather
+      // than vanishing from the a11y tree.
+      expect(tester.buttonCount('Unavailable'), 1);
     },
   );
 

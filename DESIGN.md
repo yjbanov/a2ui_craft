@@ -993,7 +993,7 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
         bundle (§13.9); prior-art survey under `research/theming/`.
         Implementation plan — thin end-to-end slices, each conformance-tested
         on both adapters before the next begins:
-        - [ ] **1. Runtime DTCG parser + resolver** in `a2ui_craft` (shared by
+        - [x] **1. Runtime DTCG parser + resolver** in `a2ui_craft` (shared by
           both adapters — §13.6 determinism by construction): parse (groups →
           dot-paths, `$type` inheritance down groups, aliases recorded) →
           resolve (layer merge for mode overlays, alias dereference with cycle
@@ -1001,7 +1001,7 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
           first, accepting both the 2025.10 object forms and the legacy string
           forms). Total throughout: malformed token → null → fallback, never
           throw.
-        - [ ] **2. Explicit token references** — the `theme.` scope (§13.4) on
+        - [x] **2. Explicit token references** — the `theme.` scope (§13.4) on
           both adapters; `Box(color: theme.color.action)` renders the token's
           color on Flutter + Jaspr, pinned by a conformance case. Decides the
           scope-vs-function syntax question at the smallest surface.

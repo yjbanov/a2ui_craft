@@ -279,6 +279,53 @@ final class ResolvedTokens {
   /// for types without a typed getter yet.
   Object? raw(String path) => _tokens[path]?.value;
 
+  /// Converts the resolved tokens into the nested map the `theme.` reference
+  /// scope reads (via a `DynamicContent`), with each value re-encoded in the
+  /// **canonical template form** for its type — exactly what a literal in the
+  /// same value position would be:
+  ///
+  /// * `color` → an `#AARRGGBB` hex string ([Rgba.toHexString]),
+  /// * `dimension` → logical pixels as a double,
+  /// * `number` → a double,
+  /// * anything else → the resolved raw `$value` unchanged.
+  ///
+  /// This is what makes `theme.color.action` interchangeable with a literal
+  /// `"#0066CC"`: primitives keep their one decoding path, and the theme scope
+  /// speaks the template's value vocabulary. Tokens whose value fails its
+  /// type's canonicalization are omitted (total — the reference then resolves
+  /// as missing and the consumer falls back).
+  Map<String, Object?> toTemplateValues() {
+    final Map<String, Object?> root = <String, Object?>{};
+    for (final DesignToken token in _tokens.values) {
+      final Object? canonical = switch (token.type) {
+        'color' => color(token.path)?.toHexString(),
+        'dimension' => dimension(token.path),
+        'number' => number(token.path),
+        _ => token.value,
+      };
+      if (canonical == null) continue;
+      final List<String> parts = token.path.split('.');
+      Map<String, Object?> group = root;
+      for (final String part in parts.sublist(0, parts.length - 1)) {
+        final Object? existing = group[part];
+        if (existing is Map<String, Object?>) {
+          group = existing;
+        } else {
+          // A token where a group is needed (possible when merged layers
+          // disagree about the shape) — the group wins; the shadowed token
+          // is dropped rather than corrupting the tree.
+          final Map<String, Object?> fresh = <String, Object?>{};
+          group[part] = fresh;
+          group = fresh;
+        }
+      }
+      if (group[parts.last] is! Map<String, Object?>) {
+        group[parts.last] = canonical;
+      }
+    }
+    return root;
+  }
+
   DesignToken? _typed(String path, String type) {
     final DesignToken? token = _tokens[path];
     return (token == null || token.type != type) ? null : token;

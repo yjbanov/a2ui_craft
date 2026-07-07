@@ -26,6 +26,7 @@ class _FlutterCraftTester implements CraftTester {
   Future<void> mountLibrary(
     RemoteWidgetLibrary main, {
     DynamicContent? data,
+    DynamicContent? theme,
     CraftEventHandler? onEvent,
   }) async {
     _runtime.update(const LibraryName(<String>['main']), main);
@@ -39,6 +40,7 @@ class _FlutterCraftTester implements CraftTester {
             'root',
           ),
           data: data ?? DynamicContent(),
+          theme: theme,
           onEvent: onEvent,
         ),
       ),

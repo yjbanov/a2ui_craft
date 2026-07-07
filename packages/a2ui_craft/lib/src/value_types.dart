@@ -438,6 +438,11 @@ final class Rgba {
   /// Returns a CSS-compatible `rgba(...)` string (alpha as a 0–1 fraction).
   String toCssString() => 'rgba($red, $green, $blue, ${alpha / 255.0})';
 
+  /// Returns the `#AARRGGBB` hex form — the canonical color encoding in
+  /// template value positions, round-trippable through [decode].
+  String toHexString() =>
+      '#${value.toRadixString(16).padLeft(8, '0').toUpperCase()}';
+
   @override
   bool operator ==(Object other) => other is Rgba && other.value == value;
 

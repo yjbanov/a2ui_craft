@@ -28,6 +28,7 @@ class RemoteWidget extends StatefulWidget {
     required this.runtime,
     required this.widget,
     required this.data,
+    this.theme,
     this.onEvent,
   });
 
@@ -52,6 +53,16 @@ class RemoteWidget extends StatefulWidget {
   /// This can be updated frequently (once per frame) using
   /// [DynamicContent.update].
   final DynamicContent data;
+
+  /// The ambient design-token theme the `theme.` reference scope reads —
+  /// resolved tokens in their canonical template forms (see
+  /// `ResolvedTokens.toTemplateValues`).
+  ///
+  /// Supplied by the template author and the host, never by transport
+  /// messages (DESIGN.md §13.2). Like [data] it is reactive: updating it (e.g.
+  /// a dark-mode swap) re-resolves live references. When null, `theme.`
+  /// references resolve as missing and consumers fall back to host defaults.
+  final DynamicContent? theme;
 
   /// Called when there's an event triggered by a remote component.
   ///
@@ -94,7 +105,8 @@ class _RemoteWidgetState extends State<RemoteWidget> {
 
   @override
   Widget build(BuildContext context) {
-    return widget.runtime
-        .build(context, widget.widget, widget.data, _eventHandler);
+    return widget.runtime.build(
+        context, widget.widget, widget.data, _eventHandler,
+        theme: widget.theme);
   }
 }

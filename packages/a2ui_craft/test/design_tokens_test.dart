@@ -333,4 +333,44 @@ void main() {
       expect(tokens.raw('font.brand'), <Object?>['Inter', 'sans-serif']);
     });
   });
+
+  group('ResolvedTokens.toTemplateValues', () {
+    test('re-encodes each type in its canonical template form, nested', () {
+      final ResolvedTokens tokens = _resolve(<String, Object?>{
+        'color': <String, Object?>{
+          r'$type': 'color',
+          'base': <String, Object?>{
+            'blue': <String, Object?>{r'$value': '#0066CC'},
+          },
+          'action': <String, Object?>{r'$value': '{color.base.blue}'},
+        },
+        'spacing': <String, Object?>{
+          'gap': <String, Object?>{
+            r'$type': 'dimension',
+            r'$value': <String, Object?>{'value': 1.5, 'unit': 'rem'},
+          },
+        },
+        'emphasis': <String, Object?>{r'$type': 'number', r'$value': 0.5},
+        'font': <String, Object?>{
+          'sans': <String, Object?>{r'$type': 'fontFamily', r'$value': 'Inter'},
+        },
+      });
+
+      final Map<String, Object?> values = tokens.toTemplateValues();
+      final Map<String, Object?> color =
+          values['color']! as Map<String, Object?>;
+      expect((color['base']! as Map<String, Object?>)['blue'], '#FF0066CC');
+      expect(color['action'], '#FF0066CC'); // alias, canonicalized
+      expect(
+          (values['spacing']! as Map<String, Object?>)['gap'], 24.0); // rem→px
+      expect(values['emphasis'], 0.5);
+      // Types without a typed getter pass their resolved raw value through.
+      expect((values['font']! as Map<String, Object?>)['sans'], 'Inter');
+    });
+
+    test('canonical color strings round-trip through Rgba.decode', () {
+      expect(Rgba.decode(const Rgba(0x800066CC).toHexString()),
+          const Rgba(0x800066CC));
+    });
+  });
 }

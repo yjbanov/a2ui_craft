@@ -639,6 +639,7 @@ const Set<String> _reservedWords = <String>{
   'false',
   'set',
   'state',
+  'theme',
   'true',
 };
 
@@ -2595,6 +2596,11 @@ class _Parser {
         final SourceLocation? start = _getSourceLocation();
         _advance();
         return _withSourceRange(StateReference(_readParts()), start);
+      }
+      if (identifier == 'theme') {
+        final SourceLocation? start = _getSourceLocation();
+        _advance();
+        return _withSourceRange(ThemeReference(_readParts()), start);
       }
       if (identifier == 'switch') {
         final SourceLocation? start = _getSourceLocation();

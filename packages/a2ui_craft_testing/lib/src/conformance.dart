@@ -100,13 +100,16 @@ typedef CraftEventHandler = void Function(String name, DynamicMap arguments);
 /// Behavioral identity across frameworks is the goal; pixel identity is not.
 abstract interface class CraftTester {
   /// Renders [main]'s `root` component (with the core component library
-  /// available as `core`), bound to [data], routing events to [onEvent].
+  /// available as `core`), bound to [data], themed by [theme] (the resolved
+  /// design tokens the `theme.` reference scope reads, in their canonical
+  /// template forms), routing events to [onEvent].
   ///
   /// This is the primitive; [CraftTesterQueries.mount] is a convenience that
   /// parses an RFW template into a library first.
   Future<void> mountLibrary(
     RemoteWidgetLibrary main, {
     DynamicContent? data,
+    DynamicContent? theme,
     CraftEventHandler? onEvent,
   });
 
@@ -141,10 +144,11 @@ extension CraftTesterQueries on CraftTester {
   Future<void> mount(
     String template, {
     DynamicContent? data,
+    DynamicContent? theme,
     CraftEventHandler? onEvent,
   }) {
     return mountLibrary(parseLibraryFile(template),
-        data: data, onEvent: onEvent);
+        data: data, theme: theme, onEvent: onEvent);
   }
 
   /// Builds a fresh `a2ui_core` processor over the demo catalog, applies
@@ -683,6 +687,116 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
       expect(tester.hasText('spaced'), isTrue); // trimmed
       expect(tester.hasText('5'), isTrue); // length("hello")
       expect(tester.hasText('n=5'), isTrue); // concat stringifies the number 5
+    },
+  );
+
+  driver.defineTest(
+    'theme references resolve design tokens to their canonical template values',
+    (CraftTester tester) async {
+      // A DTCG theme with a primitive→semantic alias, a dimension, and a
+      // number, resolved by the shared runtime parser and read through the
+      // `theme.` scope in canonical template forms (hex string / px double /
+      // double) — a theme reference is interchangeable with the literal it
+      // canonicalizes to. Text sinks display those forms, which is what lets
+      // this suite assert resolution behaviorally on every adapter; that the
+      // canonical form feeds a real styling prop is covered by the Box child.
+      final ResolvedTokens resolved = resolveDesignTokens(<DesignTokenSet>[
+        parseDesignTokens(<String, Object?>{
+          'color': <String, Object?>{
+            r'$type': 'color',
+            'base': <String, Object?>{
+              'blue': <String, Object?>{r'$value': '#0066CC'},
+            },
+            'action': <String, Object?>{r'$value': '{color.base.blue}'},
+          },
+          'spacing': <String, Object?>{
+            'gap': <String, Object?>{
+              r'$type': 'dimension',
+              r'$value': <String, Object?>{'value': 12, 'unit': 'px'},
+            },
+          },
+          'emphasis': <String, Object?>{r'$type': 'number', r'$value': 0.5},
+        }),
+      ]);
+      final DynamicContent theme = DynamicContent();
+      theme.updateAll(resolved.toTemplateValues());
+
+      await tester.mount('''
+        import core;
+        widget root = Column(children: [
+          Text(text: theme.color.action),
+          Text(text: theme.spacing.gap),
+          Text(text: theme.emphasis),
+          Box(color: theme.color.action, child: Text(text: "themed box")),
+        ]);
+      ''', theme: theme);
+
+      expect(tester.hasText('#FF0066CC'), isTrue); // alias → canonical hex
+      expect(tester.hasText('12'), isTrue); // {value: 12, unit: px} → 12
+      expect(tester.hasText('0.5'), isTrue); // number passes through
+      expect(tester.hasText('themed box'), isTrue); // feeds a color prop
+    },
+  );
+
+  driver.defineTest(
+    'a theme update re-resolves live theme references (mode swap)',
+    (CraftTester tester) async {
+      // The dark overlay overrides only the *primitive* token; because aliases
+      // dereference after the layer merge, the untouched semantic token
+      // re-points to the new primitive, and the live reference updates
+      // reactively — the host flips a mode without remounting the surface.
+      final DesignTokenSet base = parseDesignTokens(<String, Object?>{
+        'color': <String, Object?>{
+          r'$type': 'color',
+          'base': <String, Object?>{
+            'bg': <String, Object?>{r'$value': '#FFFFFF'},
+          },
+          'surface': <String, Object?>{r'$value': '{color.base.bg}'},
+        },
+      });
+      final DesignTokenSet dark = parseDesignTokens(<String, Object?>{
+        'color': <String, Object?>{
+          r'$type': 'color',
+          'base': <String, Object?>{
+            'bg': <String, Object?>{r'$value': '#111111'},
+          },
+        },
+      });
+      final DynamicContent theme = DynamicContent();
+      theme.updateAll(
+          resolveDesignTokens(<DesignTokenSet>[base]).toTemplateValues());
+
+      await tester.mount('''
+        import core;
+        widget root = Text(text: theme.color.surface);
+      ''', theme: theme);
+      expect(tester.hasText('#FFFFFFFF'), isTrue);
+
+      theme.updateAll(
+          resolveDesignTokens(<DesignTokenSet>[base, dark]).toTemplateValues());
+      await tester.pump();
+      expect(tester.hasText('#FF111111'), isTrue);
+      expect(tester.hasText('#FFFFFFFF'), isFalse);
+    },
+  );
+
+  driver.defineTest(
+    'an unthemed surface renders theme references as missing, without error',
+    (CraftTester tester) async {
+      // No theme mounted: the references resolve as missing and the consumer
+      // falls back (here Text renders nothing) — the §13 totality discipline.
+      // The surface itself must render normally.
+      await tester.mount('''
+        import core;
+        widget root = Column(children: [
+          Text(text: theme.color.action),
+          Box(color: theme.color.action, child: Text(text: "unthemed box")),
+          Text(text: "alive"),
+        ]);
+      ''');
+
+      expect(tester.hasText('alive'), isTrue);
+      expect(tester.hasText('unthemed box'), isTrue);
     },
   );
 }

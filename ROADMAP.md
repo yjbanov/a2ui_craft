@@ -542,12 +542,17 @@
         for multi-file templates. Tests scaffold into a temp dir and assert the
         output parses end-to-end (manifest, RFW template, schema + app.json
         bootstrap, every tests.json scenario).
-      - [ ] **3. Runtime loader + host URL bar.** A `CraftProjectLoader` fetches a
-        project over HTTP (manifest → template/schema/theme/`app.json`); a URL-bar
-        screen in the demo site loads a project from any URL (not a query param —
-        it must carry to future mobile/desktop app modes), demonstrating the
-        edit → re-publish → reload cycle with the host untouched. `tests.json`
-        surfaces as an optional canned-demo picker.
+      - [x] **3. Runtime loader + host URL bar.** `CraftProjectLoader`
+        (`a2ui_craft_examples`) fetches a project over HTTP (manifest →
+        template/schema/`app.json`, plus optional `tests.json`) into a
+        `LoadedProject`; total on failure (a `ProjectLoadException` the host
+        surfaces), pinned by mock-client tests. A `/load` URL-bar screen in the
+        demo site loads a project from any URL (a text field, not a query param —
+        it carries to future mobile/desktop app modes), renders it on either
+        adapter with the n-ary mode picker, and offers `tests.json` scenarios as
+        an optional canned-demo picker — demonstrating the edit → re-publish →
+        reload cycle with the host untouched. (Site UI is analyzer-checked glue
+        over the tested loader + SampleView theming; no live browser test.)
 - [ ] Prove the state-model axis with a third, non-Flutter-like framework.
 - [ ] **Security: uphold A2UI's secure-by-design promise (§12).** When templates
       are delivered ephemerally, treat them as untrusted input: add engine-level

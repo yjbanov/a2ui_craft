@@ -1338,10 +1338,11 @@ Because a project is **data, not code**, deployment is just publishing static
 files to a CDN (Firebase Hosting will do): no compile step. The host fetches the
 project from its URL at runtime, so editing and re-publishing the project updates
 the UI with **no host redeploy** — the ephemeral-loadability property made
-concrete. The tooling to demonstrate this is planned (ROADMAP.md): a `craft` CLI
-(`craft create`) that scaffolds a deployable project, a runtime
-`CraftProjectLoader` that fetches one over HTTP, and a URL-bar screen in the demo
-site that loads a project from any URL.
+concrete. The tooling that demonstrates this is in place: a `craft` CLI
+(`craft create`) scaffolds a deployable project, the runtime `CraftProjectLoader`
+fetches one over HTTP (manifest → template/schema/`app.json`, plus optional
+`tests.json`), and the demo site's URL-bar screen loads a project from any URL and
+renders it on either adapter.
 
 Sequencing note: the manifest was deliberately designed *last* — container after
 contents, so the theme file's real shape informed the config that wires it.

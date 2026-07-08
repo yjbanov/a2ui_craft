@@ -532,13 +532,16 @@
         deployable project format; behavior-preserving (generated file
         byte-identical). `tests.json` (named dev scenarios) is introduced by the
         slices that consume it.
-      - [ ] **2. `craft` CLI** (`packages/craft`, `dart pub global activate`).
+      - [x] **2. `craft` CLI** (`packages/craft`, installed via
+        `dart pub global activate --source path packages/craft`).
         `craft create <name>` scaffolds a deployable project — `manifest.json`,
         `template.craft`, `schema.json`, `app.json`, a demo `tests.json`, a
         `firebase.json` (CORS + cache headers), and a README — hard-coded to the
         counter for now (a `--template` menu later). No build step yet (deploy the
         dir as-is); an "assemble" step (drop tests, merge split templates) waits
-        for multi-file templates.
+        for multi-file templates. Tests scaffold into a temp dir and assert the
+        output parses end-to-end (manifest, RFW template, schema + app.json
+        bootstrap, every tests.json scenario).
       - [ ] **3. Runtime loader + host URL bar.** A `CraftProjectLoader` fetches a
         project over HTTP (manifest → template/schema/theme/`app.json`); a URL-bar
         screen in the demo site loads a project from any URL (not a query param —

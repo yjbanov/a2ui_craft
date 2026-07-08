@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// Bakes the code-free sample trios (`samples/<id>/{template.craft,schema.json,
-// messages.json}` + `manifest.json`) into `lib/src/generated_samples.g.dart`, so
+// Bakes the code-free sample projects (`samples/<id>/{template.craft,schema.json,
+// app.json}` + `manifest.json`) into `lib/src/generated_samples.g.dart`, so
 // every target (tests, the Flutter example, the Flutter-embedded view, the Jaspr
 // site) reads the same in-memory strings with zero per-platform file/asset IO.
 //
@@ -56,8 +56,8 @@ void main() {
     ..writeln('  final String schema;')
     ..writeln('  final String messages;')
     ..writeln()
-    ..writeln('  /// The project\'s `theme.json` (the optional 4th trio file), '
-        'or null.')
+    ..writeln('  /// The project manifest\'s optional `theme` block (a '
+        'ProjectTheme config), or null.')
     ..writeln('  final String? theme;')
     ..writeln()
     ..writeln('  /// Builds a [SampleSpec], substituting `{{framework}}`; the '
@@ -85,7 +85,9 @@ void main() {
     final String template =
         File('$_root/$id/template.craft').readAsStringSync();
     final String schema = File('$_root/$id/schema.json').readAsStringSync();
-    final String messages = File('$_root/$id/messages.json').readAsStringSync();
+    // app.json is the mini-app bootstrap — the canned A2UI message stream that
+    // builds the surface with no agent (an agent-driven project omits it).
+    final String messages = File('$_root/$id/app.json').readAsStringSync();
     // The theme is the manifest's optional `theme` block (a ProjectTheme
     // config) — present only for themed projects; re-encoded as its own JSON.
     final Object? themeConfig = project['theme'];

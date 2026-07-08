@@ -17,7 +17,7 @@ const String surfaceId = 'demo';
 /// Schema catalog document), and a script of A2UI [messages].
 ///
 /// Samples are authored as code-free data files under `samples/<id>/`
-/// (`template.craft` / `schema.json` / `messages.json`) and decoded with
+/// (`template.craft` / `schema.json` / `app.json`) and decoded with
 /// [SampleSpec.fromData]; the Flutter and Jaspr adapters each render one through
 /// their reusable `SampleView`. Action handling (e.g. a host action log) is the
 /// host's concern, supplied to `SampleView`, not part of the data.
@@ -30,12 +30,13 @@ class SampleSpec {
     this.theme,
   });
 
-  /// Decodes a sample from its three **code-free data files**: the RFW
-  /// [template] (a `.craft` source string), the component API [schemaJson]
-  /// (a JSON Schema catalog document), and [messagesJson] (a JSON array of A2UI
-  /// messages). The inverse of authoring a sample in Dart — the example apps and
-  /// the site build every built-in sample this way, and the site's editor
-  /// rebuilds an edited sample with it for live preview.
+  /// Decodes a sample from its **code-free data files**: the RFW [template]
+  /// (a `.craft` source string), the component API [schemaJson] (a JSON Schema
+  /// catalog document), and [messagesJson] — the `app.json` bootstrap (a JSON
+  /// array of A2UI messages that build the surface with no agent). The inverse
+  /// of authoring a sample in Dart — the example apps and the site build every
+  /// built-in sample this way, and the site's editor rebuilds an edited sample
+  /// with it for live preview.
   ///
   /// A `{{framework}}` token in any of the three strings is replaced with
   /// [framework] when given (so a sample can show which engine renders it).

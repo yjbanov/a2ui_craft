@@ -801,9 +801,10 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
         (`jaspr_flutter_embed`) — to browse the samples, flip each between the
         Jaspr and Flutter renderers, and open/edit its template/schema/messages
         with a live preview. Prerequisites that landed with it: samples became
-        **code-free data trios** (`samples/<id>/{template.craft,schema.json,
-        messages.json}`, the single source of truth, baked to a zero-IO constants
-        file by `tool/gen_samples.dart`, decoded by `SampleSpec.fromData`); the
+        **code-free data projects** (`samples/<id>/{template.craft,schema.json,
+        app.json}` + `manifest.json`, the single source of truth, baked to a
+        zero-IO constants file by `tool/gen_samples.dart`, decoded by
+        `SampleSpec.fromData`); the
         per-framework renderer was extracted into each adapter as a reusable
         `SampleView`; and a generic **action log** replaced per-sample Dart action
         handlers. Built and served locally (`jaspr serve`); no deployment config
@@ -1041,14 +1042,36 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
           both adapters. The demo site loads a project's theme and offers its
           modes through a render-time picker (the n-ary mode input) that
           re-themes both the Jaspr-native and embedded-Flutter renders.
-          Agent-optional is already the samples' shape — each trio's
-          `messages.json` *is* a canned stream (§13.9). The consolidated project
+          Agent-optional is already the samples' shape — each project's
+          `app.json` *is* a canned bootstrap stream (§13.9). The consolidated
+          project
           manifest then folded name + catalog id + theme-ref + mode-wiring into
           one `samples/<id>/manifest.json` per project (parsed by
           `ProjectManifest`), replacing the standalone `theme.json` and the
           top-level per-entry label — which became a plain gallery-order id list.
           The migration was behavior-preserving: the generated samples file came
           out byte-identical.
+- [ ] **Project authoring & deployment tooling (§13.9).** Show a project is a
+      *separate, ephemerally loadable artifact* from its host, publishable to a
+      CDN with no compile step. Thin slices:
+      - [x] **1. `app.json` bootstrap.** Rename each sample's `messages.json` →
+        `app.json` (the mini-app bootstrap stream), aligning the samples with the
+        deployable project format; behavior-preserving (generated file
+        byte-identical). `tests.json` (named dev scenarios) is introduced by the
+        slices that consume it.
+      - [ ] **2. `craft` CLI** (`packages/craft`, `dart pub global activate`).
+        `craft create <name>` scaffolds a deployable project — `manifest.json`,
+        `template.craft`, `schema.json`, `app.json`, a demo `tests.json`, a
+        `firebase.json` (CORS + cache headers), and a README — hard-coded to the
+        counter for now (a `--template` menu later). No build step yet (deploy the
+        dir as-is); an "assemble" step (drop tests, merge split templates) waits
+        for multi-file templates.
+      - [ ] **3. Runtime loader + host URL bar.** A `CraftProjectLoader` fetches a
+        project over HTTP (manifest → template/schema/theme/`app.json`); a URL-bar
+        screen in the demo site loads a project from any URL (not a query param —
+        it must carry to future mobile/desktop app modes), demonstrating the
+        edit → re-publish → reload cycle with the host untouched. `tests.json`
+        surfaces as an optional canned-demo picker.
 - [ ] Prove the state-model axis with a third, non-Flutter-like framework.
 - [ ] **Security: uphold A2UI's secure-by-design promise (§12).** When templates
       are delivered ephemerally, treat them as untrusted input: add engine-level
@@ -1838,17 +1861,34 @@ id, theme reference, mode wiring). Being ephemeral, it contains **data only** �
 no code; ephemeral business logic (§8's sandboxed-logic layer) gets a manifest
 slot *later*, empty for now.
 
-A project is **agent-optional**. The runtime loads a project and renders it,
-exposing hooks to connect an A2UI transport for agentic experiences — but a
-project can equally ship a canned message stream and run as a **mini-app**
-embedded in a host with no agent at all. The demo samples prove this shape
-already: each `samples/<id>/` trio (`template.craft` + `schema.json` +
-`messages.json`) is a project whose `messages.json` *is* a canned stream, and the
-demo site is a project loader. The migration ran as designed: first the theme
-arrived as a 4th trio file, then that file was promoted into a consolidated
-`samples/<id>/manifest.json` (`ProjectManifest`: name, catalog id, theme
-reference + mode wiring), with the samples root reduced to a gallery-order id
-list. Ephemeral business logic gets a manifest slot later (§8), empty for now.
+A project is **agent-optional**, which splits its A2UI messages into two roles:
+
+- **`app.json` — the bootstrap.** For a **mini-app** deployment (no agent), the
+  project ships a canned A2UI stream that builds the initial surface; the host
+  loads and replays it. This is real, deployed content. A **pure-A2UI**
+  (agent-driven) deployment omits `app.json` — the transport supplies the stream
+  live, and the runtime just exposes the hooks to connect it.
+- **`tests.json` — named dev scenarios.** An *optional* map of named A2UI streams
+  (e.g. `empty` / `loaded` / `error`), clearly labeled test data, for exercising
+  or demoing a project without an LLM. Not the app's content; a tool concern.
+
+The demo samples prove the mini-app shape already: each `samples/<id>/` project
+(`template.craft` + `schema.json` + `app.json` + `manifest.json`) is a mini-app
+whose `app.json` *is* its bootstrap, and the demo site is a project loader. The
+manifest arrived incrementally: the theme first landed as a standalone file, then
+was promoted into a consolidated `samples/<id>/manifest.json` (`ProjectManifest`:
+name, catalog id, theme reference + mode wiring), with the samples root reduced
+to a gallery-order id list. Ephemeral business logic gets a manifest slot later
+(§8), empty for now.
+
+Because a project is **data, not code**, deployment is just publishing static
+files to a CDN (Firebase Hosting will do): no compile step. The host fetches the
+project from its URL at runtime, so editing and re-publishing the project updates
+the UI with **no host redeploy** — the ephemeral-loadability property made
+concrete. The tooling to demonstrate this is planned (§8): a `craft` CLI
+(`craft create`) that scaffolds a deployable project, a runtime
+`CraftProjectLoader` that fetches one over HTTP, and a URL-bar screen in the demo
+site that loads a project from any URL.
 
 Sequencing note: the manifest was deliberately designed *last* — container after
 contents, so the theme file's real shape informed the config that wires it.

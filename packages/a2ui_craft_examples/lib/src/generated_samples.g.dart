@@ -25,7 +25,7 @@ class RawSample {
   final String schema;
   final String messages;
 
-  /// The project's `theme.json` (the optional 4th trio file), or null.
+  /// The project manifest's optional `theme` block (a ProjectTheme config), or null.
   final String? theme;
 
   /// Builds a [SampleSpec], substituting `{{framework}}`; the host supplies

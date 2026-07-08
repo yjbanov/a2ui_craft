@@ -450,7 +450,8 @@ class _SampleScreenState extends State<SampleScreen> {
         ),
         _field('Template (.craft)', _template, (String v) => _dTemplate = v),
         _field('Schema (JSON)', _schema, (String v) => _dSchema = v),
-        _field('Messages (JSON)', _messages, (String v) => _dMessages = v),
+        _field('App bootstrap (app.json)', _messages,
+            (String v) => _dMessages = v),
       ],
     );
   }

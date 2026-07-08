@@ -1,178 +1,46 @@
 [
-  {
-    "id": "greeting",
-    "label": "Greeting"
-  },
-  {
-    "id": "counter",
-    "label": "Counter"
-  },
-  {
-    "id": "toggle",
-    "label": "Toggle"
-  },
-  {
-    "id": "boxes",
-    "label": "Boxes"
-  },
-  {
-    "id": "layout",
-    "label": "Layout"
-  },
-  {
-    "id": "contact_card",
-    "label": "Contact Card"
-  },
-  {
-    "id": "stats_card",
-    "label": "Stats Card"
-  },
-  {
-    "id": "profile_card",
-    "label": "Profile Card"
-  },
-  {
-    "id": "gallery",
-    "label": "Image Gallery"
-  },
-  {
-    "id": "form",
-    "label": "Form"
-  },
-  {
-    "id": "simple_text",
-    "label": "Simple Text"
-  },
-  {
-    "id": "interactive_button",
-    "label": "Interactive Button"
-  },
-  {
-    "id": "login_form",
-    "label": "Login Form"
-  },
-  {
-    "id": "weather",
-    "label": "Weather"
-  },
-  {
-    "id": "product_card",
-    "label": "Product Card"
-  },
-  {
-    "id": "restaurant_card",
-    "label": "Restaurant Card"
-  },
-  {
-    "id": "account_balance",
-    "label": "Account Balance"
-  },
-  {
-    "id": "shipping_status",
-    "label": "Shipping Status"
-  },
-  {
-    "id": "flight_status",
-    "label": "Flight Status"
-  },
-  {
-    "id": "purchase_complete",
-    "label": "Purchase Complete"
-  },
-  {
-    "id": "coffee_order",
-    "label": "Coffee Order"
-  },
-  {
-    "id": "credit_card",
-    "label": "Credit Card"
-  },
-  {
-    "id": "child_list_template",
-    "label": "Child List Template"
-  },
-  {
-    "id": "markdown_text",
-    "label": "Markdown"
-  },
-  {
-    "id": "music_player",
-    "label": "Music Player"
-  },
-  {
-    "id": "notification_permission",
-    "label": "Permission"
-  },
-  {
-    "id": "sports_player",
-    "label": "Sports Player"
-  },
-  {
-    "id": "event_detail",
-    "label": "Event Detail"
-  },
-  {
-    "id": "step_counter",
-    "label": "Step Counter"
-  },
-  {
-    "id": "countdown_timer",
-    "label": "Countdown"
-  },
-  {
-    "id": "row_layout",
-    "label": "Row Layout"
-  },
-  {
-    "id": "user_profile",
-    "label": "User Profile"
-  },
-  {
-    "id": "chat_message",
-    "label": "Chat"
-  },
-  {
-    "id": "workout_summary",
-    "label": "Workout"
-  },
-  {
-    "id": "track_list",
-    "label": "Track List"
-  },
-  {
-    "id": "financial_data_grid",
-    "label": "Data Grid"
-  },
-  {
-    "id": "formatted_text",
-    "label": "Formatted Text"
-  },
-  {
-    "id": "incremental",
-    "label": "Incremental"
-  },
-  {
-    "id": "complex_layout",
-    "label": "Complex Layout"
-  },
-  {
-    "id": "email_compose",
-    "label": "Email Compose"
-  },
-  {
-    "id": "calendar_day",
-    "label": "Calendar Day"
-  },
-  {
-    "id": "sign_in",
-    "label": "Sign In"
-  },
-  {
-    "id": "incremental_dashboard",
-    "label": "Dashboard"
-  },
-  {
-    "id": "form_validator",
-    "label": "Form Validator"
-  }
+  "greeting",
+  "counter",
+  "toggle",
+  "boxes",
+  "layout",
+  "contact_card",
+  "stats_card",
+  "profile_card",
+  "gallery",
+  "form",
+  "simple_text",
+  "interactive_button",
+  "login_form",
+  "weather",
+  "product_card",
+  "restaurant_card",
+  "account_balance",
+  "shipping_status",
+  "flight_status",
+  "purchase_complete",
+  "coffee_order",
+  "credit_card",
+  "child_list_template",
+  "markdown_text",
+  "music_player",
+  "notification_permission",
+  "sports_player",
+  "event_detail",
+  "step_counter",
+  "countdown_timer",
+  "row_layout",
+  "user_profile",
+  "chat_message",
+  "workout_summary",
+  "track_list",
+  "financial_data_grid",
+  "formatted_text",
+  "incremental",
+  "complex_layout",
+  "email_compose",
+  "calendar_day",
+  "sign_in",
+  "incremental_dashboard",
+  "form_validator"
 ]

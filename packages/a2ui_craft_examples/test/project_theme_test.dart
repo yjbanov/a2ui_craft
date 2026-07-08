@@ -77,4 +77,35 @@ void main() {
   test('an unthemed sample carries no project theme', () {
     expect(counterSpec('Jaspr').theme, isNull);
   });
+
+  group('ProjectManifest (the consolidated per-project manifest)', () {
+    test('folds name, catalog id, and the theme reference into one document',
+        () {
+      final ProjectManifest m = ProjectManifest.parse('''
+        {
+          "name": "Profile Card",
+          "catalogId": "demo",
+          "theme": { "theme": "default", "mode": "dark" }
+        }
+      ''');
+      expect(m.name, 'Profile Card');
+      expect(m.catalogId, 'demo');
+      expect(m.theme, isNotNull);
+      expect(m.theme!.usesDefaultTheme, isTrue);
+      expect(m.theme!.defaultMode, CraftThemeMode.dark);
+    });
+
+    test('name-only manifest: no catalog override, no theme', () {
+      final ProjectManifest m = ProjectManifest.parse('{ "name": "Greeting" }');
+      expect(m.name, 'Greeting');
+      expect(m.catalogId, isNull);
+      expect(m.theme, isNull);
+    });
+
+    test('malformed or partial input parses total (empty name, no theme)', () {
+      expect(ProjectManifest.parse('{ not json').name, isEmpty);
+      expect(ProjectManifest.parse('[]').name, isEmpty);
+      expect(ProjectManifest.parse('{}').theme, isNull);
+    });
+  });
 }

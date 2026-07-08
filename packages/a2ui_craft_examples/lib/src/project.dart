@@ -6,6 +6,55 @@ import 'dart:convert';
 
 import 'package:a2ui_craft/a2ui_craft.dart';
 
+/// A project's consolidated manifest — its `manifest.json` (DESIGN.md §13.9):
+/// the container config for the ephemeral bundle, holding everything *about*
+/// the project that isn't one of its trio files.
+///
+/// v1 fields: [name] (display name), [catalogId] (which component catalog the
+/// project targets — null means the host/default catalog), and [theme] (the
+/// theme reference + mode wiring, a [ProjectTheme]). Ephemeral business logic
+/// gets a slot here later (§8), empty for now. Parsing is total: a malformed or
+/// partial manifest yields empty/absent fields rather than throwing.
+class ProjectManifest {
+  const ProjectManifest({
+    required this.name,
+    this.catalogId,
+    this.theme,
+  });
+
+  /// Parses a project `manifest.json` string. Total — malformed input yields an
+  /// empty [name] and no catalog/theme.
+  static ProjectManifest parse(String json) {
+    Object? decoded;
+    try {
+      decoded = jsonDecode(json);
+    } on FormatException {
+      decoded = null;
+    }
+    final Map<String, Object?> m =
+        decoded is Map<String, Object?> ? decoded : const <String, Object?>{};
+    final Object? name = m['name'];
+    final Object? catalogId = m['catalogId'];
+    final Object? theme = m['theme'];
+    return ProjectManifest(
+      name: name is String ? name : '',
+      catalogId: catalogId is String ? catalogId : null,
+      // The theme block is a nested ProjectTheme config; re-encode and reuse the
+      // one parser so the manifest and a standalone theme file agree.
+      theme: theme == null ? null : ProjectTheme.tryParse(jsonEncode(theme)),
+    );
+  }
+
+  /// The project's display name.
+  final String name;
+
+  /// The component catalog the project targets, or null for the host default.
+  final String? catalogId;
+
+  /// The project's theme (reference + mode wiring), or null when it ships none.
+  final ProjectTheme? theme;
+}
+
 /// The theme wiring of a project — the **4th trio file**, `theme.json`
 /// (DESIGN.md §13.5 / §13.9). A project *names* its theme (theming is explicit);
 /// a project with no `theme.json` has no [ProjectTheme] and blends into the host.

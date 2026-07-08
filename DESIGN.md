@@ -1042,11 +1042,13 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
           modes through a render-time picker (the n-ary mode input) that
           re-themes both the Jaspr-native and embedded-Flutter renders.
           Agent-optional is already the samples' shape — each trio's
-          `messages.json` *is* a canned stream (§13.9). Remaining promotion (not
-          blocking): fold name/catalog id/theme-ref/mode-wiring into one
-          consolidated per-project manifest file; today the theme reference +
-          mode wiring live in `theme.json` and the name/catalog id alongside the
-          trio.
+          `messages.json` *is* a canned stream (§13.9). The consolidated project
+          manifest then folded name + catalog id + theme-ref + mode-wiring into
+          one `samples/<id>/manifest.json` per project (parsed by
+          `ProjectManifest`), replacing the standalone `theme.json` and the
+          top-level per-entry label — which became a plain gallery-order id list.
+          The migration was behavior-preserving: the generated samples file came
+          out byte-identical.
 - [ ] Prove the state-model axis with a third, non-Flutter-like framework.
 - [ ] **Security: uphold A2UI's secure-by-design promise (§12).** When templates
       are delivered ephemerally, treat them as untrusted input: add engine-level
@@ -1841,11 +1843,12 @@ exposing hooks to connect an A2UI transport for agentic experiences — but a
 project can equally ship a canned message stream and run as a **mini-app**
 embedded in a host with no agent at all. The demo samples prove this shape
 already: each `samples/<id>/` trio (`template.craft` + `schema.json` +
-`messages.json`) is a proto-project whose `messages.json` *is* a canned stream,
-and the demo site is a project loader in embryo. The migration path is
-incremental: add the theme as a 4th trio file, then promote trio + manifest into
-the project format.
+`messages.json`) is a project whose `messages.json` *is* a canned stream, and the
+demo site is a project loader. The migration ran as designed: first the theme
+arrived as a 4th trio file, then that file was promoted into a consolidated
+`samples/<id>/manifest.json` (`ProjectManifest`: name, catalog id, theme
+reference + mode wiring), with the samples root reduced to a gallery-order id
+list. Ephemeral business logic gets a manifest slot later (§8), empty for now.
 
-Sequencing note: the manifest is deliberately designed *last* (slice 5) —
-container after contents, so the theme file's real shape informs the config that
-wires it.
+Sequencing note: the manifest was deliberately designed *last* — container after
+contents, so the theme file's real shape informed the config that wires it.

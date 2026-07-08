@@ -1027,10 +1027,26 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
           restates the pre-contract literals (regression-anchored); a conformance
           case paints the modes and flips one in place (ink re-points, state
           survives). Never applied unasked — theming stays explicit.
-        - [ ] **5. Project bundle (§13.9)** — theme as the 4th sample-trio
+        - [x] **5. Project bundle (§13.9)** — theme as the 4th sample-trio
           file, then the project manifest (name, catalog id, theme reference,
           mode wiring); the demo site loads projects; agent-optional
-          (canned-message mini-app mode).
+          (canned-message mini-app mode). Delivered: an optional `theme.json`
+          alongside each `samples/<id>/` trio, parsed by `ProjectTheme`
+          (a reference to the default theme + a mode, n-ary; or an inline token
+          set) and carried on `SampleSpec.theme`; the samples generator bakes it
+          into `RawSample.theme`. A `theme` param on `SampleView` +
+          `A2uiToRfwAdapter` threads it to the root adapter's ambient scope — the
+          first theme flowing through the real A2UI-surface path — with
+          `profile_card` shipping as a themed (default/dark) project, pinned on
+          both adapters. The demo site loads a project's theme and offers its
+          modes through a render-time picker (the n-ary mode input) that
+          re-themes both the Jaspr-native and embedded-Flutter renders.
+          Agent-optional is already the samples' shape — each trio's
+          `messages.json` *is* a canned stream (§13.9). Remaining promotion (not
+          blocking): fold name/catalog id/theme-ref/mode-wiring into one
+          consolidated per-project manifest file; today the theme reference +
+          mode wiring live in `theme.json` and the name/catalog id alongside the
+          trio.
 - [ ] Prove the state-model axis with a third, non-Flutter-like framework.
 - [ ] **Security: uphold A2UI's secure-by-design promise (§12).** When templates
       are delivered ephemerally, treat them as untrusted input: add engine-level

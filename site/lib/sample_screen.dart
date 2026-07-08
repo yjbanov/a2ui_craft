@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'dart:js_interop';
 
 import 'package:a2ui_core/a2ui_core.dart';
+import 'package:a2ui_craft/a2ui_craft.dart' show CraftTheme, CraftThemeMode;
 import 'package:a2ui_craft_examples/a2ui_craft_examples.dart';
 import 'package:a2ui_craft_jaspr/a2ui_craft_jaspr.dart';
 import 'package:jaspr/dom.dart';
@@ -53,6 +54,14 @@ class _SampleScreenState extends State<SampleScreen> {
   int _renderKey = 0;
   String? _error;
   final List<String> _log = <String>[];
+
+  // The project's theme, if it ships one (its `theme.json`, §13.9), and the
+  // mode the host has selected — the render-time n-ary mode input (§13.5). Null
+  // theme ⇒ no picker, surface blends into the host.
+  late final ProjectTheme? _project = ProjectTheme.tryParse(_raw.theme);
+  late CraftThemeMode? _mode = _project?.defaultMode;
+
+  CraftTheme? get _theme => _project?.resolve(_mode);
 
   // The rendered (active) data; the editor edits separate drafts and commits
   // them on Preview.
@@ -143,6 +152,7 @@ class _SampleScreenState extends State<SampleScreen> {
       schema: spec.catalogSchema,
       messages: spec.messages,
       onAction: _onAction,
+      theme: _theme,
     );
   }
 
@@ -266,6 +276,7 @@ class _SampleScreenState extends State<SampleScreen> {
       schema: spec.catalogSchema,
       messages: spec.messages,
       onAction: _onAction,
+      theme: _theme,
     );
   }
 
@@ -335,6 +346,7 @@ class _SampleScreenState extends State<SampleScreen> {
           styles: Styles(raw: <String, String>{'margin': '0', 'flex': '1'}),
           [Component.text(_raw.label)],
         ),
+        if (_project != null) _modePicker(),
         button(
           onClick: () => setState(() {
             _editorOpen = !_editorOpen;
@@ -357,6 +369,41 @@ class _SampleScreenState extends State<SampleScreen> {
         styles: _btn(_framework == fw),
         [Component.text(fw)],
       );
+
+  /// The render-time n-ary **mode** input for a themed project (§13.5): pick
+  /// among the project theme's available modes; both renders re-theme to it.
+  Component _modePicker() {
+    final ProjectTheme project = _project!;
+    return select(
+      value: (_mode ?? project.defaultMode).id,
+      onChange: (List<String> values) {
+        final String id =
+            values.isEmpty ? project.defaultMode.id : values.first;
+        final CraftThemeMode next = project.availableModes.firstWhere(
+          (CraftThemeMode m) => m.id == id,
+          orElse: () => project.defaultMode,
+        );
+        setState(() {
+          _mode = next;
+          // Rebuild both panes so the embedded Flutter render re-themes too.
+          _flutterWidget = null;
+          _renderKey++;
+        });
+      },
+      styles: Styles(raw: <String, String>{
+        'padding': '6px 10px',
+        'border': '1px solid #ccc',
+        'border-radius': '6px',
+        'background': '#fff',
+        'color': '#333',
+        'cursor': 'pointer',
+      }),
+      <Component>[
+        for (final CraftThemeMode m in project.availableModes)
+          option(value: m.id, [Component.text(m.label)]),
+      ],
+    );
+  }
 
   Component _editor() {
     return div(

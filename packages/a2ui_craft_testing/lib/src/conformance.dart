@@ -130,6 +130,19 @@ abstract interface class CraftTester {
   /// this probes the accessibility contract, not the visuals.
   int buttonCount(String label);
 
+  /// The foreground color the primitive **explicitly set** on the (unique)
+  /// displayed text node equal to [text], canonicalized to `#AARRGGBB` — or
+  /// null when the primitive set none and the host default shows through.
+  ///
+  /// The painted-decision probe of the theming-conformance dimension (§13.6):
+  /// it asserts a token *landed* on the primitive identically on every
+  /// adapter, never pixel equality.
+  String? textColorOf(String text);
+
+  /// The font size (logical px / CSS px) the primitive explicitly set on the
+  /// text node equal to [text], or null when the host default shows through.
+  double? textFontSizeOf(String text);
+
   /// Activates (taps/clicks) the interactive element carrying the given
   /// component `key`.
   Future<void> activate(String key);
@@ -798,6 +811,109 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
       expect(tester.hasText('#FFFFFFFF'), isFalse);
       // The counter survived: the swap re-resolved, it did not remount.
       expect(tester.hasText('n=1'), isTrue);
+    },
+  );
+
+  driver.defineTest(
+    'primitives read their ambient role defaults from the theme',
+    (CraftTester tester) async {
+      // The semantic contract (ThemeRoles, DESIGN.md §13.4): with a theme
+      // mounted, primitives whose props are unset read their roles — no
+      // theme. reference anywhere in the template. Themed values must land
+      // identically on every adapter (§13.6); the probes read the decision
+      // the primitive made, not pixels.
+      final CraftTheme theme = CraftTheme(resolveDesignTokens(<DesignTokenSet>[
+        parseDesignTokens(<String, Object?>{
+          'color': <String, Object?>{
+            r'$type': 'color',
+            'onSurface': <String, Object?>{r'$value': '#112233'},
+            'onSurfaceVariant': <String, Object?>{r'$value': '#445566'},
+          },
+          'type': <String, Object?>{
+            r'$type': 'dimension',
+            'body': <String, Object?>{
+              'size': <String, Object?>{r'$value': '18px'},
+            },
+            'caption': <String, Object?>{
+              'size': <String, Object?>{r'$value': '11px'},
+            },
+            'heading': <String, Object?>{
+              '2': <String, Object?>{
+                'size': <String, Object?>{r'$value': '30px'},
+              },
+            },
+          },
+        }),
+      ]));
+
+      await tester.mount('''
+        import core;
+        widget root = Column(children: [
+          Text(text: "body copy"),
+          Text(text: "small print", variant: "caption"),
+          Heading(text: "Sub", level: 2),
+        ]);
+      ''', theme: theme);
+
+      expect(tester.textColorOf('body copy'), '#FF112233');
+      expect(tester.textFontSizeOf('body copy'), 18);
+      expect(tester.textColorOf('small print'), '#FF445566');
+      expect(tester.textFontSizeOf('small print'), 11);
+      expect(tester.textColorOf('Sub'), '#FF112233');
+      expect(tester.textFontSizeOf('Sub'), 30);
+    },
+  );
+
+  driver.defineTest(
+    'a theme omitting a role falls back to the host default, per role',
+    (CraftTester tester) async {
+      // Partial themes degrade role-by-role: body picks up the one provided
+      // role; the caption keeps its shared built-in default (#5F6368 / 12 on
+      // both adapters) because the theme names no caption roles.
+      final CraftTheme theme = CraftTheme(resolveDesignTokens(<DesignTokenSet>[
+        parseDesignTokens(<String, Object?>{
+          'color': <String, Object?>{
+            'onSurface': <String, Object?>{
+              r'$type': 'color',
+              r'$value': '#112233',
+            },
+          },
+        }),
+      ]));
+
+      await tester.mount('''
+        import core;
+        widget root = Column(children: [
+          Text(text: "body copy"),
+          Text(text: "small print", variant: "caption"),
+        ]);
+      ''', theme: theme);
+
+      expect(tester.textColorOf('body copy'), '#FF112233');
+      expect(tester.textFontSizeOf('body copy'), isNull); // host default
+      expect(tester.textColorOf('small print'), '#FF5F6368');
+      expect(tester.textFontSizeOf('small print'), 12);
+    },
+  );
+
+  driver.defineTest(
+    'unthemed primitives keep their host defaults (regression guard)',
+    (CraftTester tester) async {
+      // No theme: the semantic contract must be invisible — body text carries
+      // no explicit styling (the host shows through) and the caption keeps
+      // exactly its pre-theming values.
+      await tester.mount('''
+        import core;
+        widget root = Column(children: [
+          Text(text: "body copy"),
+          Text(text: "small print", variant: "caption"),
+        ]);
+      ''');
+
+      expect(tester.textColorOf('body copy'), isNull);
+      expect(tester.textFontSizeOf('body copy'), isNull);
+      expect(tester.textColorOf('small print'), '#FF5F6368');
+      expect(tester.textFontSizeOf('small print'), 12);
     },
   );
 

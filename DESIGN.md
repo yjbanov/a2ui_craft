@@ -1005,10 +1005,14 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
           both adapters; `Box(color: theme.color.action)` renders the token's
           color on Flutter + Jaspr, pinned by a conformance case. Decides the
           scope-vs-function syntax question at the smallest surface.
-        - [ ] **3. Ambient role-defaults** — semantic contract v1 (small
+        - [x] **3. Ambient role-defaults** — semantic contract v1 (small
           neutral role set with surface/foreground pairing, §13.4): primitives
           read their roles when props are unset, fall back to the host default
           when the theme omits a role; theming-conformance dimension started.
+          Delivered as `ThemeRoles` + `CraftTheme` (the immutable snapshot
+          carrier that unified the two reactivity regimes), painted-decision
+          probes (`textColorOf`/`textFontSizeOf`), partial-theme and unthemed
+          regression guards, and per-adapter wiring tests.
         - [ ] **4. Default theme** — open-source base `.tokens.json` + mode
           overlays (light / dark / high-contrast); host-supplied n-ary mode
           input; reactive re-theme of a live surface. Explicit, never implicit
@@ -1659,36 +1663,44 @@ Three tiers, increasingly explicit — again the CSS model:
 
 - **Ambient role-defaults (the cascade).** The runtime holds the resolved active
   theme; each primitive reads its role default when a prop is unset — an unstyled
-  `Text` takes `color.onSurface` and the type scale, an unstyled `Button` takes
-  `color.action`. This is what lets an *unmodified* template pick up the brand with
-  zero per-widget work. When a role is unset in the theme, the primitive falls back
-  to the **host** default (Flutter `Theme.of` / CSS inherit) — so "blend in" is
-  simply the base layer of the cascade, and a partial theme overrides only what it
-  names.
+  `Text` takes `color.onSurface` and the type scale, a `Checkbox` accent takes
+  `color.primary`. (`Button` deliberately reads *nothing*: the primitive is a
+  look-free accessible pressable, and branded buttons are catalog *templates*
+  referencing roles explicitly.) This is what lets an *unmodified* template pick
+  up the brand with zero per-widget work. When a role is unset in the theme, the
+  primitive falls back to the **host** default (Flutter `Theme.of` / CSS
+  inherit) — so "blend in" is simply the base layer of the cascade, and a
+  partial theme overrides only what it names.
 - **Explicit token references.** A token is referenceable in a template value
   position, like a data binding — conceptually `Box(color: theme.color.brand)` /
   CSS `var(--brand)` — for bespoke compositions.
 - **Branded component templates** (§13.3, item 2) compose both.
 
-**Mechanism.** A theme is naturally a **fourth ambient value scope**, parallel to
-`args` / `data` / `state`, resolved from the active token map and — like data —
-**reactive**, so a host flipping dark mode re-themes a live surface through the
-existing resolution path. Open syntax question: a dedicated `theme.<path>`
-reference scope reads best but likely needs a parser touch (unlike the function
-work, which reused `ConstructorCall`); a function-style `token(name: "color.brand")`
-reuses the function machinery we just built but strains "functions are pure" (a
-token reader depends on ambient theme, not only its args). Leaning toward a real
-scope; to be decided at the smallest surface (roadmap slice 2).
+**Mechanism (decided; slices 2–3).** A theme is a **fourth ambient value
+scope**, parallel to `args` / `data` / `state`: a dedicated `theme.<path>`
+reference (a real parsed scope, `ThemeReference`, binary tag 0x14) resolved
+against the ambient **`CraftTheme`** — an immutable resolved-token snapshot the
+host supplies (`RemoteWidget.theme`). Immutability is the reactivity model:
+re-theming (a dark-mode flip) is providing a *new* snapshot; the scope change
+re-resolves live references and rebuilds role-reading primitives in one motion,
+without remounting (template state survives — conformance-pinned). The
+function-style alternative (`token(name: …)`) was rejected: it strains
+"functions are pure."
 
-**The semantic contract.** DTCG standardizes token *structure*, never *meaning*
-— nothing in the format says a button uses `color.action`. The fixed set of
-token paths each primitive reads for its ambient role-defaults is therefore the
-one piece of "standard" we author ourselves: a small, versioned contract living
-in `a2ui_craft` next to the primitive spec (§11), documented by the default
-theme (§13.5). Direction from the prior-art survey: a *small neutral* role set
-with surface/foreground pairing (shadcn-shaped), M3-name-compatible where that
-costs nothing, plus a *named* type scale — small + intent-named beats large +
-appearance-named (unanimous across Apple / M3 / shadcn / Radix).
+**The semantic contract (decided; `ThemeRoles` in `a2ui_craft`).** DTCG
+standardizes token *structure*, never *meaning* — nothing in the format says a
+caption uses `color.onSurfaceVariant`. The fixed set of token paths each
+primitive reads is therefore the one piece of "standard" we author ourselves: a
+small, versioned contract living in `a2ui_craft` next to the primitive spec
+(§11), documented by the default theme (§13.5). v1 (the full crosswalk is
+`research/theming/SEMANTIC_CONTRACT.md`): a *small neutral* role set with
+surface/foreground pairing, using **Material 3's names** where M3 has one — the
+M3 ∩ shadcn intersection — so existing exports map on without translation:
+`color.surface`/`onSurface`/`onSurfaceVariant`, `color.primary` (the accent),
+`color.outline`, `color.link`, plus a sizes-only type scale
+(`type.body.size`, `type.caption.size`, `type.heading.<n>.size`);
+`onPrimary`/`error`/`onError` are named-now-consumed-later. Radius/spacing
+scales, font families/weights, and `color.background` are deliberately deferred.
 
 **No selectors — a deliberate divergence from CSS.** A CSS stylesheet can
 *target* arbitrary elements from the outside; our theme cannot. Tokens select

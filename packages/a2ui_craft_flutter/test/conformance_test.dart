@@ -97,6 +97,18 @@ class _FlutterCraftTester implements CraftTester {
       .length;
 
   @override
+  String? textColorOf(String text) {
+    final Color? color = _tester.widget<Text>(find.text(text)).style?.color;
+    return color == null
+        ? null
+        : '#${color.toARGB32().toRadixString(16).padLeft(8, '0').toUpperCase()}';
+  }
+
+  @override
+  double? textFontSizeOf(String text) =>
+      _tester.widget<Text>(find.text(text)).style?.fontSize;
+
+  @override
   Future<void> activate(String key) async {
     await _tester.tap(find.byKey(ValueKey<String>(key)));
     await _tester.pump();

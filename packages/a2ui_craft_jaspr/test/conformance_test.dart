@@ -85,6 +85,52 @@ class _JasprCraftTester implements CraftTester {
       .length;
 
   @override
+  String? textColorOf(String text) =>
+      _canonicalCssColor(_textStyleProperty(text, 'color'));
+
+  @override
+  double? textFontSizeOf(String text) {
+    final String? value = _textStyleProperty(text, 'font-size');
+    if (value == null || !value.endsWith('px')) return null;
+    return double.tryParse(value.substring(0, value.length - 2));
+  }
+
+  /// The [property] the primitive explicitly set for [text]: read off the
+  /// nearest DOM ancestor carrying it. Conformance templates style a probed
+  /// property from exactly one ancestor, so `single` also guards against
+  /// ambiguous probes.
+  String? _textStyleProperty(String text, String property) {
+    final Iterable<Element> styled = find
+        .ancestor(
+          of: find.text(text),
+          matching: find.byComponentPredicate((Component c) =>
+              c is DomComponent &&
+              (c.styles?.properties.containsKey(property) ?? false)),
+        )
+        .evaluate();
+    if (styled.isEmpty) return null;
+    return (styled.single.component as DomComponent)
+        .styles!
+        .properties[property];
+  }
+
+  /// Canonicalizes the two CSS color forms the primitives emit — legacy hex
+  /// defaults and `rgba(...)` themed values — to `#AARRGGBB`.
+  String? _canonicalCssColor(String? css) {
+    if (css == null) return null;
+    final Rgba? hex = Rgba.decode(css);
+    if (hex != null) return hex.toHexString();
+    final Match? m =
+        RegExp(r'^rgba\((\d+), (\d+), (\d+), ([\d.]+)\)$').firstMatch(css);
+    if (m == null) return null;
+    return Rgba(((double.parse(m.group(4)!) * 255).round() << 24) |
+            (int.parse(m.group(1)!) << 16) |
+            (int.parse(m.group(2)!) << 8) |
+            int.parse(m.group(3)!))
+        .toHexString();
+  }
+
+  @override
   Future<void> activate(String key) {
     final Key k = ValueKey<String>(key);
     return _tester.click(find.byKey(k));

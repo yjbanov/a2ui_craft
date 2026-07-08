@@ -16,7 +16,7 @@
 library;
 
 // Design notes (not part of the public contract):
-// - This is the "H2 type model" in DESIGN.md §11: the framework-neutral
+// - This is the "H2 type model" in DESIGN.md §8: the framework-neutral
 //   replacement for RFW's Flutter-specific argument_decoders.
 // - Decoding lives here, not in each adapter, so the adapters cannot silently
 //   disagree about what "fill" or "spaceBetween" means.

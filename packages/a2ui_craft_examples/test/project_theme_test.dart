@@ -6,7 +6,7 @@ import 'package:a2ui_craft/a2ui_craft.dart';
 import 'package:a2ui_craft_examples/a2ui_craft_examples.dart';
 import 'package:test/test.dart';
 
-// The project theme — the 4th trio file (`theme.json`), DESIGN.md §13.5/§13.9:
+// The project theme — the 4th trio file (`theme.json`), DESIGN.md §9.5/§10:
 // a project names its theme (a reference to the default theme + a mode, or an
 // inline token set). Parsing is total; the host may open any available mode.
 

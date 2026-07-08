@@ -22,7 +22,7 @@ class ProjectLoadException implements Exception {
 }
 
 /// An A2UI Craft project fetched from a URL — the *production* counterpart to
-/// the zero-IO baked samples (DESIGN.md §13.9). This is what proves the
+/// the zero-IO baked samples (DESIGN.md §10). This is what proves the
 /// ephemeral-loadability property: a host fetches a project over HTTP at
 /// runtime, so re-publishing the project's files to its CDN updates the UI with
 /// no host redeploy.

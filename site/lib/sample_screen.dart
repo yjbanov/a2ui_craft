@@ -55,8 +55,8 @@ class _SampleScreenState extends State<SampleScreen> {
   String? _error;
   final List<String> _log = <String>[];
 
-  // The project's theme, if it ships one (its `theme.json`, §13.9), and the
-  // mode the host has selected — the render-time n-ary mode input (§13.5). Null
+  // The project's theme, if it ships one (its `theme.json`, §10), and the
+  // mode the host has selected — the render-time n-ary mode input (§9.5). Null
   // theme ⇒ no picker, surface blends into the host.
   late final ProjectTheme? _project = ProjectTheme.tryParse(_raw.theme);
   late CraftThemeMode? _mode = _project?.defaultMode;
@@ -370,7 +370,7 @@ class _SampleScreenState extends State<SampleScreen> {
         [Component.text(fw)],
       );
 
-  /// The render-time n-ary **mode** input for a themed project (§13.5): pick
+  /// The render-time n-ary **mode** input for a themed project (§9.5): pick
   /// among the project theme's available modes; both renders re-theme to it.
   Component _modePicker() {
     final ProjectTheme project = _project!;

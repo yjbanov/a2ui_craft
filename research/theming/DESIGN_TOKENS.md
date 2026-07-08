@@ -5,7 +5,7 @@
 > interoperate with existing design-system tooling? Short answer: **yes, adopt the
 > format; no, don't adopt the tooling** (it's all build-time; we need runtime). The
 > reasoning, the format primer, the fit analysis, and an API sketch are below. This
-> feeds §13 of DESIGN.md.
+> feeds §9 of DESIGN.md.
 
 ---
 
@@ -19,7 +19,7 @@
 2. **Build our own small *runtime* Dart parser + resolver** (framework-neutral, in
    `a2ui_craft`, total). This is the key insight: **the entire DTCG ecosystem is
    build-time** — it *compiles* tokens JSON into generated CSS/Dart/Swift ahead of
-   time. Our §13 requirement is the opposite: **load the tokens ephemerally over
+   time. Our §9 requirement is the opposite: **load the tokens ephemerally over
    the network and interpret them at runtime**, because the design system is not
    part of the AOT-compiled host. So we take the format, not the toolchain.
 3. **Layer one small thing DTCG does *not* give us: a semantic contract** — the
@@ -34,7 +34,7 @@
    `fontWeight`, `number`. Defer composites (`shadow`, `border`, `typography`,
    `gradient`, `transition`, `cubicBezier`) to later phases.
 
-Net: adopting DTCG **strengthens** the §13 design — it slots in exactly where §13
+Net: adopting DTCG **strengthens** the §9 design — it slots in exactly where §9
 said "a token set (data)", it gives us aliasing and modes for free (conceptually),
 and it buys ecosystem interop at the cost of a small runtime parser we were going
 to write anyway.
@@ -55,7 +55,7 @@ to write anyway.
   (colors, sizes, font settings, durations, …) and references between them.
 - **What it is NOT:** it is **not** a component-styling language. There is no
   "Button.background = {color.action}" in DTCG. It defines the *token layer* only.
-  *(This is a feature for us — it matches §13.3's decomposition exactly: tokens are
+  *(This is a feature for us — it matches §9.3's decomposition exactly: tokens are
   data (DTCG's job); component styling is our catalog templates referencing
   tokens.)*
 
@@ -111,7 +111,7 @@ dot path:
 - There's also a JSON-Pointer form (`"$ref": "#/color/base/blue/$value/components/0"`)
   for property-level access — niche; we can ignore it initially.
 - References may chain; tools **must** detect cycles as errors.
-- **Why this matters:** DTCG's primitive-vs-semantic token split (§13.3 called it
+- **Why this matters:** DTCG's primitive-vs-semantic token split (§9.3 called it
   out) *is* just aliasing — `semantic.action → base.blue`. Re-skinning = swap the
   base. We get it for free.
 
@@ -139,7 +139,7 @@ in the wild.
 
 **Fit with our value types (§11):** `color` and `dimension` map directly onto what
 our primitives already parse (hex color; `Dimension`). `typography` is exactly the
-"type token" §13 imagined. So the DTCG data model lands cleanly on our existing
+"type token" §9 imagined. So the DTCG data model lands cleanly on our existing
 framework-neutral value layer — no impedance mismatch.
 
 ### 2.5 Modes / light-dark — the **Resolver Module**
@@ -176,9 +176,9 @@ Two realities today:
 - **Caveat:** this module is a **preview draft** — "do not implement." So: adopt the
   *shape* (sets + modifiers + resolutionOrder + `inputs`) as our mental model and
   ship a minimal version, but **don't** hard-commit to its exact wire format yet.
-  This directly answers §13's open "dark mode: second map or a mode flag?" — the
+  This directly answers §9's open "dark mode: second map or a mode flag?" — the
   industry answer is *modifier contexts layered by resolution order*, driven by a
-  runtime `inputs` selection. That matches §13's cascade (host supplies the active
+  runtime `inputs` selection. That matches §9's cascade (host supplies the active
   mode as render-time config).
 
 ---
@@ -201,7 +201,7 @@ Two realities today:
 parser I could find.** They all assume the tokens are known at *compile* time and
 baked into the app.
 
-**Our requirement is the exact opposite (§13.1, §13.5):** the design system loads
+**Our requirement is the exact opposite (§9.1, §9.5):** the design system loads
 **ephemerally**, alongside the template — it is *not* compiled into the host. So:
 
 - We **cannot** use Style Dictionary / Terrazzo in our runtime path. They'd be, at
@@ -210,7 +210,7 @@ baked into the app.
 - We **must** write a **small runtime Dart parser + resolver** that ingests DTCG
   JSON and produces resolved, typed values *at load time on the client*.
 
-This is not extra work forced by DTCG — §13 already required a runtime token
+This is not extra work forced by DTCG — §9 already required a runtime token
 parser. Adopting DTCG just means that parser reads a **standard** shape instead of
 a bespoke one. Same effort, more interop.
 
@@ -222,19 +222,19 @@ a bespoke one. Same effort, more interop.
 
 ## 4. What DTCG gives us vs. what stays ours
 
-| Concern (from §13) | DTCG provides? | Notes |
+| Concern (from §9) | DTCG provides? | Notes |
 |---|---|---|
 | Token structure & types | ✅ format + type system | color/dimension/typography map onto our value types |
 | Primitive ↔ semantic tokens | ✅ via aliases `{a.b.c}` | resolve at load; cycle-detect |
-| Ephemeral, JSON, safe-to-load | ✅ (pure data, no code) | parse **totally**: bad token → fall back (§13.6) |
+| Ephemeral, JSON, safe-to-load | ✅ (pure data, no code) | parse **totally**: bad token → fall back (§9.6) |
 | Light/dark & other modes | ~ (Resolver Module, unstable) | adopt model; minimal impl; swappable |
 | **Which tokens the primitives read** (roles) | ❌ **not defined** | *our* semantic contract — see §5 |
-| Binding tokens → component styles | ❌ (out of scope for DTCG) | our catalog templates + primitive role-defaults (§13.3–13.4) |
+| Binding tokens → component styles | ❌ (out of scope for DTCG) | our catalog templates + primitive role-defaults (§9.3–9.4) |
 | Runtime interpretation | ❌ (all tooling is build-time) | our Dart parser/resolver (§3) |
 | Cross-adapter determinism | n/a (it's data) | one **shared** parser in `a2ui_craft` → identical on both adapters |
 
 **The single thing we must author is the semantic contract (§5).** Everything else
-is either given by DTCG or already planned in §13.
+is either given by DTCG or already planned in DESIGN.md §9.
 
 ---
 
@@ -242,10 +242,10 @@ is either given by DTCG or already planned in §13.
 
 DTCG says *how* to write `color.action`; it never says a button should *use*
 `color.action`. That mapping — **which token paths our primitives consult for their
-ambient role-defaults** — is ours to define, and it's the crux of §13.4's "ambient
+ambient role-defaults** — is ours to define, and it's the crux of §9.4's "ambient
 role-defaults" tier.
 
-Two sub-decisions (both were already open questions in §13.7):
+Two sub-decisions (both were already open questions in §9.7):
 
 1. **The role vocabulary.** Lean on **Material 3's** role names (`primary`,
    `onSurface`, `surface`, `outline`, a type scale, …) so existing M3 token sets map
@@ -254,7 +254,7 @@ Two sub-decisions (both were already open questions in §13.7):
    export mostly "just works" while we keep the surface small.
 2. **How a primitive reads a role.** A primitive with an unset prop looks up a fixed
    token path in the active resolved theme (e.g. `Button` → `color.action`), falling
-   back to the host default when absent (§13.4 cascade). The path list *is* the
+   back to the host default when absent (§9.4 cascade). The path list *is* the
    contract; it lives in `a2ui_craft` next to the primitive spec (§11).
 
 This contract is small, versioned, and documented — the only "standard" we own. It's
@@ -287,7 +287,7 @@ TokenSet parseDesignTokens(Map<String, Object?> dtcgJson);
 /// producing a flat map of path -> concrete typed value. Cycles resolve to null.
 ResolvedTokens resolve(TokenSet set, {Map<String, String> inputs = const {}});
 
-/// Typed, total reads used by primitives + the `theme.` reference scope (§13.4).
+/// Typed, total reads used by primitives + the `theme.` reference scope (§9.4).
 abstract class ResolvedTokens {
   Color?      color(String path);      // sRGB/hex → our Color
   Dimension?  dimension(String path);  // {value,unit} or "16px" → Dimension
@@ -299,28 +299,28 @@ abstract class ResolvedTokens {
 ```
 
 - One parser, in `a2ui_craft`, used by **both** adapters → resolved values are
-  identical on Flutter and Jaspr by construction (§13.6 determinism).
+  identical on Flutter and Jaspr by construction (§9.6 determinism).
 - **Accept legacy + 2025.10 forms** (hex string *and* color object; `"16px"` *and*
   `{value,unit}`) — be liberal in what we read.
 - **Totality**: unknown `$type`, unresolved alias, bad unit → `null` from the typed
-  getter → the primitive falls back to the host default (§13.4/§13.6). Never throws.
+  getter → the primitive falls back to the host default (§9.4/§9.6). Never throws.
 - The resolved map's **dot-path keys are exactly our `theme.<path>` references**
-  (§13.4) — so `theme.color.action` in a template is a lookup into `ResolvedTokens`.
+  (§9.4) — so `theme.color.action` in a template is a lookup into `ResolvedTokens`.
 
 ---
 
-## 7. How this updates §13 (proposed edits, for your review)
+## 7. How this updates §9 (proposed edits, for your review)
 
-- §13.3 "**Design tokens** — pure data" → name it: **the W3C DTCG format**; tokens =
+- §9.3 "**Design tokens** — pure data" → name it: **the W3C DTCG format**; tokens =
   a DTCG file; primitive/semantic split = DTCG aliases.
-- §13.4 "**explicit token references** `theme.color.brand`" → the path is a DTCG
+- §9.4 "**explicit token references** `theme.color.brand`" → the path is a DTCG
   token path; resolution is a `ResolvedTokens` lookup.
-- §13.5 transport: the author bundles a **`.tokens.json`** (DTCG); host render-time
+- §9.5 transport: the author bundles a **`.tokens.json`** (DTCG); host render-time
   config selects the **mode** (Resolver-Module `inputs`).
-- §13.7 open questions largely **answered by the ecosystem**: dark mode =
+- §9.7 open questions largely **answered by the ecosystem**: dark mode =
   modifier-contexts + resolutionOrder; token vocabulary = *our* semantic contract
   layered on DTCG (the one bespoke bit).
-- §13.8 phasing gains a concrete artifact: **Phase 1 = a runtime Dart DTCG parser +
+- The theming phasing (ROADMAP.md) gains a concrete artifact: **Phase 1 = a runtime Dart DTCG parser +
   resolver for the `color`/`dimension`/`fontFamily`/`fontWeight`/`number` subset**,
   plus the semantic contract and ambient role-defaults.
 

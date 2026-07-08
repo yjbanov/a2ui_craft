@@ -5,7 +5,7 @@
 /// A runtime parser + resolver for the W3C DTCG design-tokens format.
 ///
 /// A theme loads ephemerally as one or more DTCG `.tokens.json` documents
-/// (DESIGN.md §13.5): a base layer plus optional per-mode overlays. Each
+/// (DESIGN.md §9.5): a base layer plus optional per-mode overlays. Each
 /// document is parsed with [parseDesignTokens] into a [DesignTokenSet]; the
 /// active layers are then merged and alias-dereferenced by
 /// [resolveDesignTokens] into a [ResolvedTokens], whose typed getters are what
@@ -27,7 +27,7 @@ import 'value_types.dart';
 //   compilers, but our themes load at runtime, so we interpret the standard
 //   shape ourselves. Parsing lives in the core — like the value-type decoders
 //   and the function library — so both adapters resolve identical values by
-//   construction (§13.6).
+//   construction (§9.6).
 // - Aliases are dereferenced AFTER the layers are merged. That ordering is the
 //   whole dark-mode mechanism: an overlay that overrides a primitive token
 //   re-points every semantic alias into it without restating the semantics.
@@ -186,7 +186,7 @@ DesignToken? _dereference(DesignToken token, Map<String, DesignToken> merged) {
 /// typed, total getters.
 ///
 /// The dot paths are exactly the template-facing `theme.<path>` references
-/// (§13.4). Each getter returns null when the path is absent, the token's
+/// (§9.4). Each getter returns null when the path is absent, the token's
 /// `$type` does not match, or the value is malformed — the caller falls back
 /// (ultimately to the host default); nothing throws.
 ///
@@ -348,7 +348,7 @@ final class ResolvedTokens {
 /// The theme a host hands to a surface: an **immutable snapshot** of resolved
 /// design tokens (plus, later, the active mode).
 ///
-/// Immutability is the reactivity model (DESIGN.md §13.4): to re-theme a live
+/// Immutability is the reactivity model (DESIGN.md §9.4): to re-theme a live
 /// surface — a dark-mode flip, a brand swap — the host provides a *new*
 /// [CraftTheme] (themes are cheap to build: resolution is a map construction).
 /// The runtime's ambient scope notifies on the snapshot change, which drives

@@ -5,7 +5,7 @@
 import 'package:a2ui_craft/a2ui_craft.dart';
 import 'package:test/test.dart';
 
-// The open-source default theme (DESIGN.md §13.5, slice 4): the base layer plus
+// The open-source default theme (DESIGN.md §9.5, slice 4): the base layer plus
 // per-mode overlays resolve, per the host-supplied n-ary mode, into a complete
 // set of the semantic-contract roles. These are pure-Dart data assertions; the
 // cross-adapter *painting* of these values on a live surface (and the reactive
@@ -30,7 +30,7 @@ Rgba _hex(String s) => Rgba.decode(s)!;
 void main() {
   group('Light mode restates the pre-contract look', () {
     // Applying the default theme in Light must reproduce the exact values the
-    // primitives hardcoded before the semantic contract existed (§13.4), so a
+    // primitives hardcoded before the semantic contract existed (§9.4), so a
     // surface looks the same whether it was unthemed or freshly themed Light.
     final ResolvedTokens t = DefaultTheme.of(CraftThemeMode.light).tokens;
 
@@ -79,7 +79,7 @@ void main() {
   });
 
   test('the type scale is invariant across modes (only color changes)', () {
-    // Role names — and the type ramp — never change across modes (§13.5); only
+    // Role names — and the type ramp — never change across modes (§9.5); only
     // the color layer re-points.
     List<double?> ramp(CraftThemeMode m) {
       final ResolvedTokens t = DefaultTheme.of(m).tokens;

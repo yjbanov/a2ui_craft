@@ -67,7 +67,7 @@ abstract cheaply, so each adapter vendors its own copy of
    `Button` primitive's `onPressed`. Additive: existing RFW parsed args never carry
    bare Dart functions (only `AnyEventHandler`/`SetStateHandler` nodes), so the
    branch only matches host-supplied callbacks. Needed for A2UI actions under the
-   `a2ui_core` layering (M6); upstream candidate. Design: `DESIGN.md` §10.
+   `a2ui_core` layering (M6); upstream candidate. Design: `DESIGN.md` §5.
 
 `RemoteWidget` (from RFW's `remote_widget.dart`) is reimplemented per adapter,
 keeping RFW's public API (`RemoteWidget`, field `widget`); the Jaspr copy swaps

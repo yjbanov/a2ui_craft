@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 // The Flutter half of the ambient role-default wiring (the semantic contract,
-// DESIGN.md §13.4) for the primitives the shared painted-text probes can't
+// DESIGN.md §9.4) for the primitives the shared painted-text probes can't
 // reach: which widget property each role lands on, and that the unthemed
 // fallback is this adapter's pre-theming value (the heading ramp). The
 // cross-adapter text-color/size behavior is pinned by the conformance suite.

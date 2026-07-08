@@ -3,11 +3,11 @@
 > **Status: research note (uncommitted).** A side-by-side comparison of the
 > theming/design-token options surveyed in [PRIOR_ART.md](PRIOR_ART.md) and its
 > deep-dives. Everything here is condensed from those files; follow the links for
-> the reasoning. Nothing is committed; the §13 `DESIGN.md` draft is untouched.
+> the reasoning. Nothing is committed; the §9 `DESIGN.md` draft is untouched.
 
 **Legend:** ✅ strong / native · 🟡 partial / indirect · ❌ absent — · n/a not
 applicable. "Ephemeral-safe" = it's *pure data* (no code execution) that can load
-over the untrusted transport per the §13.2 trust model. "Pure-Dart" = a runtime
+over the untrusted transport per the §9.2 trust model. "Pure-Dart" = a runtime
 Dart implementation exists we could share across both adapters for identical output.
 
 ---
@@ -92,4 +92,4 @@ Tailwind / Radix. **Determinism** favors the pure-Dart options (M3, Flutter).
 | **System UI spec / Open Props** | **Seeds** — scale shapes and a neutral default token set. |
 
 See [PRIOR_ART.md §F](PRIOR_ART.md) for how these compose into a strawman v1, and
-[PRIOR_ART.md §E](PRIOR_ART.md) for the mapping onto §13.7's open questions.
+[PRIOR_ART.md §E](PRIOR_ART.md) for the mapping onto §9.7's open questions.

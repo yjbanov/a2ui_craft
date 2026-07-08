@@ -58,10 +58,10 @@ class RemoteWidget extends StatefulComponent {
 
   /// The ambient design-token theme — an immutable resolved snapshot read by
   /// `theme.` references and by the primitives' role defaults (the semantic
-  /// contract, DESIGN.md §13.4).
+  /// contract, DESIGN.md §9.4).
   ///
   /// Supplied by the template author and the host, never by transport
-  /// messages (DESIGN.md §13.2). To re-theme a live surface (e.g. a dark-mode
+  /// messages (DESIGN.md §9.2). To re-theme a live surface (e.g. a dark-mode
   /// swap), rebuild with a *new* [CraftTheme]; the surface re-resolves in
   /// place. When null, `theme.` references resolve as missing and primitives
   /// fall back to host defaults.

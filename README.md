@@ -28,7 +28,7 @@ a2ui_craft           core engine — pure Dart, NO UI-framework dependency
 Every adapter exposes the **same API**, keeping RFW's upstream public names
 (`Runtime`, `RemoteWidget`, `LocalWidgetLibrary`, `createCoreComponents`, …) so
 client code reads identically across frameworks. What each adapter may and may not
-change is specified in [`DESIGN.md` §5](DESIGN.md) and enforced by the project
+change is specified in [`DESIGN.md` §7](DESIGN.md) and enforced by the project
 skills in [`skills/`](skills).
 
 ## Why not compile templates to A2UI Transport directly?
@@ -38,7 +38,7 @@ protocol that mutates a live, stateful UI. Bridging the two requires evaluating
 the template against data and reconciling it against the previous tree — a
 *runtime* concern, not something an ahead-of-time compiler can do. So A2UI Craft
 is a client-side engine, and A2UI simply treats its templates as an
-implementation of an A2UI **catalog**. (Full reasoning in [`DESIGN.md` §2](DESIGN.md).)
+implementation of an A2UI **catalog**. (Full reasoning in [`DESIGN.md` §4](DESIGN.md).)
 
 ## Getting started
 

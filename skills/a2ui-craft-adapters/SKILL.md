@@ -15,7 +15,7 @@ description: >-
 A2UI Craft is one framework-agnostic engine with thin per-framework adapters.
 The whole value of the project is that **the same template renders identically
 on every framework**. These rules keep that true as the adapters evolve. They
-mirror `DESIGN.md` §5 — read it if anything here is unclear; `DESIGN.md` is the
+mirror `DESIGN.md` §7 — read it if anything here is unclear; `DESIGN.md` is the
 source of truth.
 
 ## First question to ask: does this belong in the core or an adapter?

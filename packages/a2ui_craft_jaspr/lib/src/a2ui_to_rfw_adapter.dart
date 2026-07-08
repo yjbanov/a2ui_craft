@@ -67,7 +67,7 @@ class A2uiToRfwAdapter extends StatefulComponent {
   /// default.
   final ConstructorCall Function(String type, DynamicMap args)? mapComponent;
 
-  /// The theme this surface renders under (§13), or null to blend into the host.
+  /// The theme this surface renders under (§9), or null to blend into the host.
   ///
   /// Set on the **root** adapter only: it wraps the rendered tree in the ambient
   /// theme scope, from which every descendant adapter's primitives read their

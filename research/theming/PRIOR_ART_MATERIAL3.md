@@ -17,7 +17,7 @@ Two reasons no other system on this list shares:
    `a2ui_craft` and run it on **both** adapters (Flutter and Jaspr/dart2js),
    getting **identical resolved colors by construction** — the same
    consolidation-for-determinism move we already made for the function library.
-2. **It answers three §13 open questions at once**: *token vocabulary* (a mature,
+2. **It answers three §9 open questions at once**: *token vocabulary* (a mature,
    battle-tested role set), *dark mode* (light + dark schemes fall out of one
    seed), and *accessibility* (contrast is a first-class input to the algorithm).
 
@@ -82,12 +82,12 @@ Other pieces (not on our critical path, but notable):
 
 ## Fit with A2UI Craft
 
-| Concern (§13) | M3 offers | Verdict |
+| Concern (§9) | M3 offers | Verdict |
 |---|---|---|
-| Token vocabulary (§13.7) | mature role set (`primary`/`on*`/`*Container`/`surface`/`outline`/`error`…) | **strong** — and it's what the DTCG note (§5.1) already leaned toward naming-compatibly |
-| Dark mode (§13.7) | `isDark` flips tone selection; light+dark from one seed | **strong** — best answer to "one seed, two modes" |
+| Token vocabulary (§9.7) | mature role set (`primary`/`on*`/`*Container`/`surface`/`outline`/`error`…) | **strong** — and it's what the DTCG note (§5.1) already leaned toward naming-compatibly |
+| Dark mode (§9.7) | `isDark` flips tone selection; light+dark from one seed | **strong** — best answer to "one seed, two modes" |
 | Accessibility | `contrastLevel` as an input; HCT tone ⇒ WCAG contrast | **strong** — accessibility is *generated*, not hand-audited |
-| Cross-adapter determinism (§13.6) | pure-Dart, share the package on both adapters | **strong** — identical ARGB by construction |
+| Cross-adapter determinism (§9.6) | pure-Dart, share the package on both adapters | **strong** — identical ARGB by construction |
 | Type scale | M3 type scale (display/headline/title/body/label × L/M/S) — exists in Flutter's `TextTheme`, but *not* in `material_color_utilities` (that's color-only) | partial — names yes, generation no |
 | Spacing / shape | not covered by the color package | n/a |
 
@@ -108,7 +108,7 @@ Other pieces (not on our critical path, but notable):
   → a known ARGB on both adapters) before we rely on it. This is the same
   discipline as the function library, and it's cheap.
 - **Opinion cost.** Adopting M3 roles wholesale imports ~26+ color roles. That's a
-  lot of surface for "keep the token set small" (§13.7). We can subset: expose a
+  lot of surface for "keep the token set small" (§9.7). We can subset: expose a
   *minimal* neutral role set that happens to be M3-name-compatible, and let the M3
   generator fill a fuller set for authors who want it.
 

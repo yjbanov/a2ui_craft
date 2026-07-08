@@ -31,7 +31,7 @@ String humanizeName(String name) => name
     .map((String part) => part[0].toUpperCase() + part.substring(1))
     .join(' ');
 
-/// The consolidated project manifest (§13.9): display name + which component
+/// The consolidated project manifest (§10): display name + which component
 /// catalog the host must provide. No theme block → the surface blends into its
 /// host; add a `"theme"` block (e.g. `{ "theme": "default", "mode": "dark" }`)
 /// to opt in.

@@ -2,9 +2,50 @@
 
 > **Status:** active. This document is the source of truth for the project's
 > direction. Code and skills should defer to it; when reality and this document
-> disagree, fix one of them deliberately.
+> disagree, fix one of them deliberately. This document describes the design as
+> it stands; implementation status and slice-by-slice plans live in
+> [ROADMAP.md](ROADMAP.md).
 
-## 1. What A2UI Craft is
+**In one paragraph:** A2UI lets an agent drive real UI by composing a small,
+vetted catalog of components — but someone must implement that catalog, by
+hand, natively, once per UI framework, compiled into every host app. A2UI Craft
+makes a catalog cheap: each catalog widget is authored **once**, as a
+declarative RFW template over a small set of cross-framework **primitives**,
+rendered by a framework-agnostic engine (Flutter and Jaspr today), and shipped
+as an ephemerally-loadable **project** — pure data, deployable to a CDN,
+updatable without a host redeploy.
+
+## 1. The problem
+
+[A2UI](https://github.com/google/A2UI)'s premise is that an agent (an LLM) can
+drive real, trustworthy UI by *composing a catalog*: a small, pre-vetted set of
+components the client offers, addressed over a declarative, data-only protocol.
+The protocol is deliberately renderer-agnostic — it says which catalog
+components go where, with what data, and never how to draw them.
+
+That leaves the expensive part to every client: **someone must implement the
+catalog.** Today that means hand-writing each catalog widget natively, once per
+UI framework. Three costs follow:
+
+1. **Multiplied authoring.** A catalog of N widgets on M frameworks is N×M
+   implementations, kept behaviorally in sync by hand. The multiplication
+   punishes exactly the catalogs that make agent-driven UI good — rich,
+   domain-specific ones.
+2. **Compiled into the host.** The catalog ships inside the host app's binary,
+   so iterating on it means redeploying every host app. And the party who
+   designs a catalog (the *template author* — a brand, a product team, a
+   third-party integration) is often not the host-app developer, yet has no way
+   to ship or update their work independently.
+3. **The cheap alternative is worse.** Skipping vetted catalogs — letting the
+   agent compose low-level pieces over the wire — bloats model context (defeating
+   small, fast models), produces unpredictable output, and cannot be vetted
+   before deployment, which kills high-trust business use-cases.
+
+A2UI Craft removes the expense: author each catalog widget **once**, as a
+declarative template; render it with whatever UI framework the client is built
+on; and ship it as **data** — an ephemerally-loadable bundle, not compiled code.
+
+## 2. What A2UI Craft is
 
 A2UI Craft is a **framework-agnostic, client-side templating engine**. It takes
 declarative UI templates written in the **RFW (Remote Flutter Widgets) text
@@ -15,11 +56,53 @@ It is *not* a new language and *not* an ahead-of-time compiler to a wire format.
 We adopt RFW's existing language and runtime essentially as-is, and generalize
 the runtime so it is no longer tied to Flutter.
 
-## Glossary
+A2UI is already renderer-agnostic — it composes UI out of **catalog** items and
+doesn't care how a renderer implements them. A2UI Craft slots in cleanly:
+
+> The agent (e.g. an A2UI Python SDK app talking to an LLM) speaks A2UI against a
+> plain catalog of components. It does **not** know templates exist. When it says
+> `updateComponents … component="WeatherCard"`, the client picks a template
+> named `WeatherCard` and renders it with its framework. There can be several
+> client implementations — e.g. Flutter on mobile, Jaspr on web — all honoring
+> the same catalog.
+
+In other words: **A2UI Craft templates are an implementation of an A2UI
+catalog**, as opposed to wrapping native widgets one-for-one.
+
+### The hypotheses we are proving
+
+1. **H1 — RFW generalizes across rendering engines.** The RFW language and
+   runtime, despite the "F", are not Flutter-specific. We prove this by making
+   the *same* template + runtime drive two genuinely different rendering engines.
+   - **Current scope: Flutter + Jaspr, Dart-only.** Jaspr is chosen because it is
+     Dart (so we test the *factoring*, not a *rewrite*) yet renders to the HTML
+     DOM — a different rendering engine from Flutter's canvas/`RenderObject`.
+   - Known limitation we are *accepting for now*: Flutter and Jaspr share a
+     similar *reactive/state* programming model (`build` + `setState`), so this
+     pair stresses the **rendering-engine** axis well but the **state-model** axis
+     weakly. We judge that low-risk because templates only need to turn
+     A2UI-supplied data into UI; they don't author novel interaction models.
+     Proving the state-model axis fully (SwiftUI, Jetpack Compose, React) is
+     future work, not part of the current milestone.
+
+2. **H2 — a single cross-platform core component/type library exists** that is
+   expressive enough for A2UI use cases and maps cleanly onto every framework.
+   This is where rendering-engine differences bite hardest (Flutter's explicit
+   layout/animation vs. the HTML DOM's hard split between markup and blackbox
+   CSS layout/animation). **§8 defines the approach:** a *constrained
+   common model* (flexbox-shaped, with an explicit value-type vocabulary) rather
+   than mirroring either framework's native layout.
+
+A2UI Craft is deliberately a **least-common-denominator** engine. The hunch is
+that this denominator is still quite expressive and covers many A2UI use cases.
+When a developer needs deeper, framework-specific capabilities, the escape hatch
+is to **drop down to the raw framework** (per-framework, but that's an advanced
+case).
+
+## 3. Glossary
 
 These terms recur throughout and are easy to conflate; this document uses them
-precisely ("primitive" and "catalog" replace the older "low-level catalog" /
-"high-level catalog"):
+precisely:
 
 - **Primitive** — a single **low-level** building block available to template code
   (`Text`, `Row`, `Box`, `Button`, `Image`, …): one entry in an RFW
@@ -27,7 +110,7 @@ precisely ("primitive" and "catalog" replace the older "low-level catalog" /
   **template-private** — composed *by* templates at build time, never referenced
   by an agent. A primitive may come from the **core primitives** we ship *or* be a
   **custom primitive** an app defines (apps super-set and sub-set the core set —
-  see §11 "Extensible by design").
+  see §8 "Extensible by design").
 - **Core primitives** — the **standard** primitive set A2UI Craft ships (the
   base/standard primitives). `createCoreComponents()` builds them and
   `corePrimitives` pins the contract every adapter must implement. Unqualified,
@@ -42,52 +125,14 @@ precisely ("primitive" and "catalog" replace the older "low-level catalog" /
 In short: **a catalog widget is a template over primitives** — and the primitives
 it composes are the core primitives plus any custom ones the app registers.
 
-## 2. Why this shape (and why not the earlier AOT-to-A2UI idea)
-
-The project briefly explored a new language ("Craft") that would AOT-compile
-straight into [A2UI](https://github.com/google/A2UI) Transport (JSON) messages.
-That doesn't work, for a fundamental reason:
-
-- A **template** is a pure function `(data, state) → UI`. It describes what the
-  UI should look like for the current inputs; it ignores prior UI state.
-- **A2UI Transport** is an *imperative* protocol over a *stateful* surface
-  (`updateComponents` presupposes a prior tree to mutate). Turning a template
-  into Transport requires evaluating it with concrete data *and* diffing against
-  the previously produced tree — i.e. **reconciliation** — which a compiler
-  cannot do, because neither the data nor the prior tree exist at compile time.
-
-So a template needs a **runtime engine** that owns state and reconciliation.
-Two places that engine could live:
-
-- **Server-side**: re-introduces a network round-trip for every local
-  interaction and forces the server to hold per-client UI state. Against A2UI's
-  grain.
-- **Client-side**: local interactivity stays local; the engine renders templates
-  using whatever framework the client is built on. **This is the approach we
-  take, and it is exactly what RFW already is.**
-
-### How this relates to A2UI
-
-A2UI is already renderer-agnostic — it composes UI out of **catalog** items and
-doesn't care how a renderer implements them. A2UI Craft slots in cleanly:
-
-> The agent (e.g. an A2UI Python SDK app talking to an LLM) speaks A2UI against a
-> plain catalog of components. It does **not** know templates exist. When it says
-> `updateComponents … component="WeatherCard"`, the client picks a template
-> named `WeatherCard` and renders it with its framework. There can be several
-> client implementations — e.g. Flutter on mobile, Jaspr on web — all honoring
-> the same catalog. A2UI's per-surface data model becomes the engine's
-> `DynamicContent`.
-
-In other words: **A2UI Craft templates are an implementation of an A2UI
-catalog**, as opposed to wrapping native widgets one-for-one.
+## 4. The design model
 
 ### The two-level model: agent-facing catalog widgets vs. template-private primitives
 
-There are **two distinct catalogs**, and conflating them is the central mistake to
-avoid:
+There are **two distinct levels of vocabulary**, and conflating them is the
+central mistake to avoid:
 
-1. **Primitives** — a rich set of primitives (`Text`, `Row`, `Column`,
+1. **Primitives** — a rich set of building blocks (`Text`, `Row`, `Column`,
    `Button`, `TextField`, `Checkbox`, `Image`, …). This is **never exposed to the
    agent.** A large primitive vocabulary bloats model context (defeating small,
    fast models), and letting an LLM compose primitives at runtime is
@@ -109,13 +154,10 @@ reuse other catalog widgets — e.g. a `ProductList` template using `ProductCard
 hand-writing each one natively per framework — is exactly what buys cross-framework
 reuse: the same template renders on Flutter and Jaspr. **This is the core of H1,
 and the reason RFW is load-bearing here** even as the A2UI protocol/data layer
-moves to `a2ui_core` (§10).
+lives in `a2ui_core` (§5).
 
 A2UI operates **only** on the catalog. The bridge maps an A2UI
 catalog component to its template; the template composes the primitives.
-§6 covers how that composition is rendered and kept correct under partial updates,
-and the concrete template layer; §10 covers how `a2ui_core` layers above it.
-
 The vetted vocabulary (primitive widgets and higher-level templates) is
 **predefined by the client** and registered once; an A2UI message only
 **composes** it. How that composition is rendered — and how it stays correct
@@ -138,81 +180,349 @@ that is the exception, not this project's focus: A2UI Craft exists to make the
 **templating** path expressive and capable; developers choose, per surface, when to
 template and when to fall back to raw A2UI.
 
-> The first implementation in `a2ui_craft_bridge` took a shortcut: it translated
-> each surface into a synthesized `RemoteWidgetLibrary` (`widget root = …`) and
-> rendered that. It worked, but it conflated "compose predefined widgets" with
-> "define a library," and it re-synthesized/re-rendered the whole tree on every
-> update. That shortcut has been replaced by the §6 architecture (per-id host
-> adapters + `Runtime.buildNode`), which composes the predefined catalog directly
-> and updates each component in place.
+### Where the engine runs: a client-side runtime
 
-## 3. The hypotheses we are proving
+A **template** is a pure function `(data, state) → UI`. It describes what the
+UI should look like for the current inputs; it ignores prior UI state. **A2UI
+Transport**, by contrast, is an *imperative* protocol over a *stateful* surface
+(`updateComponents` presupposes a prior tree to mutate). Bridging the two
+requires evaluating the template with concrete data *and* diffing against the
+previously produced tree — i.e. **reconciliation**. So a template needs a
+**runtime engine** that owns state and reconciliation. Two shapes were
+considered and rejected before settling on the third:
 
-1. **H1 — RFW generalizes across rendering engines.** The RFW language and
-   runtime, despite the "F", are not Flutter-specific. We prove this by making
-   the *same* template + runtime drive two genuinely different rendering engines.
-   - **Current scope: Flutter + Jaspr, Dart-only.** Jaspr is chosen because it is
-     Dart (so we test the *factoring*, not a *rewrite*) yet renders to the HTML
-     DOM — a different rendering engine from Flutter's canvas/`RenderObject`.
-   - Known limitation we are *accepting for now*: Flutter and Jaspr share a
-     similar *reactive/state* programming model (`build` + `setState`), so this
-     pair stresses the **rendering-engine** axis well but the **state-model** axis
-     weakly. We judge that low-risk because templates only need to turn
-     A2UI-supplied data into UI; they don't author novel interaction models.
-     Proving the state-model axis fully (SwiftUI, Jetpack Compose, React) is
-     future work, not part of the current milestone.
+- **Considered and rejected: AOT-compiling templates to A2UI Transport.** A
+  compiler cannot reconcile: neither the concrete data nor the prior tree exist
+  at compile time. Any "template language that compiles to A2UI messages" runs
+  into this wall regardless of syntax.
+- **Considered and rejected: a server-side engine.** Running the engine on the
+  server re-introduces a network round-trip for every local interaction and
+  forces the server to hold per-client UI state. Against A2UI's grain.
+- **Client-side runtime engine** — local interactivity stays local; the engine
+  renders templates using whatever framework the client is built on. **This is
+  the approach we take, and it is exactly what RFW already is.**
 
-2. **H2 — a single cross-platform core component/type library exists** that is
-   expressive enough for A2UI use cases and maps cleanly onto every framework.
-   This is where rendering-engine differences bite hardest (Flutter's explicit
-   layout/animation vs. the HTML DOM's hard split between markup and blackbox
-   CSS layout/animation). H2 has started — the component contract and conformance
-   harness (ROADMAP.md) — but the cross-platform type/style model is still ahead. The
-   current core component sets are intentionally minimal harness fixtures, not the
-   real library. **§11 defines the approach** for growing them: a *constrained
-   common model* (flexbox-shaped, with an explicit value-type vocabulary) rather
-   than mirroring either framework's native layout.
+## 5. Architecture
 
-A2UI Craft is deliberately a **least-common-denominator** engine. The hunch is
-that this denominator is still quite expressive and covers many A2UI use cases.
-When a developer needs deeper, framework-specific capabilities, the escape hatch
-is to **drop down to the raw framework** (per-framework, but that's an advanced
-case).
+The stack, from an incoming agent message down to pixels:
 
-## 4. Architecture
+```
+A2UI message (catalog component refs + data + functions/checks)
+  │  a2ui_core: MessageProcessor + DataModel + GenericBinder
+  ▼  → resolved props (concrete scalars), id'd child tree, action callbacks, two-way setters
+  │  bridge (thin): component name → RFW template; resolved props → template ARGS;
+  │                 inject child adapters; wire callbacks → events
+  ▼
+  │  RFW: buildNode(ConstructorCall(templateName, {args, children:[adapters]}), scope: catalogLib)
+  │       template composes the primitives (args.* / internal ...for / switch)
+  ▼
+Flutter / Jaspr primitives
+```
+
+### Division of labor: `a2ui_core` above, RFW below
+
+`a2ui_core` (the Dart core package in `flutter/genui` that backs the `genui`
+Flutter renderer — mirroring how `web_core` backs the Angular/React/Lit
+renderers) owns the A2UI protocol, the data model, and the resolution of
+bindings/functions/`checks`. It is **complementary to RFW, not a replacement**:
+`a2ui_core` sits *above* the template layer, RFW sits *below* it.
+
+RFW is the **build-time template engine** that materializes catalog widgets
+from primitives, once, cross-framework (§4). `a2ui_core` is the
+**runtime A2UI layer** — protocol, data, and the value-level computation RFW
+deliberately lacks (functions/`formatString`, `checks`, two-way binding;
+RFW's AST has no function/expression node). Building those on RFW would
+duplicate canonical logic and diverge from the reference implementation.
+
+### The seam
+
+`a2ui_core` resolves bindings/functions/`checks` to **concrete values**, handed
+to a template as **args** — not data references. Consequences:
+
+- **RFW's data layer (`DynamicContent`, `data.x` path bindings) is not used for
+  A2UI.** Reactivity is **component-granular**: when a component's inputs
+  change, `a2ui_core`'s `resolvedProps` signal fires, the per-id adapter
+  rebuilds, and `buildNode` re-renders that component's template with new args.
+  A small `preact_signals → setState` bridge per adapter carries the signal into
+  the framework's lifecycle.
+- **RFW's `Loop` survives only for template-*internal* iteration** over an args
+  list (`...for p in args.products`). The A2UI-level `ChildList` is resolved by
+  `a2ui_core` into an id'd child tree and injected as host adapters (§6).
+- **Actions and two-way binding pass through resolved.** `a2ui_core`'s
+  `GenericBinder` resolves an `action` prop to a plain Dart callback and injects
+  `setX` setters for `{path}`-bound props; the bridge hands both to templates as
+  args. To make that wiring direct, the runtimes' `handler<T>`/`voidHandler`
+  accept an already-resolved `Function` argument (VENDORED extension #3).
+
+### Packages
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │ a2ui_craft  (core, pure Dart, NO UI-framework dependency)     │
 │   parsing + AST + binary format (vendored RFW formats layer)  │
-│   DynamicContent (reactive data model)                        │
+│   DynamicContent · design tokens + CraftTheme · functions     │
 └─────────────────────────────────────────────────────────────┘
         ▲                                   ▲
         │ depends on                        │ depends on
 ┌───────────────────────┐         ┌───────────────────────────┐
 │ a2ui_craft_flutter     │         │ a2ui_craft_jaspr           │
 │  Runtime → Flutter      │         │  Runtime → Jaspr           │
-│  Widget; core comps as  │         │  Component; core comps as  │
+│  Widget; primitives as  │         │  Component; primitives as  │
 │  Flutter widgets        │         │  DOM (div/flexbox)         │
 └───────────────────────┘         └───────────────────────────┘
+        ▲                                   ▲
+        └───────── a2ui_craft_bridge ───────┘
+              (A2UI → engine, on a2ui_core; framework-neutral)
 ```
 
 - **Core (`a2ui_craft`)** is the **vendored RFW *formats* layer** (`binary`,
-  `model`, `text`) plus `content` (the `DynamicContent` reactive model). It is
-  pure Dart with zero UI-framework dependency. We **vendor** rather than depend
-  on `package:rfw` because RFW's `pubspec.yaml` pulls in Flutter even though its
-  `formats.dart` library does not — so there is no Flutter-free way to consume it
-  today. (A future upstream restructuring could remove the need to vendor.)
+  `model`, `text`) plus `content` (the `DynamicContent` reactive model, used by
+  standalone-RFW hosting), the design-token parser/resolver and `CraftTheme`
+  (§9), and the shared function library. It is pure Dart with zero UI-framework
+  dependency. We **vendor** rather than depend on `package:rfw` because RFW's
+  `pubspec.yaml` pulls in Flutter even though its `formats.dart` library does
+  not — so there is no Flutter-free way to consume it today. (A future upstream
+  restructuring could remove the need to vendor.)
 
 - **Adapters (`a2ui_craft_flutter`, `a2ui_craft_jaspr`)** each contain their own
   copy of the **runtime** (`Runtime`, `DataSource`, the curried-node machinery)
-  plus a minimal core-component library. Each runtime is a near-verbatim port of
-  RFW's runtime; the unavoidable reason it cannot be shared as-is is that RFW's
-  runtime is parameterized by the framework's *node type* (Flutter `Widget` vs.
-  Jaspr `Component`), and Dart cannot abstract over that cheaply. So the runtime
-  is duplicated per framework **by design**, and kept behaviorally identical.
+  plus their implementation of the core primitives. Each runtime is a
+  near-verbatim port of RFW's runtime; the unavoidable reason it cannot be
+  shared as-is is that RFW's runtime is parameterized by the framework's *node
+  type* (Flutter `Widget` vs. Jaspr `Component`), and Dart cannot abstract over
+  that cheaply. So the runtime is duplicated per framework **by design**, and
+  kept behaviorally identical (§7).
 
-## 5. Adapter invariants — what MUST NOT deviate, and what MAY
+- **Bridge (`a2ui_craft_bridge`)** is the thin, framework-neutral glue between
+  `a2ui_core` and the engine: `A2uiComponentBinding` (a per-component listenable
+  of resolved props) and `a2uiArgsFromProps` (props → template args, child
+  injection, callback wiring).
+
+- **`a2ui_core`** is consumed as a **git dependency** on `flutter/genui`
+  (`packages/a2ui_core`) so we track latest and others can run the repo locally;
+  it will be pinned to a published version once the team cuts a release. It is
+  pre-1.0, so some API churn is expected. Its dependencies are pure Dart
+  (`collection`, `json_schema_builder`, `meta`, `preact_signals` — no Flutter),
+  so it is Jaspr-compatible.
+
+## 6. Rendering A2UI surfaces: composition, identity, and partial updates
+
+This section defines how an A2UI surface is rendered, and the small, additive
+extensions to the RFW runtime it requires.
+
+### The model: a predefined catalog that the message composes
+
+Two things are **predefined by the client and registered once**:
+
+- a `LocalWidgetLibrary` of primitive widgets (the native building blocks), and
+- a `RemoteWidgetLibrary` of vetted higher-level templates (e.g.
+  `WeatherCard`) that may expose **slots** (`args.child` / `args.children`).
+
+An A2UI message **never defines widgets**. It carries a *composition*: a flat,
+id-referenced adjacency list of component *instances* that reference predefined
+names and bind data. Rendering a component means looking it up in the predefined
+catalog and composing it — A2UI's own "catalog of components" model.
+
+Widgets and data live in two separate worlds in RFW, and this separation is
+load-bearing:
+
+- the **template/args world** holds widgets (nested `ConstructorCall`s, `args.*`
+  projection, builders);
+- the **data world** holds only plain values (`int/double/bool/String`, maps,
+  lists).
+
+Data cannot carry widgets: `DataSource.child`/`childList` only
+accept already-built widget nodes, a data reference resolves to a plain
+value, and the data model asserts its leaves are scalars. So a
+dynamically-shaped A2UI tree **must** be expressed in the template/args world,
+not smuggled through data. This is the trust boundary that stops runtime data
+from injecting UI — and it's why the composition must be built as widget nodes at
+render time.
+
+### The adapter tree: host widgets are the retained A2UI component tree
+
+Each A2UI component is rendered by a host wrapper widget, `A2uiToRfwAdapter`,
+**keyed by the A2UI component id**. The adapter:
+
+- renders its own component via `Runtime.buildNode` (below), and
+- passes each child as a nested `A2uiToRfwAdapter` injected into the component's
+  `child` / `children` slot.
+
+So the **host framework's widget tree _is_ the A2UI component tree** — one keyed
+adapter per id. The engine renders one component at a time (including a vetted
+multi-node template with its slots). The rule: **structure _between_ components is
+the adapters' job; structure _within_ a component (template internals) is RFW's.**
+A predefined template's internals are never A2UI-addressable, which is exactly the
+property we want for vetted components.
+
+### Identity & reconciliation: why positional matching is not enough
+
+Host frameworks reconcile children by `runtimeType` + `key`; with no key they
+match **positionally**. RFW today attaches **no key** to its widget wrapper
+(`_Widget`), so RFW subtrees reconcile purely by position. That is correct for
+**in-place leaf updates** (same shape) but wrong for **insert / remove /
+reorder**: shifting a child by one slot makes a sibling's element-held state (a
+checkbox value, in-progress text input, scroll offset, animation) reconcile onto
+the wrong widget, or get dropped.
+
+A2UI components have **stable ids** and updates are **id-addressed**, with
+reordering expected. So reconciliation must be **keyed by the A2UI id**, not by
+position.
+
+We adopt Flutter's own idiom for preserving identity through wrapper widgets.
+`SliverChildBuilderDelegate.build` wraps each list child in decorators yet keeps
+identity by **lifting the child's key onto the outermost wrapper** —
+`KeyedSubtree(key: _SaltedValueKey(child.key), child: …)` — so the key sits at the
+reconciliation position despite the wrappers. We do the same: RFW's `_Widget`
+becomes the keyed wrapper, lifting a reserved `key` argument (set to the A2UI id)
+as a typed `ValueKey` so host reconciliation matches RFW subtrees by A2UI id.
+Lifting the key onto the wrapper solves the standalone-RFW and A2UI cases with
+one mechanism — no bypassing of the wrapper is needed. (Salting à la
+`_SaltedValueKey` — to stay `GlobalKey`-safe when a key value is itself a `Key` —
+is deferred; current keys are scalar ids and the inner child is unkeyed, so
+there is nothing to collide with.)
+
+### Partial updates
+
+State lives in two places, and each kind of update touches only what it must:
+
+- **`updateDataModel`** writes to `a2ui_core`'s `DataModel`. Each component
+  whose resolved props depend on the changed paths gets a new `resolvedProps`
+  value, and only that component's adapter rebuilds (component-granular
+  reactivity, §5). No structural work.
+- **`updateComponents`** is routed **per id**: only the addressed
+  `A2uiToRfwAdapter` rebuilds, re-rendering from that node down. No whole-tree
+  re-synthesis, no re-currying of unaffected nodes.
+
+Localizing updates to the affected subtree (plus keyed reconciliation keeping
+sibling/descendant state intact) is the main reason for the adapter tree.
+
+### Two additive deviations from RFW (candidates to upstream)
+
+Both are small, additive, and behavior-preserving for existing RFW usage. Each is
+recorded in `VENDORED.md` (extensions #6 and #5) and is a good candidate to
+propose to upstream RFW.
+
+1. **`Runtime.buildNode(context, composition, data, handler, {scope, theme})`**
+   — render an ad-hoc composition (a `ConstructorCall` whose slot arguments
+   may be already-built host widgets) against the registered libraries, resolving
+   names via `scope`. *Why A2UI needs it:* the structure is decided at runtime,
+   and RFW otherwise renders only **named** declarations and **forbids recursive
+   templates** — so there is no way to render a runtime-built tree without
+   synthesizing a throwaway library per message.
+2. **Keyed `_Widget`** — honor a reserved literal `key` argument,
+   lifted onto the `_Widget` wrapper as a typed `ValueKey`. *Why A2UI needs it:*
+   id-addressed updates with reordering require identity-based reconciliation. It
+   also independently improves RFW for any dynamic-list UI, so it has merit beyond
+   A2UI.
+
+### Lists and scope (the delicate part)
+
+A2UI `ChildList` templates (data-driven lists) expand into one child per data
+item, with relative bindings resolving against each item. `a2ui_core` resolves a
+`children` slot — both a static id list and a `ChildList` template — into a
+`List<ChildNode>`, and the bridge injects **one child adapter per `ChildNode`**.
+A static child keys its adapter by its (unique) A2UI id; a `ChildList` item has
+a deeper, per-item `basePath` (the item's data path), which becomes its
+reconciliation key. Template-*internal* iteration over an args list
+(`...for p in args.products`) still uses RFW's own `Loop`, which scopes each
+item via a depth-aware `LoopReference` so relative bindings — including nested
+loops — resolve against the right item.
+
+**Known limitation — positional reconciliation of list items.** Static
+components reconcile **keyed by their A2UI id** (above), but the A2UI spec
+currently attaches **no stable identifier to the elements of a data array** that a
+`ChildList` unrolls. With no per-item id to key on, list items are reconciled
+**positionally** — the index-based `basePath` *is* the position. This is precisely
+the imprecise behavior this section otherwise argues against: inserting,
+removing, or reordering items in the *middle* of a list shifts every following
+item by a slot, so element-held state (a checkbox value, in-progress text input,
+scroll offset, animation) reconciles onto the wrong item or is dropped. In-place
+item updates and append/truncate at the *end* are unaffected; only mid-list
+structural churn is.
+
+We **accept this cost** rather than invent a client-side key — indexes don't help
+(they *are* the position), and hashing item contents is fragile and breaks on
+edits. The proper fix belongs in the protocol and is filed as
+[a2ui#1745](https://github.com/a2ui-project/a2ui/issues/1745): give `ChildList`
+items a stable identifier (a per-item key, or a template-declared key path),
+resolved at the spec and `a2ui_core` level. This is **protocol-inherent, not an RFW
+artifact**: `a2ui_core`'s own `GenericBinder` unrolls a `ChildList` into
+`ChildNode`s that share the template `componentId` and are distinguished only by an
+index-based `basePath` — i.e. the reference implementation reconciles list items
+positionally for the same reason.
+
+**Design policy — keyed-when-present, positional-fallback (permanent).** The engine
+keys each unrolled child instance by a **per-item key when the list provides one**,
+and **falls back to the positional index when it does not**. This is *not* an
+interim stance that a2ui#1745 retires: even once the spec gains per-item keys, they
+are **opt-in** — an agent or a template can always emit an unkeyed list — so the
+engine must never assume keys are present and must degrade to positional
+reconciliation gracefully. The fallback is therefore permanent; the keyed path is
+an *upgrade* applied per list, not a global mode switch.
+
+We are already **structurally ready** for the fix: keyed reconciliation reuses the
+keyed-`_Widget` / per-id-adapter machinery; only the **key source** changes
+(today: the positional `basePath`; post-fix: the item's key surfaced by
+`a2ui_core`'s `ChildNode`). Per-item keys are **scoped within their parent list**
+(salted by the list's component id) so a list-item key can never collide with a
+sibling component's A2UI-id key.
+
+### The template layer: what A2UI references, and what the bridge targets
+
+Per the two-level model (§4), **A2UI components reference catalog widgets,
+each backed by an RFW template**; the bridge maps a component to its template, and
+the template composes the primitives.
+
+Primitives — an RFW `LocalWidgetLibrary`, implemented per framework:
+
+```
+core: Text, Row, Column, Button, Image, TextField, Checkbox, …
+```
+
+Catalog — an RFW `RemoteWidgetLibrary`, authored once and vetted at
+build time (`import core;`):
+
+```
+widget ProductCard = Column(children: [
+  Image(src: args.imageUrl),
+  Text(text: args.title),
+  Text(text: args.price),
+  Button(onPressed: event 'addToCart' { productId: args.id },
+         child: Text(text: 'Add to cart')),
+]);
+
+// a layout widget: its children are supplied by A2UI at runtime
+widget Grid = Column(children: args.children);
+```
+
+An A2UI message references only catalog names; a component's props are the
+template's `args`, and a layout widget's `children` are child component ids:
+
+```
+{ "id": "root", "component": "Grid", "children": ["p1", "wx"] }
+{ "id": "p1", "component": "ProductCard", "title": …, "imageUrl": … }
+```
+
+Rendering is exactly the machinery above, pointed at the catalog library:
+the `p1` adapter (keyed by its id) renders `buildNode(ConstructorCall('ProductCard',
+{…props…}), scope: catalogLib)`; `'ProductCard'` resolves to the **template**,
+which imports and composes `core`. `Grid`'s `args.children` receive the child
+adapters (`p1`, `wx`) via host-widget injection, reconciled by id under partial
+updates.
+
+The bridge is **catalog-agnostic**: it maps a component's props to `args` **by
+name** (`children`/`child` are structural slots by key; an `{event}` becomes an
+`EventHandler`, a `{path}` a data binding, else a literal), with no per-type
+knowledge — and `A2uiToRfwAdapter` takes a configurable `scope` (the catalog
+library). A catalog template then maps those args onto the primitives (e.g.
+`widget Tappable = Button(onPressed: args.action, …)`). The machinery is pinned
+bottom-up by tests: `template_layer_spike_test` proves the runtime mechanics
+(named-template composition, host-widget injection through `args.children`,
+`EventHandler`-as-arg) with no runtime changes, and `runA2uiConformance` proves
+the end-to-end bridge path on both adapters.
+
+## 7. Adapter invariants — what MUST NOT deviate, and what MAY
 
 This section is the contract that keeps the adapters honest. It is mirrored by
 the project skill that governs adapter work.
@@ -230,9 +540,10 @@ the same way, and the same interactions dispatch the same events.
    the core, not in adapters.
 2. **Public API surface & names.** Every adapter exposes the same names with the
    same shapes:
-   - `Runtime` (with `update(LibraryName, WidgetLibrary)` and
-     `build(context, FullyQualifiedWidgetName, DynamicContent, RemoteEventHandler)`),
-   - `RemoteWidget` (fields: `runtime`, `widget`, `data`, `onEvent`),
+   - `Runtime` (with `update(LibraryName, WidgetLibrary)`,
+     `build(context, FullyQualifiedWidgetName, DynamicContent, RemoteEventHandler)`,
+     and `buildNode(…, {scope, theme})`),
+   - `RemoteWidget` (fields: `runtime`, `widget`, `data`, `theme`, `onEvent`),
    - `LocalWidgetLibrary` / `LocalWidgetBuilder`,
    - `DataSource` (with `v<T>`, `child`, `childList`, `voidHandler`, `handler<T>`),
    - `RemoteEventHandler`, `createCoreComponents()`.
@@ -278,421 +589,16 @@ automated checks:
   conformance run. Adding/altering a core component means extending the manifest
   and the suite, not writing per-adapter tests.
 
-## 6. Rendering A2UI surfaces: composition, identity, and partial updates
-
-This section defines how an A2UI surface is rendered, and the two small, additive
-extensions to the RFW runtime it requires. It supersedes the "translate to a
-library" shortcut noted in §2.
-
-### The model: a predefined catalog that the message composes
-
-Two things are **predefined by the client and registered once**:
-
-- a `LocalWidgetLibrary` of primitive widgets (the native building blocks), and
-- optionally a `RemoteWidgetLibrary` of vetted higher-level templates (e.g.
-  `WeatherCard`) that may expose **slots** (`args.child` / `args.children`).
-
-An A2UI message **never defines widgets**. It carries a *composition*: a flat,
-id-referenced adjacency list of component *instances* that reference predefined
-names and bind data. Rendering a component means looking it up in the predefined
-catalog and composing it — A2UI's own "catalog of components" model.
-
-Widgets and data live in two separate worlds in RFW, and this separation is
-load-bearing:
-
-- the **template/args world** holds widgets (nested `ConstructorCall`s, `args.*`
-  projection, builders);
-- the **data world** (`DynamicContent`) holds only plain values
-  (`int/double/bool/String`, maps, lists).
-
-We verified that data cannot carry widgets: `DataSource.child`/`childList` only
-accept already-built widget nodes, a `data.x` reference resolves to a plain
-value, and `DynamicContent` asserts its leaves are scalars. So a
-dynamically-shaped A2UI tree **must** be expressed in the template/args world,
-not smuggled through data. This is the trust boundary that stops runtime data
-from injecting UI — and it's why the composition must be built as widget nodes at
-render time.
-
-### The adapter tree: host widgets are the retained A2UI component tree
-
-Each A2UI component is rendered by a host wrapper widget, `A2uiToRfwAdapter`,
-**keyed by the A2UI component id**. The adapter:
-
-- renders its own component via `Runtime.buildNode` (below), and
-- passes each child as a nested `A2uiToRfwAdapter` injected into the component's
-  `child` / `children` slot.
-
-So the **host framework's widget tree _is_ the A2UI component tree** — one keyed
-adapter per id. The engine renders one component at a time (including a vetted
-multi-node template with its slots). The rule: **structure _between_ components is
-the adapters' job; structure _within_ a component (template internals) is RFW's.**
-A predefined template's internals are never A2UI-addressable, which is exactly the
-property we want for vetted components.
-
-### Identity & reconciliation: why positional matching is not enough
-
-Host frameworks reconcile children by `runtimeType` + `key`; with no key they
-match **positionally**. RFW today attaches **no key** to its widget wrapper
-(`_Widget`), so RFW subtrees reconcile purely by position. That is correct for
-**in-place leaf updates** (same shape) but wrong for **insert / remove /
-reorder**: shifting a child by one slot makes a sibling's element-held state (a
-checkbox value, in-progress text input, scroll offset, animation) reconcile onto
-the wrong widget, or get dropped.
-
-A2UI components have **stable ids** and updates are **id-addressed**, with
-reordering expected. So reconciliation must be **keyed by the A2UI id**, not by
-position.
-
-We adopt Flutter's own idiom for preserving identity through wrapper widgets.
-`SliverChildBuilderDelegate.build` wraps each list child in decorators yet keeps
-identity by **lifting the child's key onto the outermost wrapper** —
-`KeyedSubtree(key: _SaltedValueKey(child.key), child: …)` — so the key sits at the
-reconciliation position despite the wrappers. We do the same: RFW's `_Widget`
-becomes the keyed wrapper, lifting a reserved `key` argument (set to the A2UI id)
-as a typed `ValueKey` so host reconciliation matches RFW subtrees by A2UI id.
-(Salting à la `_SaltedValueKey` — to stay `GlobalKey`-safe when a key value is
-itself a `Key` — is deferred; current keys are scalar ids and the inner child is
-unkeyed, so there is nothing to collide with.)
-
-### Partial updates
-
-State lives in two places, and each kind of update touches only what it must:
-
-- **`updateDataModel`** writes to `DynamicContent`; RFW's existing path-keyed
-  subscriptions rebuild only the bound nodes. No structural work.
-- **`updateComponents`** is routed **per id**: the surface holds, per component
-  id, a listenable of the latest component definition; only the addressed
-  `A2uiToRfwAdapter` rebuilds, re-rendering from that node down. No whole-tree
-  re-synthesis, no re-currying of unaffected nodes.
-
-Localizing updates to the affected subtree (plus keyed reconciliation keeping
-sibling/descendant state intact) is the main reason for the adapter tree.
-
-### Two additive deviations from RFW (candidates to upstream)
-
-Both are small, additive, and behavior-preserving for existing RFW usage. Each is
-recorded in `VENDORED.md` (extensions #6 and #5) and is a good candidate to
-propose to upstream RFW.
-
-1. **`Runtime.buildNode(context, composition, data, handler, {scope})`** *(done —
-   M2)* — render an ad-hoc composition (a `ConstructorCall` whose slot arguments
-   may be already-built host widgets) against the registered libraries, resolving
-   names via `scope`. *Why A2UI needs it:* the structure is decided at runtime,
-   and RFW otherwise renders only **named** declarations and **forbids recursive
-   templates** — so there is no way to render a runtime-built tree without
-   synthesizing a throwaway library per message.
-2. **Keyed `_Widget`** *(done — M1)* — honor a reserved literal `key` argument,
-   lifted onto the `_Widget` wrapper as a typed `ValueKey`. *Why A2UI needs it:*
-   id-addressed updates with reordering require identity-based reconciliation. It
-   also independently improves RFW for any dynamic-list UI, so it has merit beyond
-   A2UI.
-
-These replace the earlier idea of a "transparent injection" that bypassed the
-wrapper: lifting the key onto the wrapper is the idiomatic Flutter approach and
-solves both the standalone-RFW and A2UI cases with one mechanism.
-
-### Lists and scope (the delicate part)
-
-A2UI `ChildList` templates (data-driven lists) create a child data scope:
-relative bindings resolve against each item. We render this with **RFW's own
-`Loop`**, emitted *inside* the owning component's `buildNode` composition (the
-`ChildList` becomes `children: [ ...for x in <input>: <template> ]`). RFW already
-gives us everything a list needs here: it unrolls the data array, scopes each
-item via a depth-aware `LoopReference` (so relative bindings — including nested
-`ChildList`s — resolve against the right item), and rebuilds reactively when the
-array changes. A separate host-side "list adapter" was considered and rejected:
-its only extra power was per-item *keyed* identity, which the limitation below
-makes moot, and A2UI list items are template instances (one shared `componentId`),
-so they are not individually id-addressable anyway. (M4)
-
-**Known limitation — positional reconciliation of unrolled children.** Static
-components reconcile **keyed by their A2UI id** (above), but the A2UI spec
-currently attaches **no stable identifier to the elements of a data array** that a
-`ChildList` unrolls. With no per-item id to key on, list items are reconciled
-**positionally** — index 0 onto index 0, and so on. This is precisely the
-imprecise behavior this section otherwise argues against: inserting, removing, or
-reordering items in the *middle* of a list shifts every following item by a slot,
-so element-held state (a checkbox value, in-progress text input, scroll offset,
-animation) reconciles onto the wrong item or is dropped. In-place item updates and
-append/truncate at the *end* are unaffected; only mid-list structural churn is.
-
-We **accept this cost** rather than invent a client-side key — indexes don't help
-(they *are* the position), and hashing item contents is fragile and breaks on
-edits. The proper fix belongs in the protocol and is filed as
-[a2ui#1745](https://github.com/a2ui-project/a2ui/issues/1745): give `ChildList`
-items a stable identifier (a per-item key, or a template-declared key path),
-resolved at the spec and `a2ui_core` level. This is **protocol-inherent, not an RFW
-artifact**: `a2ui_core`'s own `GenericBinder` unrolls a `ChildList` into
-`ChildNode`s that share the template `componentId` and are distinguished only by an
-index-based `basePath` — i.e. the reference implementation reconciles list items
-positionally for the same reason.
-
-**Design policy — keyed-when-present, positional-fallback (permanent).** The engine
-keys each unrolled child instance by a **per-item key when the list provides one**,
-and **falls back to the positional index when it does not**. This is *not* an
-interim stance that a2ui#1745 retires: even once the spec gains per-item keys, they
-are **opt-in** — an agent or a template can always emit an unkeyed list — so the
-engine must never assume keys are present and must degrade to positional
-reconciliation gracefully. The fallback is therefore permanent; the keyed path is
-an *upgrade* applied per list, not a global mode switch.
-
-We are already **structurally ready** for the fix: keyed reconciliation reuses the
-keyed-`_Widget` (M1) / per-id-adapter (M3) machinery; only the **key source**
-changes (today: none → positional index; post-fix: the item's key surfaced by
-`a2ui_core`'s `ChildNode`). Per-item keys are **scoped within their parent list**
-(salted by the list's component id) so a list-item key can never collide with a
-sibling component's A2UI-id key.
-
-### The template layer: what A2UI references, and what the bridge targets
-
-Per the two-level model (§2), **A2UI components reference catalog widgets,
-each backed by an RFW template**; the bridge maps a component to its template, and
-the template composes the primitives.
-
-Primitives — an RFW `LocalWidgetLibrary`, implemented per framework:
-
-```
-core: Text, Row, Column, Button, Image, TextField, Checkbox, …
-```
-
-Catalog — an RFW `RemoteWidgetLibrary`, authored once and vetted at
-build time (`import core;`):
-
-```
-widget ProductCard = Column(children: [
-  Image(src: args.imageUrl),
-  Text(text: args.title),
-  Text(text: args.price),
-  Button(onPressed: event 'addToCart' { productId: args.id },
-         child: Text(text: 'Add to cart')),
-]);
-
-// a layout widget: its children are supplied by A2UI at runtime
-widget Grid = Column(children: args.children);
-```
-
-An A2UI message references only catalog names; a component's props are the
-template's `args`, and a layout widget's `children` are child component ids:
-
-```
-{ "id": "root", "component": "Grid", "children": ["p1", "wx"] }
-{ "id": "p1", "component": "ProductCard", "title": …, "imageUrl": … }
-```
-
-Rendering is exactly the M1–M4 machinery, re-pointed at the catalog library:
-the `p1` adapter (keyed by its id) renders `buildNode(ConstructorCall('ProductCard',
-{…props…}), scope: catalogLib)`; `'ProductCard'` resolves to the **template**,
-which imports and composes `core`. `Grid`'s `args.children` receive the child
-adapters (`p1`, `wx`) via host-widget injection, reconciled by id under partial
-updates.
-
-**Status: done (M5).** The two levels are no longer conflated. The bridge is now
-**catalog-agnostic** — `_buildComponent` maps a component's props to `args` **by
-name** (`children`/`child` are structural slots by key; an `{event}`→`EventHandler`,
-a `{path}`→data binding, else literal), with no per-type knowledge — and
-`A2uiToRfwAdapter` takes a configurable `scope` (the catalog library).
-A catalog template then maps those args onto the primitives (e.g.
-`widget Tappable = Button(onPressed: args.action, …)`). The conformance suite and
-the Jaspr example now render A2UI components (`Stack`/`Label`/`Tappable`) against a
-real catalog over `core`. Validated bottom-up: `template_layer_spike_test`
-proves the runtime mechanics (named-template composition, host-widget injection
-through `args.children`, `EventHandler`-as-arg) with **no runtime changes**;
-`runA2uiConformance` proves the end-to-end bridge path on both adapters.
-
-## 7. Repository layout
-
-```
-a2ui-craft/
-├── DESIGN.md                     # this document (source of truth)
-├── README.md
-├── AGENTS.md                     # agent-agnostic guidance (build/test, pointers)
-├── LICENSE                       # BSD-3-Clause (forked from RFW)
-├── VENDORED.md                   # provenance of vendored RFW code
-├── pubspec.yaml                  # Dart pub workspace root
-├── tool/check.sh                 # one entrypoint: resolve + format + analyze + test
-├── tool/testing/                 # repo-wide checks (e.g. license headers); not published
-├── .github/workflows/ci.yml      # CI: runs tool/check.sh
-├── skills/                       # project skills (adapter-authoring guidance)
-└── packages/
-    ├── a2ui_craft/               # core: vendored RFW formats + DynamicContent
-    ├── a2ui_craft_bridge/        # A2UI → engine, on a2ui_core (framework-neutral)
-    ├── a2ui_craft_testing/       # shared conformance suite + catalog (not published)
-    ├── a2ui_craft_examples/      # shared, framework-neutral sample specs (demo only)
-    ├── a2ui_craft_flutter/       # Flutter adapter (runtime + core comps + example)
-    └── a2ui_craft_jaspr/         # Jaspr adapter (runtime + core comps + example)
-```
-
-Run `tool/check.sh` to verify the whole workspace (format, analyze, and tests for
-every package) — it is exactly what CI runs.
-
-Because one member (`a2ui_craft_flutter`) depends on the Flutter SDK, the whole
-workspace is resolved with **`flutter pub get`** (Flutter's bundled Dart also runs
-the pure-Dart and Jaspr packages fine). The *core* package itself remains
-Flutter-free; only the workspace resolution involves the Flutter SDK.
-
-## 8. Status & roadmap
-
-The living status checklist and the slice-by-slice implementation plans now live
-in their own file — **[ROADMAP.md](ROADMAP.md)** — so this document stays focused
-on design rationale rather than churning status. See ROADMAP.md for what has
-shipped and what is planned next.
-
-## 9. Open questions
-
-- **Core component vocabulary (H2):** what is the least-common-denominator set,
-  and how are layout/animation differences reconciled between Flutter and the
-  DOM? **Direction decided (§11):** a constrained common model with a flexbox
-  spine and explicit sizing, rather than mirroring either framework. Still open:
-  the exact per-category widget set and how far the layout algebra reaches (e.g.
-  `Grid`, scrolling/overflow, `Stack` z-order) before the "drop to raw framework"
-  escape hatch (§3).
-- **Type model:** the equivalent of RFW's `argument_decoders` is intensely
-  Flutter-specific and is explicitly *not* part of the core; H2 must define a
-  framework-neutral type/style model that each adapter maps down. **Direction
-  decided (§11):** a small value-type vocabulary (`Dimension`/`Color`/`EdgeInsets`/
-  alignment/`TextStyle`) extending the A2UI common-type `$ref` mechanism. Still
-  open: the precise canonical shapes and how `Dimension`'s `flex`/`fill`/`hug`
-  interact with nested scroll/intrinsic-sizing edge cases.
-- **Template packaging & richer A2UI catalog binding:** the basic binding
-  exists (`a2ui_craft_bridge` maps A2UI `component` types to core components by
-  name). Still open: named higher-level templates (e.g. a `WeatherCard` template
-  resolving an A2UI `component="WeatherCard"`), and how such templates are
-  authored, bundled, and versioned alongside a catalog.
-- **List-item identity — filed as [a2ui#1745](https://github.com/a2ui-project/a2ui/issues/1745).**
-  A2UI gives every *component* a stable id but attaches **no identifier to the
-  elements of a data array** unrolled by a `ChildList`, forcing positional
-  reconciliation for list items (§6). The fix is requested at the spec +
-  `a2ui_core` level. Our side is **keyed-when-present, positional-fallback
-  (permanent)** — see §6; the fallback stays even after keys land, since per-item
-  keys are opt-in. To adopt keys when available: surface the item key from
-  `a2ui_core`'s `ChildNode` and set it as the child adapter's key (salted by the
-  parent list id). Track the issue for the final key shape.
-- **`a2ui_core` seam (§10):** with `a2ui_core` resolving props to concrete values
-  fed as template `args`, reactivity becomes component-granular (whole-component
-  rebuild) rather than per-binding. Open: is that granularity acceptable for the
-  catalog (likely yes — small vetted widgets), and how exactly do
-  template-internal inputs wire back to `a2ui_core`'s two-way setters?
-
-## 10. Layering with `a2ui_core` (planned direction)
-
-`a2ui_core` (the Dart core package in `flutter/genui` that backs the `genui`
-Flutter renderer — mirroring how `web_core` backs the Angular/React/Lit renderers)
-owns the A2UI protocol, the data model, and the resolution of
-bindings/functions/`checks`. It is **complementary to RFW, not a replacement**:
-`a2ui_core` sits *above* the template layer, RFW sits *below* it. This supersedes
-the protocol/data half of the interim bridge; the template/rendering half (§6)
-stays on RFW.
-
-### The stack
-
-```
-A2UI message (catalog component refs + data + functions/checks)
-  │  a2ui_core: MessageProcessor + DataModel + GenericBinder
-  ▼  → resolved props (concrete scalars), id'd child tree, action callbacks, two-way setters
-  │  bridge (thin): component name → RFW template; resolved props → template ARGS;
-  │                 inject child adapters; wire callbacks → events
-  ▼
-  │  RFW: buildNode(ConstructorCall(templateName, {args, children:[adapters]}), scope: catalogLib)
-  │       template composes the primitives (args.* / internal ...for / switch)
-  ▼
-Flutter / Jaspr primitives
-```
-
-### Why this is the right division
-
-RFW is the **build-time template engine** that materializes catalog widgets
-from primitives, once, cross-framework (§2). `a2ui_core` is the
-**runtime A2UI layer** — protocol, data, and the value-level computation RFW
-deliberately lacks (functions/`formatString`, `checks`, two-way binding, theme;
-RFW's AST has no function/expression node). Building those on RFW would duplicate
-canonical logic and diverge from the reference implementation.
-
-### The seam
-
-`a2ui_core` resolves bindings/functions/`checks` to **concrete values**, handed to
-a template as **args** — not data references. Consequences:
-
-- **RFW's data layer (`DynamicContent`, `data.x` path bindings) is no longer used
-  for A2UI.** Reactivity moves to **component granularity**: when inputs change,
-  `a2ui_core`'s `resolvedProps` signal fires, the per-id adapter rebuilds, and
-  `buildNode` re-renders the template with new args.
-- **RFW's `Loop` survives only for template-*internal* iteration** over an args
-  list (`...for p in args.products`). The A2UI-level `ChildList` is resolved by
-  `a2ui_core` into the id'd child tree and injected as host adapters.
-- A `preact_signals → setState` bridge per adapter, plus wiring `a2ui_core`
-  actions / two-way setters to RFW `EventHandler` / `voidHandler`.
-
-### What moves, stays, and gets built
-
-| Concern | Disposition |
-| --- | --- |
-| A2UI ingest (`A2uiSurface`), `SurfaceListenable`, `_buildComponent`/`_children`→`Loop`, `_value`/`_pathRef` | **delete** → `a2ui_core` |
-| A2UI data (`DynamicContent`) + M4 data-path (`_applyDataUpdate`/`_descend`/`_assign`/`_segment`) | **delete** → `a2ui_core` `DataModel` |
-| functions/`formatString`, `checks`, two-way setters, theme, `deleteSurface` (+ the map-growth leak) | **don't build** → `a2ui_core` provides |
-| RFW runtime: `buildNode`, host-injection, keyed `_Widget`, `Loop`, `args`, `Switch` (M1/M2) | **keep** |
-| `core_components` primitives | **keep** |
-| per-id adapter tree (M3) | **keep, re-rooted** on `a2ui_core`'s component tree + `resolvedProps` signals |
-| the bridge | **keep, thin** — name→template, args feed, child injection, event wiring |
-| catalog template `RemoteWidgetLibrary` | **build** (the missing layer, §6 / M5) |
-
-M1–M4 are not wasted: they are the template-rendering plumbing. Only the
-protocol/data/binding half of the bridge is delegated.
-
-### Risks & status
-
-- **Maturity:** `a2ui_core` is pre-1.0 (`0.0.1-wip002`); API may churn. It is the
-  canonical direction (the JS stack already follows it).
-- **Pure-Dart deps** (`collection`, `json_schema_builder`, `meta`,
-  `preact_signals` — no Flutter), so Jaspr-compatible.
-- **Status: spike landed; full adoption in progress (M6).** The de-risking
-  Jaspr spike (`a2ui_core_seam_spike_test.dart`) is green and proves the seam end
-  to end with the **real, published** `a2ui_core` (`^0.0.1-dev002` from pub.dev):
-  a `ProductCard` + `Grid` template library over `core`, an A2UI surface placing
-  two cards in a grid, `a2ui_core` resolving a `formatString` price and an
-  `updateDataModel`. Findings:
-  - **No RFW runtime change is needed for the data/binding/structural seam.**
-    `a2ui_core`'s `MessageProcessor` + `SurfaceModel` + `GenericBinder` produce
-    `resolvedProps` (concrete scalars + `List<ChildNode>`); a thin per-id adapter
-    maps props → template `args`, injects child adapters for `ChildNode`s, and
-    renders via the existing `buildNode(scope: catalogLib)`.
-  - **Reactivity is component-granular and works:** an `updateDataModel` flows
-    `DataModel` → `formatString` `computed` → `resolvedProps` signal → a
-    `preact_signals`-`subscribe` → `setState` bridge → only the affected card's
-    adapter rebuilds (guard-verified: disabling the bridge fails the update test).
-  - **Action seam proven.** `GenericBinder` resolves an `action` prop to a Dart
-    `Future<void> Function()`; a template wires it to a `Button` primitive's
-    `onPressed`; clicking dispatches an `A2uiClientAction` (name + context) back
-    through `a2ui_core`. This required **one small additive runtime affordance** —
-    `handler<T>`/`voidHandler` now accept an already-resolved `Function` arg
-    (VENDORED extension #3, both runtimes; guard-verified). Two-way setters (the
-    `setX` callbacks `GenericBinder` injects for `{path}`-bound props) remain to be
-    wired for editable inputs — a follow-on, not a blocker for read/action UIs.
-  - **Dependency strategy resolved:** depend on `a2ui_core` via a **git dependency**
-    on `flutter/genui` (`packages/a2ui_core`) so we track latest and others can run
-    it locally. (`resolution: workspace` does not block a git or path dep; a bare
-    path breaks CI, and the published pub.dev prerelease lags `main`.) Switch to a
-    published version once the team cuts a release.
-
-  **Adoption complete (M6).** The deletion + re-rooting in the table above is
-  done: the bridge is now `A2uiComponentBinding` + `a2uiArgsFromProps` over
-  `a2ui_core`; both `A2uiToRfwAdapter`s render from an `a2ui_core` `SurfaceModel`;
-  `runA2uiConformance`, the bridge binding tests, the custom-catalog reorder test,
-  and the seam spike are green on both adapters. `a2ui_core` is pulled via a git
-  dependency on `flutter/genui` (a workspace-wide `dependency_overrides`), to be
-  pinned once the team cuts a release. Two-way setters for editable inputs are
-  now wired (see the roadmap entry in ROADMAP.md).
-
-## 11. The core primitives: a constrained common model
-
-This section defines the approach for growing the primitives (the
-`LocalWidgetLibrary` / "core" library) from today's seed into a **capable**
-primitive vocabulary. It is the concrete plan for **H2** (§3) and supersedes the
-"see §9" placeholders for the type/style model.
+## 8. The core primitives: a constrained common model
+
+This section defines the design of the core primitives (the
+`LocalWidgetLibrary` / "core" library): a **capable, cross-framework**
+primitive vocabulary. It is the concrete answer to **H2** (§2).
 
 ### Why this is the load-bearing library
 
 The core primitives are the framework's **instruction set**. Per the two-level
-model (§2), app developers **compose it into templates** to build their own
+model (§4), app developers **compose it into templates** to build their own
 domain-specific catalogs — and they can also **extend and replace** it
 with bespoke or brand-styled widgets ("Extensible by design", below). So our job
 is not to ship a catalog, nor an exhaustive one: it is to ship a
@@ -703,14 +609,14 @@ against each other:
 - **Expressiveness** — it must scale to a wide variety of use-cases, because each
   app's catalog is unique.
 - **Cross-framework identity** — a primitive must behave the same whether a
-  template is rendered by Flutter or Jaspr (§5). Every primitive we add multiplies
+  template is rendered by Flutter or Jaspr (§7). Every primitive we add multiplies
   the surface where the two can silently diverge.
 
 ### Not a copy of A2UI's basic catalog
 
 The core primitives are **not** A2UI's [Basic
 Catalog](https://a2ui.org/specification/v1_0/catalogs/basic/catalog.json)
-re-implemented 1:1. That catalog is caught **between** the two worlds (§2) and
+re-implemented 1:1. That catalog is caught **between** the two levels (§4) and
 serves neither cleanly: several of its components bake in **opinionated layout**
 that a primitive should not impose. Its `TextField` and `CheckBox` bundle
 a `label` with a fixed arrangement (label above the field; label beside the box);
@@ -723,7 +629,7 @@ radio — the way Flutter's material/cupertino libraries expose them. Label
 placement, option lists, and selection grouping are composed **in templates**,
 where they belong and where they can differ per design without changing the
 primitive (a labeled field or a choice picker is then itself a catalog
-template). This is the general move (§2's *bias to templatize*): keep each
+template). This is the general move (§4's *bias to templatize*): keep each
 primitive minimal and cross-framework, and templatize the opinionated composition.
 We therefore borrow A2UI's catalog as a **coverage target** — what the catalog
 templates must be able to express — not as the shape of the primitives themselves.
@@ -765,19 +671,19 @@ So extension and replacement are **first-class and must be ergonomic**, not an
 afterthought. Mechanically this is a short step from where we are: the primitives
 are already a `LocalWidgetLibrary` (a name→builder map), so super-setting is adding
 entries and sub-setting is overriding them; what's missing is an ergonomic
-compose/override API and clear registration. This is the **structured form of §3's
+compose/override API and clear registration. This is the **structured form of §2's
 "drop to the raw framework" escape hatch** — applied at the primitive level instead
 of abandoning the engine.
 
 #### Where the contract still bites
 
-The cross-framework behavioral contract (§5) and conformance (Pillar C, below)
+The cross-framework behavioral contract (§7) and conformance (Pillar C, below)
 cover the widgets *we* ship. A developer's additions and replacements are theirs to
 keep consistent: a replacement that preserves the same **name, props, and
 observable behavior** stays template-portable across their frameworks (and they can
 run it through our conformance harness to prove it); one that diverges is, by
 choice, framework-specific. Two complementary axes serve "make it look like my
-app": **theming** (the deferred H2 layer — restyle *our* control via tokens) for
+app": **theming** (§9 — restyle *our* control via tokens) for
 the light-touch case, and **replacement** (swap in a native or bespoke control) for
 the heavy case.
 
@@ -787,13 +693,11 @@ aim for a strong, broadly-useful default — especially the **layout spine** (th
 most reusable, least-restyled part) and the common controls — and let extension
 cover the long tail.
 
-### Why the seed won't scale as-is
+### Why hand-mirrored implementations don't converge
 
-The core primitives began as two hand-written files (`core_components.dart` ×2) whose
-headers said they "deliberately mirror, component-for-component" each other, with
-`runCoreComponentConformance` — coarse "is this text visible?" probes — as the only
-thing holding them together. That is fine for a handful of demo widgets, but it
-does not scale:
+The naive way to build a cross-framework primitive set is to write it twice —
+one Flutter file, one Jaspr file, each promising to "mirror" the other — with
+coarse visibility probes as the safety net. That does not scale:
 
 - **The frameworks have genuinely different layout models.** Flutter is
   constraint-based (constraints down, sizes up; explicit `mainAxisSize`/`Expanded`);
@@ -803,26 +707,18 @@ does not scale:
 - **Coarse probes can't see layout divergence.** "Is this text visible?" passes
   even when a `Row` lays out completely differently on the two sides. The gap
   between "tests green" and "actually identical" widens with every widget.
-- **Hand-mirrored implementations drift in telling ways.** The seed `Card`
-  hard-codes its padding and shadow independently on each side; the now-removed
-  `Video` was a stub box on Flutter but a real `<video>` on Jaspr — drift nothing
-  coarse catches (and a reason a heavy capability like video belongs in
-  `extended_primitives`, not the core, ROADMAP.md).
+- **Hand-mirrored implementations drift in telling ways** — a padding hard-coded
+  independently on each side, a capability stubbed on one framework and real on
+  the other. Nothing coarse catches it. (Heavy capabilities like video belong in
+  an extended primitives package, not the core set — ROADMAP.md.)
 
-So the task is not "write more widgets like these." It is to **establish a
-contract that makes the adapters converge by construction, and sharpen the
+So the task is not "write more widgets by hand, carefully." It is to **establish
+a contract that makes the adapters converge by construction, and sharpen the
 enforcement enough to keep them honest** — which is what the rest of this section
-defines.
-
-> **Progress (this is underway, not hypothetical).** The `Flex`, `Box`, and atoms
-> slices (ROADMAP.md) are now built **against the spec** rather than by mirroring: their
-> value types decode in the **core**, the per-adapter builders implement that
-> contract, and **geometry conformance** runs on both adapters against real layout
-> (`RenderBox` / `getBoundingClientRect`), so divergence is *caught* rather than
-> invisible. The headers that once said "deliberately mirror" now say "implements
-> the spec." The not-yet-converged tail is the remaining seed components — chiefly
-> `Card` — which still need to be brought onto the contract. (`Video`/`AudioPlayer`
-> are deferred to `extended_primitives` rather than the core set, ROADMAP.md.)
+defines. Concretely: each primitive's value types decode in the **core**, the
+per-adapter builders implement that contract, and **geometry conformance** runs
+on both adapters against real layout, so divergence is *caught* rather than
+invisible.
 
 ### The decision: a constrained common model, flexbox-shaped
 
@@ -868,7 +764,7 @@ standards*, the two stay consistent. We **rejected it as a runtime dependency**:
   implementations of this exact model. Yoga's consistency-with-the-web is real but
   **redundant** — it mainly buys tighter *bit-for-bit* parity with CSS, which this
   contract explicitly does not need (behavioral identity within a tolerance band,
-  not pixel parity — §5). We'd pay a large fixed cost to close a gap the contract
+  not pixel parity — §7). We'd pay a large fixed cost to close a gap the contract
   already tolerates.
 - **The cost lands exactly where it hurts.** A C++ library plus per-platform FFI
   bindings (and no FFI-to-native on Flutter web), which **breaks host-only
@@ -896,17 +792,16 @@ for layout-only fixtures (Pillar C) — but not as a shipped dependency.
 There is **one framework-neutral source of truth** per primitive: its prop names,
 their value types and defaults, and its behavioral semantics stated concretely
 enough to test. Both adapters implement *against* that spec; neither adapter's code
-is the contract. `corePrimitives` is the embryo of this — it pins the *set of names* —
-and it grows into the real contract by also pinning props, types, and semantics.
-The header comment "deliberately mirrors the other adapter" is replaced by "implements
-the spec"; the spec, not a sibling file, is what each adapter answers to.
+is the contract. `corePrimitives` pins the *set of names*, and the contract also
+pins props, types, and semantics. Each adapter answers to the spec, not to a
+sibling file.
 
 ### Pillar B — a shared value-type vocabulary (the H2 type model)
 
 The core primitives need a small set of cross-framework value types, each with one
 canonical representation that every adapter maps down. This is the
 framework-neutral replacement for RFW's intensely Flutter-specific
-`argument_decoders` (§9), and the foundation theming later plugs into:
+`argument_decoders`, and the foundation theming plugs into (§9):
 
 | Type | Canonical shape | Notes |
 | --- | --- | --- |
@@ -917,72 +812,314 @@ framework-neutral replacement for RFW's intensely Flutter-specific
 | `Axis` | `horizontal` \| `vertical` | `Row`/`Column` are `Flex` + this |
 | `TextStyle` | size, weight, color, … | |
 
-These extend the **A2UI common-type vocabulary** already settled for ephemeral
-schemas (the `$ref`/`CommonSchemas` mechanism behind `loadCatalog`, ROADMAP.md), so a
+These extend the **A2UI common-type vocabulary** already used for ephemeral
+schemas (the `$ref`/`CommonSchemas` mechanism behind `loadCatalog`), so a
 template author and a catalog schema describe a dimension or a color the same way
-A2UI describes a `DynamicString`. Designing these now — even minimally — is
-deliberate: they are load-bearing for every primitive and brutal to retrofit.
-**Theming itself is deferred** ("one step at a time"), but the types it will hang
-on are not.
+A2UI describes a `DynamicString`. These types are load-bearing for every
+primitive and brutal to retrofit, which is why they are designed alongside the
+first primitives rather than after them.
 
-### Pillar C — conformance graduates from "visible" to geometry-with-tolerance
+### Pillar C — conformance is geometry-with-tolerance, not "is it visible"
 
-The contract is only real if it is enforced. The probes must rise from "is this
-text visible?" to **"this child sits at this offset, at this size — within
-tolerance."** `CraftTester` gains geometry queries (a node's box position and
-size); `runCoreComponentConformance` asserts layout outcomes for `Flex`, sizing,
-alignment, gap, and wrap on both adapters.
+The contract is only real if it is enforced. Probes like "is this text visible?"
+cannot see layout divergence, so conformance asserts **"this child sits at this
+offset, at this size — within tolerance."** `CraftGeometryTester` /
+`runFlexGeometryConformance` (in `a2ui_craft_testing`) assert child offsets and
+sizes for main/cross alignment, gap, and flex distribution against **real layout
+on both adapters**: Flutter `RenderBox` via `WidgetTester.getRect`, and Jaspr via
+a **headless browser** — `getBoundingClientRect` under `dart test -p chrome`,
+wired into `check.sh`. Geometry parity is enforced against a genuine browser,
+not a CSS-structure proxy (host-only Dart tests do no DOM layout). Fixtures use
+fixed-size boxes (no text) so the band is sub-pixel. This is the one place a
+real browser is required in CI — a deliberate, contained cost for the layout
+spine.
 
 Parity is **behavioral with a tolerance band**, never pixel-exact — text shaping
 and line-breaking differ across engines, so exact pixels are impossible and not the
-goal (§5). Choosing the constrained model (above) is precisely what keeps the band
-small. This sharpening is where the real investment goes; without it the contract
-is just a comment.
-
-> **Realized for the `Flex` slice.** `CraftGeometryTester`/`runFlexGeometryConformance`
-> (in `a2ui_craft_testing`) now assert child offsets and sizes for main/cross
-> alignment, gap, and flex distribution against **real layout on both adapters**:
-> Flutter `RenderBox` via `WidgetTester.getRect`, and Jaspr via a **headless
-> browser** — `getBoundingClientRect` under `dart test -p chrome`, wired into
-> `check.sh`. This settles the open worry that Jaspr layout could only be checked
-> host-only (where the DOM does no layout): geometry parity is enforced against a
-> genuine browser, not a CSS-structure proxy. Fixtures use fixed-size boxes (no
-> text) so the band is sub-pixel. Note this is the one place a real browser is
-> required in CI — a deliberate, contained cost for the layout spine.
+goal (§7). Choosing the constrained model (above) is precisely what keeps the band
+small.
 
 ### Pillar D — breadth by category, depth-first on layout
 
-A capable catalog needs coverage across these categories (today's seed is a thin
-slice of each):
+A capable catalog needs coverage across these categories:
 
 - **Layout** — `Flex` (`Row`/`Column`), `Box`/`Container` (size + padding + margin
   + decoration), `Align`/`Center`, `Stack` + `Positioned`, `Spacer`/`Gap`, `Wrap`,
   `ScrollView`, `Grid`.
 - **Atoms** — `Text` (over the `TextStyle` type), `Image`, `Icon`, `Divider`.
 - **Controls** — `Button`, `TextField`, `Checkbox`, `Switch`, `Radio`, `Slider`,
-  `Select`. (Two-way binding is already proven, ROADMAP.md.)
+  `Select`. (Two-way binding flows through `a2ui_core`'s setters, §5.)
 
 The order is **depth-first on layout + the value types**: `Flex`, `Box`, and the
 `Dimension`/`EdgeInsets`/alignment types are where Pillars A–C are proven and where
 cross-framework divergence is hardest. Controls and atoms then compose on that
-proven foundation, so breadth is comparatively cheap. The first concrete step is a
-**vertical slice through `Flex`** — spec + value types + geometry conformance — end
-to end on both adapters, before going wide.
+proven foundation, so breadth is comparatively cheap.
 
-### What this is not (yet)
+### What this is not
 
-- **Not theming.** The value types are theming's foundation; the theming layer on
-  top is deliberately later.
-- **Not pixel parity.** Behavioral identity within a tolerance band (§5).
-- **Not a Flutter or DOM mirror.** The catalog is its own constrained vocabulary;
-  "looks like a Flutter `Row`" / "looks like a `<div style=flex>`" is an adapter
-  implementation detail, not the contract.
+- **Not pixel parity.** Behavioral identity within a tolerance band (§7).
+- **Not a Flutter or DOM mirror.** The primitive set is its own constrained
+  vocabulary; "looks like a Flutter `Row`" / "looks like a `<div style=flex>`" is
+  an adapter implementation detail, not the contract.
+- **Not theming.** The value types are theming's foundation; theming itself is
+  the layer on top (§9).
 
-## 12. Security: upholding A2UI's secure-by-design promise
+## 9. Theming & design systems
+
+The direction below came out of a prior-art survey — W3C DTCG, Material 3, the
+web token systems, the native platforms — written up under `research/theming/`.
+The load-bearing decisions: the trust model (§9.2), adopting the **W3C DTCG
+token format** (§9.3), and the ephemeral transport (§9.5).
+
+### 9.1 The problem
+
+Templates compose the host's **local** primitives, so they inherit the host app's
+look for free — Flutter `Theme.of(context)`, or the CSS cascade in Jaspr. That is
+the right default and covers the common case: a template that should **blend into**
+its host. We keep it as the zero-config baseline.
+
+It fails one case, the one that motivates this section: the template author and the
+host developer are **different parties** who want to brand **separately**. The
+author needs to ship a design system *with* their templates, and — because it is
+not part of the AOT-compiled host — it must load **ephemerally**, over the same
+kind of channel as the template itself.
+
+### 9.2 Whose concern is a design system? (the trust model)
+
+There are three parties, and putting theming on the right one is the crux:
+
+| Party | Artifact | Trust |
+|---|---|---|
+| **Host developer** | the compiled app: primitives + the standard function library (AOT Dart) | fully trusted (it *is* the app) |
+| **Template author** | the catalog templates (`.craft`) + their schema, loaded ephemerally | trusted *author*, untrusted *transport* |
+| **Agent (LLM)** | the A2UI transport messages — which components, the data, the actions | **untrusted** |
+
+A design system is a **template-author** concern — "how *my* templates look" — in
+exactly the way the templates themselves are. So it belongs in the **author's
+ephemeral channel** (bundled with the templates), **not** the agent's message
+channel.
+
+#### Considered and rejected: A2UI's `createSurface` theme channel
+
+A2UI's `createSurface` carries an opaque `theme` map, which looks at first like
+the natural ephemeral channel for a design system. It is the wrong one, for two
+reasons: (a) it is part of the A2UI **Basic Catalog**, which A2UI Craft
+explicitly does not implement; and (b) it is **agent-authored** — the wrong
+trust domain, the same mistake already rejected for computation. The invariant
+there was "the agent supplies *data*; the author supplies *computation*"; its
+theming corollary is "the author supplies the *brand*." A brand chosen by the
+LLM is not the author's brand. **Default: the agent does not control theme.**
+
+Dynamic theming that *is* legitimate — dark/light mode, a user's accent
+preference, a host wanting to inject *its own* brand into an embedded template —
+comes from the **host** (trusted), as render-time configuration, not from agent
+messages. Letting the agent influence theme at all would be a separate, explicitly
+opt-in, security-reviewed capability (mirroring how a function reaching the
+agent-facing catalog is a separate choice) — never the default.
+
+### 9.3 What a design system decomposes into
+
+A design system is not one thing. Split it by what must be compiled vs. what can be
+data, and most of it turns out to be ephemeral-capable already:
+
+1. **Design tokens** — named values: a palette, semantic colour roles, a type
+   scale, a spacing rhythm, radii/shape, elevation. Pure **data**; serializes to
+   JSON; loads ephemerally like anything else. *This is the genuinely missing
+   piece.* **Format: the W3C DTCG Design Tokens format** (`.tokens.json`, core
+   module stable as of 2025.10) — adopted as-is for interop with Figma / Tokens
+   Studio / Style Dictionary rather than inventing our own; its **aliases**
+   (`"{color.base.blue}"`) are exactly the primitive→semantic split below. The
+   entire DTCG ecosystem is *build-time* (compilers baking tokens into apps),
+   and our requirement is *runtime* interpretation of ephemerally-loaded tokens
+   — so we adopt the **format, not the tooling**, and keep a small total
+   runtime parser + resolver in `a2ui_craft`, shared by both adapters
+   (`research/theming/DESIGN_TOKENS.md`). (Design systems layer these:
+   **primitive** tokens — `blue/500` — and **semantic** tokens — `color.action
+   → blue/500`. Re-skinning is remapping the semantic layer over the primitive
+   one, so the indirection is worth keeping. Mature systems add a third,
+   *component* tier — `button.background → color.action`; for us that tier *is*
+   item 2 below: branded catalog templates.)
+2. **Component styling / variants** — "our button is pill-shaped with our accent."
+   **Already the author's job, already ephemeral:** a branded component is a
+   *catalog template* over primitives (`widget Button = Box(color: …, radius: …,
+   child: …)`), and the author *owns the catalog the agent draws from*. Tokens make
+   this clean — the branded templates reference tokens instead of hardcoded values,
+   so a re-skin swaps tokens, not templates.
+3. **New render code / novel interaction behaviors** — a genuinely new painted
+   widget, a custom gesture or animation. These **cannot** be ephemeral (same limit
+   as custom primitives; this is the "Later — ephemeral sandboxed logic" layer in
+   ROADMAP.md's two-layer plan).
+
+So the honest boundary: **ephemeral theming governs *appearance + composition*, not
+new rendering or behavior.** The browser analogy holds exactly — the engine
+(primitives) is compiled and fixed; the stylesheet (tokens) loads ephemerally and
+drives appearance. **A design system here _is_ a token set + the author's catalog.**
+The only genuinely new primitive we owe is **tokens, plus a way to reference them.**
+
+### 9.4 How tokens reach the primitives
+
+Three tiers, increasingly explicit — again the CSS model:
+
+- **Ambient role-defaults (the cascade).** The runtime holds the resolved active
+  theme; each primitive reads its role default when a prop is unset — an unstyled
+  `Text` takes `color.onSurface` and the type scale, a `Checkbox` accent takes
+  `color.primary`. (`Button` deliberately reads *nothing*: the primitive is a
+  look-free accessible pressable, and branded buttons are catalog *templates*
+  referencing roles explicitly.) This is what lets an *unmodified* template pick
+  up the brand with zero per-widget work. When a role is unset in the theme, the
+  primitive falls back to the **host** default (Flutter `Theme.of` / CSS
+  inherit) — so "blend in" is simply the base layer of the cascade, and a
+  partial theme overrides only what it names.
+- **Explicit token references.** A token is referenceable in a template value
+  position, like a data binding — conceptually `Box(color: theme.color.brand)` /
+  CSS `var(--brand)` — for bespoke compositions.
+- **Branded component templates** (§9.3, item 2) compose both.
+
+**Mechanism.** A theme is a **fourth ambient value scope**, parallel to `args` /
+`data` / `state`: a dedicated `theme.<path>` reference (a real parsed scope,
+`ThemeReference`, binary tag 0x14) resolved against the ambient **`CraftTheme`**
+— an immutable resolved-token snapshot the host supplies (`RemoteWidget.theme` /
+`buildNode(theme: …)`). Immutability is the reactivity model: re-theming (a
+dark-mode flip) is providing a *new* snapshot; the scope change re-resolves live
+references and rebuilds role-reading primitives in one motion, without
+remounting (template state survives — conformance-pinned). The function-style
+alternative (`token(name: …)`) was rejected: it strains "functions are pure."
+
+**The semantic contract (`ThemeRoles` in `a2ui_craft`).** DTCG
+standardizes token *structure*, never *meaning* — nothing in the format says a
+caption uses `color.onSurfaceVariant`. The fixed set of token paths each
+primitive reads is therefore the one piece of "standard" we author ourselves: a
+small, versioned contract living in `a2ui_craft` next to the primitive spec
+(§8), documented by the default theme (§9.5). v1 (the full crosswalk is
+`research/theming/SEMANTIC_CONTRACT.md`): a *small neutral* role set with
+surface/foreground pairing, using **Material 3's names** where M3 has one — the
+M3 ∩ shadcn intersection — so existing exports map on without translation:
+`color.surface`/`onSurface`/`onSurfaceVariant`, `color.primary` (the accent),
+`color.outline`, `color.link`, plus a sizes-only type scale
+(`type.body.size`, `type.caption.size`, `type.heading.<n>.size`);
+`onPrimary`/`error`/`onError` are named-now-consumed-later. Radius/spacing
+scales, font families/weights, and `color.background` are deliberately deferred.
+
+**No selectors — a deliberate divergence from CSS.** A CSS stylesheet can
+*target* arbitrary elements from the outside; our theme cannot. Tokens select
+nothing — primitives *pull* their roles from the contract. Anything
+selector-shaped ("all buttons inside cards look different") is a **branded
+catalog template** (§9.3, item 2), not a theme feature. This is the guard rail
+against the "reimplement CSS in JSON" cliff (§9.7).
+
+### 9.5 The ephemeral transport
+
+The theme artifact travels in the **author's** channel: bundled with the
+project (§10) next to `template.craft` / `schema.json`, and in production
+served from the author's origin with the rest of the bundle. Concretely, a
+theme is a **base DTCG `.tokens.json` plus per-mode overlay files** (each
+independently a valid DTCG document), with the mode wiring declared in
+**project config** — *ours*, not the token files — because DTCG's own
+multi-mode answer (the Resolver Module) is an unstable preview draft; we mirror
+its model (sets + modifier contexts + resolution order) behind our own config
+so we can conform when it stabilizes. The **host** supplies render-time
+configuration only — the active mode, and optionally a host-brand base layer to
+seed the cascade. The mode input is **n-ary** (light / dark / their
+high-contrast variants), not a boolean — accessibility modes are first-class
+axes alongside dark (the Apple/M3 lesson). Nothing here rides an agent message.
+
+**Theming is explicit, never implicit.** A project *names* its theme; a project
+with no theme gets the baseline behavior — blend into the host (§9.1). We ship an
+open-source **default theme** (light, dark, and high-contrast modes) that themes
+the standard primitives; it is the starter kit for custom themes, the reference
+documentation of the semantic contract, and the theming-conformance fixture —
+but the runtime never applies it unasked, so embedded surfaces keep blending in.
+
+The cascade (lowest → highest precedence): **host defaults → author design
+system → host render-time config (mode / injected brand) → explicit per-widget
+props.** Each layer is a partial token map merged over the one below.
+
+### 9.6 Cross-adapter fidelity
+
+The token schema is framework-neutral (like the existing value types); each adapter
+maps a token to its native styling — a colour → `Color` / CSS colour; a type token
+→ `TextStyle` / CSS font; spacing/shape → the already-proven `Dimension` path.
+**Token *application* is deterministic** (the same token yields the same declared
+intent on both adapters); **pixel rendering is not**, and is explicitly not the
+goal (§7) — a design system encodes *decisions*, not pixels.
+The theming conformance dimension reuses the geometry-harness pattern: assert a
+token lands on a primitive on both adapters (resolved padding/colour via
+`getRect` / inspection).
+
+**Totality.** A theme is untrusted-shaped ephemeral data, so parsing is total: an
+unknown or malformed token falls back to the layer below (ultimately the host
+default), never throws — the same discipline as the function library.
+
+### 9.7 Hard sub-problems (flagged, not solved)
+
+- **Style isolation — asymmetric across adapters.** Separate branding implies the
+  template's styling must not leak into the host, nor the host's into the template
+  beyond intended inheritance. Flutter is naturally isolated (no cascade; widget
+  styling is explicit). Jaspr/DOM is **not** — CSS cascades globally, so a template
+  rendered into a host page can bleed styles both ways. Truly separate branding on
+  the web likely needs scoping (a shadow root, or a strict scoping / containment
+  strategy). This is the biggest adapter-specific unknown, and it interacts with
+  the embedding story (Flutter-in-Jaspr on the demo site).
+- **Font loading.** A type token names a family, but the family must *exist* on the
+  platform. Ephemeral font *files* are large binary assets and their own hard
+  problem (like ephemeral code). v1: reference fonts by name, host-resolved
+  (bundled or system); ephemeral `@font-face`-style loading is later.
+- **Token vocabulary — answered (§9.4):** a small neutral role set with
+  surface/foreground pairing, M3-name-compatible where obvious; the semantic
+  contract is ours to author and version.
+- **Dark mode — answered (§9.5):** neither a second vocabulary nor a bare
+  flag — the semantic layer selects a different value per **n-ary mode input**
+  (light / dark / high-contrast), the shape CSS `light-dark()`, Panda condition
+  tokens, DTCG resolver modifiers, and M3 `isDark` all converge on
+  (`research/theming/PRIOR_ART.md` §B.3). Role names never change across modes.
+- **How much per-component style surface** to expose before this becomes
+  "reimplement CSS in JSON." The catalog-template escape hatch (§9.3, item 2) is
+  the pressure-release valve — keep the token set small and push bespoke styling
+  into templates.
+
+## 10. The A2UI Craft project (the ephemeral bundle)
+
+The unit that travels the author's channel deserves a name: an **A2UI Craft
+project** is a self-contained, *ephemerally loadable* bundle of everything a
+template author ships — catalog templates (`.craft`), their A2UI bindings
+(component schema), a theme (§9.5), and config (a small manifest: name, catalog
+id, theme reference, mode wiring). Being ephemeral, it contains **data only** —
+no code; ephemeral business logic (ROADMAP.md's sandboxed-logic layer) gets a
+manifest slot *later*, empty for now.
+
+A project is **agent-optional**, which splits its A2UI messages into two roles:
+
+- **`app.json` — the bootstrap.** For a **mini-app** deployment (no agent), the
+  project ships a canned A2UI stream that builds the initial surface; the host
+  loads and replays it. This is real, deployed content. A **pure-A2UI**
+  (agent-driven) deployment omits `app.json` — the transport supplies the stream
+  live, and the runtime just exposes the hooks to connect it.
+- **`tests.json` — named dev scenarios.** An *optional* map of named A2UI streams
+  (e.g. `empty` / `loaded` / `error`), clearly labeled test data, for exercising
+  or demoing a project without an LLM. Not the app's content; a tool concern.
+
+The demo samples prove the mini-app shape: each `samples/<id>/` project
+(`template.craft` + `schema.json` + `app.json` + `manifest.json`) is a mini-app
+whose `app.json` *is* its bootstrap, and the demo site is a project loader. The
+consolidated `manifest.json` (`ProjectManifest`) carries the display name, the
+catalog id, and the theme reference + mode wiring; the samples root is reduced
+to a gallery-order id list.
+
+Because a project is **data, not code**, deployment is just publishing static
+files to a CDN (Firebase Hosting will do): no compile step. The host fetches the
+project from its URL at runtime, so editing and re-publishing the project updates
+the UI with **no host redeploy** — the ephemeral-loadability property made
+concrete. The tooling that demonstrates this: the `craft` CLI
+(`craft create`) scaffolds a deployable project, the runtime `CraftProjectLoader`
+fetches one over HTTP (manifest → template/schema/`app.json`, plus optional
+`tests.json`), and the demo site's URL-bar screen loads a project from any URL and
+renders it on either adapter.
+
+## 11. Security: upholding A2UI's secure-by-design promise
 
 > **Status: noted, not yet designed.** This section records a requirement so it is
 > not forgotten. The actual threat model and mechanisms are future work, orthogonal
-> to the primitives (§11) and not designed in this pass.
+> to the primitives (§8) and not designed in this pass.
 
 A2UI is built for **secure, trusted agentic experiences**. Its security rests on
 the ephemerally-loaded payload being **declarative data, not code**: A2UI Transport
@@ -997,7 +1134,7 @@ A2UI Craft preserves the no-arbitrary-code property: RFW templates are
 **declarative** (data binding, `...for` loops, `switch`, `state`, `event`/args)
 with **no host-code eval**. The only things a template can *do* are compose the
 **catalog** and dispatch scoped **events/actions** — so **the catalog is the
-capability ceiling.** (This is also why sub-/super-setting, §11, is the right place
+capability ceiling.** (This is also why sub-/super-setting, §8, is the right place
 to reason about what a deployment grants: capability is conferred by what goes into
 the catalog.) Keeping that boundary intact as the language and engine grow is the
 core security invariant.
@@ -1006,14 +1143,13 @@ core security invariant.
 
 The threat scales with **who supplies a template, and when**:
 
-- **Build-time, vetted, shipped with the client** (today's stance, §2) — templates
+- **Build-time, vetted, shipped with the client** (§4) — templates
   are *app code*: trusted, reviewed, not an external attack vector. A runaway
   template only harms its own author.
-- **Ephemerally delivered at runtime** (the trajectory: `loadCatalog` already makes
-  component *schemas* data; templates are the natural next thing to deliver on
-  demand) from a server, a third-party catalog, or anything the agent can
-  influence — now a template is **untrusted input** and must be treated with the
-  same suspicion as the rest of the ephemeral payload.
+- **Ephemerally delivered at runtime** (the project, §10; `loadCatalog` already
+  makes component *schemas* data) from a server, a third-party catalog, or
+  anything the agent can influence — now a template is **untrusted input** and
+  must be treated with the same suspicion as the rest of the ephemeral payload.
 
 The work below matters precisely when templates cross into the second category.
 
@@ -1068,281 +1204,65 @@ upstream-RFW contribution — any host running untrusted RFW wants resource limi
 Revisit this when ephemeral template delivery (or a security review of the
 ephemeral surface) is on the table.
 
-## 13. Theming & design systems
+## 12. Repository layout
 
-> **Status: design settled; implementation starting.** The direction below came
-> out of a prior-art survey — W3C DTCG, Material 3, the web token systems, the
-> native platforms — written up under `research/theming/`. This supersedes an
-> earlier drive-by roadmap note (which pointed at the wrong channel — see
-> §13.2). The load-bearing decisions: the trust model (§13.2), adopting the
-> **W3C DTCG token format** (§13.3), and the ephemeral transport (§13.5). The
-> slice-by-slice implementation plan is embedded in ROADMAP.md.
+```
+a2ui-craft/
+├── DESIGN.md                     # this document (source of truth)
+├── ROADMAP.md                    # status & slice-by-slice implementation plans
+├── README.md
+├── AGENTS.md                     # agent-agnostic guidance (build/test, pointers)
+├── LICENSE                       # BSD-3-Clause (forked from RFW)
+├── VENDORED.md                   # provenance of vendored RFW code + our extensions
+├── pubspec.yaml                  # Dart pub workspace root
+├── tool/check.sh                 # one entrypoint: resolve + format + analyze + test
+├── tool/testing/                 # repo-wide checks (e.g. license headers); not published
+├── .github/workflows/ci.yml      # CI: runs tool/check.sh
+├── skills/                       # project skills (adapter-authoring guidance)
+├── research/                     # design research notes (e.g. theming prior art)
+├── site/                         # demo site: Jaspr host + embedded Flutter; gallery + project loader
+└── packages/
+    ├── a2ui_craft/               # core: vendored RFW formats, tokens/theme, functions
+    ├── a2ui_craft_bridge/        # A2UI → engine, on a2ui_core (framework-neutral)
+    ├── a2ui_craft_testing/       # shared conformance + geometry suites (not published)
+    ├── a2ui_craft_examples/      # sample projects, SampleSpec, CraftProjectLoader
+    ├── a2ui_craft_flutter/       # Flutter adapter (runtime + core primitives + example)
+    ├── a2ui_craft_jaspr/         # Jaspr adapter (runtime + core primitives + example)
+    └── craft/                    # the `craft` CLI (`craft create`)
+```
 
-### 13.1 The problem
+Run `tool/check.sh` to verify the whole workspace (format, analyze, and tests for
+every package) — it is exactly what CI runs.
 
-Templates compose the host's **local** primitives, so they inherit the host app's
-look for free — Flutter `Theme.of(context)`, or the CSS cascade in Jaspr. That is
-the right default and covers the common case: a template that should **blend into**
-its host. We keep it as the zero-config baseline.
+Because one member (`a2ui_craft_flutter`) depends on the Flutter SDK, the whole
+workspace is resolved with **`flutter pub get`** (Flutter's bundled Dart also runs
+the pure-Dart and Jaspr packages fine). The *core* package itself remains
+Flutter-free; only the workspace resolution involves the Flutter SDK.
 
-It fails one case, the one that motivates this section: the template author and the
-host developer are **different parties** who want to brand **separately**. The
-author needs to ship a design system *with* their templates, and — because it is
-not part of the AOT-compiled host — it must load **ephemerally**, over the same
-kind of channel as the template itself.
+## 13. Open questions
 
-### 13.2 Whose concern is a design system? (the trust model)
-
-There are three parties, and putting theming on the right one is the crux:
-
-| Party | Artifact | Trust |
-|---|---|---|
-| **Host developer** | the compiled app: primitives + the standard function library (AOT Dart) | fully trusted (it *is* the app) |
-| **Template author** | the catalog templates (`.craft`) + their schema, loaded ephemerally | trusted *author*, untrusted *transport* |
-| **Agent (LLM)** | the A2UI transport messages — which components, the data, the actions | **untrusted** |
-
-A design system is a **template-author** concern — "how *my* templates look" — in
-exactly the way the templates themselves are. So it belongs in the **author's
-ephemeral channel** (bundled with the templates), **not** the agent's message
-channel.
-
-**Correcting an earlier note.** A2UI's `createSurface` carries an opaque `theme`
-map, and we once flagged it as "the natural ephemeral channel." It is the wrong
-one, for two reasons: (a) it is part of the A2UI **Basic Catalog**, which A2UI
-Craft explicitly does not implement; and (b) it is **agent-authored** — the same
-wrong-trust-domain mistake we already rejected for computation. The invariant there
-was "the agent supplies *data*; the author supplies *computation*"; its theming
-corollary is "the author supplies the *brand*." A brand chosen by the LLM is not
-the author's brand. **Default: the agent does not control theme.**
-
-Dynamic theming that *is* legitimate — dark/light mode, a user's accent
-preference, a host wanting to inject *its own* brand into an embedded template —
-comes from the **host** (trusted), as render-time configuration, not from agent
-messages. Letting the agent influence theme at all would be a separate, explicitly
-opt-in, security-reviewed capability (mirroring how a function reaching the
-agent-facing catalog is a separate choice) — never the default.
-
-### 13.3 What a design system decomposes into
-
-A design system is not one thing. Split it by what must be compiled vs. what can be
-data, and most of it turns out to be ephemeral-capable already:
-
-1. **Design tokens** — named values: a palette, semantic colour roles, a type
-   scale, a spacing rhythm, radii/shape, elevation. Pure **data**; serializes to
-   JSON; loads ephemerally like anything else. *This is the genuinely missing
-   piece.* **Format: the W3C DTCG Design Tokens format** (`.tokens.json`, core
-   module stable as of 2025.10) — adopted as-is for interop with Figma / Tokens
-   Studio / Style Dictionary rather than inventing our own; its **aliases**
-   (`"{color.base.blue}"`) are exactly the primitive→semantic split below. The
-   entire DTCG ecosystem is *build-time* (compilers baking tokens into apps),
-   and our requirement is *runtime* interpretation of ephemerally-loaded tokens
-   — so we adopt the **format, not the tooling**, and write a small total
-   runtime parser + resolver in `a2ui_craft`, shared by both adapters
-   (`research/theming/DESIGN_TOKENS.md`). (Design systems layer these:
-   **primitive** tokens — `blue/500` — and **semantic** tokens — `color.action
-   → blue/500`. Re-skinning is remapping the semantic layer over the primitive
-   one, so the indirection is worth keeping. Mature systems add a third,
-   *component* tier — `button.background → color.action`; for us that tier *is*
-   item 2 below: branded catalog templates.)
-2. **Component styling / variants** — "our button is pill-shaped with our accent."
-   **Already the author's job, already ephemeral:** a branded component is a
-   *catalog template* over primitives (`widget Button = Box(color: …, radius: …,
-   child: …)`), and the author *owns the catalog the agent draws from*. Tokens make
-   this clean — the branded templates reference tokens instead of hardcoded values,
-   so a re-skin swaps tokens, not templates.
-3. **New render code / novel interaction behaviors** — a genuinely new painted
-   widget, a custom gesture or animation. These **cannot** be ephemeral (same limit
-   as custom primitives; this is the "Later — ephemeral sandboxed logic" layer in
-   ROADMAP.md's two-layer plan).
-
-So the honest boundary: **ephemeral theming governs *appearance + composition*, not
-new rendering or behavior.** The browser analogy holds exactly — the engine
-(primitives) is compiled and fixed; the stylesheet (tokens) loads ephemerally and
-drives appearance. **A design system here _is_ a token set + the author's catalog.**
-The only genuinely new primitive we owe is **tokens, plus a way to reference them.**
-
-### 13.4 How tokens reach the primitives
-
-Three tiers, increasingly explicit — again the CSS model:
-
-- **Ambient role-defaults (the cascade).** The runtime holds the resolved active
-  theme; each primitive reads its role default when a prop is unset — an unstyled
-  `Text` takes `color.onSurface` and the type scale, a `Checkbox` accent takes
-  `color.primary`. (`Button` deliberately reads *nothing*: the primitive is a
-  look-free accessible pressable, and branded buttons are catalog *templates*
-  referencing roles explicitly.) This is what lets an *unmodified* template pick
-  up the brand with zero per-widget work. When a role is unset in the theme, the
-  primitive falls back to the **host** default (Flutter `Theme.of` / CSS
-  inherit) — so "blend in" is simply the base layer of the cascade, and a
-  partial theme overrides only what it names.
-- **Explicit token references.** A token is referenceable in a template value
-  position, like a data binding — conceptually `Box(color: theme.color.brand)` /
-  CSS `var(--brand)` — for bespoke compositions.
-- **Branded component templates** (§13.3, item 2) compose both.
-
-**Mechanism (decided; slices 2–3).** A theme is a **fourth ambient value
-scope**, parallel to `args` / `data` / `state`: a dedicated `theme.<path>`
-reference (a real parsed scope, `ThemeReference`, binary tag 0x14) resolved
-against the ambient **`CraftTheme`** — an immutable resolved-token snapshot the
-host supplies (`RemoteWidget.theme`). Immutability is the reactivity model:
-re-theming (a dark-mode flip) is providing a *new* snapshot; the scope change
-re-resolves live references and rebuilds role-reading primitives in one motion,
-without remounting (template state survives — conformance-pinned). The
-function-style alternative (`token(name: …)`) was rejected: it strains
-"functions are pure."
-
-**The semantic contract (decided; `ThemeRoles` in `a2ui_craft`).** DTCG
-standardizes token *structure*, never *meaning* — nothing in the format says a
-caption uses `color.onSurfaceVariant`. The fixed set of token paths each
-primitive reads is therefore the one piece of "standard" we author ourselves: a
-small, versioned contract living in `a2ui_craft` next to the primitive spec
-(§11), documented by the default theme (§13.5). v1 (the full crosswalk is
-`research/theming/SEMANTIC_CONTRACT.md`): a *small neutral* role set with
-surface/foreground pairing, using **Material 3's names** where M3 has one — the
-M3 ∩ shadcn intersection — so existing exports map on without translation:
-`color.surface`/`onSurface`/`onSurfaceVariant`, `color.primary` (the accent),
-`color.outline`, `color.link`, plus a sizes-only type scale
-(`type.body.size`, `type.caption.size`, `type.heading.<n>.size`);
-`onPrimary`/`error`/`onError` are named-now-consumed-later. Radius/spacing
-scales, font families/weights, and `color.background` are deliberately deferred.
-
-**No selectors — a deliberate divergence from CSS.** A CSS stylesheet can
-*target* arbitrary elements from the outside; our theme cannot. Tokens select
-nothing — primitives *pull* their roles from the contract. Anything
-selector-shaped ("all buttons inside cards look different") is a **branded
-catalog template** (§13.3, item 2), not a theme feature. This is the guard rail
-against the "reimplement CSS in JSON" cliff (§13.7).
-
-### 13.5 The ephemeral transport
-
-The theme artifact travels in the **author's** channel: bundled with the template
-package (for the demo, a 4th trio file next to `template.craft` / `schema.json`;
-in production, served from the author's origin with the rest of the bundle — the
-project, §13.9). Concretely, a theme is a **base DTCG `.tokens.json` plus
-per-mode overlay files** (each independently a valid DTCG document), with the
-mode wiring declared in **project config** — *ours*, not the token files —
-because DTCG's own multi-mode answer (the Resolver Module) is an unstable
-preview draft; we mirror its model (sets + modifier contexts + resolution order)
-behind our own config so we can conform when it stabilizes. The **host**
-supplies render-time configuration only — the active mode, and optionally a
-host-brand base layer to seed the cascade. The mode input is **n-ary** (light /
-dark / their high-contrast variants), not a boolean — accessibility modes are
-first-class axes alongside dark (the Apple/M3 lesson) — though v1 ships
-light/dark first. Nothing here rides an agent message.
-
-**Theming is explicit, never implicit.** A project *names* its theme; a project
-with no theme gets today's behavior — blend into the host (§13.1). We ship an
-open-source **default theme** (light, dark, and high-contrast modes) that themes
-the standard primitives; it is the starter kit for custom themes, the reference
-documentation of the semantic contract, and the theming-conformance fixture —
-but the runtime never applies it unasked, so embedded surfaces keep blending in.
-
-Proposed cascade (lowest → highest precedence): **host defaults → author design
-system → host render-time config (mode / injected brand) → explicit per-widget
-props.** Each layer is a partial token map merged over the one below.
-
-### 13.6 Cross-adapter fidelity
-
-The token schema is framework-neutral (like the existing value types); each adapter
-maps a token to its native styling — a colour → `Color` / CSS colour; a type token
-→ `TextStyle` / CSS font; spacing/shape → the already-proven `Dimension` path.
-**Token *application* is deterministic** (the same token yields the same declared
-intent on both adapters); **pixel rendering is not**, and is explicitly not the
-goal (§5, the Ahem/golden note) — a design system encodes *decisions*, not pixels.
-A "theming conformance" dimension reuses the geometry-harness pattern: assert a
-token lands on a primitive on both adapters (resolved padding/colour via
-`getRect` / inspection).
-
-**Totality.** A theme is untrusted-shaped ephemeral data, so parsing is total: an
-unknown or malformed token falls back to the layer below (ultimately the host
-default), never throws — the same discipline as the function library.
-
-### 13.7 Hard sub-problems (flagged, not solved)
-
-- **Style isolation — asymmetric across adapters.** Separate branding implies the
-  template's styling must not leak into the host, nor the host's into the template
-  beyond intended inheritance. Flutter is naturally isolated (no cascade; widget
-  styling is explicit). Jaspr/DOM is **not** — CSS cascades globally, so a template
-  rendered into a host page can bleed styles both ways. Truly separate branding on
-  the web likely needs scoping (a shadow root, or a strict scoping / containment
-  strategy). This is the biggest adapter-specific unknown, and it interacts with
-  the embedding story (Flutter-in-Jaspr on the demo site).
-- **Font loading.** A type token names a family, but the family must *exist* on the
-  platform. Ephemeral font *files* are large binary assets and their own hard
-  problem (like ephemeral code). v1: reference fonts by name, host-resolved
-  (bundled or system); ephemeral `@font-face`-style loading is later.
-- **Token vocabulary — answered (§13.4):** a small neutral role set with
-  surface/foreground pairing, M3-name-compatible where obvious; the semantic
-  contract is ours to author and version.
-- **Dark mode — answered (§13.5):** neither a second vocabulary nor a bare
-  flag — the semantic layer selects a different value per **n-ary mode input**
-  (light / dark / high-contrast), the shape CSS `light-dark()`, Panda condition
-  tokens, DTCG resolver modifiers, and M3 `isDark` all converge on
-  (`research/theming/PRIOR_ART.md` §B.3). Role names never change across modes.
-- **How much per-component style surface** to expose before this becomes
-  "reimplement CSS in JSON." The catalog-template escape hatch (§13.3, item 2) is
-  the pressure-release valve — keep the token set small and push bespoke styling
-  into templates.
-
-### 13.8 Phased plan (launch-and-iterate)
-
-The executable slice-by-slice plan (with per-slice acceptance) is embedded in
-ROADMAP.md. In outline:
-
-0. **(today)** Host inheritance — kept as the zero-config default / base layer.
-1. **Runtime DTCG parser + resolver** in `a2ui_craft` (shared, total).
-2. **Explicit token references** in templates (the `theme.` scope) — the thin
-   end-to-end slice, conformance-pinned on both adapters.
-3. **Ambient role-defaults** — the semantic contract v1; primitives read their
-   roles with host fallback; theming-conformance dimension started.
-4. **The default theme** (light / dark / high-contrast) + the host mode input;
-   reactive re-theme of a live surface.
-5. **The project bundle** (§13.9) — theme as the 4th trio file, then the
-   manifest. Branded component templates referencing tokens ride along once
-   slice 2 lands (they're just templates).
-- **Later:** the hard sub-problems (Jaspr style isolation, injected host brand,
-  font handling); anything needing new render code or behavior → the
-  sandboxed-code layer, not theming.
-
-### 13.9 The A2UI Craft project (the ephemeral bundle)
-
-The unit that travels the author's channel deserves a name: an **A2UI Craft
-project** is a self-contained, *ephemerally loadable* bundle of everything a
-template author ships — catalog templates (`.craft`), their A2UI bindings
-(component schema), a theme (§13.5), and config (a small manifest: name, catalog
-id, theme reference, mode wiring). Being ephemeral, it contains **data only** —
-no code; ephemeral business logic (ROADMAP.md's sandboxed-logic layer) gets a manifest
-slot *later*, empty for now.
-
-A project is **agent-optional**, which splits its A2UI messages into two roles:
-
-- **`app.json` — the bootstrap.** For a **mini-app** deployment (no agent), the
-  project ships a canned A2UI stream that builds the initial surface; the host
-  loads and replays it. This is real, deployed content. A **pure-A2UI**
-  (agent-driven) deployment omits `app.json` — the transport supplies the stream
-  live, and the runtime just exposes the hooks to connect it.
-- **`tests.json` — named dev scenarios.** An *optional* map of named A2UI streams
-  (e.g. `empty` / `loaded` / `error`), clearly labeled test data, for exercising
-  or demoing a project without an LLM. Not the app's content; a tool concern.
-
-The demo samples prove the mini-app shape already: each `samples/<id>/` project
-(`template.craft` + `schema.json` + `app.json` + `manifest.json`) is a mini-app
-whose `app.json` *is* its bootstrap, and the demo site is a project loader. The
-manifest arrived incrementally: the theme first landed as a standalone file, then
-was promoted into a consolidated `samples/<id>/manifest.json` (`ProjectManifest`:
-name, catalog id, theme reference + mode wiring), with the samples root reduced
-to a gallery-order id list. Ephemeral business logic gets a manifest slot later
-(ROADMAP.md), empty for now.
-
-Because a project is **data, not code**, deployment is just publishing static
-files to a CDN (Firebase Hosting will do): no compile step. The host fetches the
-project from its URL at runtime, so editing and re-publishing the project updates
-the UI with **no host redeploy** — the ephemeral-loadability property made
-concrete. The tooling that demonstrates this is in place: a `craft` CLI
-(`craft create`) scaffolds a deployable project, the runtime `CraftProjectLoader`
-fetches one over HTTP (manifest → template/schema/`app.json`, plus optional
-`tests.json`), and the demo site's URL-bar screen loads a project from any URL and
-renders it on either adapter.
-
-Sequencing note: the manifest was deliberately designed *last* — container after
-contents, so the theme file's real shape informed the config that wires it.
+- **Core primitive vocabulary (H2):** the constrained common model (§8) settles
+  the *shape*; still open is the exact per-category widget set and how far the
+  layout algebra reaches (e.g. `Grid`, scrolling/overflow, `Stack` z-order)
+  before the "drop to raw framework" escape hatch (§2) takes over.
+- **Type model:** the precise canonical shapes of the §8 value types, and how
+  `Dimension`'s `flex`/`fill`/`hug` interact with nested scroll/intrinsic-sizing
+  edge cases.
+- **Catalog packaging & versioning:** the project (§10) answers how templates
+  are authored and bundled; still open is how catalogs and their templates are
+  **versioned** as they evolve — what a host pins, and how a project declares
+  compatibility.
+- **List-item identity — filed as [a2ui#1745](https://github.com/a2ui-project/a2ui/issues/1745).**
+  A2UI gives every *component* a stable id but attaches **no identifier to the
+  elements of a data array** unrolled by a `ChildList`, forcing positional
+  reconciliation for list items (§6). The fix is requested at the spec +
+  `a2ui_core` level. Our side is **keyed-when-present, positional-fallback
+  (permanent)** — see §6; the fallback stays even after keys land, since per-item
+  keys are opt-in. To adopt keys when available: surface the item key from
+  `a2ui_core`'s `ChildNode` and set it as the child adapter's key (salted by the
+  parent list id). Track the issue for the final key shape.
+- **Reactivity granularity (§5):** with `a2ui_core` resolving props to concrete
+  values fed as template `args`, reactivity is component-granular
+  (whole-component rebuild) rather than per-binding. Open: is that granularity
+  acceptable as catalogs grow (likely yes — small vetted widgets), or does some
+  hot path eventually want per-binding updates back?

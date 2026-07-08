@@ -4,7 +4,7 @@
 > DTCG format at other prior art we could **adopt as-is** or **draw inspiration
 > from** (especially things people are *in love with*), and not to rush toward
 > adopting anything. This is the index + synthesis; the deep-dives are separate
-> files. Nothing here is committed, and it doesn't touch the §13 DESIGN.md draft.
+> files. Nothing here is committed, and it doesn't touch the §9 DESIGN.md draft.
 
 ## The deep-dives
 
@@ -20,7 +20,7 @@
 ## The two lenses
 
 For each system I asked: **(1) adopt as-is, or draw inspiration?** and **(2) which
-§13 open question does it inform?** The relevant §13.7 open questions are: *token
+§9 open question does it inform?** The relevant §9.7 open questions are: *token
 vocabulary* (M3 roles vs minimal neutral), *dark mode* (second map vs mode flag),
 *how tokens reach primitives* (the cascade mechanism), *how much per-component
 surface*, plus *style isolation* and *fonts*.
@@ -29,7 +29,7 @@ surface*, plus *style isolation* and *fonts*.
 
 ## A. The landscape at a glance
 
-| System | Loved for | Adopt / inspire | Best idea to take | Informs §13 |
+| System | Loved for | Adopt / inspire | Best idea to take | Informs §9 |
 |---|---|---|---|---|
 | **W3C DTCG** | interop standard | **Adopt (format)** | on-the-wire token format + aliases + resolver modes | 13.3, 13.5, 13.7 |
 | **Material 3** | theme-from-a-seed, "Material You" | **Adopt (algorithm, optional)** | seed → accessible light+dark roles, pure-Dart | 13.7 vocab + dark + a11y, 13.6 |
@@ -60,7 +60,7 @@ choices that *independent* ecosystems all made. These are the safe bets.
 
 ### B.1 Three tiers, not two: global → semantic/alias → component
 
-§13.3 frames tokens as a *two-layer* split (primitive → semantic). Every mature
+§9.3 frames tokens as a *two-layer* split (primitive → semantic). Every mature
 enterprise system (Carbon, Adobe Spectrum, Primer, M3, Salesforce) actually uses
 **three** tiers:
 
@@ -69,9 +69,9 @@ enterprise system (Carbon, Adobe Spectrum, Primer, M3, Salesforce) actually uses
    blue.500`). *This is the re-skin layer: remap here, names stay, output changes.*
 3. **Component** — component-scoped tokens (`button.background → color.action`).
 
-For us, **tier 3 is our catalog templates** (§13.3 item 2): a branded `Button`
+For us, **tier 3 is our catalog templates** (§9.3 item 2): a branded `Button`
 template references the semantic role, exactly as a component token does. So the
-correction to §13.3 is small but real — we already *have* all three tiers; naming
+correction to §9.3 is small but real — we already *have* all three tiers; naming
 them as such clarifies that "component tokens" = "branded catalog templates," and
 that the semantic (alias) tier is the load-bearing one to get right.
 
@@ -80,7 +80,7 @@ that the semantic (alias) tier is the load-bearing one to get right.
 DTCG aliases, Radix's fixed step-roles, shadcn's `--primary`, M3's `onSurface`,
 Apple's `label`, Panda's `semanticTokens` — all the same move: **primitives carry
 values, a thin semantic layer carries *meaning*, and re-skinning/dark-mode/branding
-all happen by remapping the semantic layer.** §13.3's instinct to "keep the
+all happen by remapping the semantic layer.** §9.3's instinct to "keep the
 indirection" is unanimously validated. Get the *semantic vocabulary* right and
 everything else is plumbing.
 
@@ -93,26 +93,26 @@ Four independent mechanisms say the identical thing:
 - **DTCG** Resolver Module — modifier *contexts* selected by `inputs: {theme:'dark'}`.
 - **M3** — `isDark` flips *tone selection* on one tonal palette.
 
-None of them is "author a second, parallel token vocabulary." So §13.7's dark-mode
+None of them is "author a second, parallel token vocabulary." So §9.7's dark-mode
 question has a clear answer: **the semantic layer selects a different value per mode
 input; role names never change.** And Apple + M3 add: make the mode input *n-ary*
 (light/dark/high-contrast/…), not a boolean, even if v1 only ships light/dark.
 
 ### B.4 Runtime resolution = a cascade of variable scopes with fallback
 
-Our "theme as a 4th ambient reactive scope" (§13.4) is the same idea as CSS custom
+Our "theme as a 4th ambient reactive scope" (§9.4) is the same idea as CSS custom
 properties and Flutter's `InheritedWidget` — nearest scope wins, inherits down,
 `var(--x, fallback)` degrades to the host default. Both adapters *already have this
 substrate natively* ([PRIOR_ART_RUNTIME_RESOLUTION.md](PRIOR_ART_RUNTIME_RESOLUTION.md),
-[PRIOR_ART_NATIVE_PLATFORMS.md](PRIOR_ART_NATIVE_PLATFORMS.md)), so §13.5's cascade
+[PRIOR_ART_NATIVE_PLATFORMS.md](PRIOR_ART_NATIVE_PLATFORMS.md)), so §9.5's cascade
 isn't something we build from scratch — it's something we *map onto* two existing
-cascades. Totality (§13.6) is `var()`'s fallback, for free.
+cascades. Totality (§9.6) is `var()`'s fallback, for free.
 
 ### B.5 Keep the vocabulary small; push bespoke into the component layer
 
 Every *loved* system is deliberately small (shadcn ~20 roles; Radix 12 steps;
 Apple a compact hierarchy) and shoves one-off styling into components. This
-directly validates §13.7's "don't reimplement CSS in JSON" worry and §13.3's
+directly validates §9.7's "don't reimplement CSS in JSON" worry and §9.3's
 catalog-template escape hatch as the pressure valve. **The token set should be
 small and semantic; bespoke goes in templates.**
 
@@ -154,20 +154,20 @@ systems can't offer at runtime.
   (`--color-*`, `--space-*`, `--radius-*`) that map 1:1 onto DTCG dot-paths.
 - **System UI theme spec** → **ordinal scales** for spacing rhythm + type scale.
 - **Open Props** → a ready-made **neutral default token set** to seed the base
-  layer of the §13.5 cascade.
+  layer of the §9.5 cascade.
 
 ---
 
-## E. How the prior art answers §13's open questions
+## E. How the prior art answers §9's open questions
 
-| §13.7 open question | What the prior art says |
+| §9.7 open question | What the prior art says |
 |---|---|
 | **Token vocabulary** — M3 roles or minimal neutral? | Offer **both**: a *small neutral* semantic set (shadcn-shaped, surface/foreground pairing) that is **M3-name-compatible where obvious**, so a hand-authored neutral theme *and* an M3/DTCG export both map on. Small + semantic beats large + appearance-named (unanimous). |
 | **Dark mode** — second map or mode flag? | **Neither a second vocabulary nor a bare flag:** the semantic layer **selects a different value per mode input** (CSS `light-dark()` / Panda conditions / DTCG modifiers / M3 `isDark`). Make the mode input **n-ary** (light/dark/contrast). |
-| **How tokens reach primitives** | A **cascade of ambient variable scopes with fallback** — map onto CSS custom properties (Jaspr) and `InheritedWidget`/`ThemeExtension` (Flutter). The §13.4 "4th reactive scope" is exactly this. |
-| **How much per-component surface** | **Keep it small**; push bespoke into the component tier = branded catalog templates (§13.3 item 2). Every loved system does this. |
-| **Style isolation (web)** | Prior art here is CSS scoping/shadow DOM (still the §13.7 hard problem — none of these token systems solves cross-tree leakage; that's a delivery concern, tracked separately). |
-| **Fonts** | Named family roles + Apple's *named type scale* (Dynamic Type) support §13.7's "reference by name, host-resolved" v1; ephemeral font files remain future work. |
+| **How tokens reach primitives** | A **cascade of ambient variable scopes with fallback** — map onto CSS custom properties (Jaspr) and `InheritedWidget`/`ThemeExtension` (Flutter). The §9.4 "4th reactive scope" is exactly this. |
+| **How much per-component surface** | **Keep it small**; push bespoke into the component tier = branded catalog templates (§9.3 item 2). Every loved system does this. |
+| **Style isolation (web)** | Prior art here is CSS scoping/shadow DOM (still the §9.7 hard problem — none of these token systems solves cross-tree leakage; that's a delivery concern, tracked separately). |
+| **Fonts** | Named family roles + Apple's *named type scale* (Dynamic Type) support §9.7's "reference by name, host-resolved" v1; ephemeral font files remain future work. |
 
 ---
 
@@ -182,7 +182,7 @@ Pulling the convergent bets together, a defensible v1 would be:
    (body/title/…), a spacing **scale**, a radius scale — M3-name-compatible where
    it costs nothing. This is the one thing we author; keep it tiny.
 3. **Dark mode:** **condition-selected semantic values** (one mode input, n-ary),
-   resolved at load; hosts supply the active mode (§13.2 trust model — never the
+   resolved at load; hosts supply the active mode (§9.2 trust model — never the
    agent).
 4. **Optional generator:** authors may ship a **seed color + style** instead of a
    full token map; `material_color_utilities` expands it to the role set (same
@@ -195,7 +195,7 @@ Pulling the convergent bets together, a defensible v1 would be:
    generation) to the same landed value on both adapters — same discipline as the
    function library.
 
-This keeps §13's architecture intact and slots each piece of prior art where it's
+This keeps §9's architecture intact and slots each piece of prior art where it's
 strongest: **DTCG for the format, M3 for optional generation, shadcn/Radix/Apple
 for the vocabulary, CSS/Flutter for the runtime cascade, Panda/CSS for dark mode,
 vanilla-extract for the contract discipline.** Nothing here needs to be adopted

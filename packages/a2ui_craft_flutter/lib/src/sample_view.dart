@@ -47,7 +47,7 @@ class SampleView extends StatefulWidget {
   /// Called when the rendered surface dispatches an A2UI action.
   final void Function(A2uiClientAction action)? onAction;
 
-  /// The theme to render the surface under (§13), or null to blend into the
+  /// The theme to render the surface under (§9), or null to blend into the
   /// host — a project supplies this from its `theme.json` via `ProjectTheme`.
   final CraftTheme? theme;
 

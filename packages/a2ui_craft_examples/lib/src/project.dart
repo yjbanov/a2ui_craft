@@ -6,14 +6,14 @@ import 'dart:convert';
 
 import 'package:a2ui_craft/a2ui_craft.dart';
 
-/// A project's consolidated manifest — its `manifest.json` (DESIGN.md §13.9):
+/// A project's consolidated manifest — its `manifest.json` (DESIGN.md §10):
 /// the container config for the ephemeral bundle, holding everything *about*
 /// the project that isn't one of its trio files.
 ///
 /// v1 fields: [name] (display name), [catalogId] (which component catalog the
 /// project targets — null means the host/default catalog), and [theme] (the
 /// theme reference + mode wiring, a [ProjectTheme]). Ephemeral business logic
-/// gets a slot here later (§8), empty for now. Parsing is total: a malformed or
+/// gets a slot here later (ROADMAP.md), empty for now. Parsing is total: a malformed or
 /// partial manifest yields empty/absent fields rather than throwing.
 class ProjectManifest {
   const ProjectManifest({
@@ -56,7 +56,7 @@ class ProjectManifest {
 }
 
 /// The theme wiring of a project — the **4th trio file**, `theme.json`
-/// (DESIGN.md §13.5 / §13.9). A project *names* its theme (theming is explicit);
+/// (DESIGN.md §9.5 / §10). A project *names* its theme (theming is explicit);
 /// a project with no `theme.json` has no [ProjectTheme] and blends into the host.
 ///
 /// Two shapes are recognized (everything else — including malformed JSON —

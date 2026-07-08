@@ -2,7 +2,7 @@
 
 > The living status checklist and the slice-by-slice implementation plans. This
 > file tracks **status** and churns as work lands; the stable design rationale
-> lives in [DESIGN.md](DESIGN.md), and section references like `§13` point into
+> lives in [DESIGN.md](DESIGN.md), and section references like `§9` point into
 > it.
 
 - [x] Pivot to client-side templating engine; drop the AOT-to-Transport idea.
@@ -25,7 +25,7 @@
       (§6). **Done:** `a2ui_craft_bridge` renders the seed catalog
       (Text/Row/Column/Button) incl. data bindings, `ChildList` templates, and
       events — verified on both adapters via `runA2uiConformance` and the Jaspr
-      example. The "synthesize a library" shortcut (§2) is retired; rendering now
+      example. The early "synthesize a library" shortcut is retired; rendering now
       follows the §6 architecture (per-id host adapters + `Runtime.buildNode`),
       built bottom-up:
   - [x] **M1** — keyed `_Widget` (literal `key` lifted onto the wrapper) on both
@@ -56,7 +56,7 @@
         `template_layer_spike_test` (runtime mechanics: named-template
         composition, host-widget injection through `args.children`,
         `EventHandler`-as-arg) and `runA2uiConformance` (end-to-end, both adapters).
-  - [x] **M6 — layer `a2ui_core` underneath the protocol/data half (§10).**
+  - [x] **M6 — layer `a2ui_core` underneath the protocol/data half (§5).**
         `a2ui_core` (a git dependency on `flutter/genui`) now owns A2UI ingest, the
         data model, and binding/function/`checks` resolution; RFW + the bridge keep
         materializing templates. The bridge shrank to `A2uiComponentBinding`
@@ -130,11 +130,11 @@
         contract is proven via the checkbox (a value-free toggle) plus the shared
         setter path. A `Form` sample demonstrates both inputs in the gallery.
   - [~] **Then** — grow the **core primitives** into a capable vocabulary
-        (§11): the catalog is the app developer's job,
+        (§8): the catalog is the app developer's job,
         authored *as templates over* these primitives. Approach decided —
         constrained common model + value-type vocabulary + geometry conformance.
         **First slice landed:** see the `Flex` vertical slice below.
-- [~] **H2 type/style model + capable primitives (§11).** Build the
+- [~] **H2 type/style model + capable primitives (§8).** Build the
       framework-neutral value-type vocabulary (the `argument_decoders`
       replacement — `Dimension`/`Color`/`EdgeInsets`/alignment/`TextStyle`),
       sharpen conformance to geometry-with-tolerance, and grow the catalog
@@ -178,7 +178,7 @@
         both adapters render the *same* model and can't disagree; each renders it
         **structurally** (Flutter widgets / DOM `h1`–`h6`/`p`/`ul`/`strong`/…),
         never by injecting raw HTML — upholding the secure-by-design posture
-        (§12). Core unit tests cover the parser; a shared conformance case proves
+        (§11). Core unit tests cover the parser; a shared conformance case proves
         cross-adapter parity. (Block quotes, code fences, images, and tables
         degrade to text for now.)
   - [x] **`Heading` primitive.** Rather than overloading `Text` with a heading
@@ -197,8 +197,8 @@
         adapter's optional `mapComponent` seam, which maps a component's `type`
         and props onto a [ConstructorCall] (renaming props onto the widget's
         args). This complements the primary value proposition (a **catalog** of
-        **templates** over primitives, §2): some local widgets are pointless to
-        rebuild from primitives and are better exposed as-is (§3, "Bespoke
+        **templates** over primitives, §4): some local widgets are pointless to
+        rebuild from primitives and are better exposed as-is (§8, "Bespoke
         widgets"). The capability is **catalog-agnostic and decoupled from the
         core primitives** — proven by a self-contained test that maps a synthetic
         `Hero` component onto a bespoke `Banner` widget (static and data-bound) on
@@ -206,7 +206,7 @@
   - [ ] **Toward the gallery.** Mapping a *specific* catalog (e.g. A2UI's Basic
         Catalog) onto Craft is an embedder/app concern, **not a framework
         deliverable** — and not a license to let that catalog drive primitive
-        design (the Basic Catalog is itself stuck between low- and high-level, §11
+        design (the Basic Catalog is itself stuck between low- and high-level, §8
         "Not a copy of A2UI's basic catalog"). When we build a gallery demo, each
         component is realized by the artifact that fits its semantics — a template
         for composed/domain widgets, a direct mapping for primitive-shaped or
@@ -352,7 +352,7 @@
         handlers, `switch state.x { … }`) render and react **identically** on
         Flutter and Jaspr — a tap flips local state and the template re-renders
         with no host code, no `a2ui_core` data-model round-trip, and no agent in
-        the loop (this is the *client-side* layer of §1, distinct from A2UI's
+        the loop (this is the *client-side* layer of §2, distinct from A2UI's
         agent-in-the-loop action→data model). Shipped as the `toggle` sample and
         a both-adapters behavioral conformance case. **Limitation noted:** the
         RFW expression language has **no arithmetic/operators**, so state changes
@@ -459,28 +459,28 @@
           day one (local Dart resolves on a microtask; a sandbox over postMessage)
           — the local→sandbox swap is then unobservable. Handlers communicate only
           through data-model writes, never a sync return. Pure function
-          *expressions* stay synchronous. This routes through the §12 cancellable
+          *expressions* stay synchronous. This routes through the §11 cancellable
           scheduler (timeouts/cancellation for free).
-  - [ ] **Ephemeral theming / design systems (§13).** Design settled: the
+  - [ ] **Ephemeral theming / design systems (§9).** Design settled: the
         trust model (author's channel, never the agent's), the **W3C DTCG token
         format**, the cascade, explicit-never-implicit theming, and the project
-        bundle (§13.9); prior-art survey under `research/theming/`.
+        bundle (§10); prior-art survey under `research/theming/`.
         Implementation plan — thin end-to-end slices, each conformance-tested
         on both adapters before the next begins:
         - [x] **1. Runtime DTCG parser + resolver** in `a2ui_craft` (shared by
-          both adapters — §13.6 determinism by construction): parse (groups →
+          both adapters — §9.6 determinism by construction): parse (groups →
           dot-paths, `$type` inheritance down groups, aliases recorded) →
           resolve (layer merge for mode overlays, alias dereference with cycle
           detection) → typed total reads (`color` / `dimension` / `number`
           first, accepting both the 2025.10 object forms and the legacy string
           forms). Total throughout: malformed token → null → fallback, never
           throw.
-        - [x] **2. Explicit token references** — the `theme.` scope (§13.4) on
+        - [x] **2. Explicit token references** — the `theme.` scope (§9.4) on
           both adapters; `Box(color: theme.color.action)` renders the token's
           color on Flutter + Jaspr, pinned by a conformance case. Decides the
           scope-vs-function syntax question at the smallest surface.
         - [x] **3. Ambient role-defaults** — semantic contract v1 (small
-          neutral role set with surface/foreground pairing, §13.4): primitives
+          neutral role set with surface/foreground pairing, §9.4): primitives
           read their roles when props are unset, fall back to the host default
           when the theme omits a role; theming-conformance dimension started.
           Delivered as `ThemeRoles` + `CraftTheme` (the immutable snapshot
@@ -490,7 +490,7 @@
         - [x] **4. Default theme** — open-source base `.tokens.json` + mode
           overlays (light / dark / high-contrast); host-supplied n-ary mode
           input; reactive re-theme of a live surface. Explicit, never implicit
-          (§13.5). Delivered as the DTCG token layers under
+          (§9.5). Delivered as the DTCG token layers under
           `packages/a2ui_craft/lib/src/themes/default/` (a neutral palette,
           the contract roles aliased onto it, the type scale) + a `manifest.json`
           carrying the mode → resolution-order wiring (ours, not the token
@@ -501,7 +501,7 @@
           restates the pre-contract literals (regression-anchored); a conformance
           case paints the modes and flips one in place (ink re-points, state
           survives). Never applied unasked — theming stays explicit.
-        - [x] **5. Project bundle (§13.9)** — theme as the 4th sample-trio
+        - [x] **5. Project bundle (§10)** — theme as the 4th sample-trio
           file, then the project manifest (name, catalog id, theme reference,
           mode wiring); the demo site loads projects; agent-optional
           (canned-message mini-app mode). Delivered: an optional `theme.json`
@@ -516,7 +516,7 @@
           modes through a render-time picker (the n-ary mode input) that
           re-themes both the Jaspr-native and embedded-Flutter renders.
           Agent-optional is already the samples' shape — each project's
-          `app.json` *is* a canned bootstrap stream (§13.9). The consolidated
+          `app.json` *is* a canned bootstrap stream (§10). The consolidated
           project
           manifest then folded name + catalog id + theme-ref + mode-wiring into
           one `samples/<id>/manifest.json` per project (parsed by
@@ -524,7 +524,7 @@
           top-level per-entry label — which became a plain gallery-order id list.
           The migration was behavior-preserving: the generated samples file came
           out byte-identical.
-- [ ] **Project authoring & deployment tooling (§13.9).** Show a project is a
+- [ ] **Project authoring & deployment tooling (§10).** Show a project is a
       *separate, ephemerally loadable artifact* from its host, publishable to a
       CDN with no compile step. Thin slices:
       - [x] **1. `app.json` bootstrap.** Rename each sample's `messages.json` →
@@ -554,7 +554,7 @@
         reload cycle with the host untouched. (Site UI is analyzer-checked glue
         over the tested loader + SampleView theming; no live browser test.)
 - [ ] Prove the state-model axis with a third, non-Flutter-like framework.
-- [ ] **Security: uphold A2UI's secure-by-design promise (§12).** When templates
+- [ ] **Security: uphold A2UI's secure-by-design promise (§11).** When templates
       are delivered ephemerally, treat them as untrusted input: add engine-level
       operation budgets (loop / instantiation / depth / node counters + wall-clock
       deadline) — **time-windowed, not reset-per-update**, and routing all

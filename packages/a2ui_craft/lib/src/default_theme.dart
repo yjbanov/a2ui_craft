@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-/// The open-source **default theme** (DESIGN.md §13.5): a base DTCG token layer
+/// The open-source **default theme** (DESIGN.md §9.5): a base DTCG token layer
 /// plus per-mode overlays, resolved for a host-supplied **n-ary mode** (light /
 /// dark and their high-contrast variants — accessibility modes are first-class
 /// axes, not a boolean flag).
@@ -10,7 +10,7 @@
 /// It serves three jobs at once: the reference documentation of the semantic
 /// contract ([ThemeRoles]), the starter kit authors fork for custom themes, and
 /// the theming-conformance fixture. The runtime **never applies it unasked** —
-/// theming is explicit (§13.1): a surface with no theme still blends into its
+/// theming is explicit (§9.1): a surface with no theme still blends into its
 /// host. A host that *wants* it calls [DefaultTheme.of] and hands the resulting
 /// [CraftTheme] to a surface; flipping [CraftThemeMode] is just handing over the
 /// next (cached, immutable) snapshot — the surface re-themes in place.
@@ -26,7 +26,7 @@ import 'design_tokens.dart';
 
 /// The render-time mode a host selects for the default theme.
 ///
-/// N-ary by design (§13.5): dark and high-contrast are orthogonal accessibility
+/// N-ary by design (§9.5): dark and high-contrast are orthogonal accessibility
 /// axes, not one boolean. Each value's [name] is its key in the theme
 /// manifest's `modes` map (the resolution order for that mode).
 enum CraftThemeMode {
@@ -52,7 +52,7 @@ enum CraftThemeMode {
 }
 
 /// The default theme's manifest: its name and the mode → resolution-order
-/// wiring. This wiring is **ours**, kept out of the token files (§13.5): DTCG's
+/// wiring. This wiring is **ours**, kept out of the token files (§9.5): DTCG's
 /// own multi-mode answer is still an unstable draft, so we mirror its model
 /// (sets + resolution order) behind our own config and can conform later.
 final class DefaultThemeManifest {

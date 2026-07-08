@@ -2,34 +2,34 @@
 
 > **Status: research note (uncommitted).** Part of the theming prior-art survey;
 > see [PRIOR_ART.md](PRIOR_ART.md) for the index and verdicts. This file is about
-> the *mechanism* question of §13.4 — **how do tokens reach primitives at runtime,
+> the *mechanism* question of §9.4 — **how do tokens reach primitives at runtime,
 > and how do the cascade + dark mode actually resolve** — because that is where our
 > design differs most from the build-time DTCG ecosystem
 > ([DESIGN_TOKENS.md](DESIGN_TOKENS.md)). Two lineages matter: the **CSS platform**
-> (the model §13.4 explicitly mirrors) and **JS runtime theme objects** (the family
+> (the model §9.4 explicitly mirrors) and **JS runtime theme objects** (the family
 > that most resembles our "theme is a 4th ambient reactive scope" idea).
 
 ---
 
 ## 1. CSS custom properties + the cascade — the reference model
 
-§13.4 already frames our token delivery as "the CSS model." It's worth being
+§9.4 already frames our token delivery as "the CSS model." It's worth being
 precise about *why* CSS custom properties are the right mental model for a
 **runtime, ephemeral, total** theme layer — every property we want, the platform
 already has:
 
 - **`var(--x, fallback)` — totality with host fallback, natively.** A custom
-  property lookup that misses returns its fallback. That is exactly §13.4's "an
-  unset role falls back to the host default" and §13.6's totality discipline —
+  property lookup that misses returns its fallback. That is exactly §9.4's "an
+  unset role falls back to the host default" and §9.6's totality discipline —
   built into the resolution primitive, no branching.
 - **The cascade *is* the ambient-role-default tier.** A custom property resolves
   from the **nearest ancestor scope** that defines it and inherits down the tree.
   Redefining `--brand` on a subtree re-themes only that subtree. This is precisely
-  §13.5's layered cascade (host defaults → author system → host mode config →
+  §9.5's layered cascade (host defaults → author system → host mode config →
   per-widget) — each layer just redefines variables at a deeper scope.
 - **Runtime-reactive by construction.** Change a variable at `:root` and every
   `var()` consumer updates live — no rebuild. That is our "host flips dark mode and
-  a live surface re-themes through the existing resolution path" (§13.4), for free
+  a live surface re-themes through the existing resolution path" (§9.4), for free
   on the web adapter.
 - **`light-dark()` — a per-token, value-level dark encoding.** The newer
   `light-dark(lightValue, darkValue)` function returns one or the other based on
@@ -37,7 +37,7 @@ already has:
   `:root { color-scheme: light dark }` and write
   `--surface: light-dark(#fff, #111)`. It reached **Baseline "newly available" in
   May 2024** (Chrome/Edge 123, Firefox 120, Safari 17.5) and is projected
-  **"widely available" ~Nov 2026**. This is a concrete data point for §13.7's dark
+  **"widely available" ~Nov 2026**. This is a concrete data point for §9.7's dark
   mode question: *a single token can carry both mode values inline*, selected by an
   ambient input — the same shape as Panda's condition-tokens (below) and DTCG's
   resolver modifiers.
@@ -46,7 +46,7 @@ already has:
 it's the native substrate (map resolved tokens → CSS custom properties at a scope;
 map dark mode → `color-scheme` + `light-dark()` or a `.dark` scope). The value for
 *design* is that CSS has already worked out the exact resolution semantics we
-described in §13.4/§13.5; we should mirror them rather than invent.
+described in §9.4/§9.5; we should mirror them rather than invent.
 
 ---
 
@@ -76,7 +76,7 @@ The [System UI Theme Specification](https://github.com/system-ui/theme-specifica
 
 **What to steal:** the **scale** concept — `space` and `fontSizes` as *ordered
 scales referenced by step*, rather than a pile of named sizes. A compact spacing
-rhythm and type scale (§13.3 item 1) is exactly an ordinal scale; "the 3rd space
+rhythm and type scale (§9.3 item 1) is exactly an ordinal scale; "the 3rd space
 step" is a smaller, more consistent vocabulary than a dozen named paddings. Also
 notable: this was an early attempt at *one canonical theme-object shape as a
 contract* — the same instinct as our semantic contract, predating DTCG.
@@ -102,7 +102,7 @@ semanticTokens: {                           // meaning + per-condition value
 }
 ```
 
-**What to steal:** this is **the single cleanest runtime answer to §13.7's dark
+**What to steal:** this is **the single cleanest runtime answer to §9.7's dark
 mode question**. The *semantic* token (`fg`) references a *different primitive* per
 condition (`base` vs `_dark`); the primitive palette is never duplicated, and
 consumers just read `fg`. It's the runtime-object analogue of CSS `light-dark()`
@@ -129,28 +129,28 @@ thus the same underlying variables).
 set of token *paths* primitives read, independent of any particular theme's values.
 vanilla-extract validates "implement it completely"; **our analogue degrades
 instead of erroring** — a theme that omits a role falls back to the host default
-(§13.4/§13.6 totality) rather than failing to compile. Same idea (a contract of
+(§9.4/§9.6 totality) rather than failing to compile. Same idea (a contract of
 paths), different failure mode (graceful, because our themes are untrusted-shaped
 ephemeral data, not trusted source).
 
 ---
 
-## Synthesis for §13
+## Synthesis for §9
 
-- **Mechanism (§13.4):** our proposed "theme = a 4th ambient reactive value scope,
+- **Mechanism (§9.4):** our proposed "theme = a 4th ambient reactive value scope,
   parallel to `args`/`data`/`state`" *is* the runtime-theme-object model, and it
   maps onto the two native substrates directly: **CSS custom properties** on Jaspr,
   **`InheritedWidget`/`ThemeExtension`** on Flutter
   ([PRIOR_ART_NATIVE_PLATFORMS.md](PRIOR_ART_NATIVE_PLATFORMS.md)). Both give the
   cascade + reactivity + fallback semantics for free.
-- **Dark mode (§13.7):** strong, cross-system convergence — CSS `light-dark()`,
+- **Dark mode (§9.7):** strong, cross-system convergence — CSS `light-dark()`,
   Panda condition-tokens, DTCG resolver modifiers all say *same role names, value
   chosen by an ambient mode input*. Recommend the **semantic-token-selects-per-mode**
   model over "a second full token map."
-- **The contract (§13.4/§5 of DTCG note):** vanilla-extract confirms the value of
+- **The contract (§9.4/§5 of DTCG note):** vanilla-extract confirms the value of
   an explicit *contract of token paths* separate from theme values; our version is
   the same but total (missing ⇒ host fallback, never an error).
-- **Scales (§13.3):** styled-system's ordinal scales (`space`, `fontSizes`) are a
+- **Scales (§9.3):** styled-system's ordinal scales (`space`, `fontSizes`) are a
   compact way to encode spacing rhythm + type scale — a good shape for our non-color
   tokens.
 

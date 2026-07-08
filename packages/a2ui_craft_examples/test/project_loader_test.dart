@@ -8,7 +8,7 @@ import 'package:http/testing.dart';
 import 'package:test/test.dart';
 
 // A minimal project served by a mock CDN — the production path (fetch a project
-// over HTTP) exercised without a network (DESIGN.md §13.9).
+// over HTTP) exercised without a network (DESIGN.md §10).
 
 const Map<String, String> _files = <String, String>{
   'manifest.json': '{ "name": "Pulse", "catalogId": "demo", '

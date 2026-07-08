@@ -1900,7 +1900,7 @@ class _ThemeScope extends InheritedWidget {
 /// or null when the surface is unthemed.
 ///
 /// This is how the core primitives read their role defaults (the semantic
-/// contract, DESIGN.md §13.4): a typed, total lookup with the host default as
+/// contract, DESIGN.md §9.4): a typed, total lookup with the host default as
 /// the fallback. Registers a dependency, so a theme swap rebuilds the caller.
 CraftTheme? ambientCraftTheme(BuildContext context) =>
     context.dependOnInheritedWidgetOfExactType<_ThemeScope>()?.theme;

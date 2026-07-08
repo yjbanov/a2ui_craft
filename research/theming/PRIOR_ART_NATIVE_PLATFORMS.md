@@ -2,23 +2,23 @@
 
 > **Status: research note (uncommitted).** Part of the theming prior-art survey;
 > see [PRIOR_ART.md](PRIOR_ART.md) for the index and verdicts. These two matter for
-> different reasons: **Flutter** is the *substrate one adapter renders into* (§13.6
+> different reasons: **Flutter** is the *substrate one adapter renders into* (§9.6
 > — so its theming API is the literal carrier for our resolved tokens, not a design
 > choice), and **Apple HIG/SwiftUI** is the most mature *semantic + adaptive +
 > accessible* role model on any platform (the gold standard for the vocabulary and
-> mode questions in §13.7).
+> mode questions in §9.7).
 
 ---
 
 ## 1. Flutter — `ThemeData`, the `InheritedWidget` cascade, and `ThemeExtension`
 
-The Flutter adapter already gets §13.1's zero-config baseline *for free* because
+The Flutter adapter already gets §9.1's zero-config baseline *for free* because
 Flutter theming *is* an ambient cascade:
 
 - **`Theme.of(context)` is the cascade.** `ThemeData` is provided via an
   `InheritedWidget`; a widget reads the nearest ancestor theme and rebuilds when it
   changes. This is Flutter's `var()` — the exact "inherit the host look for free"
-  mechanism of §13.1, and the native home for §13.4's *ambient role-defaults* tier.
+  mechanism of §9.1, and the native home for §9.4's *ambient role-defaults* tier.
   Wrapping a subtree in a new `Theme(data: …)` re-themes just that subtree — the
   cascade/override semantics we want, already there.
 
@@ -53,7 +53,7 @@ Flutter theming *is* an ambient cascade:
 
   This is *precisely* the mechanism the Flutter adapter would use to carry our
   resolved token map into the ambient theme so primitives read roles the Flutter
-  way. And `lerp` means §13.4's "reactive re-theme when the host flips dark mode"
+  way. And `lerp` means §9.4's "reactive re-theme when the host flips dark mode"
   can be a smooth animated transition, not a hard cut — a nice, free win.
 
 - **`ColorScheme` + `TextTheme` — the M3 semantic layer, native.** Flutter's own
@@ -63,7 +63,7 @@ Flutter theming *is* an ambient cascade:
   ([PRIOR_ART_MATERIAL3.md](PRIOR_ART_MATERIAL3.md)). `CupertinoTheme` is the iOS
   counterpart.
 
-**Implication for §13.6 (cross-adapter mapping) — now concrete.** One resolved
+**Implication for §9.6 (cross-adapter mapping) — now concrete.** One resolved
 token, two native carriers:
 
 | Resolved token | Flutter adapter maps to | Jaspr adapter maps to |
@@ -80,7 +80,7 @@ the same architecture as the primitives themselves (§11) and the function libra
 
 **Verdict:** `ThemeExtension` is **adopt** — but as an *implementation fact* of the
 Flutter adapter, not a portable design. It's how tokens become ambient on Flutter,
-it gives typed reads + animated transitions, and it slots under §13.4's cascade
+it gives typed reads + animated transitions, and it slots under §9.4's cascade
 with zero friction.
 
 ---
@@ -111,23 +111,23 @@ be" — and it's a system users *trust* precisely because they never think about
   should be named roles** (body/title/…) resolved to sizes, not raw pixel tokens.
 
 - **Materials / vibrancy** (blur, translucency) — out of scope for us: they need
-  real render code, which §13.3 puts in the "cannot be ephemeral" bucket.
+  real render code, which §9.3 puts in the "cannot be ephemeral" bucket.
 
 **What to steal (all inspiration — Apple ships no portable format):**
 
 1. **Roles encode *intent*, not appearance, and are adaptive by design.** This is
-   the philosophical core of §13.4's role-defaults and §13.6's "a design system
+   the philosophical core of §9.4's role-defaults and §9.6's "a design system
    encodes *decisions*, not pixels." Name a role for what it's *for* (`action`,
    `onSurface`), and modes/contrast/accessibility become *resolution details* of
    that role rather than separate tokens.
 2. **Hierarchy as a compact depth mechanism.** `primary/secondary/tertiary/
    quaternary` labels + backgrounds give visual depth from *very few* tokens —
-   exactly the "keep the token set small" pressure of §13.7. Worth considering a
+   exactly the "keep the token set small" pressure of §9.7. Worth considering a
    small emphasis hierarchy (`onSurface` / `onSurfaceVariant` / muted) rather than
    many bespoke greys.
 3. **Modes are *plural*.** Apple treats **increased-contrast** (and reduce-
    transparency, bold-text, larger-text) as first-class axes *alongside* light/dark.
-   This is a forward-looking note for §13.7: whatever mode mechanism we pick
+   This is a forward-looking note for §9.7: whatever mode mechanism we pick
    (semantic-token-selects-per-condition — see
    [PRIOR_ART_RUNTIME_RESOLUTION.md](PRIOR_ART_RUNTIME_RESOLUTION.md)) should be
    *n-ary in the mode input*, not hardwired to a single light/dark boolean — even

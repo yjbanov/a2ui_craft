@@ -61,7 +61,7 @@ adapter runs against its own renderer through a `CraftTester`, plus a
 **core-primitives contract** (`corePrimitives`) pinning the standard set. Behavioral identity is
 the bar, not pixel identity. When you add or change a core primitive, extend the
 shared core primitives + conformance suite — not a single adapter's test (see
-[`DESIGN.md` §5](DESIGN.md) and the `a2ui-craft-adapters` skill).
+[`DESIGN.md` §7](DESIGN.md) and the `a2ui-craft-adapters` skill).
 
 > Terminology (see `DESIGN.md`'s Glossary): a **primitive** is a low-level,
 > template-private building block (one entry in an RFW `LocalWidgetLibrary`). The
@@ -88,7 +88,7 @@ shared core primitives + conformance suite — not a single adapter's test (see
 ## Working on framework adapters (read this before touching `packages/a2ui_craft_*`)
 
 The whole project depends on **the same template rendering identically on every
-framework**. The rules that keep this true are specified in [`DESIGN.md` §5](DESIGN.md)
+framework**. The rules that keep this true are specified in [`DESIGN.md` §7](DESIGN.md)
 and elaborated in the project skills under [`skills/`](skills):
 
 - [`skills/a2ui-craft-adapters`](skills/a2ui-craft-adapters/SKILL.md) — the
@@ -119,7 +119,7 @@ Quick rules of thumb:
 
 Current scope is **Flutter + Jaspr, Dart-only**. The cross-platform core
 component/type library ("H2" in `DESIGN.md`) is **in progress**, built as a
-constrained common model (see `DESIGN.md` §11): the `Flex` and `Box` slices —
+constrained common model (see `DESIGN.md` §8): the `Flex` and `Box` slices —
 value types, explicit sizing, and geometry conformance — have landed, and the
 core primitives grow depth-first from there. The older seed primitives outside
 that work remain **minimal harness fixtures**. Grow the core primitives as a task

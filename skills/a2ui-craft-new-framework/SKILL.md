@@ -14,7 +14,7 @@ description: >-
 
 A new adapter must render the *same* templates, with the *same* public API and
 behavior, as the existing adapters — only the produced node type and the leaf
-rendering differ. Read the `a2ui-craft-adapters` skill and `DESIGN.md` §5 first;
+rendering differ. Read the `a2ui-craft-adapters` skill and `DESIGN.md` §7 first;
 they define the invariants this recipe must satisfy. **Copy the Flutter adapter
 (`packages/a2ui_craft_flutter`) as the canonical reference** — it is itself a
 near-verbatim, repointed copy of RFW's runtime.
@@ -81,6 +81,6 @@ task explicitly calls for it.
 ## If the framework fights the invariants
 
 If the framework's model makes a MUST invariant (from `a2ui-craft-adapters` /
-`DESIGN.md` §5) genuinely impossible, that is a finding about H1 (does RFW
+`DESIGN.md` §7) genuinely impossible, that is a finding about H1 (does RFW
 generalize across rendering/state models?). Document it in `DESIGN.md` rather
 than weakening the shared contract to force a fit.

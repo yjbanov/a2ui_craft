@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 /// The **semantic contract**: the design-token paths the core primitives read
-/// for their *ambient role defaults* (DESIGN.md §13.4).
+/// for their *ambient role defaults* (DESIGN.md §9.4).
 ///
 /// DTCG standardizes token *structure*, never *meaning* — nothing in the
 /// format says a caption uses `color.onSurfaceVariant`. This contract is the
@@ -13,7 +13,7 @@
 /// export maps on without translation — see
 /// research/theming/SEMANTIC_CONTRACT.md).
 ///
-/// Reading rules (§13.4): a primitive consults its role only when the
+/// Reading rules (§9.4): a primitive consults its role only when the
 /// corresponding prop is unset; a theme that omits a role degrades to the
 /// **host default** (an unthemed surface renders exactly as if this contract
 /// did not exist). Lookups are typed and total — never throwing — like every

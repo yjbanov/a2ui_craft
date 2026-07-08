@@ -57,7 +57,7 @@ reads when a prop is unset.
 
 ## 3. Naming: take the M3 ∩ shadcn intersection
 
-§13.4's draft used `color.action`. Recommend replacing it with **`primary`** —
+§9.4's draft used `color.action`. Recommend replacing it with **`primary`** —
 the one name Material 3 *and* shadcn/ui agree on, so both an M3 DTCG export and
 a shadcn-shaped hand theme map on with zero translation. The full v1 set keeps
 M3's names wherever M3 has one (`onSurface`, `onSurfaceVariant`, `outline`)
@@ -112,12 +112,12 @@ can target them without a future rename; no primitive reads them yet):
   revisit when a second consumer appears.
 - **Font family / weight / full `typography` composites**: the DTCG composite
   type is deferred (DESIGN_TOKENS.md §2.4 — phase 3), and family loading is a
-  §13.7 hard problem. Sizes-only is the honest v1.
+  §9.7 hard problem. Sizes-only is the honest v1.
 - **`color.background`** (page behind surfaces): an A2UI surface renders into
   host chrome; the host owns the page. Skip until the mini-app/project mode
   (slice 5) makes a surface own its page.
 
-**Fallback semantics (unchanged from §13.4):** explicit prop → ambient role →
+**Fallback semantics (unchanged from §9.4):** explicit prop → ambient role →
 host default. A theme omitting a role degrades to exactly today's rendering;
 an *unthemed* surface must render **identically to today** — that's a
 regression guard slice 3 should test explicitly, not a hope.
@@ -126,7 +126,7 @@ regression guard slice 3 should test explicitly, not a hope.
 
 A constant in `a2ui_craft` next to the primitive spec (§11) — proposed shape:
 a documented list of `(path, type, consumers)` entries (usable by tooling and
-the conformance suite to iterate roles), plus doc-table in DESIGN.md §13.4.
+the conformance suite to iterate roles), plus doc-table in DESIGN.md §9.4.
 The default theme file (slice 4) is its executable documentation; contract
 changes are versioned like primitive-vocabulary changes (additive preferred).
 
@@ -163,13 +163,13 @@ API-shape only, and better now than after the default theme ships against it.
 text-based trick can't cover: assert a themed role *lands* on the primitive —
 Flutter: read the effective color off the widget (e.g. `Text.style.color`,
 `ColoredBox.color`); Jaspr: the rendered style attribute/computed value. Same
-geometry-harness philosophy (§13.6): assert the *decision* landed on both
+geometry-harness philosophy (§9.6): assert the *decision* landed on both
 adapters, never pixel equality. Plus the regression guard: unthemed output
 byte-identical to pre-theming rendering.
 
 ## 7. The decision actually being asked
 
-1. **Role names:** the M3 ∩ shadcn intersection above (drops §13.4's `action`
+1. **Role names:** the M3 ∩ shadcn intersection above (drops §9.4's `action`
    for `primary`). *(Recommended as written.)*
 2. **v1 scope:** the consumed table in §4 — 6 color roles + the size-only type
    scale; radius/spacing/fonts deferred with reasons. *(Recommended as

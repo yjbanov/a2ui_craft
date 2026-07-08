@@ -8,7 +8,7 @@ import 'package:jaspr/jaspr.dart';
 import 'package:jaspr_test/jaspr_test.dart';
 
 // The Jaspr half of the ambient role-default wiring (the semantic contract,
-// DESIGN.md §13.4) for the primitives the shared painted-text probes can't
+// DESIGN.md §9.4) for the primitives the shared painted-text probes can't
 // reach: which CSS property each role lands on, and that the unthemed
 // fallback is this adapter's pre-theming rendering (browser-default headings,
 // the rgba(0,0,0,0.12) divider). The cross-adapter text-color/size behavior

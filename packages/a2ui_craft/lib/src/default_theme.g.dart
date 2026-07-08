@@ -10,7 +10,7 @@
 const String defaultThemeManifestJson = r'''
 {
   "name": "A2UI Craft Default",
-  "description": "The open-source default theme: the reference documentation of the semantic contract, the starter kit for custom themes, and the theming-conformance fixture. The runtime never applies it unasked (DESIGN.md §13.5).",
+  "description": "The open-source default theme: the reference documentation of the semantic contract, the starter kit for custom themes, and the theming-conformance fixture. The runtime never applies it unasked (DESIGN.md §9.5).",
   "sets": {
     "base": "base.tokens.json",
     "dark": "dark.tokens.json",

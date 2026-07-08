@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// a2ui_core `formatString` integration (DESIGN.md §10): drives the **real**
+// a2ui_core `formatString` integration (DESIGN.md §5): drives the **real**
 // `A2uiToRfwAdapter` over `a2ui_core`, exercising the one binding feature the
 // cross-adapter conformance suite does not — a `formatString` function resolving
 // a value that is fed to a template as an arg, and re-resolving reactively on

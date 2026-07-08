@@ -4,7 +4,7 @@
 > see [PRIOR_ART.md](PRIOR_ART.md) for the index and verdicts. These four are the
 > systems web developers are *actually in love with* right now. None is an
 > adopt-as-is *format* (that's DTCG — see [DESIGN_TOKENS.md](DESIGN_TOKENS.md)),
-> but each contributes a proven idea for our **semantic contract** (§13.4/§13.7)
+> but each contributes a proven idea for our **semantic contract** (§9.4/§9.7)
 > and delivery model. There is a clean through-line: **Radix** gives the color
 > science, **Tailwind v4** gives the delivery (tokens *are* CSS variables), and
 > **shadcn/ui** gives the small semantic role set everyone now copies.
@@ -76,15 +76,15 @@ namespace determines which utilities/variants exist.
 
 - **Tokens as runtime variables by default.** Tailwind v4 makes the token layer
   *live CSS variables*, not a build-only artifact. That is exactly our
-  "theme = a reactive ambient scope" (§13.4) on the Jaspr adapter — flip a variable
+  "theme = a reactive ambient scope" (§9.4) on the Jaspr adapter — flip a variable
   at `:root` and everything re-themes. It's a strong vote for our web adapter
   mapping resolved tokens → CSS custom properties (see
   [PRIOR_ART_RUNTIME_RESOLUTION.md](PRIOR_ART_RUNTIME_RESOLUTION.md)).
 - **Flat, namespaced token paths.** `--color-*`, `--spacing`, `--radius-*` is a
   clean, flat naming scheme that maps 1:1 onto DTCG dot-paths (`color.*`,
-  `spacing`, `radius.*`) and onto our `theme.<path>` references (§13.4).
+  `spacing`, `radius.*`) and onto our `theme.<path>` references (§9.4).
 - **"A few scales, not a thousand colors."** Tailwind's whole ergonomic is a small
-  set of constrained scales — the same discipline §13.7 wants ("keep the token set
+  set of constrained scales — the same discipline §9.7 wants ("keep the token set
   small").
 
 **Fit / caveat:** Tailwind is a *build-time utility generator*; we don't want the
@@ -137,12 +137,12 @@ the industry — the closest existing thing to the "semantic contract" the DTCG 
 - Adopt the **flat, un-Material role names** as a candidate *neutral* vocabulary
   (an alternative/complement to leaning on M3 names) — `background/foreground`,
   `primary`, `muted`, `accent`, `destructive`, `border`, `ring`.
-- Adopt the **same-names-across-modes** dark-mode model (§13.7 answer).
+- Adopt the **same-names-across-modes** dark-mode model (§9.7 answer).
 
 **Fit / caveat:** it's a convention expressed as CSS, not a portable format —
 **inspiration**, and it maps trivially onto DTCG (each variable = one semantic
 token aliasing a primitive). Note shadcn is deliberately *un-branded/neutral* where
-M3 is *branded/generated*: the two are the two ends of §13.7's "M3 vocabulary vs
+M3 is *branded/generated*: the two are the two ends of §9.7's "M3 vocabulary vs
 minimal neutral" question, and we can offer both.
 
 ---
@@ -158,7 +158,7 @@ minimal neutral" question, and we can offer both.
 **What to steal:** Open Props is *proof that a neutral, un-opinionated default
 token set, shipped as plain variables, is genuinely useful across frameworks* — no
 Material aesthetic, no utility framework, just good primitive tokens. It's a strong
-**reference/seed for our own default token set** (the base layer of the §13.5
+**reference/seed for our own default token set** (the base layer of the §9.5
 cascade the host supplies), and a sanity check on scale granularity (how many
 sizes/radii/shadows are "enough").
 
@@ -168,22 +168,22 @@ and its values are a reasonable starting point.
 
 ---
 
-## How this cluster informs §13
+## How this cluster informs §9
 
-- **Semantic contract (§13.4/§13.7):** shadcn's role set + Radix's step semantics
+- **Semantic contract (§9.4/§9.7):** shadcn's role set + Radix's step semantics
   are the two best small-vocabulary references; both are *neutral* alternatives to
   M3's *branded* roles ([PRIOR_ART_MATERIAL3.md](PRIOR_ART_MATERIAL3.md)). Likely
   answer: a small neutral role set (shadcn-shaped, with surface/foreground pairing)
   that is *also* M3-name-compatible where obvious, so both a hand-authored neutral
   theme and an M3 export map on.
-- **Dark mode (§13.7):** all four say **same names, values selected by an ambient
+- **Dark mode (§9.7):** all four say **same names, values selected by an ambient
   input** — not a second token vocabulary. Strong, consistent signal.
-- **Delivery on the web adapter (§13.6):** tokens → CSS custom properties at
+- **Delivery on the web adapter (§9.6):** tokens → CSS custom properties at
   `:root` is the native, loved, runtime-reactive mechanism (Tailwind v4, shadcn,
   Open Props all do exactly this).
-- **Keep it small (§13.7):** every loved system here is *deliberately small* and
+- **Keep it small (§9.7):** every loved system here is *deliberately small* and
   pushes bespoke styling into components — validating the catalog-template escape
-  hatch (§13.3 item 2) as the pressure valve.
+  hatch (§9.3 item 2) as the pressure valve.
 
 ## Sources
 

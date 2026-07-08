@@ -117,7 +117,7 @@ void main() {
       'Profile Card is a themed project — its theme.json paints it dark',
       (WidgetTester tester) async {
     // The 4th trio file: profile_card ships `theme.json` ({theme:default,
-    // mode:dark}). Its SampleSpec carries a ProjectTheme (§13.9), the gallery
+    // mode:dark}). Its SampleSpec carries a ProjectTheme (§10), the gallery
     // Sample resolves it, and the surface renders under the default Dark theme —
     // Card gets the dark surface role. This is theming end-to-end from a data
     // file, through the real A2UI-surface/adapter path.

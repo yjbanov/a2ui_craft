@@ -134,7 +134,7 @@ abstract interface class CraftTester {
   /// displayed text node equal to [text], canonicalized to `#AARRGGBB` — or
   /// null when the primitive set none and the host default shows through.
   ///
-  /// The painted-decision probe of the theming-conformance dimension (§13.6):
+  /// The painted-decision probe of the theming-conformance dimension (§9.6):
   /// it asserts a token *landed* on the primitive identically on every
   /// adapter, never pixel equality.
   String? textColorOf(String text);
@@ -413,7 +413,7 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
     data.update('name', 'Ada');
     data.update('agree', true);
     // The TextField primitive is the bare input — no label. A label is a
-    // template's choice, composed as a sibling Text (DESIGN.md §2 / §11).
+    // template's choice, composed as a sibling Text (DESIGN.md §4 / §8).
     await tester.mount('''
       import core;
       widget root = Column(children: [
@@ -858,10 +858,10 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
   driver.defineTest(
     'primitives read their ambient role defaults from the theme',
     (CraftTester tester) async {
-      // The semantic contract (ThemeRoles, DESIGN.md §13.4): with a theme
+      // The semantic contract (ThemeRoles, DESIGN.md §9.4): with a theme
       // mounted, primitives whose props are unset read their roles — no
       // theme. reference anywhere in the template. Themed values must land
-      // identically on every adapter (§13.6); the probes read the decision
+      // identically on every adapter (§9.6); the probes read the decision
       // the primitive made, not pixels.
       final CraftTheme theme = CraftTheme(resolveDesignTokens(<DesignTokenSet>[
         parseDesignTokens(<String, Object?>{
@@ -990,7 +990,7 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
     'an unthemed surface renders theme references as missing, without error',
     (CraftTester tester) async {
       // No theme mounted: the references resolve as missing and the consumer
-      // falls back (here Text renders nothing) — the §13 totality discipline.
+      // falls back (here Text renders nothing) — the §9 totality discipline.
       // The surface itself must render normally.
       await tester.mount('''
         import core;

@@ -34,10 +34,10 @@ class CraftRect {
 
 /// A framework-neutral handle to a *mounted* surface that can be **measured**.
 ///
-/// This is the geometry counterpart to `CraftTester` (DESIGN.md §11, Pillar C):
+/// This is the geometry counterpart to `CraftTester` (DESIGN.md §8, Pillar C):
 /// where `CraftTester`'s probes are behavioral ("is this text visible?"), these
 /// answer "where, and how big, is this node?" — within a tolerance band, never
-/// pixel-exact (§5). Each adapter implements it over its real renderer: Flutter
+/// pixel-exact (§7). Each adapter implements it over its real renderer: Flutter
 /// via `WidgetTester` geometry, Jaspr via a headless-browser `getBoundingClientRect`.
 abstract interface class CraftGeometryTester {
   /// Parses [template] as the `main` library (with `core` available) and renders
@@ -58,7 +58,7 @@ abstract interface class CraftGeometryDriver {
 }
 
 /// How close two measured coordinates must be to count as equal. Parity is
-/// behavioral within a tolerance band, not pixel-exact (DESIGN.md §5, §11
+/// behavioral within a tolerance band, not pixel-exact (DESIGN.md §7, §8
 /// Pillar C); the fixtures use fixed-size boxes (no text shaping) so the real
 /// divergence is sub-pixel rounding.
 const double _tol = 1.0;
@@ -332,7 +332,7 @@ void runBoxGeometryConformance(CraftGeometryDriver driver) {
 
 /// The shared **geometric** specification for the atoms slice — `Image` variant
 /// sizing and `List` direction. (Text/Icon are not geometry-tested: text shaping
-/// is the documented cross-engine divergence, §5.)
+/// is the documented cross-engine divergence, §7.)
 void runAtomGeometryConformance(CraftGeometryDriver driver) {
   driver.defineTest(
     'Image variant occupies its canonical box (same on both adapters)',

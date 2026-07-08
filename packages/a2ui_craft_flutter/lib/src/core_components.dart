@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 import 'runtime.dart';
 
 // Design notes (not part of the public API):
-// - Each component implements the framework-neutral spec (DESIGN.md §11,
+// - Each component implements the framework-neutral spec (DESIGN.md §8,
 //   Pillar A) using the shared value types (Dimension, FlexAxis, the
 //   alignments), rather than mirroring the Jaspr adapter by hand; the contract
 //   is verified by package:a2ui_craft_testing (behavioral, and geometric for the
@@ -56,7 +56,7 @@ LocalWidgetLibrary createCoreComponents() {
     'Markdown': (BuildContext context, DataSource source) =>
         _buildMarkdown(source.v<String>(['text']) ?? '', context),
     // Row, Column, and Flex are one builder over a `FlexAxis`: Row/Column pin
-    // the axis, Flex reads it from `direction` (DESIGN.md §11).
+    // the axis, Flex reads it from `direction` (DESIGN.md §8).
     'Flex': (BuildContext context, DataSource source) =>
         _buildFlex(source, FlexAxis.parse(source.v<String>(['direction']))),
     'Row': (BuildContext context, DataSource source) =>
@@ -192,7 +192,7 @@ LocalWidgetLibrary createCoreComponents() {
       );
     },
     // The bare text input — no label. Label placement is a template's choice
-    // (see DESIGN.md §2 "Bias to templatize" / §11), composed as a separate Text.
+    // (see DESIGN.md §4 "Bias to templatize" / §8), composed as a separate Text.
     'TextField': (BuildContext context, DataSource source) {
       return _CoreTextField(
         value: source.v<String>(['value']),
@@ -395,7 +395,7 @@ TextStyle? _bodyStyle(BuildContext context) {
 
 /// Reads a role color from the ambient theme as a Flutter [Color], or null
 /// when the surface is unthemed / the theme omits the role — the caller then
-/// falls back to the host default (DESIGN.md §13.4).
+/// falls back to the host default (DESIGN.md §9.4).
 Color? _roleColor(BuildContext context, String role) {
   final Rgba? rgba = ambientCraftTheme(context)?.tokens.color(role);
   return rgba == null ? null : Color(rgba.value);
@@ -634,7 +634,7 @@ CrossAxisAlignment _toCrossAxisAlignment(CrossAxisAlign a) => switch (a) {
 /// state, participates in focus traversal, and activates from the keyboard
 /// (Space/Enter arrive as [ActivateIntent]/[ButtonActivateIntent] via the
 /// app-level default shortcuts). Appearance stays the child's job (DESIGN.md
-/// §2, bias to templatize) — this widget paints nothing.
+/// §4, bias to templatize) — this widget paints nothing.
 class _CoreButton extends StatelessWidget {
   const _CoreButton({required this.onPressed, required this.child});
 

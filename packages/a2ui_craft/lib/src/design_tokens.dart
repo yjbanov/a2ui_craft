@@ -18,6 +18,7 @@
 /// data; the same discipline as the function library.
 library;
 
+import 'content.dart';
 import 'value_types.dart';
 
 // Design notes (not part of the public contract):
@@ -342,4 +343,30 @@ final class ResolvedTokens {
     final double value = raw.toDouble();
     return value < 0.0 ? 0.0 : (value > 1.0 ? 1.0 : value);
   }
+}
+
+/// The theme a host hands to a surface: an **immutable snapshot** of resolved
+/// design tokens (plus, later, the active mode).
+///
+/// Immutability is the reactivity model (DESIGN.md §13.4): to re-theme a live
+/// surface — a dark-mode flip, a brand swap — the host provides a *new*
+/// [CraftTheme] (themes are cheap to build: resolution is a map construction).
+/// The runtime's ambient scope notifies on the snapshot change, which drives
+/// both consumers at once: primitives reading their role defaults rebuild, and
+/// `theme.` references re-resolve through [content]. One carrier, one
+/// reactivity regime.
+final class CraftTheme {
+  CraftTheme(this.tokens);
+
+  /// The resolved tokens, read (typed and total) by primitives for their
+  /// ambient role defaults.
+  final ResolvedTokens tokens;
+
+  /// The template-facing view of [tokens] — canonical template values in a
+  /// [DynamicContent] — that `theme.<path>` references resolve against.
+  ///
+  /// Derived once per snapshot and consumed by the runtimes; hosts never need
+  /// to touch it.
+  late final DynamicContent content = DynamicContent()
+    ..updateAll(tokens.toTemplateValues());
 }

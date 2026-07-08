@@ -100,18 +100,23 @@ typedef CraftEventHandler = void Function(String name, DynamicMap arguments);
 /// Behavioral identity across frameworks is the goal; pixel identity is not.
 abstract interface class CraftTester {
   /// Renders [main]'s `root` component (with the core component library
-  /// available as `core`), bound to [data], themed by [theme] (the resolved
-  /// design tokens the `theme.` reference scope reads, in their canonical
-  /// template forms), routing events to [onEvent].
+  /// available as `core`), bound to [data], themed by [theme] (an immutable
+  /// resolved-token snapshot), routing events to [onEvent].
   ///
   /// This is the primitive; [CraftTesterQueries.mount] is a convenience that
   /// parses an RFW template into a library first.
   Future<void> mountLibrary(
     RemoteWidgetLibrary main, {
     DynamicContent? data,
-    DynamicContent? theme,
+    CraftTheme? theme,
     CraftEventHandler? onEvent,
   });
+
+  /// Replaces the ambient theme of the currently mounted surface with a new
+  /// snapshot, exactly as a host flipping a mode would — **without
+  /// remounting**: element state must survive and live `theme.` references
+  /// must re-resolve in place.
+  Future<void> retheme(CraftTheme? theme);
 
   /// Processes pending frames after an out-of-band change (e.g. a [data] update).
   Future<void> pump();
@@ -150,7 +155,7 @@ extension CraftTesterQueries on CraftTester {
   Future<void> mount(
     String template, {
     DynamicContent? data,
-    DynamicContent? theme,
+    CraftTheme? theme,
     CraftEventHandler? onEvent,
   }) {
     return mountLibrary(parseLibraryFile(template),
@@ -706,7 +711,7 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
       // canonicalizes to. Text sinks display those forms, which is what lets
       // this suite assert resolution behaviorally on every adapter; that the
       // canonical form feeds a real styling prop is covered by the Box child.
-      final ResolvedTokens resolved = resolveDesignTokens(<DesignTokenSet>[
+      final CraftTheme theme = CraftTheme(resolveDesignTokens(<DesignTokenSet>[
         parseDesignTokens(<String, Object?>{
           'color': <String, Object?>{
             r'$type': 'color',
@@ -723,9 +728,7 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
           },
           'emphasis': <String, Object?>{r'$type': 'number', r'$value': 0.5},
         }),
-      ]);
-      final DynamicContent theme = DynamicContent();
-      theme.updateAll(resolved.toTemplateValues());
+      ]));
 
       await tester.mount('''
         import core;
@@ -745,12 +748,14 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
   );
 
   driver.defineTest(
-    'a theme update re-resolves live theme references (mode swap)',
+    'a new theme snapshot re-themes the live surface (mode swap, no remount)',
     (CraftTester tester) async {
       // The dark overlay overrides only the *primitive* token; because aliases
       // dereference after the layer merge, the untouched semantic token
-      // re-points to the new primitive, and the live reference updates
-      // reactively — the host flips a mode without remounting the surface.
+      // re-points to the new primitive. The host flips the mode by providing a
+      // new immutable snapshot — and the surface re-resolves IN PLACE: the
+      // template's own state must survive the swap (that is what
+      // distinguishes a re-theme from a remount).
       final DesignTokenSet base = parseDesignTokens(<String, Object?>{
         'color': <String, Object?>{
           r'$type': 'color',
@@ -768,21 +773,31 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
           },
         },
       });
-      final DynamicContent theme = DynamicContent();
-      theme.updateAll(
-          resolveDesignTokens(<DesignTokenSet>[base]).toTemplateValues());
 
       await tester.mount('''
         import core;
-        widget root = Text(text: theme.color.surface);
-      ''', theme: theme);
+        widget root { count: 0 } = Column(children: [
+          Button(
+            key: "inc",
+            onPressed: set state.count = add(a: state.count, b: 1),
+            child: Text(text: "bump"),
+          ),
+          Text(text: concat(a: "n=", b: state.count)),
+          Text(text: theme.color.surface),
+        ]);
+      ''', theme: CraftTheme(resolveDesignTokens(<DesignTokenSet>[base])));
       expect(tester.hasText('#FFFFFFFF'), isTrue);
 
-      theme.updateAll(
-          resolveDesignTokens(<DesignTokenSet>[base, dark]).toTemplateValues());
-      await tester.pump();
+      // Accumulate local state, then swap the theme.
+      await tester.activate('inc');
+      expect(tester.hasText('n=1'), isTrue);
+
+      await tester.retheme(
+          CraftTheme(resolveDesignTokens(<DesignTokenSet>[base, dark])));
       expect(tester.hasText('#FF111111'), isTrue);
       expect(tester.hasText('#FFFFFFFF'), isFalse);
+      // The counter survived: the swap re-resolved, it did not remount.
+      expect(tester.hasText('n=1'), isTrue);
     },
   );
 

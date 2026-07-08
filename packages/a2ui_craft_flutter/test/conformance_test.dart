@@ -22,16 +22,31 @@ class _FlutterCraftTester implements CraftTester {
     ..registerFunctions(createCoreFunctions())
     ..update(a2uiDemoCatalogName, parseLibraryFile(a2uiDemoCatalogSource));
 
+  DynamicContent? _mountedData;
+  CraftEventHandler? _mountedOnEvent;
+
   @override
   Future<void> mountLibrary(
     RemoteWidgetLibrary main, {
     DynamicContent? data,
-    DynamicContent? theme,
+    CraftTheme? theme,
     CraftEventHandler? onEvent,
   }) async {
     _runtime.update(const LibraryName(<String>['main']), main);
+    _mountedData = data ?? DynamicContent();
+    _mountedOnEvent = onEvent;
+    await _pumpMounted(theme);
+  }
 
-    await _tester.pumpWidget(
+  @override
+  Future<void> retheme(CraftTheme? theme) => _pumpMounted(theme);
+
+  /// Pumps the mounted surface with [theme]. The runtime, library, and data
+  /// are unchanged, so a re-pump updates the same element tree in place — a
+  /// theme swap must not remount (state survives), which the conformance
+  /// suite asserts.
+  Future<void> _pumpMounted(CraftTheme? theme) {
+    return _tester.pumpWidget(
       _host(
         RemoteWidget(
           runtime: _runtime,
@@ -39,9 +54,9 @@ class _FlutterCraftTester implements CraftTester {
             LibraryName(<String>['main']),
             'root',
           ),
-          data: data ?? DynamicContent(),
+          data: _mountedData!,
           theme: theme,
-          onEvent: onEvent,
+          onEvent: _mountedOnEvent,
         ),
       ),
     );

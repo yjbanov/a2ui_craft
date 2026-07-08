@@ -22,27 +22,37 @@ class _JasprCraftTester implements CraftTester {
     ..registerFunctions(createCoreFunctions())
     ..update(a2uiDemoCatalogName, parseLibraryFile(a2uiDemoCatalogSource));
 
+  final GlobalStateKey<_RethemeShellState> _shellKey =
+      GlobalStateKey<_RethemeShellState>();
+
   @override
   Future<void> mountLibrary(
     RemoteWidgetLibrary main, {
     DynamicContent? data,
-    DynamicContent? theme,
+    CraftTheme? theme,
     CraftEventHandler? onEvent,
   }) async {
     _runtime.update(const LibraryName(<String>['main']), main);
-
+    // ComponentTester.pumpComponent attaches a fresh root each call (no
+    // reconciliation with the previous tree), so the theme lives in a stateful
+    // shell: retheme() swaps it via setState and the surface updates in place
+    // — a theme swap must not remount (state survives), which the conformance
+    // suite asserts.
     _tester.pumpComponent(
-      RemoteWidget(
+      _RethemeShell(
+        key: _shellKey,
         runtime: _runtime,
-        widget: const FullyQualifiedWidgetName(
-          LibraryName(<String>['main']),
-          'root',
-        ),
         data: data ?? DynamicContent(),
-        theme: theme,
+        initialTheme: theme,
         onEvent: onEvent,
       ),
     );
+    await _tester.pump();
+  }
+
+  @override
+  Future<void> retheme(CraftTheme? theme) async {
+    _shellKey.currentState!.retheme(theme);
     await _tester.pump();
   }
 
@@ -84,6 +94,47 @@ class _JasprCraftTester implements CraftTester {
   Future<void> toggleCheckbox() async {
     _tester.dispatchEvent(find.tag('input'), 'change');
     await _tester.pump();
+  }
+}
+
+/// Owns the mounted surface's theme so [_JasprCraftTester.retheme] can swap it
+/// in place (setState) — pumping a fresh root would remount and reset template
+/// state, which is exactly what a re-theme must not do.
+class _RethemeShell extends StatefulComponent {
+  const _RethemeShell({
+    super.key,
+    required this.runtime,
+    required this.data,
+    required this.initialTheme,
+    required this.onEvent,
+  });
+
+  final Runtime runtime;
+  final DynamicContent data;
+  final CraftTheme? initialTheme;
+  final CraftEventHandler? onEvent;
+
+  @override
+  State<_RethemeShell> createState() => _RethemeShellState();
+}
+
+class _RethemeShellState extends State<_RethemeShell> {
+  late CraftTheme? _theme = component.initialTheme;
+
+  void retheme(CraftTheme? theme) => setState(() => _theme = theme);
+
+  @override
+  Component build(BuildContext context) {
+    return RemoteWidget(
+      runtime: component.runtime,
+      widget: const FullyQualifiedWidgetName(
+        LibraryName(<String>['main']),
+        'root',
+      ),
+      data: component.data,
+      theme: _theme,
+      onEvent: component.onEvent,
+    );
   }
 }
 

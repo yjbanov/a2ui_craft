@@ -338,7 +338,7 @@ class Runtime extends ChangeNotifier {
     FullyQualifiedWidgetName widget,
     DynamicContent data,
     RemoteEventHandler remoteEventTarget, {
-    DynamicContent? theme,
+    CraftTheme? theme,
   }) {
     _CurriedWidget? boundWidget = _widgets[widget];
     if (boundWidget == null) {
@@ -378,7 +378,7 @@ class Runtime extends ChangeNotifier {
     DynamicContent data,
     RemoteEventHandler remoteEventTarget, {
     required LibraryName scope,
-    DynamicContent? theme,
+    CraftTheme? theme,
   }) {
     // TODO(yjbanov): isn't it expensive to check for loops for every node build? Maybe we should cache the result of this check for each library.
     _checkForImportLoops(scope);
@@ -1797,12 +1797,12 @@ class _WidgetState extends State<_Widget> implements DataSource {
     return subscription.value;
   }
 
-  /// The ambient theme content, from the nearest [_ThemeScope]; a shared empty
-  /// content when the surface has no theme (every lookup resolves as missing,
-  /// so consumers fall back to host defaults).
+  /// The ambient theme's template-facing content, from the nearest
+  /// [_ThemeScope]; a shared empty content when the surface has no theme
+  /// (every lookup resolves as missing, so consumers fall back to host
+  /// defaults).
   DynamicContent get _theme =>
-      context.dependOnInheritedComponentOfExactType<_ThemeScope>()?.theme ??
-      _emptyTheme;
+      ambientCraftTheme(context)?.content ?? _emptyTheme;
   static final DynamicContent _emptyTheme = DynamicContent();
 
   Object _widgetBuilderArgResolver(List<Object> rawDataKey) {
@@ -1877,19 +1877,31 @@ class _ThemeMarker {
 
 const Object _themeMarker = _ThemeMarker();
 
-/// Supplies the ambient theme ([DynamicContent] of resolved design tokens in
-/// their canonical template forms) to every remote component below it — the
-/// `theme.` reference scope. Installed by [Runtime.build] / [Runtime.buildNode]
-/// when a theme is provided.
+/// Supplies the ambient [CraftTheme] to every remote component below it — both
+/// the `theme.` reference scope (via [CraftTheme.content]) and the primitives'
+/// role defaults (via [ambientCraftTheme]). Installed by [Runtime.build] /
+/// [Runtime.buildNode] when a theme is provided.
+///
+/// The theme is an immutable snapshot; a host re-themes by providing a new
+/// one, which notifies dependents here.
 class _ThemeScope extends InheritedComponent {
   const _ThemeScope({required this.theme, required super.child});
 
-  final DynamicContent theme;
+  final CraftTheme theme;
 
   @override
   bool updateShouldNotify(_ThemeScope oldComponent) =>
       theme != oldComponent.theme;
 }
+
+/// The ambient [CraftTheme] installed by [Runtime.build] / [Runtime.buildNode],
+/// or null when the surface is unthemed.
+///
+/// This is how the core primitives read their role defaults (the semantic
+/// contract, DESIGN.md §13.4): a typed, total lookup with the host default as
+/// the fallback. Registers a dependency, so a theme swap rebuilds the caller.
+CraftTheme? ambientCraftTheme(BuildContext context) =>
+    context.dependOnInheritedComponentOfExactType<_ThemeScope>()?.theme;
 
 @immutable
 class _Key {

@@ -1,0 +1,15 @@
+{
+  "$description": "A2UI Craft default theme — Dark overlay. Layers over the base; re-points the color roles onto the base palette's darker/lighter steps. Aliases dereference after the layer merge, so overriding the role tokens here re-themes without restating the palette or the type scale.",
+  "color": {
+    "$type": "color",
+    "surface": { "$value": "{palette.gray.900}" },
+    "onSurface": { "$value": "{palette.gray.50}" },
+    "onSurfaceVariant": { "$value": "{palette.gray.400}" },
+    "primary": { "$value": "{palette.blue.300}" },
+    "onPrimary": { "$value": "{palette.gray.900}" },
+    "outline": { "$value": "{palette.gray.700}" },
+    "link": { "$value": "{palette.blue.300}" },
+    "error": { "$value": "{palette.red.300}" },
+    "onError": { "$value": "{palette.gray.900}" }
+  }
+}

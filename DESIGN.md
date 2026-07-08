@@ -1013,10 +1013,20 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
           carrier that unified the two reactivity regimes), painted-decision
           probes (`textColorOf`/`textFontSizeOf`), partial-theme and unthemed
           regression guards, and per-adapter wiring tests.
-        - [ ] **4. Default theme** — open-source base `.tokens.json` + mode
+        - [x] **4. Default theme** — open-source base `.tokens.json` + mode
           overlays (light / dark / high-contrast); host-supplied n-ary mode
           input; reactive re-theme of a live surface. Explicit, never implicit
-          (§13.5).
+          (§13.5). Delivered as the DTCG token layers under
+          `packages/a2ui_craft/lib/src/themes/default/` (a neutral palette,
+          the contract roles aliased onto it, the type scale) + a `manifest.json`
+          carrying the mode → resolution-order wiring (ours, not the token
+          files); a generator bakes them zero-IO into `default_theme.g.dart`
+          (drift-guarded in `check.sh`, like the sample trios); `DefaultTheme.of`
+          + the `CraftThemeMode` enum (light / dark and their high-contrast
+          variants) resolve a cached immutable `CraftTheme` per mode. Light
+          restates the pre-contract literals (regression-anchored); a conformance
+          case paints the modes and flips one in place (ink re-points, state
+          survives). Never applied unasked — theming stays explicit.
         - [ ] **5. Project bundle (§13.9)** — theme as the 4th sample-trio
           file, then the project manifest (name, catalog id, theme reference,
           mode wiring); the demo site loads projects; agent-optional

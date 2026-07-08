@@ -1,0 +1,16 @@
+{
+  "name": "A2UI Craft Default",
+  "description": "The open-source default theme: the reference documentation of the semantic contract, the starter kit for custom themes, and the theming-conformance fixture. The runtime never applies it unasked (DESIGN.md §13.5).",
+  "sets": {
+    "base": "base.tokens.json",
+    "dark": "dark.tokens.json",
+    "highContrast": "light-high-contrast.tokens.json",
+    "darkHighContrast": "dark-high-contrast.tokens.json"
+  },
+  "modes": {
+    "light": ["base"],
+    "dark": ["base", "dark"],
+    "lightHighContrast": ["base", "highContrast"],
+    "darkHighContrast": ["base", "dark", "darkHighContrast"]
+  }
+}

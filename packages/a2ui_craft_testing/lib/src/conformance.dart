@@ -964,6 +964,42 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
       expect(tester.hasText('unthemed box'), isTrue);
     },
   );
+
+  driver.defineTest(
+    'the default theme paints its modes; a mode flip re-themes in place',
+    (CraftTester tester) async {
+      // Slice 4: the open-source default theme (DefaultTheme) resolves for a
+      // host-supplied n-ary mode and lands identically on both adapters. Light
+      // restates the pre-contract ink (#202124); flipping to Dark is just
+      // handing the surface the next immutable snapshot — the ink re-points and
+      // local state survives the swap (a re-theme, not a remount).
+      await tester.mount('''
+        import core;
+        widget root { count: 0 } = Column(children: [
+          Button(
+            key: "inc",
+            onPressed: set state.count = add(a: state.count, b: 1),
+            child: Text(text: "bump"),
+          ),
+          Text(text: concat(a: "n=", b: state.count)),
+          Text(text: "body copy"),
+        ]);
+      ''', theme: DefaultTheme.of(CraftThemeMode.light));
+      expect(tester.textColorOf('body copy'), '#FF202124');
+
+      await tester.activate('inc');
+      expect(tester.hasText('n=1'), isTrue);
+
+      await tester.retheme(DefaultTheme.of(CraftThemeMode.dark));
+      // Dark ink (gray.50) landed, and the counter survived the re-theme.
+      expect(tester.textColorOf('body copy'), '#FFF8F9FA');
+      expect(tester.hasText('n=1'), isTrue);
+
+      // The high-contrast axis is a distinct mode, not a toggle on Dark.
+      await tester.retheme(DefaultTheme.of(CraftThemeMode.darkHighContrast));
+      expect(tester.textColorOf('body copy'), '#FFFFFFFF');
+    },
+  );
 }
 
 /// The shared behavioral specification for rendering an **A2UI surface**

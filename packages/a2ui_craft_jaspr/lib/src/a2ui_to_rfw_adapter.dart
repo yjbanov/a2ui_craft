@@ -33,6 +33,7 @@ class A2uiToRfwAdapter extends StatefulComponent {
     this.basePath = '/',
     this.scope = const LibraryName(<String>['core']),
     this.mapComponent,
+    this.theme,
     String? reconcileKey,
   }) : super(key: ValueKey<String>(reconcileKey ?? id));
 
@@ -65,6 +66,13 @@ class A2uiToRfwAdapter extends StatefulComponent {
   /// embedder's choice per component; this adapter ships no catalog-specific
   /// default.
   final ConstructorCall Function(String type, DynamicMap args)? mapComponent;
+
+  /// The theme this surface renders under (§13), or null to blend into the host.
+  ///
+  /// Set on the **root** adapter only: it wraps the rendered tree in the ambient
+  /// theme scope, from which every descendant adapter's primitives read their
+  /// role defaults — so nested adapters leave this null and inherit it.
+  final CraftTheme? theme;
 
   @override
   State<A2uiToRfwAdapter> createState() => _A2uiToRfwAdapterState();
@@ -132,6 +140,7 @@ class _A2uiToRfwAdapterState extends State<A2uiToRfwAdapter> {
       DynamicContent(),
       _noEvent,
       scope: component.scope,
+      theme: component.theme,
     );
   }
 

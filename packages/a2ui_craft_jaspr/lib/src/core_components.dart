@@ -29,15 +29,22 @@ LocalWidgetLibrary createCoreComponents() {
       final String text = _readText(source, const <Object>['text']);
       final TextVariant variant =
           TextVariant.parse(source.v<String>(['variant']));
-      return variant == TextVariant.caption
-          ? span(
-              styles: Styles(raw: <String, String>{
-                'font-size': '12px',
-                'color': '#5f6368',
-              }),
-              <Component>[Component.text(text)],
-            )
-          : Component.text(text);
+      if (variant == TextVariant.caption) {
+        return span(
+          styles: Styles(raw: <String, String>{
+            'font-size': _roleSize(context, ThemeRoles.captionSize) ?? '12px',
+            'color':
+                _roleColor(context, ThemeRoles.onSurfaceVariant) ?? '#5f6368',
+          }),
+          <Component>[Component.text(text)],
+        );
+      }
+      // Unthemed body text stays a bare text node — exactly the pre-theming
+      // DOM; only a themed role introduces a styled wrapper.
+      final Styles? style = _bodyStyle(context);
+      return style == null
+          ? Component.text(text)
+          : span(styles: style, <Component>[Component.text(text)]);
     },
     // A single heading line carrying a real heading role + `level` (1–6) for
     // assistive tech (an `h1`–`h6` element) — distinct from `Text`, a plain span.
@@ -46,6 +53,7 @@ LocalWidgetLibrary createCoreComponents() {
       final int level = (source.v<int>(['level']) ?? 1).clamp(1, 6);
       return _mdHeading(
         level,
+        context,
         <Component>[
           Component.text(_readText(source, const <Object>['text']))
         ],
@@ -54,7 +62,7 @@ LocalWidgetLibrary createCoreComponents() {
     // Renders a Markdown string (parsed in the core) as headings, paragraphs,
     // and lists with inline emphasis — structurally, never as raw HTML.
     'Markdown': (BuildContext context, DataSource source) =>
-        _buildMarkdown(source.v<String>(['text']) ?? ''),
+        _buildMarkdown(source.v<String>(['text']) ?? '', context),
     // Row, Column, and Flex are one builder over a `FlexAxis`: Row/Column pin
     // the axis, Flex reads it from `direction` (DESIGN.md §11).
     'Flex': (BuildContext context, DataSource source) =>
@@ -77,6 +85,11 @@ LocalWidgetLibrary createCoreComponents() {
     'Button': (BuildContext context, DataSource source) {
       final onPressed = source.voidHandler(['onPressed']);
       return button(
+        // `type=button` opts out of implicit form submission; `disabled` keeps
+        // a handler-less button out of the tab order and announced as disabled
+        // — parity with the Flutter adapter's Semantics(enabled: false).
+        type: ButtonType.button,
+        disabled: onPressed == null,
         onClick: onPressed == null ? null : () => onPressed(),
         [
           source.child(['child'])
@@ -193,8 +206,12 @@ LocalWidgetLibrary createCoreComponents() {
     'Box': (BuildContext context, DataSource source) => _buildBox(source),
     'Image': (BuildContext context, DataSource source) => _buildImage(source),
     'Icon': (BuildContext context, DataSource source) {
+      final String? color = _roleColor(context, ThemeRoles.onSurface);
       return i(
         classes: 'material-icons',
+        styles: color == null
+            ? null
+            : Styles(raw: <String, String>{'color': color}),
         <Component>[
           Component.text(_iconLigature(source.v<String>(['icon'])))
         ],
@@ -203,12 +220,14 @@ LocalWidgetLibrary createCoreComponents() {
     'Divider': (BuildContext context, DataSource source) {
       final FlexAxis axis = FlexAxis.parse(source.v<String>(['axis']),
           fallback: FlexAxis.horizontal);
+      final String separator =
+          _roleColor(context, ThemeRoles.outline) ?? 'rgba(0, 0, 0, 0.12)';
       if (axis == FlexAxis.vertical) {
         return div(
           styles: Styles(raw: <String, String>{
             'width': '1px',
             'align-self': 'stretch',
-            'background-color': 'rgba(0, 0, 0, 0.12)',
+            'background-color': separator,
           }),
           const <Component>[],
         );
@@ -223,7 +242,7 @@ LocalWidgetLibrary createCoreComponents() {
           'height': '1px',
           'border': 'none',
           'margin': '0',
-          'background-color': 'rgba(0, 0, 0, 0.12)',
+          'background-color': separator,
         }),
         const <Component>[],
       );
@@ -257,6 +276,8 @@ LocalWidgetLibrary createCoreComponents() {
       );
     },
     'Card': (BuildContext context, DataSource source) {
+      final Rgba? surface =
+          ambientCraftTheme(context)?.tokens.color(ThemeRoles.surface);
       return div(
         styles: Styles(
           padding: Padding.all(Unit.pixels(16)),
@@ -267,7 +288,8 @@ LocalWidgetLibrary createCoreComponents() {
             offsetX: Unit.zero,
             offsetY: Unit.pixels(2),
           ),
-          backgroundColor: Colors.white,
+          backgroundColor:
+              surface == null ? Colors.white : Color(surface.toCssString()),
         ),
         [
           source.child(['child'])
@@ -284,9 +306,13 @@ LocalWidgetLibrary createCoreComponents() {
         (HandlerTrigger trigger) =>
             (String value) => trigger(<String, Object?>{'value': value}),
       );
+      final String? border = _roleColor(context, ThemeRoles.outline);
       return input<String>(
         type: InputType.text,
         value: source.v<String>(['value']) ?? '',
+        styles: border == null
+            ? null
+            : Styles(raw: <String, String>{'border-color': border}),
         onInput: onChanged,
       );
     },
@@ -302,6 +328,7 @@ LocalWidgetLibrary createCoreComponents() {
       return input(
         type: InputType.checkbox,
         checked: value,
+        styles: _accentStyle(context),
         events: onChanged == null
             ? null
             : <String, EventCallback>{'change': (_) => onChanged(!value)},
@@ -318,6 +345,7 @@ LocalWidgetLibrary createCoreComponents() {
       return input(
         type: InputType.radio,
         checked: selected,
+        styles: _accentStyle(context),
         events: onChanged == null
             ? null
             : <String, EventCallback>{'click': (_) => onChanged()},
@@ -340,6 +368,7 @@ LocalWidgetLibrary createCoreComponents() {
       return input<String>(
         type: InputType.range,
         value: '$value',
+        styles: _accentStyle(context),
         attributes: <String, String>{
           'min': '$min',
           'max': '$max',
@@ -625,17 +654,25 @@ AlignItems _alignItemsFor(double y) => y < 0
 /// model (the Flutter adapter renders the same model with widgets), as DOM
 /// headings/paragraphs/lists with `strong`/`em`/`code`/`a` emphasis — never raw
 /// HTML.
-Component _buildMarkdown(String source) {
+Component _buildMarkdown(String source, BuildContext context) {
   final List<MarkdownBlock> blocks = parseMarkdown(source);
+  // Body color/size land on the wrapper and cascade to paragraphs and lists
+  // (CSS inheritance is the base-style threading the Flutter adapter does by
+  // hand); headings and links override their own properties below.
   return div(
-    <Component>[for (final MarkdownBlock block in blocks) _mdBlock(block)],
+    styles: _bodyStyle(context),
+    <Component>[
+      for (final MarkdownBlock block in blocks) _mdBlock(block, context)
+    ],
   );
 }
 
-Component _mdBlock(MarkdownBlock block) => switch (block) {
+Component _mdBlock(MarkdownBlock block, BuildContext context) =>
+    switch (block) {
       MarkdownHeading(:final int level, :final List<MarkdownSpan> spans) =>
-        _mdHeading(level, _mdInline(spans)),
-      MarkdownParagraph(:final List<MarkdownSpan> spans) => p(_mdInline(spans)),
+        _mdHeading(level, context, _mdInline(spans, context)),
+      MarkdownParagraph(:final List<MarkdownSpan> spans) =>
+        p(_mdInline(spans, context)),
       MarkdownList(
         :final bool ordered,
         :final List<List<MarkdownSpan>> items
@@ -643,32 +680,87 @@ Component _mdBlock(MarkdownBlock block) => switch (block) {
         ordered
             ? ol(<Component>[
                 for (final List<MarkdownSpan> item in items)
-                  li(_mdInline(item)),
+                  li(_mdInline(item, context)),
               ])
             : ul(<Component>[
                 for (final List<MarkdownSpan> item in items)
-                  li(_mdInline(item)),
+                  li(_mdInline(item, context)),
               ]),
     };
 
-Component _mdHeading(int level, List<Component> children) => switch (level) {
-      1 => h1(children),
-      2 => h2(children),
-      3 => h3(children),
-      4 => h4(children),
-      5 => h5(children),
-      _ => h6(children),
-    };
+Component _mdHeading(
+    int level, BuildContext context, List<Component> children) {
+  final String? size = _roleSize(context, ThemeRoles.headingSize(level));
+  final String? color = _roleColor(context, ThemeRoles.onSurface);
+  // Unthemed headings keep the browser's default h1–h6 rendering (the host
+  // default on this adapter, as the Flutter ramp is on that one).
+  final Styles? styles = (size == null && color == null)
+      ? null
+      : Styles(raw: <String, String>{
+          if (size != null) 'font-size': size,
+          if (color != null) 'color': color,
+        });
+  return switch (level) {
+    1 => h1(styles: styles, children),
+    2 => h2(styles: styles, children),
+    3 => h3(styles: styles, children),
+    4 => h4(styles: styles, children),
+    5 => h5(styles: styles, children),
+    _ => h6(styles: styles, children),
+  };
+}
 
-List<Component> _mdInline(List<MarkdownSpan> spans) =>
-    <Component>[for (final MarkdownSpan span in spans) _mdSpan(span)];
+List<Component> _mdInline(List<MarkdownSpan> spans, BuildContext context) =>
+    <Component>[for (final MarkdownSpan span in spans) _mdSpan(span, context)];
 
-Component _mdSpan(MarkdownSpan span) {
+Component _mdSpan(MarkdownSpan span, BuildContext context) {
   Component node = Component.text(span.text);
   if (span.code) node = code(<Component>[node]);
   if (span.italic) node = em(<Component>[node]);
   if (span.bold) node = strong(<Component>[node]);
   final String? href = span.href;
-  if (href != null) node = a(<Component>[node], href: href);
+  if (href != null) {
+    final String? link = _roleColor(context, ThemeRoles.link);
+    node = a(
+      <Component>[node],
+      href: href,
+      styles:
+          link == null ? null : Styles(raw: <String, String>{'color': link}),
+    );
+  }
   return node;
+}
+
+/// The ambient body-text style, or null when neither role is themed — an
+/// unthemed surface must render exactly the pre-theming DOM (DESIGN.md §13.4).
+Styles? _bodyStyle(BuildContext context) {
+  final String? color = _roleColor(context, ThemeRoles.onSurface);
+  final String? size = _roleSize(context, ThemeRoles.bodySize);
+  if (color == null && size == null) return null;
+  return Styles(raw: <String, String>{
+    if (size != null) 'font-size': size,
+    if (color != null) 'color': color,
+  });
+}
+
+/// The `accent-color` style carrying [ThemeRoles.primary] to the native
+/// checkbox/radio/range inputs, or null for the host default.
+Styles? _accentStyle(BuildContext context) {
+  final String? accent = _roleColor(context, ThemeRoles.primary);
+  return accent == null
+      ? null
+      : Styles(raw: <String, String>{'accent-color': accent});
+}
+
+/// Reads a role color from the ambient theme as a CSS color string, or null
+/// when the surface is unthemed / the theme omits the role — the caller then
+/// falls back to the host default (DESIGN.md §13.4).
+String? _roleColor(BuildContext context, String role) =>
+    ambientCraftTheme(context)?.tokens.color(role)?.toCssString();
+
+/// Reads a role size (a `dimension` token) as a CSS px length, or null for
+/// the host default.
+String? _roleSize(BuildContext context, String role) {
+  final double? px = ambientCraftTheme(context)?.tokens.dimension(role);
+  return px == null ? null : '${numberToDisplayString(px)}px';
 }

@@ -22,15 +22,31 @@ class _FlutterCraftTester implements CraftTester {
     ..registerFunctions(createCoreFunctions())
     ..update(a2uiDemoCatalogName, parseLibraryFile(a2uiDemoCatalogSource));
 
+  DynamicContent? _mountedData;
+  CraftEventHandler? _mountedOnEvent;
+
   @override
   Future<void> mountLibrary(
     RemoteWidgetLibrary main, {
     DynamicContent? data,
+    CraftTheme? theme,
     CraftEventHandler? onEvent,
   }) async {
     _runtime.update(const LibraryName(<String>['main']), main);
+    _mountedData = data ?? DynamicContent();
+    _mountedOnEvent = onEvent;
+    await _pumpMounted(theme);
+  }
 
-    await _tester.pumpWidget(
+  @override
+  Future<void> retheme(CraftTheme? theme) => _pumpMounted(theme);
+
+  /// Pumps the mounted surface with [theme]. The runtime, library, and data
+  /// are unchanged, so a re-pump updates the same element tree in place — a
+  /// theme swap must not remount (state survives), which the conformance
+  /// suite asserts.
+  Future<void> _pumpMounted(CraftTheme? theme) {
+    return _tester.pumpWidget(
       _host(
         RemoteWidget(
           runtime: _runtime,
@@ -38,8 +54,9 @@ class _FlutterCraftTester implements CraftTester {
             LibraryName(<String>['main']),
             'root',
           ),
-          data: data ?? DynamicContent(),
-          onEvent: onEvent,
+          data: _mountedData!,
+          theme: theme,
+          onEvent: _mountedOnEvent,
         ),
       ),
     );
@@ -73,6 +90,25 @@ class _FlutterCraftTester implements CraftTester {
   int textCount(String text) => find.text(text).evaluate().length;
 
   @override
+  int buttonCount(String label) => find.semantics
+      .byPredicate(
+          (node) => node.flagsCollection.isButton && node.label == label)
+      .evaluate()
+      .length;
+
+  @override
+  String? textColorOf(String text) {
+    final Color? color = _tester.widget<Text>(find.text(text)).style?.color;
+    return color == null
+        ? null
+        : '#${color.toARGB32().toRadixString(16).padLeft(8, '0').toUpperCase()}';
+  }
+
+  @override
+  double? textFontSizeOf(String text) =>
+      _tester.widget<Text>(find.text(text)).style?.fontSize;
+
+  @override
   Future<void> activate(String key) async {
     await _tester.tap(find.byKey(ValueKey<String>(key)));
     await _tester.pump();
@@ -93,7 +129,17 @@ class _FlutterConformanceDriver implements CraftConformanceDriver {
   ) {
     testWidgets(
       description,
-      (WidgetTester tester) => body(_FlutterCraftTester(tester)),
+      (WidgetTester tester) async {
+        // Semantics stays on for every case: the suite probes the a11y tree
+        // (CraftTester.buttonCount), and the handle must be released before
+        // the test ends.
+        final semantics = tester.ensureSemantics();
+        try {
+          await body(_FlutterCraftTester(tester));
+        } finally {
+          semantics.dispose();
+        }
+      },
     );
   }
 }

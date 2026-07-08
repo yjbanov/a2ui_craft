@@ -21,6 +21,7 @@ workspace:
   - packages/a2ui_craft_flutter
   - packages/a2ui_craft_flutter/example
   - packages/a2ui_craft_examples
+  - packages/craft
   - site
   - tool/testing
 

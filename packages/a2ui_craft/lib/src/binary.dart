@@ -213,10 +213,12 @@ Uint8List encodeLibraryBlob(RemoteWidgetLibrary value) {
 ///   as a string for the [ConstructorCall.name] followed by an untagged map
 ///   describing the [ConstructorCall.arguments].
 ///
-/// * Argument, data, and state references ([ArgsReference], [DataReference],
-///   and [StateReference] respectively) have tags 0x0A, 0x0B, and 0x0D
-///   respectively, and are encoded as tagged lists of strings or integers
-///   giving the [Reference.parts] of the reference.
+/// * Argument, data, state, and theme references ([ArgsReference],
+///   [DataReference], [StateReference], and [ThemeReference] respectively)
+///   have tags 0x0A, 0x0B, 0x0D, and 0x14 respectively, and are encoded as
+///   tagged lists of strings or integers giving the [Reference.parts] of the
+///   reference. (The theme-reference tag is an A2UI Craft addition to the RFW
+///   format.)
 ///
 /// * Loop references ([LoopReference]) have the tag 0x0C, and are encoded as an
 ///   integer giving the number of [Loop] objects between the reference and the
@@ -315,6 +317,7 @@ const int _msDefault = 0x10;
 const int _msSetState = 0x11;
 const int _msWidgetBuilder = 0x12;
 const int _msWidgetBuilderArgReference = 0x13;
+const int _msThemeReference = 0x14;
 
 /// API for decoding Remote Flutter Widgets binary blobs.
 ///
@@ -468,6 +471,8 @@ class _BlobDecoder {
         return ArgsReference(_readPartList());
       case _msDataReference:
         return DataReference(_readPartList());
+      case _msThemeReference:
+        return ThemeReference(_readPartList());
       case _msLoopReference:
         return LoopReference(_readInt64(), _readPartList());
       case _msStateReference:
@@ -672,6 +677,10 @@ class _BlobEncoder {
       value.parts.forEach(_writePart);
     } else if (value is DataReference) {
       bytes.addByte(_msDataReference);
+      _writeInt64(value.parts.length);
+      value.parts.forEach(_writePart);
+    } else if (value is ThemeReference) {
+      bytes.addByte(_msThemeReference);
       _writeInt64(value.parts.length);
       value.parts.forEach(_writePart);
     } else if (value is WidgetBuilderArgReference) {

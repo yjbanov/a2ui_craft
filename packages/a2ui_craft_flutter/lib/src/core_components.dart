@@ -30,8 +30,12 @@ LocalWidgetLibrary createCoreComponents() {
       return Text(
         _readText(source, const <Object>['text']),
         style: variant == TextVariant.caption
-            ? const TextStyle(fontSize: 12, color: Color(0xFF5F6368))
-            : null,
+            ? TextStyle(
+                fontSize: _roleSize(context, ThemeRoles.captionSize) ?? 12,
+                color: _roleColor(context, ThemeRoles.onSurfaceVariant) ??
+                    const Color(0xFF5F6368),
+              )
+            : _bodyStyle(context),
       );
     },
     // A single heading line carrying a real heading role + `level` (1–6) for
@@ -43,14 +47,14 @@ LocalWidgetLibrary createCoreComponents() {
         headingLevel: level,
         child: Text(
           _readText(source, const <Object>['text']),
-          style: _mdHeadingStyle(level),
+          style: _mdHeadingStyle(level, context),
         ),
       );
     },
     // Renders a Markdown string (parsed in the core) as headings, paragraphs,
     // and lists with inline emphasis — structurally, never as raw HTML.
     'Markdown': (BuildContext context, DataSource source) =>
-        _buildMarkdown(source.v<String>(['text']) ?? ''),
+        _buildMarkdown(source.v<String>(['text']) ?? '', context),
     // Row, Column, and Flex are one builder over a `FlexAxis`: Row/Column pin
     // the axis, Flex reads it from `direction` (DESIGN.md §11).
     'Flex': (BuildContext context, DataSource source) =>
@@ -67,8 +71,8 @@ LocalWidgetLibrary createCoreComponents() {
     },
     'Button': (BuildContext context, DataSource source) {
       final VoidCallback? onPressed = source.voidHandler(['onPressed']);
-      return GestureDetector(
-        onTap: onPressed,
+      return _CoreButton(
+        onPressed: onPressed,
         child: source.child(['child']),
       );
     },
@@ -136,14 +140,18 @@ LocalWidgetLibrary createCoreComponents() {
     'Box': (BuildContext context, DataSource source) => _buildBox(source),
     'Image': (BuildContext context, DataSource source) => _buildImage(source),
     'Icon': (BuildContext context, DataSource source) {
-      return Icon(_iconData(source.v<String>(['icon'])));
+      return Icon(
+        _iconData(source.v<String>(['icon'])),
+        color: _roleColor(context, ThemeRoles.onSurface),
+      );
     },
     'Divider': (BuildContext context, DataSource source) {
       final FlexAxis axis = FlexAxis.parse(source.v<String>(['axis']),
           fallback: FlexAxis.horizontal);
+      final Color? color = _roleColor(context, ThemeRoles.outline);
       return axis == FlexAxis.vertical
-          ? const VerticalDivider()
-          : const Divider();
+          ? VerticalDivider(color: color)
+          : Divider(color: color);
     },
     'ScrollView': (BuildContext context, DataSource source) {
       return SingleChildScrollView(
@@ -176,6 +184,7 @@ LocalWidgetLibrary createCoreComponents() {
         // Zero it so the primitive is spacing-neutral on both adapters; spacing
         // between cards is the layout's job (a `Column` `gap`).
         margin: EdgeInsets.zero,
+        color: _roleColor(context, ThemeRoles.surface),
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: source.child(['child']),
@@ -187,6 +196,7 @@ LocalWidgetLibrary createCoreComponents() {
     'TextField': (BuildContext context, DataSource source) {
       return _CoreTextField(
         value: source.v<String>(['value']),
+        borderColor: _roleColor(context, ThemeRoles.outline),
         // The `onChanged` arg is a2ui_core's two-way setter (a resolved
         // callback), accepted directly by the runtime's handler affordance.
         onChanged: source.handler<ValueChanged<String>>(
@@ -205,6 +215,7 @@ LocalWidgetLibrary createCoreComponents() {
       );
       return Checkbox(
         value: value,
+        activeColor: _roleColor(context, ThemeRoles.primary),
         onChanged:
             onChanged == null ? null : (bool? v) => onChanged(v ?? !value),
       );
@@ -218,11 +229,11 @@ LocalWidgetLibrary createCoreComponents() {
     'Radio': (BuildContext context, DataSource source) {
       final bool selected = source.v<bool>(['selected']) ?? false;
       final VoidCallback? onChanged = source.voidHandler(['onChanged']);
-      return GestureDetector(
-        onTap: onChanged,
-        child: Icon(
-          selected ? Icons.radio_button_checked : Icons.radio_button_off,
-        ),
+      return _CoreRadio(
+        selected: selected,
+        onChanged: onChanged,
+        // The selected glyph shows the accent; unselected keeps the host look.
+        accent: _roleColor(context, ThemeRoles.primary),
       );
     },
     // A bare numeric slider (no label — that is a template's choice). Two-way
@@ -242,6 +253,7 @@ LocalWidgetLibrary createCoreComponents() {
         min: min,
         max: max,
         value: value,
+        activeColor: _roleColor(context, ThemeRoles.primary),
         divisions: (steps != null && steps > 0) ? steps : null,
         onChanged: onChanged,
       );
@@ -284,29 +296,30 @@ String _readText(DataSource source, List<Object> key) {
 /// [MarkdownBlock] model, and this renders it as Flutter widgets (headings,
 /// paragraphs, and lists with inline emphasis). The Jaspr adapter renders the
 /// same model with DOM elements.
-Widget _buildMarkdown(String source) {
+Widget _buildMarkdown(String source, BuildContext context) {
   final List<MarkdownBlock> blocks = parseMarkdown(source);
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     mainAxisSize: MainAxisSize.min,
     children: <Widget>[
-      for (final MarkdownBlock block in blocks) _mdBlock(block)
+      for (final MarkdownBlock block in blocks) _mdBlock(block, context)
     ],
   );
 }
 
-Widget _mdBlock(MarkdownBlock block) => switch (block) {
+Widget _mdBlock(MarkdownBlock block, BuildContext context) => switch (block) {
       MarkdownHeading(:final int level, :final List<MarkdownSpan> spans) =>
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 4),
           child: Semantics(
             headingLevel: level,
-            child: _mdInline(spans, base: _mdHeadingStyle(level)),
+            child: _mdInline(spans, context,
+                base: _mdHeadingStyle(level, context)),
           ),
         ),
       MarkdownParagraph(:final List<MarkdownSpan> spans) => Padding(
           padding: const EdgeInsets.symmetric(vertical: 2),
-          child: _mdInline(spans),
+          child: _mdInline(spans, context, base: _bodyStyle(context)),
         ),
       MarkdownList(
         :final bool ordered,
@@ -321,8 +334,9 @@ Widget _mdBlock(MarkdownBlock block) => switch (block) {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
-                  Text(ordered ? '${i + 1}. ' : '• '),
-                  _mdInline(items[i]),
+                  Text(ordered ? '${i + 1}. ' : '• ',
+                      style: _bodyStyle(context)),
+                  _mdInline(items[i], context, base: _bodyStyle(context)),
                 ],
               ),
           ],
@@ -332,37 +346,65 @@ Widget _mdBlock(MarkdownBlock block) => switch (block) {
 /// Renders a run of spans. A single span becomes a plain `Text` (so the
 /// behavioral conformance harness's `find.text` can locate it); multiple spans
 /// become a `Text.rich`.
-Widget _mdInline(List<MarkdownSpan> spans, {TextStyle? base}) {
+Widget _mdInline(List<MarkdownSpan> spans, BuildContext context,
+    {TextStyle? base}) {
   if (spans.length == 1) {
-    return Text(spans.first.text, style: _mdSpanStyle(spans.first, base));
+    return Text(spans.first.text,
+        style: _mdSpanStyle(spans.first, base, context));
   }
   return Text.rich(TextSpan(children: <InlineSpan>[
     for (final MarkdownSpan span in spans)
-      TextSpan(text: span.text, style: _mdSpanStyle(span, base)),
+      TextSpan(text: span.text, style: _mdSpanStyle(span, base, context)),
   ]));
 }
 
-TextStyle _mdSpanStyle(MarkdownSpan span, TextStyle? base) {
+TextStyle _mdSpanStyle(
+    MarkdownSpan span, TextStyle? base, BuildContext context) {
   TextStyle style = base ?? const TextStyle();
   if (span.bold) style = style.copyWith(fontWeight: FontWeight.bold);
   if (span.italic) style = style.copyWith(fontStyle: FontStyle.italic);
   if (span.code) style = style.copyWith(fontFamily: 'monospace');
   if (span.href != null) {
     style = style.copyWith(
-      color: const Color(0xFF1A73E8),
+      color: _roleColor(context, ThemeRoles.link) ?? const Color(0xFF1A73E8),
       decoration: TextDecoration.underline,
     );
   }
   return style;
 }
 
-TextStyle _mdHeadingStyle(int level) {
+TextStyle _mdHeadingStyle(int level, BuildContext context) {
   const List<double> sizes = <double>[24, 22, 20, 18, 16, 14];
   return TextStyle(
-    fontSize: sizes[(level - 1).clamp(0, 5)],
+    fontSize: _roleSize(context, ThemeRoles.headingSize(level)) ??
+        sizes[(level - 1).clamp(0, 5)],
     fontWeight: FontWeight.bold,
+    color: _roleColor(context, ThemeRoles.onSurface),
   );
 }
+
+/// The ambient body-text style, or null when neither role is themed (the host
+/// default shows through untouched — an unthemed surface must render exactly
+/// as before the semantic contract existed).
+TextStyle? _bodyStyle(BuildContext context) {
+  final Color? color = _roleColor(context, ThemeRoles.onSurface);
+  final double? size = _roleSize(context, ThemeRoles.bodySize);
+  if (color == null && size == null) return null;
+  return TextStyle(color: color, fontSize: size);
+}
+
+/// Reads a role color from the ambient theme as a Flutter [Color], or null
+/// when the surface is unthemed / the theme omits the role — the caller then
+/// falls back to the host default (DESIGN.md §13.4).
+Color? _roleColor(BuildContext context, String role) {
+  final Rgba? rgba = ambientCraftTheme(context)?.tokens.color(role);
+  return rgba == null ? null : Color(rgba.value);
+}
+
+/// Reads a role size (a `dimension` token, logical pixels) from the ambient
+/// theme, or null for the host default.
+double? _roleSize(BuildContext context, String role) =>
+    ambientCraftTheme(context)?.tokens.dimension(role);
 
 /// Builds a `Flex` (and thus `Row`/`Column`) from the catalog spec, mapping the
 /// framework-neutral value types onto Flutter's `Flex`.
@@ -585,14 +627,119 @@ CrossAxisAlignment _toCrossAxisAlignment(CrossAxisAlign a) => switch (a) {
       CrossAxisAlign.stretch => CrossAxisAlignment.stretch,
     };
 
+/// The look-free pressable behind the `Button` primitive.
+///
+/// Matches the Jaspr adapter's native `<button>`: announces a **button role**
+/// whose accessible name merges from the child, exposes the enabled/disabled
+/// state, participates in focus traversal, and activates from the keyboard
+/// (Space/Enter arrive as [ActivateIntent]/[ButtonActivateIntent] via the
+/// app-level default shortcuts). Appearance stays the child's job (DESIGN.md
+/// §2, bias to templatize) — this widget paints nothing.
+class _CoreButton extends StatelessWidget {
+  const _CoreButton({required this.onPressed, required this.child});
+
+  final VoidCallback? onPressed;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool enabled = onPressed != null;
+    return MergeSemantics(
+      child: Semantics(
+        button: true,
+        enabled: enabled,
+        child: FocusableActionDetector(
+          enabled: enabled,
+          actions: <Type, Action<Intent>>{
+            ActivateIntent: CallbackAction<ActivateIntent>(
+              onInvoke: (ActivateIntent intent) {
+                onPressed!();
+                return null;
+              },
+            ),
+            ButtonActivateIntent: CallbackAction<ButtonActivateIntent>(
+              onInvoke: (ButtonActivateIntent intent) {
+                onPressed!();
+                return null;
+              },
+            ),
+          },
+          child: GestureDetector(onTap: onPressed, child: child),
+        ),
+      ),
+    );
+  }
+}
+
+/// The radio glyph behind the `Radio` primitive, with the semantics the bare
+/// `GestureDetector` + `Icon` lacked: a checked/unchecked state in a mutually
+/// exclusive group, enabled/disabled, focus, and keyboard activation — parity
+/// with the Jaspr adapter's native `<input type=radio>`. (The glyph itself is
+/// still the interim rendering; see the TODO at the registration site.)
+class _CoreRadio extends StatelessWidget {
+  const _CoreRadio({
+    required this.selected,
+    required this.onChanged,
+    this.accent,
+  });
+
+  final bool selected;
+  final VoidCallback? onChanged;
+
+  /// The `color.primary` role, shown by the selected glyph; null keeps the
+  /// host look.
+  final Color? accent;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool enabled = onChanged != null;
+    return MergeSemantics(
+      child: Semantics(
+        checked: selected,
+        inMutuallyExclusiveGroup: true,
+        enabled: enabled,
+        child: FocusableActionDetector(
+          enabled: enabled,
+          actions: <Type, Action<Intent>>{
+            ActivateIntent: CallbackAction<ActivateIntent>(
+              onInvoke: (ActivateIntent intent) {
+                onChanged!();
+                return null;
+              },
+            ),
+            ButtonActivateIntent: CallbackAction<ButtonActivateIntent>(
+              onInvoke: (ButtonActivateIntent intent) {
+                onChanged!();
+                return null;
+              },
+            ),
+          },
+          child: GestureDetector(
+            onTap: onChanged,
+            child: Icon(
+              selected ? Icons.radio_button_checked : Icons.radio_button_off,
+              color: selected ? accent : null,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// A text field that reflects an externally-bound [value] (without clobbering
 /// the cursor mid-edit) and reports edits through [onChanged] — the two halves
 /// of two-way binding.
 class _CoreTextField extends StatefulWidget {
-  const _CoreTextField({this.value, this.onChanged});
+  const _CoreTextField({this.value, this.onChanged, this.borderColor});
 
   final String? value;
   final ValueChanged<String>? onChanged;
+
+  /// The `color.outline` role for the (enabled) underline; null keeps the
+  /// host's default decoration. Focused/error states keep the host emphasis
+  /// until the contract grows state roles.
+  final Color? borderColor;
 
   @override
   State<_CoreTextField> createState() => _CoreTextFieldState();
@@ -622,6 +769,13 @@ class _CoreTextFieldState extends State<_CoreTextField> {
   Widget build(BuildContext context) {
     return TextField(
       controller: _controller,
+      decoration: widget.borderColor == null
+          ? const InputDecoration()
+          : InputDecoration(
+              enabledBorder: UnderlineInputBorder(
+                borderSide: BorderSide(color: widget.borderColor!),
+              ),
+            ),
       onChanged: widget.onChanged,
     );
   }

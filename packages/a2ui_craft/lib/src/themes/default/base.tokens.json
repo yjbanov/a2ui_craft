@@ -1,0 +1,57 @@
+{
+  "$description": "A2UI Craft default theme — base layer (also the Light mode). A neutral palette plus the semantic contract roles (DESIGN.md §13.4) aliased onto it, and the type scale. Mode overlays re-point the color roles onto the same palette; the type scale never changes across modes. The Light values restate the primitives the primitives hardcoded before the contract, so applying this theme in Light mode reproduces today's look.",
+  "palette": {
+    "$type": "color",
+    "$description": "Primitive ramp. Roles alias into this; overlays override roles, not the ramp.",
+    "white": { "$value": "#FFFFFF" },
+    "black": { "$value": "#000000" },
+    "gray": {
+      "50": { "$value": "#F8F9FA" },
+      "100": { "$value": "#F1F3F4" },
+      "200": { "$value": "#E8EAED" },
+      "300": { "$value": "#DADCE0" },
+      "400": { "$value": "#BDC1C6" },
+      "500": { "$value": "#9AA0A6" },
+      "600": { "$value": "#80868B" },
+      "700": { "$value": "#5F6368" },
+      "800": { "$value": "#3C4043" },
+      "900": { "$value": "#202124" }
+    },
+    "blue": {
+      "300": { "$value": "#8AB4F8" },
+      "600": { "$value": "#1A73E8" },
+      "700": { "$value": "#1967D2" }
+    },
+    "red": {
+      "300": { "$value": "#F28B82" },
+      "600": { "$value": "#D93025" }
+    }
+  },
+  "color": {
+    "$type": "color",
+    "$description": "The semantic contract roles (ThemeRoles). Light values.",
+    "surface": { "$value": "{palette.white}" },
+    "onSurface": { "$value": "{palette.gray.900}" },
+    "onSurfaceVariant": { "$value": "{palette.gray.700}" },
+    "primary": { "$value": "{palette.blue.600}" },
+    "onPrimary": { "$value": "{palette.white}" },
+    "outline": { "$value": "{palette.gray.300}" },
+    "link": { "$value": "{palette.blue.600}" },
+    "error": { "$value": "{palette.red.600}" },
+    "onError": { "$value": "{palette.white}" }
+  },
+  "type": {
+    "$type": "dimension",
+    "$description": "Sizes only in v1 (families/weights are a later phase). Restates the primitives' built-in ramp.",
+    "body": { "size": { "$value": "14px" } },
+    "caption": { "size": { "$value": "12px" } },
+    "heading": {
+      "1": { "size": { "$value": "24px" } },
+      "2": { "size": { "$value": "22px" } },
+      "3": { "size": { "$value": "20px" } },
+      "4": { "size": { "$value": "18px" } },
+      "5": { "size": { "$value": "16px" } },
+      "6": { "size": { "$value": "14px" } }
+    }
+  }
+}

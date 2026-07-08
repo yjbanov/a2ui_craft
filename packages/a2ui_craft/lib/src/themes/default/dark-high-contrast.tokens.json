@@ -1,0 +1,10 @@
+{
+  "$description": "A2UI Craft default theme — Dark high-contrast overlay. Layers over the base AND the Dark overlay (resolution order: base, dark, dark-high-contrast), so it only carries the deltas that raise Dark's contrast: pure-black surface, pure-white ink, brighter border.",
+  "color": {
+    "$type": "color",
+    "surface": { "$value": "{palette.black}" },
+    "onSurface": { "$value": "{palette.white}" },
+    "onSurfaceVariant": { "$value": "{palette.gray.100}" },
+    "outline": { "$value": "{palette.gray.300}" }
+  }
+}

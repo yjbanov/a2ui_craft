@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// Bakes the code-free sample trios (`samples/<id>/{template.craft,schema.json,
-// messages.json}` + `manifest.json`) into `lib/src/generated_samples.g.dart`, so
+// Bakes the code-free sample projects (`samples/<id>/{template.craft,schema.json,
+// app.json}` + `manifest.json`) into `lib/src/generated_samples.g.dart`, so
 // every target (tests, the Flutter example, the Flutter-embedded view, the Jaspr
 // site) reads the same in-memory strings with zero per-platform file/asset IO.
 //
@@ -17,11 +17,14 @@ import 'dart:io';
 const String _root = 'packages/a2ui_craft_examples/samples';
 const String _out =
     'packages/a2ui_craft_examples/lib/src/generated_samples.g.dart';
+const JsonEncoder _pretty = JsonEncoder.withIndent('  ');
 
 void main() {
-  final List<Map<String, dynamic>> manifest =
+  // The gallery manifest is an ordered id list; each project's own
+  // `manifest.json` holds its name (and optional catalogId / theme).
+  final List<String> ids =
       (jsonDecode(File('$_root/manifest.json').readAsStringSync()) as List)
-          .cast<Map<String, dynamic>>();
+          .cast<String>();
 
   final StringBuffer b = StringBuffer()
     ..writeln('// Copyright 2013 The Flutter Authors')
@@ -44,6 +47,7 @@ void main() {
     ..writeln('    required this.template,')
     ..writeln('    required this.schema,')
     ..writeln('    required this.messages,')
+    ..writeln('    this.theme,')
     ..writeln('  });')
     ..writeln()
     ..writeln('  final String id;')
@@ -51,6 +55,10 @@ void main() {
     ..writeln('  final String template;')
     ..writeln('  final String schema;')
     ..writeln('  final String messages;')
+    ..writeln()
+    ..writeln('  /// The project manifest\'s optional `theme` block (a '
+        'ProjectTheme config), or null.')
+    ..writeln('  final String? theme;')
     ..writeln()
     ..writeln('  /// Builds a [SampleSpec], substituting `{{framework}}`; the '
         'host supplies')
@@ -61,21 +69,32 @@ void main() {
     ..writeln('        schemaJson: schema,')
     ..writeln('        messagesJson: messages,')
     ..writeln('        framework: framework,')
+    ..writeln('        themeJson: theme,')
     ..writeln('      );')
     ..writeln('}')
     ..writeln()
     ..writeln('/// Every built-in sample, in gallery order.')
     ..writeln('const List<RawSample> rawSamples = <RawSample>[');
 
-  for (final Map<String, dynamic> m in manifest) {
-    final String id = m['id'] as String;
-    final String label = m['label'] as String;
+  for (final String id in ids) {
+    // The project manifest consolidates name + optional catalogId + theme.
+    final Map<String, dynamic> project =
+        jsonDecode(File('$_root/$id/manifest.json').readAsStringSync())
+            as Map<String, dynamic>;
+    final String label = project['name'] as String;
     final String template =
         File('$_root/$id/template.craft').readAsStringSync();
     final String schema = File('$_root/$id/schema.json').readAsStringSync();
-    final String messages = File('$_root/$id/messages.json').readAsStringSync();
-    for (final String s in <String>[template, schema, messages]) {
-      if (s.contains("'''")) {
+    // app.json is the mini-app bootstrap — the canned A2UI message stream that
+    // builds the surface with no agent (an agent-driven project omits it).
+    final String messages = File('$_root/$id/app.json').readAsStringSync();
+    // The theme is the manifest's optional `theme` block (a ProjectTheme
+    // config) — present only for themed projects; re-encoded as its own JSON.
+    final Object? themeConfig = project['theme'];
+    final String? theme =
+        themeConfig == null ? null : '${_pretty.convert(themeConfig)}\n';
+    for (final String? s in <String?>[template, schema, messages, theme]) {
+      if (s != null && s.contains("'''")) {
         stderr.writeln("Sample '$id' contains ''' — cannot raw-embed.");
         exit(1);
       }
@@ -92,22 +111,28 @@ void main() {
       ..writeln("''',")
       ..writeln("    messages: r'''")
       ..write(messages)
-      ..writeln("''',")
-      ..writeln('  ),');
+      ..writeln("''',");
+    if (theme != null) {
+      b
+        ..writeln("    theme: r'''")
+        ..write(theme)
+        ..writeln("''',");
+    }
+    b.writeln('  ),');
   }
   b
     ..writeln('];')
     ..writeln()
     ..writeln('// Named accessors (one per sample), kept for the example apps '
         'and tests.');
-  for (int i = 0; i < manifest.length; i++) {
-    final String name = _camel(manifest[i]['id'] as String);
+  for (int i = 0; i < ids.length; i++) {
+    final String name = _camel(ids[i]);
     b.writeln('SampleSpec ${name}Spec(String framework) => '
         'rawSamples[$i].toSpec(framework);');
   }
 
   File(_out).writeAsStringSync(b.toString());
-  stdout.writeln('Generated ${manifest.length} samples → $_out');
+  stdout.writeln('Generated ${ids.length} samples → $_out');
 }
 
 String _camel(String snake) {

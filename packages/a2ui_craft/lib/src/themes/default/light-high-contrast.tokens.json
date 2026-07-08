@@ -1,0 +1,11 @@
+{
+  "$description": "A2UI Craft default theme — Light high-contrast overlay. Layers over the base (Light); pushes foreground/border contrast to the ceiling for accessibility (WCAG AAA intent). High contrast is a first-class mode axis, not a boolean toggle on dark.",
+  "color": {
+    "$type": "color",
+    "onSurface": { "$value": "{palette.black}" },
+    "onSurfaceVariant": { "$value": "{palette.gray.900}" },
+    "outline": { "$value": "{palette.gray.900}" },
+    "primary": { "$value": "{palette.blue.700}" },
+    "link": { "$value": "{palette.blue.700}" }
+  }
+}

@@ -336,8 +336,9 @@ class Runtime extends ChangeNotifier {
     BuildContext context,
     FullyQualifiedWidgetName widget,
     DynamicContent data,
-    RemoteEventHandler remoteEventTarget,
-  ) {
+    RemoteEventHandler remoteEventTarget, {
+    CraftTheme? theme,
+  }) {
     _CurriedWidget? boundWidget = _widgets[widget];
     if (boundWidget == null) {
       _checkForImportLoops(widget.library);
@@ -351,8 +352,11 @@ class Runtime extends ChangeNotifier {
       );
       _widgets[widget] = boundWidget;
     }
-    return boundWidget
+    final Widget built = boundWidget
         .build(context, data, remoteEventTarget, const <_WidgetState>[]);
+    // The theme rides an inherited scope (the ambient cascade), not the
+    // curried-widget plumbing; omitting it leaves any enclosing scope visible.
+    return theme == null ? built : _ThemeScope(theme: theme, child: built);
   }
 
   /// Builds an ad-hoc [composition] against the registered libraries, without it
@@ -372,6 +376,7 @@ class Runtime extends ChangeNotifier {
     DynamicContent data,
     RemoteEventHandler remoteEventTarget, {
     required LibraryName scope,
+    CraftTheme? theme,
   }) {
     // TODO(yjbanov): isn't it expensive to check for loops for every node build? Maybe we should cache the result of this check for each library.
     _checkForImportLoops(scope);
@@ -383,8 +388,9 @@ class Runtime extends ChangeNotifier {
       -1,
       <FullyQualifiedWidgetName>{},
     ) as _CurriedWidget;
-    return curried
-        .build(context, data, remoteEventTarget, const <_WidgetState>[]);
+    final Widget built =
+        curried.build(context, data, remoteEventTarget, const <_WidgetState>[]);
+    return theme == null ? built : _ThemeScope(theme: theme, child: built);
   }
 
   /// Returns the [BlobNode] that most closely corresponds to a given [BuildContext].
@@ -958,6 +964,9 @@ abstract class _CurriedWidget extends BlobNode {
             );
           } else if (inputList is DataReference) {
             inputList = dataResolver(inputList.parts);
+          } else if (inputList is ThemeReference) {
+            inputList =
+                dataResolver(<Object>[_themeMarker, ...inputList.parts]);
           } else if (inputList is WidgetBuilderArgReference) {
             inputList = widgetBuilderArgResolver(
               <Object>[inputList.argumentName, ...inputList.parts],
@@ -1029,6 +1038,17 @@ abstract class _CurriedWidget extends BlobNode {
           index = parts.length;
         }
         current = dataResolver(current.parts);
+        continue;
+      } else if (current is ThemeReference) {
+        if (index < parts.length) {
+          current = current.constructReference(parts.sublist(index));
+          index = parts.length;
+        }
+        // Theme lookups ride the data-resolver callback, marked with the
+        // non-string _themeMarker so _dataResolver can route them to the theme
+        // content. The marker type cannot appear in transport data (JSON keys
+        // are strings), so the two trust domains cannot be confused.
+        current = dataResolver(<Object>[_themeMarker, ...current.parts]);
         continue;
       } else if (current is WidgetBuilderArgReference) {
         current = widgetBuilderArgResolver(
@@ -1460,6 +1480,14 @@ class _WidgetState extends State<_Widget> implements DataSource {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // The ambient theme instance changed (_ThemeScope, subscribed to via
+    // _theme); drop subscriptions so lookups re-subscribe into the new one.
+    _unsubscribe();
+  }
+
+  @override
   void dispose() {
     _unsubscribe();
     super.dispose();
@@ -1742,6 +1770,18 @@ class _WidgetState extends State<_Widget> implements DataSource {
   }
 
   Object _dataResolver(List<Object> rawDataKey) {
+    // A theme lookup routed through this callback (see _themeMarker): the same
+    // subscription machinery, but into the ambient theme content — a different
+    // object in a different trust domain (author/host, never the transport).
+    if (rawDataKey.isNotEmpty && identical(rawDataKey.first, _themeMarker)) {
+      final List<Object> themeKey = rawDataKey.sublist(1);
+      final themeSubscriptionKey = _Key(_kThemeSection, themeKey);
+      final _Subscription subscription =
+          _subscriptions[themeSubscriptionKey] ??=
+              _Subscription(_theme, this, themeKey);
+      _dependencies.add(subscription);
+      return subscription.value;
+    }
     final dataKey = _Key(_kDataSection, rawDataKey);
     final _Subscription subscription;
     if (!_subscriptions.containsKey(dataKey)) {
@@ -1753,6 +1793,14 @@ class _WidgetState extends State<_Widget> implements DataSource {
     _dependencies.add(subscription);
     return subscription.value;
   }
+
+  /// The ambient theme's template-facing content, from the nearest
+  /// [_ThemeScope]; a shared empty content when the surface has no theme
+  /// (every lookup resolves as missing, so consumers fall back to host
+  /// defaults).
+  DynamicContent get _theme =>
+      ambientCraftTheme(context)?.content ?? _emptyTheme;
+  static final DynamicContent _emptyTheme = DynamicContent();
 
   Object _widgetBuilderArgResolver(List<Object> rawDataKey) {
     final widgetBuilderArgKey = _Key(_kWidgetBuilderArgSection, rawDataKey);
@@ -1820,6 +1868,42 @@ class _WidgetState extends State<_Widget> implements DataSource {
 const int _kDataSection = -1;
 const int _kArgsSection = -2;
 const int _kWidgetBuilderArgSection = -3;
+const int _kThemeSection = -4;
+
+/// The marker prepended to a key routed through the data-resolver callback to
+/// address the ambient theme rather than [DynamicContent] data (see
+/// [_WidgetState._dataResolver]). A private non-string type: transport data is
+/// JSON (string keys only), so no message can ever produce this marker.
+class _ThemeMarker {
+  const _ThemeMarker();
+}
+
+const Object _themeMarker = _ThemeMarker();
+
+/// Supplies the ambient [CraftTheme] to every remote widget below it — both
+/// the `theme.` reference scope (via [CraftTheme.content]) and the primitives'
+/// role defaults (via [ambientCraftTheme]). Installed by [Runtime.build] /
+/// [Runtime.buildNode] when a theme is provided.
+///
+/// The theme is an immutable snapshot; a host re-themes by providing a new
+/// one, which notifies dependents here.
+class _ThemeScope extends InheritedWidget {
+  const _ThemeScope({required this.theme, required super.child});
+
+  final CraftTheme theme;
+
+  @override
+  bool updateShouldNotify(_ThemeScope oldWidget) => theme != oldWidget.theme;
+}
+
+/// The ambient [CraftTheme] installed by [Runtime.build] / [Runtime.buildNode],
+/// or null when the surface is unthemed.
+///
+/// This is how the core primitives read their role defaults (the semantic
+/// contract, DESIGN.md §13.4): a typed, total lookup with the host default as
+/// the fallback. Registers a dependency, so a theme swap rebuilds the caller.
+CraftTheme? ambientCraftTheme(BuildContext context) =>
+    context.dependOnInheritedWidgetOfExactType<_ThemeScope>()?.theme;
 
 @immutable
 class _Key {

@@ -113,6 +113,27 @@ void main() {
     });
   });
 
+  testWidgets(
+      'Profile Card is a themed project — its theme.json paints it dark',
+      (WidgetTester tester) async {
+    // The 4th trio file: profile_card ships `theme.json` ({theme:default,
+    // mode:dark}). Its SampleSpec carries a ProjectTheme (§13.9), the gallery
+    // Sample resolves it, and the surface renders under the default Dark theme —
+    // Card gets the dark surface role. This is theming end-to-end from a data
+    // file, through the real A2UI-surface/adapter path.
+    final SampleSpec spec = profileCardSpec('Flutter');
+    expect(spec.theme, isNotNull);
+    expect(spec.theme!.usesDefaultTheme, isTrue);
+    expect(spec.theme!.defaultMode.id, 'dark');
+
+    await mockNetworkImagesFor(() async {
+      await _pump(tester, spec);
+      for (final Card card in tester.widgetList<Card>(find.byType(Card))) {
+        expect(card.color, const Color(0xFF202124)); // color.surface, Dark
+      }
+    });
+  });
+
   testWidgets('Image Gallery renders three images',
       (WidgetTester tester) async {
     await mockNetworkImagesFor(() async {

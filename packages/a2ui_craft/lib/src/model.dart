@@ -557,6 +557,33 @@ class DataReference extends Reference {
   String toString() => 'data.${parts.join(".")}';
 }
 
+/// Reference to the ambient design-token theme (see [Runtime.build]'s `theme`
+/// argument) — the fourth ambient value scope, parallel to `args`, `data`, and
+/// `state`.
+///
+/// The parts are a resolved design-token path (e.g. `theme.color.action`
+/// references the token `color.action`). The theme is supplied by the template
+/// author and the host — never by transport messages — so this scope lives in
+/// a different trust domain than [DataReference] and is deliberately a
+/// distinct node type.
+class ThemeReference extends Reference {
+  /// Wraps the given [parts] as a [ThemeReference].
+  ///
+  /// The [parts] must not be mutated after the object is created.
+  const ThemeReference(super.parts);
+
+  /// Creates a new [ThemeReference] that indexes even deeper than this one.
+  ///
+  /// Equivalent to [DataReference.constructReference], for the theme scope:
+  /// indirecting through `args` appends the extra parts to the token path.
+  ThemeReference constructReference(List<Object> moreParts) {
+    return ThemeReference(parts + moreParts);
+  }
+
+  @override
+  String toString() => 'theme.${parts.join(".")}';
+}
+
 /// Reference to the single argument of type [DynamicMap] passed into the widget builder.
 ///
 /// This class is used to represent references to a function argument.

@@ -100,21 +100,48 @@ typedef CraftEventHandler = void Function(String name, DynamicMap arguments);
 /// Behavioral identity across frameworks is the goal; pixel identity is not.
 abstract interface class CraftTester {
   /// Renders [main]'s `root` component (with the core component library
-  /// available as `core`), bound to [data], routing events to [onEvent].
+  /// available as `core`), bound to [data], themed by [theme] (an immutable
+  /// resolved-token snapshot), routing events to [onEvent].
   ///
   /// This is the primitive; [CraftTesterQueries.mount] is a convenience that
   /// parses an RFW template into a library first.
   Future<void> mountLibrary(
     RemoteWidgetLibrary main, {
     DynamicContent? data,
+    CraftTheme? theme,
     CraftEventHandler? onEvent,
   });
+
+  /// Replaces the ambient theme of the currently mounted surface with a new
+  /// snapshot, exactly as a host flipping a mode would — **without
+  /// remounting**: element state must survive and live `theme.` references
+  /// must re-resolve in place.
+  Future<void> retheme(CraftTheme? theme);
 
   /// Processes pending frames after an out-of-band change (e.g. a [data] update).
   Future<void> pump();
 
   /// The number of currently displayed text nodes whose content equals [text].
   int textCount(String text);
+
+  /// The number of elements exposing a **button role** to assistive technology
+  /// whose accessible name is [label] — Flutter: semantics nodes flagged as
+  /// buttons; Jaspr: rendered `<button>` elements. Plain text never counts;
+  /// this probes the accessibility contract, not the visuals.
+  int buttonCount(String label);
+
+  /// The foreground color the primitive **explicitly set** on the (unique)
+  /// displayed text node equal to [text], canonicalized to `#AARRGGBB` — or
+  /// null when the primitive set none and the host default shows through.
+  ///
+  /// The painted-decision probe of the theming-conformance dimension (§13.6):
+  /// it asserts a token *landed* on the primitive identically on every
+  /// adapter, never pixel equality.
+  String? textColorOf(String text);
+
+  /// The font size (logical px / CSS px) the primitive explicitly set on the
+  /// text node equal to [text], or null when the host default shows through.
+  double? textFontSizeOf(String text);
 
   /// Activates (taps/clicks) the interactive element carrying the given
   /// component `key`.
@@ -141,10 +168,11 @@ extension CraftTesterQueries on CraftTester {
   Future<void> mount(
     String template, {
     DynamicContent? data,
+    CraftTheme? theme,
     CraftEventHandler? onEvent,
   }) {
     return mountLibrary(parseLibraryFile(template),
-        data: data, onEvent: onEvent);
+        data: data, theme: theme, onEvent: onEvent);
   }
 
   /// Builds a fresh `a2ui_core` processor over the demo catalog, applies
@@ -724,6 +752,293 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
       expect(tester.hasText('spaced'), isTrue); // trimmed
       expect(tester.hasText('5'), isTrue); // length("hello")
       expect(tester.hasText('n=5'), isTrue); // concat stringifies the number 5
+    },
+  );
+
+  driver.defineTest(
+    'theme references resolve design tokens to their canonical template values',
+    (CraftTester tester) async {
+      // A DTCG theme with a primitive→semantic alias, a dimension, and a
+      // number, resolved by the shared runtime parser and read through the
+      // `theme.` scope in canonical template forms (hex string / px double /
+      // double) — a theme reference is interchangeable with the literal it
+      // canonicalizes to. Text sinks display those forms, which is what lets
+      // this suite assert resolution behaviorally on every adapter; that the
+      // canonical form feeds a real styling prop is covered by the Box child.
+      final CraftTheme theme = CraftTheme(resolveDesignTokens(<DesignTokenSet>[
+        parseDesignTokens(<String, Object?>{
+          'color': <String, Object?>{
+            r'$type': 'color',
+            'base': <String, Object?>{
+              'blue': <String, Object?>{r'$value': '#0066CC'},
+            },
+            'action': <String, Object?>{r'$value': '{color.base.blue}'},
+          },
+          'spacing': <String, Object?>{
+            'gap': <String, Object?>{
+              r'$type': 'dimension',
+              r'$value': <String, Object?>{'value': 12, 'unit': 'px'},
+            },
+          },
+          'emphasis': <String, Object?>{r'$type': 'number', r'$value': 0.5},
+        }),
+      ]));
+
+      await tester.mount('''
+        import core;
+        widget root = Column(children: [
+          Text(text: theme.color.action),
+          Text(text: theme.spacing.gap),
+          Text(text: theme.emphasis),
+          Box(color: theme.color.action, child: Text(text: "themed box")),
+        ]);
+      ''', theme: theme);
+
+      expect(tester.hasText('#FF0066CC'), isTrue); // alias → canonical hex
+      expect(tester.hasText('12'), isTrue); // {value: 12, unit: px} → 12
+      expect(tester.hasText('0.5'), isTrue); // number passes through
+      expect(tester.hasText('themed box'), isTrue); // feeds a color prop
+    },
+  );
+
+  driver.defineTest(
+    'a new theme snapshot re-themes the live surface (mode swap, no remount)',
+    (CraftTester tester) async {
+      // The dark overlay overrides only the *primitive* token; because aliases
+      // dereference after the layer merge, the untouched semantic token
+      // re-points to the new primitive. The host flips the mode by providing a
+      // new immutable snapshot — and the surface re-resolves IN PLACE: the
+      // template's own state must survive the swap (that is what
+      // distinguishes a re-theme from a remount).
+      final DesignTokenSet base = parseDesignTokens(<String, Object?>{
+        'color': <String, Object?>{
+          r'$type': 'color',
+          'base': <String, Object?>{
+            'bg': <String, Object?>{r'$value': '#FFFFFF'},
+          },
+          'surface': <String, Object?>{r'$value': '{color.base.bg}'},
+        },
+      });
+      final DesignTokenSet dark = parseDesignTokens(<String, Object?>{
+        'color': <String, Object?>{
+          r'$type': 'color',
+          'base': <String, Object?>{
+            'bg': <String, Object?>{r'$value': '#111111'},
+          },
+        },
+      });
+
+      await tester.mount('''
+        import core;
+        widget root { count: 0 } = Column(children: [
+          Button(
+            key: "inc",
+            onPressed: set state.count = add(a: state.count, b: 1),
+            child: Text(text: "bump"),
+          ),
+          Text(text: concat(a: "n=", b: state.count)),
+          Text(text: theme.color.surface),
+        ]);
+      ''', theme: CraftTheme(resolveDesignTokens(<DesignTokenSet>[base])));
+      expect(tester.hasText('#FFFFFFFF'), isTrue);
+
+      // Accumulate local state, then swap the theme.
+      await tester.activate('inc');
+      expect(tester.hasText('n=1'), isTrue);
+
+      await tester.retheme(
+          CraftTheme(resolveDesignTokens(<DesignTokenSet>[base, dark])));
+      expect(tester.hasText('#FF111111'), isTrue);
+      expect(tester.hasText('#FFFFFFFF'), isFalse);
+      // The counter survived: the swap re-resolved, it did not remount.
+      expect(tester.hasText('n=1'), isTrue);
+    },
+  );
+
+  driver.defineTest(
+    'primitives read their ambient role defaults from the theme',
+    (CraftTester tester) async {
+      // The semantic contract (ThemeRoles, DESIGN.md §13.4): with a theme
+      // mounted, primitives whose props are unset read their roles — no
+      // theme. reference anywhere in the template. Themed values must land
+      // identically on every adapter (§13.6); the probes read the decision
+      // the primitive made, not pixels.
+      final CraftTheme theme = CraftTheme(resolveDesignTokens(<DesignTokenSet>[
+        parseDesignTokens(<String, Object?>{
+          'color': <String, Object?>{
+            r'$type': 'color',
+            'onSurface': <String, Object?>{r'$value': '#112233'},
+            'onSurfaceVariant': <String, Object?>{r'$value': '#445566'},
+          },
+          'type': <String, Object?>{
+            r'$type': 'dimension',
+            'body': <String, Object?>{
+              'size': <String, Object?>{r'$value': '18px'},
+            },
+            'caption': <String, Object?>{
+              'size': <String, Object?>{r'$value': '11px'},
+            },
+            'heading': <String, Object?>{
+              '2': <String, Object?>{
+                'size': <String, Object?>{r'$value': '30px'},
+              },
+            },
+          },
+        }),
+      ]));
+
+      await tester.mount('''
+        import core;
+        widget root = Column(children: [
+          Text(text: "body copy"),
+          Text(text: "small print", variant: "caption"),
+          Heading(text: "Sub", level: 2),
+        ]);
+      ''', theme: theme);
+
+      expect(tester.textColorOf('body copy'), '#FF112233');
+      expect(tester.textFontSizeOf('body copy'), 18);
+      expect(tester.textColorOf('small print'), '#FF445566');
+      expect(tester.textFontSizeOf('small print'), 11);
+      expect(tester.textColorOf('Sub'), '#FF112233');
+      expect(tester.textFontSizeOf('Sub'), 30);
+    },
+  );
+
+  driver.defineTest(
+    'a theme omitting a role falls back to the host default, per role',
+    (CraftTester tester) async {
+      // Partial themes degrade role-by-role: body picks up the one provided
+      // role; the caption keeps its shared built-in default (#5F6368 / 12 on
+      // both adapters) because the theme names no caption roles.
+      final CraftTheme theme = CraftTheme(resolveDesignTokens(<DesignTokenSet>[
+        parseDesignTokens(<String, Object?>{
+          'color': <String, Object?>{
+            'onSurface': <String, Object?>{
+              r'$type': 'color',
+              r'$value': '#112233',
+            },
+          },
+        }),
+      ]));
+
+      await tester.mount('''
+        import core;
+        widget root = Column(children: [
+          Text(text: "body copy"),
+          Text(text: "small print", variant: "caption"),
+        ]);
+      ''', theme: theme);
+
+      expect(tester.textColorOf('body copy'), '#FF112233');
+      expect(tester.textFontSizeOf('body copy'), isNull); // host default
+      expect(tester.textColorOf('small print'), '#FF5F6368');
+      expect(tester.textFontSizeOf('small print'), 12);
+    },
+  );
+
+  driver.defineTest(
+    'unthemed primitives keep their host defaults (regression guard)',
+    (CraftTester tester) async {
+      // No theme: the semantic contract must be invisible — body text carries
+      // no explicit styling (the host shows through) and the caption keeps
+      // exactly its pre-theming values.
+      await tester.mount('''
+        import core;
+        widget root = Column(children: [
+          Text(text: "body copy"),
+          Text(text: "small print", variant: "caption"),
+        ]);
+      ''');
+
+      expect(tester.textColorOf('body copy'), isNull);
+      expect(tester.textFontSizeOf('body copy'), isNull);
+      expect(tester.textColorOf('small print'), '#FF5F6368');
+      expect(tester.textFontSizeOf('small print'), 12);
+    },
+  );
+
+  driver.defineTest(
+    'Button announces a button role, named by its child, on and off',
+    (CraftTester tester) async {
+      // The primitive is look-free (the child is the appearance — branding is
+      // a catalog template's job), but the *accessibility* contract is the
+      // primitive's: a button role whose accessible name derives from the
+      // child, and an explicit disabled state when there is no handler.
+      // Flutter merges the child into a button semantics node; Jaspr renders a
+      // native <button> — same announcement either way.
+      await tester.mount('''
+        import core;
+        widget root = Column(children: [
+          Button(onPressed: event "press" {}, child: Text(text: "Press me")),
+          Button(child: Text(text: "Unavailable")),
+          Text(text: "Press me"),
+        ]);
+      ''');
+
+      // Exactly the button announces the role — the identical plain text
+      // sibling never does.
+      expect(tester.buttonCount('Press me'), 1);
+      expect(tester.textCount('Press me'), 2);
+      // A handler-less button still announces as a (disabled) button rather
+      // than vanishing from the a11y tree.
+      expect(tester.buttonCount('Unavailable'), 1);
+    },
+  );
+
+  driver.defineTest(
+    'an unthemed surface renders theme references as missing, without error',
+    (CraftTester tester) async {
+      // No theme mounted: the references resolve as missing and the consumer
+      // falls back (here Text renders nothing) — the §13 totality discipline.
+      // The surface itself must render normally.
+      await tester.mount('''
+        import core;
+        widget root = Column(children: [
+          Text(text: theme.color.action),
+          Box(color: theme.color.action, child: Text(text: "unthemed box")),
+          Text(text: "alive"),
+        ]);
+      ''');
+
+      expect(tester.hasText('alive'), isTrue);
+      expect(tester.hasText('unthemed box'), isTrue);
+    },
+  );
+
+  driver.defineTest(
+    'the default theme paints its modes; a mode flip re-themes in place',
+    (CraftTester tester) async {
+      // Slice 4: the open-source default theme (DefaultTheme) resolves for a
+      // host-supplied n-ary mode and lands identically on both adapters. Light
+      // restates the pre-contract ink (#202124); flipping to Dark is just
+      // handing the surface the next immutable snapshot — the ink re-points and
+      // local state survives the swap (a re-theme, not a remount).
+      await tester.mount('''
+        import core;
+        widget root { count: 0 } = Column(children: [
+          Button(
+            key: "inc",
+            onPressed: set state.count = add(a: state.count, b: 1),
+            child: Text(text: "bump"),
+          ),
+          Text(text: concat(a: "n=", b: state.count)),
+          Text(text: "body copy"),
+        ]);
+      ''', theme: DefaultTheme.of(CraftThemeMode.light));
+      expect(tester.textColorOf('body copy'), '#FF202124');
+
+      await tester.activate('inc');
+      expect(tester.hasText('n=1'), isTrue);
+
+      await tester.retheme(DefaultTheme.of(CraftThemeMode.dark));
+      // Dark ink (gray.50) landed, and the counter survived the re-theme.
+      expect(tester.textColorOf('body copy'), '#FFF8F9FA');
+      expect(tester.hasText('n=1'), isTrue);
+
+      // The high-contrast axis is a distinct mode, not a toggle on Dark.
+      await tester.retheme(DefaultTheme.of(CraftThemeMode.darkHighContrast));
+      expect(tester.textColorOf('body copy'), '#FFFFFFFF');
     },
   );
 }

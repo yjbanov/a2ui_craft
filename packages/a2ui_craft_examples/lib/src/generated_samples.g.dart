@@ -16,6 +16,7 @@ class RawSample {
     required this.template,
     required this.schema,
     required this.messages,
+    this.theme,
   });
 
   final String id;
@@ -23,6 +24,9 @@ class RawSample {
   final String template;
   final String schema;
   final String messages;
+
+  /// The project manifest's optional `theme` block (a ProjectTheme config), or null.
+  final String? theme;
 
   /// Builds a [SampleSpec], substituting `{{framework}}`; the host supplies
   /// any action handling separately.
@@ -32,6 +36,7 @@ class RawSample {
         schemaJson: schema,
         messagesJson: messages,
         framework: framework,
+        themeJson: theme,
       );
 }
 
@@ -821,6 +826,12 @@ widget ProfileCard = Card(child: Column(children: [
     }
   }
 ]
+''',
+    theme: r'''
+{
+  "theme": "default",
+  "mode": "dark"
+}
 ''',
   ),
   RawSample(

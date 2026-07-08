@@ -28,6 +28,12 @@ dart format packages/a2ui_craft_examples/lib/src/generated_samples.g.dart
 git diff --exit-code packages/a2ui_craft_examples/lib/src/generated_samples.g.dart \
   || { echo "generated_samples.g.dart is stale — run tool/gen_samples.dart and commit."; exit 1; }
 
+step "Check generated default theme is in sync with the token files"
+dart run packages/a2ui_craft/tool/gen_default_theme.dart
+dart format packages/a2ui_craft/lib/src/default_theme.g.dart
+git diff --exit-code packages/a2ui_craft/lib/src/default_theme.g.dart \
+  || { echo "default_theme.g.dart is stale — run tool/gen_default_theme.dart and commit."; exit 1; }
+
 step "Analyze: a2ui_craft (core)"
 (cd packages/a2ui_craft && dart analyze)
 
@@ -39,6 +45,9 @@ step "Analyze: a2ui_craft_testing"
 
 step "Analyze: a2ui_craft_examples (shared sample specs)"
 (cd packages/a2ui_craft_examples && dart analyze)
+
+step "Analyze: craft (CLI)"
+(cd packages/craft && dart analyze)
 
 step "Analyze: a2ui_craft_jaspr"
 (cd packages/a2ui_craft_jaspr && dart analyze)
@@ -66,6 +75,9 @@ step "Test: a2ui_craft (core)"
 
 step "Test: a2ui_craft_examples (code-free sample data pipeline)"
 (cd packages/a2ui_craft_examples && dart test)
+
+step "Test: craft (CLI scaffolding)"
+(cd packages/craft && dart test)
 
 step "Test: a2ui_craft_bridge (A2UI translation)"
 (cd packages/a2ui_craft_bridge && dart test)

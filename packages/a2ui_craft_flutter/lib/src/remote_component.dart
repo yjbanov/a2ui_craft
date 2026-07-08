@@ -28,6 +28,7 @@ class RemoteWidget extends StatefulWidget {
     required this.runtime,
     required this.widget,
     required this.data,
+    this.theme,
     this.onEvent,
   });
 
@@ -52,6 +53,17 @@ class RemoteWidget extends StatefulWidget {
   /// This can be updated frequently (once per frame) using
   /// [DynamicContent.update].
   final DynamicContent data;
+
+  /// The ambient design-token theme — an immutable resolved snapshot read by
+  /// `theme.` references and by the primitives' role defaults (the semantic
+  /// contract, DESIGN.md §13.4).
+  ///
+  /// Supplied by the template author and the host, never by transport
+  /// messages (DESIGN.md §13.2). To re-theme a live surface (e.g. a dark-mode
+  /// swap), rebuild with a *new* [CraftTheme]; the surface re-resolves in
+  /// place. When null, `theme.` references resolve as missing and primitives
+  /// fall back to host defaults.
+  final CraftTheme? theme;
 
   /// Called when there's an event triggered by a remote component.
   ///
@@ -94,7 +106,8 @@ class _RemoteWidgetState extends State<RemoteWidget> {
 
   @override
   Widget build(BuildContext context) {
-    return widget.runtime
-        .build(context, widget.widget, widget.data, _eventHandler);
+    return widget.runtime.build(
+        context, widget.widget, widget.data, _eventHandler,
+        theme: widget.theme);
   }
 }

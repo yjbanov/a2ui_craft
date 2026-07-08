@@ -34,6 +34,22 @@ class GalleryScreen extends StatelessComponent {
                 'and messages live.'),
           ],
         ),
+        // The production path: load a *deployed* project over HTTP, the way a
+        // real host app would — proof it's a separate, ephemeral artifact.
+        Link(
+          to: '/load',
+          styles: Styles(raw: <String, String>{
+            'display': 'inline-block',
+            'margin-top': '12px',
+            'padding': '8px 14px',
+            'border': '1px solid #1a73e8',
+            'border-radius': '8px',
+            'color': '#1a73e8',
+            'text-decoration': 'none',
+            'font-weight': '600',
+          }),
+          child: Component.text('Load a project from a URL →'),
+        ),
         div(
           styles: Styles(raw: <String, String>{
             'display': 'grid',

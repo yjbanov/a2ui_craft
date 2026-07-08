@@ -34,4 +34,46 @@ void main() {
         data.subscribe(<Object>['greeting'], (Object value) {});
     expect(current, 'Hello');
   });
+
+  test('theme references parse in value positions, like data references', () {
+    final RemoteWidgetLibrary library = parseLibraryFile('''
+      import core;
+      widget root = Box(
+        color: theme.color.action,
+        child: Text(text: theme.type.body.size),
+      );
+    ''');
+
+    final ConstructorCall root = library.widgets.single.root as ConstructorCall;
+    final ThemeReference color = root.arguments['color']! as ThemeReference;
+    expect(color.parts, <Object>['color', 'action']);
+    final ConstructorCall child = root.arguments['child']! as ConstructorCall;
+    final ThemeReference text = child.arguments['text']! as ThemeReference;
+    expect(text.parts, <Object>['type', 'body', 'size']);
+  });
+
+  test('theme is a reserved word for user-chosen identifiers', () {
+    // Like `data`/`state`, reserved-ness guards the identifier positions a
+    // user names (loop variables, builder arguments) — a loop variable named
+    // `theme` would shadow the reference scope. Widget declaration names are
+    // a separate namespace and are unaffected, as with the other scopes.
+    expect(
+      () => parseLibraryFile(
+          'widget root = Column(children: [...for theme in args.list: '
+          'Text(text: theme)]);'),
+      throwsA(isA<ParserException>()),
+    );
+  });
+
+  test('theme references survive a binary round trip (tag 0x14)', () {
+    final RemoteWidgetLibrary library = parseLibraryFile('''
+      widget root = Box(color: theme.color.action);
+    ''');
+    final RemoteWidgetLibrary decoded =
+        decodeLibraryBlob(encodeLibraryBlob(library));
+
+    final ConstructorCall root = decoded.widgets.single.root as ConstructorCall;
+    final ThemeReference color = root.arguments['color']! as ThemeReference;
+    expect(color.parts, <Object>['color', 'action']);
+  });
 }

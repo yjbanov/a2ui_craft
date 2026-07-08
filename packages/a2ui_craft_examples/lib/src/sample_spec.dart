@@ -6,6 +6,8 @@ import 'dart:convert';
 
 import 'package:a2ui_core/a2ui_core.dart';
 
+import 'project.dart';
+
 /// The `a2ui_core` catalog id and surface id the samples' messages reference.
 const String catalogId = 'demo';
 const String surfaceId = 'demo';
@@ -15,7 +17,7 @@ const String surfaceId = 'demo';
 /// Schema catalog document), and a script of A2UI [messages].
 ///
 /// Samples are authored as code-free data files under `samples/<id>/`
-/// (`template.craft` / `schema.json` / `messages.json`) and decoded with
+/// (`template.craft` / `schema.json` / `app.json`) and decoded with
 /// [SampleSpec.fromData]; the Flutter and Jaspr adapters each render one through
 /// their reusable `SampleView`. Action handling (e.g. a host action log) is the
 /// host's concern, supplied to `SampleView`, not part of the data.
@@ -25,23 +27,29 @@ class SampleSpec {
     required this.catalogSource,
     required this.catalogSchema,
     required this.messages,
+    this.theme,
   });
 
-  /// Decodes a sample from its three **code-free data files**: the RFW
-  /// [template] (a `.craft` source string), the component API [schemaJson]
-  /// (a JSON Schema catalog document), and [messagesJson] (a JSON array of A2UI
-  /// messages). The inverse of authoring a sample in Dart — the example apps and
-  /// the site build every built-in sample this way, and the site's editor
-  /// rebuilds an edited sample with it for live preview.
+  /// Decodes a sample from its **code-free data files**: the RFW [template]
+  /// (a `.craft` source string), the component API [schemaJson] (a JSON Schema
+  /// catalog document), and [messagesJson] — the `app.json` bootstrap (a JSON
+  /// array of A2UI messages that build the surface with no agent). The inverse
+  /// of authoring a sample in Dart — the example apps and the site build every
+  /// built-in sample this way, and the site's editor rebuilds an edited sample
+  /// with it for live preview.
   ///
   /// A `{{framework}}` token in any of the three strings is replaced with
   /// [framework] when given (so a sample can show which engine renders it).
+  ///
+  /// An optional [themeJson] is the project's 4th trio file (`theme.json`);
+  /// when present and recognized it becomes [theme] (see [ProjectTheme]).
   factory SampleSpec.fromData({
     required String label,
     required String template,
     required String schemaJson,
     required String messagesJson,
     String? framework,
+    String? themeJson,
   }) {
     String sub(String s) =>
         framework == null ? s : s.replaceAll('{{framework}}', framework);
@@ -56,6 +64,7 @@ class SampleSpec {
       catalogSource: sub(template),
       catalogSchema: schema,
       messages: messages,
+      theme: ProjectTheme.tryParse(themeJson),
     );
   }
 
@@ -71,4 +80,8 @@ class SampleSpec {
 
   /// The A2UI messages that build the surface (root id `root`).
   final List<A2uiMessage> messages;
+
+  /// The project's theme (from its `theme.json`), or null when the project
+  /// ships no theme and should blend into its host.
+  final ProjectTheme? theme;
 }

@@ -36,9 +36,10 @@ There is intentionally **no deployment config** in this repo.
 
 ## How it fits together
 
-- Samples are the **code-free data trios** from `a2ui_craft_examples`
-  (`samples/<id>/{template.craft,schema.json,messages.json}`), decoded with
-  `SampleSpec.fromData`.
+- Samples are the **code-free data projects** from `a2ui_craft_examples`
+  (`samples/<id>/{template.craft,schema.json,app.json}` + `manifest.json`),
+  decoded with `SampleSpec.fromData`. `app.json` is the mini-app bootstrap (the
+  canned A2UI stream that builds the surface with no agent).
 - The Jaspr render uses `a2ui_craft_jaspr`'s `SampleView`; the Flutter render
   embeds `a2ui_craft_flutter`'s `SampleView` inside a `FlutterEmbedView`
   (`lib/flutter_host.dart` is the only file that imports `package:flutter`).

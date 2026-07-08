@@ -6,6 +6,7 @@ import 'package:jaspr/jaspr.dart';
 import 'package:jaspr_router/jaspr_router.dart';
 
 import 'gallery.dart';
+import 'load_screen.dart';
 import 'sample_screen.dart';
 
 /// The A2UI Craft demo site: a gallery of samples, each openable on its own
@@ -27,6 +28,12 @@ class App extends StatelessComponent {
           path: '/sample/:id',
           builder: (BuildContext context, RouteState state) =>
               SampleScreen(id: state.params['id'] ?? ''),
+        ),
+        Route(
+          path: '/load',
+          title: 'Load a project',
+          builder: (BuildContext context, RouteState state) =>
+              const LoadScreen(),
         ),
       ],
     );

@@ -44,6 +44,7 @@ void main() {
     ..writeln('    required this.template,')
     ..writeln('    required this.schema,')
     ..writeln('    required this.messages,')
+    ..writeln('    this.theme,')
     ..writeln('  });')
     ..writeln()
     ..writeln('  final String id;')
@@ -51,6 +52,10 @@ void main() {
     ..writeln('  final String template;')
     ..writeln('  final String schema;')
     ..writeln('  final String messages;')
+    ..writeln()
+    ..writeln('  /// The project\'s `theme.json` (the optional 4th trio file), '
+        'or null.')
+    ..writeln('  final String? theme;')
     ..writeln()
     ..writeln('  /// Builds a [SampleSpec], substituting `{{framework}}`; the '
         'host supplies')
@@ -61,6 +66,7 @@ void main() {
     ..writeln('        schemaJson: schema,')
     ..writeln('        messagesJson: messages,')
     ..writeln('        framework: framework,')
+    ..writeln('        themeJson: theme,')
     ..writeln('      );')
     ..writeln('}')
     ..writeln()
@@ -74,8 +80,13 @@ void main() {
         File('$_root/$id/template.craft').readAsStringSync();
     final String schema = File('$_root/$id/schema.json').readAsStringSync();
     final String messages = File('$_root/$id/messages.json').readAsStringSync();
-    for (final String s in <String>[template, schema, messages]) {
-      if (s.contains("'''")) {
+    // The theme is the optional 4th trio file — present only for themed
+    // projects.
+    final File themeFile = File('$_root/$id/theme.json');
+    final String? theme =
+        themeFile.existsSync() ? themeFile.readAsStringSync() : null;
+    for (final String? s in <String?>[template, schema, messages, theme]) {
+      if (s != null && s.contains("'''")) {
         stderr.writeln("Sample '$id' contains ''' — cannot raw-embed.");
         exit(1);
       }
@@ -92,8 +103,14 @@ void main() {
       ..writeln("''',")
       ..writeln("    messages: r'''")
       ..write(messages)
-      ..writeln("''',")
-      ..writeln('  ),');
+      ..writeln("''',");
+    if (theme != null) {
+      b
+        ..writeln("    theme: r'''")
+        ..write(theme)
+        ..writeln("''',");
+    }
+    b.writeln('  ),');
   }
   b
     ..writeln('];')

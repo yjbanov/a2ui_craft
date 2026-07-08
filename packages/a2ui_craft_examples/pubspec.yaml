@@ -13,6 +13,7 @@ resolution: workspace
 
 dependencies:
   a2ui_core: any
+  a2ui_craft: any
 
 dev_dependencies:
   lints: ^4.0.0

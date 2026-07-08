@@ -6,6 +6,8 @@ import 'dart:convert';
 
 import 'package:a2ui_core/a2ui_core.dart';
 
+import 'project.dart';
+
 /// The `a2ui_core` catalog id and surface id the samples' messages reference.
 const String catalogId = 'demo';
 const String surfaceId = 'demo';
@@ -25,6 +27,7 @@ class SampleSpec {
     required this.catalogSource,
     required this.catalogSchema,
     required this.messages,
+    this.theme,
   });
 
   /// Decodes a sample from its three **code-free data files**: the RFW
@@ -36,12 +39,16 @@ class SampleSpec {
   ///
   /// A `{{framework}}` token in any of the three strings is replaced with
   /// [framework] when given (so a sample can show which engine renders it).
+  ///
+  /// An optional [themeJson] is the project's 4th trio file (`theme.json`);
+  /// when present and recognized it becomes [theme] (see [ProjectTheme]).
   factory SampleSpec.fromData({
     required String label,
     required String template,
     required String schemaJson,
     required String messagesJson,
     String? framework,
+    String? themeJson,
   }) {
     String sub(String s) =>
         framework == null ? s : s.replaceAll('{{framework}}', framework);
@@ -56,6 +63,7 @@ class SampleSpec {
       catalogSource: sub(template),
       catalogSchema: schema,
       messages: messages,
+      theme: ProjectTheme.tryParse(themeJson),
     );
   }
 
@@ -71,4 +79,8 @@ class SampleSpec {
 
   /// The A2UI messages that build the surface (root id `root`).
   final List<A2uiMessage> messages;
+
+  /// The project's theme (from its `theme.json`), or null when the project
+  /// ships no theme and should blend into its host.
+  final ProjectTheme? theme;
 }

@@ -5,6 +5,7 @@
 import 'package:a2ui_craft_examples/a2ui_craft_examples.dart';
 import 'package:a2ui_craft_jaspr_example/app.dart';
 import 'package:a2ui_craft_jaspr_example/sample.dart';
+import 'package:jaspr/jaspr.dart';
 import 'package:jaspr_test/jaspr_test.dart';
 
 /// Mounts a shared [SampleSpec] exactly as the gallery does.
@@ -12,6 +13,16 @@ Future<void> _pump(ComponentTester tester, SampleSpec spec) async {
   tester.pumpComponent(Sample(spec));
   await tester.pump();
 }
+
+/// All values of the CSS [property] explicitly set by rendered DOM components.
+List<String> _styleValues(String property) => <String>[
+      for (final Element element in find
+          .byComponentPredicate((Component c) =>
+              c is DomComponent &&
+              (c.styles?.properties.containsKey(property) ?? false))
+          .evaluate())
+        (element.component as DomComponent).styles!.properties[property]!,
+    ];
 
 void main() {
   testComponents('Greeting renders its title, bound message, and button',
@@ -80,6 +91,30 @@ void main() {
     expect(find.text('Jaspr Framework'), findsOneComponent);
     expect(find.text('Build apps for any screen.'), findsOneComponent);
     expect(find.text('Dart'), findsOneComponent);
+  });
+
+  testComponents(
+      'Profile Card is a themed project — its theme.json paints it dark',
+      (ComponentTester tester) async {
+    // The 4th trio file: profile_card ships `theme.json` ({theme:default,
+    // mode:dark}). Its SampleSpec carries a ProjectTheme (§13.9), the gallery
+    // Sample resolves it, and the surface renders under the default Dark theme —
+    // the two Cards get the dark surface role. Theming end-to-end from a data
+    // file, through the real A2UI-surface/adapter path.
+    final SampleSpec spec = profileCardSpec('Jaspr');
+    expect(spec.theme, isNotNull);
+    expect(spec.theme!.usesDefaultTheme, isTrue);
+    expect(spec.theme!.defaultMode.id, 'dark');
+
+    await _pump(tester, spec);
+    // Each of the two cards paints its surface (color.surface = #202124) and,
+    // via its Divider, the outline role (color.outline = #5F6368 in Dark).
+    expect(_styleValues('background-color'), <String>[
+      'rgba(32, 33, 36, 1.0)', // card 1 ← surface
+      'rgba(95, 99, 104, 1.0)', // card 1 divider ← outline
+      'rgba(32, 33, 36, 1.0)', // card 2 ← surface
+      'rgba(95, 99, 104, 1.0)', // card 2 divider ← outline
+    ]);
   });
 
   testComponents('Image Gallery renders three images',

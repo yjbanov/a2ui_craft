@@ -4,7 +4,7 @@
 
 import 'package:a2ui_core/a2ui_core.dart';
 import 'package:a2ui_craft/a2ui_craft.dart'
-    show LibraryName, createCoreFunctions, parseLibraryFile;
+    show CraftTheme, LibraryName, createCoreFunctions, parseLibraryFile;
 import 'package:a2ui_craft_bridge/a2ui_craft_bridge.dart';
 import 'package:flutter/widgets.dart';
 
@@ -31,6 +31,7 @@ class SampleView extends StatefulWidget {
     required this.schema,
     required this.messages,
     this.onAction,
+    this.theme,
     this.rootId = 'root',
   });
 
@@ -45,6 +46,10 @@ class SampleView extends StatefulWidget {
 
   /// Called when the rendered surface dispatches an A2UI action.
   final void Function(A2uiClientAction action)? onAction;
+
+  /// The theme to render the surface under (§13), or null to blend into the
+  /// host — a project supplies this from its `theme.json` via `ProjectTheme`.
+  final CraftTheme? theme;
 
   /// The component id to render as the surface root.
   final String rootId;
@@ -93,6 +98,7 @@ class _SampleViewState extends State<SampleView> {
       surface: surface,
       runtime: _runtime,
       scope: _catalogName,
+      theme: widget.theme,
     );
   }
 }

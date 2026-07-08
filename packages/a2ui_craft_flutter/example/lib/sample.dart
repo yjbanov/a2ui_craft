@@ -18,5 +18,6 @@ class Sample extends StatelessWidget {
         template: spec.catalogSource,
         schema: spec.catalogSchema,
         messages: spec.messages,
+        theme: spec.theme?.resolve(),
       );
 }

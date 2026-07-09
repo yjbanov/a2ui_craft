@@ -89,6 +89,11 @@ class _SampleScreenState extends State<SampleScreen> {
   // tear down and re-run the Flutter surface; it is recreated only on Preview.
   Object? _flutterWidget;
 
+  // The Flutter content's self-measured height (see flutterSampleApp): the
+  // host element is sized to it, so the embed hugs its content like the Jaspr
+  // pane does. Null until the first report lands (the fallback height shows).
+  double? _flutterHeight;
+
   JSFunction? _resizeListener;
   void Function()? _unsubscribeTheme;
 
@@ -198,6 +203,14 @@ class _SampleScreenState extends State<SampleScreen> {
       messages: spec.messages,
       dark: SiteTheme.effectiveDark,
       onAction: _onAction,
+      onContentHeight: (double height) {
+        // Reported from Flutter's frame callbacks — may land after this
+        // screen unmounted (embed teardown is async).
+        if (!mounted) return;
+        final double px = height.ceilToDouble();
+        if (_flutterHeight == px) return;
+        setState(() => _flutterHeight = px);
+      },
       theme: _theme,
     );
   }
@@ -332,7 +345,9 @@ class _SampleScreenState extends State<SampleScreen> {
       key: ValueKey<String>('flutter-$_renderKey'),
       styles: Styles(raw: <String, String>{
         'width': '100%',
-        'height': '640px',
+        // Sized to the Flutter content's self-measured height; the fixed
+        // fallback only shows until the first report lands.
+        'height': '${(_flutterHeight ?? 640).ceil()}px',
         'border': '1px solid var(--border)',
         'border-radius': '10px',
         'overflow': 'hidden',

@@ -66,6 +66,9 @@ class _LoadScreenState extends State<LoadScreen> {
   String? _scenario; // null → the app.json bootstrap
   int _renderKey = 0;
   Object? _flutterWidget;
+
+  // The Flutter content's self-measured height (see flutterSampleApp).
+  double? _flutterHeight;
   final List<String> _log = <String>[];
 
   Future<void> _doLoad() async {
@@ -320,13 +323,23 @@ class _LoadScreenState extends State<LoadScreen> {
       messages: _messages,
       dark: SiteTheme.effectiveDark,
       onAction: _onAction,
+      onContentHeight: (double height) {
+        // Reported from Flutter's frame callbacks — may land after this
+        // screen unmounted (embed teardown is async).
+        if (!mounted) return;
+        final double px = height.ceilToDouble();
+        if (_flutterHeight == px) return;
+        setState(() => _flutterHeight = px);
+      },
       theme: _theme,
     );
     return FlutterEmbedView(
       key: ValueKey<String>('flutter-$_renderKey'),
       styles: Styles(raw: <String, String>{
         'width': '100%',
-        'height': '560px',
+        // Sized to the Flutter content's self-measured height; the fixed
+        // fallback only shows until the first report lands.
+        'height': '${(_flutterHeight ?? 560).ceil()}px',
         'border': '1px solid var(--border)',
         'border-radius': '10px',
         'overflow': 'hidden',

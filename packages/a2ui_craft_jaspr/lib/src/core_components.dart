@@ -33,8 +33,8 @@ LocalWidgetLibrary createCoreComponents() {
         return span(
           styles: Styles(raw: <String, String>{
             'font-size': _roleSize(context, ThemeRoles.captionSize) ?? '12px',
-            'color':
-                _roleColor(context, ThemeRoles.onSurfaceVariant) ?? '#5f6368',
+            'color': _roleColor(context, ThemeRoles.onSurfaceVariant) ??
+                _kCaptionFallback,
           }),
           <Component>[Component.text(text)],
         );
@@ -221,7 +221,7 @@ LocalWidgetLibrary createCoreComponents() {
       final FlexAxis axis = FlexAxis.parse(source.v<String>(['axis']),
           fallback: FlexAxis.horizontal);
       final String separator =
-          _roleColor(context, ThemeRoles.outline) ?? 'rgba(0, 0, 0, 0.12)';
+          _roleColor(context, ThemeRoles.outline) ?? _kDividerFallback;
       if (axis == FlexAxis.vertical) {
         return div(
           styles: Styles(raw: <String, String>{
@@ -288,8 +288,9 @@ LocalWidgetLibrary createCoreComponents() {
             offsetX: Unit.zero,
             offsetY: Unit.pixels(2),
           ),
-          backgroundColor:
-              surface == null ? Colors.white : Color(surface.toCssString()),
+          backgroundColor: surface == null
+              ? const Color(_kSurfaceFallback)
+              : Color(surface.toCssString()),
         ),
         [
           source.child(['child'])
@@ -757,6 +758,19 @@ Styles? _accentStyle(BuildContext context) {
 /// falls back to the host default (DESIGN.md §9.4).
 String? _roleColor(BuildContext context, String role) =>
     ambientCraftTheme(context)?.tokens.color(role)?.toCssString();
+
+// Host-default fallback colors for the roles this adapter must paint even
+// unthemed. Like Flutter's fallbacks (which resolve through `Theme.of` and so
+// follow the host's dark mode), these must adapt to the page's effective
+// color scheme — CSS `light-dark()` resolves against `color-scheme`, so a
+// host page that declares `color-scheme: light dark` (or an explicit
+// override) re-inks unthemed surfaces in dark mode instead of painting a
+// light card under dark body text. On a page with no `color-scheme`
+// declaration they resolve to the light value — the pre-dark-mode rendering.
+const String _kSurfaceFallback = 'light-dark(#ffffff, #2a2b2e)';
+const String _kDividerFallback =
+    'light-dark(rgba(0, 0, 0, 0.12), rgba(255, 255, 255, 0.16))';
+const String _kCaptionFallback = 'light-dark(#5f6368, #9aa0a6)';
 
 /// Reads a role size (a `dimension` token) as a CSS px length, or null for
 /// the host default.

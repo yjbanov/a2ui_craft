@@ -22,43 +22,29 @@
     <!-- The generated CSS (all @css declarations from your components). -->
     <link rel="stylesheet" href="main.css" />
 
-    <!-- The site's own chrome palette, following the browser/system dark-light
-         preference. Components reference these variables instead of literal
-         colors, so the whole host re-themes with `prefers-color-scheme`.
-         (Sample surfaces are themed separately, by their project theme.) -->
+    <!-- The site's own chrome palette. Every pair resolves through CSS
+         `light-dark()` against the root's `color-scheme`, which defaults to
+         the browser/system preference and can be overridden by the global
+         theme toggle (an inline `color-scheme: light|dark` on <html>, set by
+         SiteTheme). A media query could not do this — it only sees the
+         browser preference, never the override. (Sample surfaces are themed
+         separately, by their project theme.) -->
     <style>
       :root {
         color-scheme: light dark;
-        --bg: #ffffff;
-        --fg: #333333;
-        --muted: #555555;
-        --subtle: #888888;
-        --faint: #bbbbbb;
-        --border: #eeeeee;
-        --border-strong: #cccccc;
-        --panel: #fafafa;
-        --card: #ffffff;
-        --accent: #1a73e8;
-        --accent-fg: #ffffff;
-        --error-bg: #fdecea;
-        --error-fg: #b3261e;
-      }
-      @media (prefers-color-scheme: dark) {
-        :root {
-          --bg: #202124;
-          --fg: #e8eaed;
-          --muted: #bdc1c6;
-          --subtle: #9aa0a6;
-          --faint: #5f6368;
-          --border: #3c4043;
-          --border-strong: #5f6368;
-          --panel: #28292c;
-          --card: #2a2b2e;
-          --accent: #8ab4f8;
-          --accent-fg: #202124;
-          --error-bg: #3c1d1b;
-          --error-fg: #f2b8b5;
-        }
+        --bg: light-dark(#ffffff, #202124);
+        --fg: light-dark(#333333, #e8eaed);
+        --muted: light-dark(#555555, #bdc1c6);
+        --subtle: light-dark(#888888, #9aa0a6);
+        --faint: light-dark(#bbbbbb, #5f6368);
+        --border: light-dark(#eeeeee, #3c4043);
+        --border-strong: light-dark(#cccccc, #5f6368);
+        --panel: light-dark(#fafafa, #28292c);
+        --card: light-dark(#ffffff, #2a2b2e);
+        --accent: light-dark(#1a73e8, #8ab4f8);
+        --accent-fg: light-dark(#ffffff, #202124);
+        --error-bg: light-dark(#fdecea, #3c1d1b);
+        --error-fg: light-dark(#b3261e, #f2b8b5);
       }
       body {
         margin: 0;

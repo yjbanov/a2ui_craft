@@ -18,18 +18,20 @@ Widget flutterSampleApp({
   required String template,
   required Map<String, Object?> schema,
   required List<A2uiMessage> messages,
+  required bool dark,
   void Function(A2uiClientAction action)? onAction,
   CraftTheme? theme,
 }) {
   final Rgba? surface = theme?.tokens.color('color.surface');
   return MaterialApp(
     debugShowCheckedModeBanner: false,
-    // Follow the browser/system dark-light preference (Flutter web maps
-    // `prefers-color-scheme` onto the platform brightness); a themed project's
-    // surface color overrides the scaffold either way.
+    // [dark] is the site's effective scheme (system preference + the global
+    // toggle's override) — explicit rather than ThemeMode.system, because the
+    // embedded engine only sees the browser preference, never the override. A
+    // themed project's surface color overrides the scaffold either way.
     theme: ThemeData(useMaterial3: true),
     darkTheme: ThemeData(useMaterial3: true, brightness: Brightness.dark),
-    themeMode: ThemeMode.system,
+    themeMode: dark ? ThemeMode.dark : ThemeMode.light,
     home: Scaffold(
       backgroundColor: surface == null ? null : Color(surface.value),
       body: SafeArea(

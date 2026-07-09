@@ -114,10 +114,27 @@ class _JasprCraftTester implements CraftTester {
         .properties[property];
   }
 
-  /// Canonicalizes the two CSS color forms the primitives emit — legacy hex
-  /// defaults and `rgba(...)` themed values — to `#AARRGGBB`.
+  /// Canonicalizes the CSS color forms the primitives emit — hex defaults,
+  /// `rgba(...)` themed values, and `light-dark(...)` host fallbacks — to
+  /// `#AARRGGBB`. This tester is a light host, so `light-dark()` resolves to
+  /// its first argument, exactly as a browser with a light `color-scheme`
+  /// would.
   String? _canonicalCssColor(String? css) {
     if (css == null) return null;
+    if (css.startsWith('light-dark(') && css.endsWith(')')) {
+      // Take the light arm — split on the top-level comma (the arms may
+      // themselves be `rgba(...)` calls with commas).
+      final String inner = css.substring('light-dark('.length, css.length - 1);
+      int depth = 0;
+      for (int i = 0; i < inner.length; i++) {
+        final String ch = inner[i];
+        if (ch == '(') depth++;
+        if (ch == ')') depth--;
+        if (ch == ',' && depth == 0) {
+          return _canonicalCssColor(inner.substring(0, i).trim());
+        }
+      }
+    }
     final Rgba? hex = Rgba.decode(css);
     if (hex != null) return hex.toHexString();
     final Match? m =

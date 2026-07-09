@@ -30,12 +30,13 @@ final CraftTheme _fullTheme = _theme(<String, Object?>{
 });
 
 Future<void> _mount(WidgetTester tester, String template,
-    {CraftTheme? theme}) async {
+    {CraftTheme? theme, Brightness brightness = Brightness.light}) async {
   final Runtime runtime = Runtime()
     ..update(const LibraryName(<String>['core']), createCoreComponents())
     ..registerFunctions(createCoreFunctions())
     ..update(const LibraryName(<String>['main']), parseLibraryFile(template));
   await tester.pumpWidget(MaterialApp(
+    theme: ThemeData(useMaterial3: true, brightness: brightness),
     home: Scaffold(
       body: RemoteWidget(
         runtime: runtime,
@@ -157,5 +158,42 @@ void main() {
         }));
     expect(tester.widget<Text>(find.text('Sub')).style!.fontSize, 30);
     expect(tester.widget<Text>(find.text('Minor')).style!.fontSize, 20);
+  });
+
+  testWidgets('unthemed caption and link fallbacks follow the host brightness',
+      (WidgetTester tester) async {
+    // The host default must adapt like the rest of Material does (Card and
+    // Divider get this via null-color pass-through): a dark host re-inks the
+    // caption and link fallbacks — mirroring the Jaspr adapter's
+    // `light-dark()` pairs, so the pair stays behaviorally identical.
+    const String template = '''
+      import core;
+      widget root = Column(children: [
+        Text(text: "small print", variant: "caption"),
+        Markdown(text: "a [tap me](https://example.com) link"),
+      ]);
+    ''';
+
+    await _mount(tester, template);
+    expect(tester.widget<Text>(find.text('small print')).style!.color,
+        const Color(0xFF5F6368));
+
+    await _mount(tester, template, brightness: Brightness.dark);
+    // MaterialApp animates theme changes; settle so Theme.of is fully dark.
+    await tester.pumpAndSettle();
+    expect(tester.widget<Text>(find.text('small print')).style!.color,
+        const Color(0xFF9AA0A6));
+    final TextSpan darkLink = tester
+        .widget<Text>(find.textContaining('tap me'))
+        .textSpan! as TextSpan;
+    TextStyle? linkStyle;
+    darkLink.visitChildren((InlineSpan span) {
+      if (span is TextSpan && span.text == 'tap me') {
+        linkStyle = span.style;
+        return false;
+      }
+      return true;
+    });
+    expect(linkStyle?.color, const Color(0xFF8AB4F8));
   });
 }

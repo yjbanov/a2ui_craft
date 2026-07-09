@@ -539,6 +539,23 @@
           tab editing a themed project's manifest theme block with Preview
           re-parse. Pinned by inline-modes/`modeFor` units and light↔dark
           re-theme tests in both example galleries (default + custom themes).
+        - [x] **7. Adaptive host fallbacks + global scheme toggle.** Root-cause
+          fix for unthemed samples breaking on dark hosts: the Jaspr
+          primitives' host-default fallbacks (Card surface, Divider, caption)
+          were hardcoded light while body text inherited the dark page — now
+          they are CSS `light-dark()` pairs resolving against the page's
+          `color-scheme`, the CSS analogue of Flutter's `Theme.of` fallback
+          (which is why Flutter never broke). Flutter's two non-Material
+          fallbacks (caption, Markdown link) became brightness-aware to keep
+          the pair identical on dark hosts; the conformance tester's color
+          canonicalizer resolves `light-dark()` as a light host. The site
+          gained a global 🌓 System / ☀️ Light / 🌙 Dark toggle (`SiteTheme` +
+          `ThemeToggle`, persisted, on every screen): it writes an inline
+          `color-scheme` override on `<html>`, which the palette variables and
+          primitive fallbacks follow, while screens read `effectiveDark` for
+          what CSS can't reach (a themed project's mode, the embedded Flutter
+          shell's explicit ThemeMode). Pinned by per-adapter fallback tests
+          (light-dark pairs on Jaspr; light/dark brightness on Flutter).
 - [ ] **Project authoring & deployment tooling (§10).** Show a project is a
       *separate, ephemerally loadable artifact* from its host, publishable to a
       CDN with no compile step. Thin slices:

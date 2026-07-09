@@ -33,7 +33,7 @@ LocalWidgetLibrary createCoreComponents() {
             ? TextStyle(
                 fontSize: _roleSize(context, ThemeRoles.captionSize) ?? 12,
                 color: _roleColor(context, ThemeRoles.onSurfaceVariant) ??
-                    const Color(0xFF5F6368),
+                    _captionFallback(context),
               )
             : _bodyStyle(context),
       );
@@ -366,7 +366,7 @@ TextStyle _mdSpanStyle(
   if (span.code) style = style.copyWith(fontFamily: 'monospace');
   if (span.href != null) {
     style = style.copyWith(
-      color: _roleColor(context, ThemeRoles.link) ?? const Color(0xFF1A73E8),
+      color: _roleColor(context, ThemeRoles.link) ?? _linkFallback(context),
       decoration: TextDecoration.underline,
     );
   }
@@ -400,6 +400,22 @@ Color? _roleColor(BuildContext context, String role) {
   final Rgba? rgba = ambientCraftTheme(context)?.tokens.color(role);
   return rgba == null ? null : Color(rgba.value);
 }
+
+// Host-default fallbacks for roles this adapter must ink even unthemed. Card
+// and Divider pass a null color through to Material (which already follows
+// the host theme's brightness); caption and link have no Material equivalent,
+// so they adapt on the theme brightness themselves — mirroring the Jaspr
+// adapter's `light-dark()` fallbacks so the pair stays behaviorally identical
+// on dark hosts.
+Color _captionFallback(BuildContext context) =>
+    Theme.of(context).brightness == Brightness.dark
+        ? const Color(0xFF9AA0A6)
+        : const Color(0xFF5F6368);
+
+Color _linkFallback(BuildContext context) =>
+    Theme.of(context).brightness == Brightness.dark
+        ? const Color(0xFF8AB4F8)
+        : const Color(0xFF1A73E8);
 
 /// Reads a role size (a `dimension` token, logical pixels) from the ambient
 /// theme, or null for the host default.

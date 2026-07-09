@@ -7,6 +7,8 @@ import 'package:jaspr/dom.dart';
 import 'package:jaspr/jaspr.dart';
 import 'package:jaspr_router/jaspr_router.dart';
 
+import 'theme_mode.dart';
+
 /// The landing screen: a grid of sample cards. Clicking one routes to its
 /// dedicated sample screen.
 class GalleryScreen extends StatelessComponent {
@@ -22,9 +24,20 @@ class GalleryScreen extends StatelessComponent {
         'font-family': 'system-ui, -apple-system, sans-serif',
       }),
       [
-        h1(
-            styles: Styles(raw: <String, String>{'margin': '0 0 4px'}),
-            [Component.text('A2UI Craft')]),
+        div(
+          styles: Styles(raw: <String, String>{
+            'display': 'flex',
+            'align-items': 'center',
+            'justify-content': 'space-between',
+            'gap': '10px',
+          }),
+          [
+            h1(
+                styles: Styles(raw: <String, String>{'margin': '0 0 4px'}),
+                [Component.text('A2UI Craft')]),
+            const ThemeToggle(),
+          ],
+        ),
         p(
           styles: Styles(
               raw: <String, String>{'color': 'var(--muted)', 'margin': '0'}),

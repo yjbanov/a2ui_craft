@@ -10,9 +10,10 @@ import 'package:jaspr_test/jaspr_test.dart';
 // The Jaspr half of the ambient role-default wiring (the semantic contract,
 // DESIGN.md §9.4) for the primitives the shared painted-text probes can't
 // reach: which CSS property each role lands on, and that the unthemed
-// fallback is this adapter's pre-theming rendering (browser-default headings,
-// the rgba(0,0,0,0.12) divider). The cross-adapter text-color/size behavior
-// is pinned by the conformance suite.
+// fallback is **adaptive** — a `light-dark()` pair that follows the host
+// page's `color-scheme`, the CSS analogue of Flutter's `Theme.of` fallback
+// (a dark host must not get a light card under dark-mode body text). The
+// cross-adapter text-color/size behavior is pinned by the conformance suite.
 
 CraftTheme _theme(Map<String, Object?> document) =>
     CraftTheme(resolveDesignTokens(<DesignTokenSet>[
@@ -108,17 +109,22 @@ void main() {
   testComponents(
       'headings use the type.heading token; unthemed keeps browser defaults',
       (ComponentTester tester) async {
-    // Unthemed: a bare h2 (browser styling is the host default here) and the
-    // divider keeps its built-in separator color.
+    // Unthemed: a bare h2 (browser styling is the host default here); the
+    // Card and Divider fall back to scheme-adaptive `light-dark()` pairs so a
+    // dark host re-inks them (the root cause of light cards on dark pages).
     await _mount(tester, '''
       import core;
       widget root = Column(children: [
         Heading(text: "Sub", level: 2),
+        Card(child: Text(text: "in card")),
         Divider(),
       ]);
     ''');
     expect(_styleValues('font-size'), isEmpty);
-    expect(_styleValues('background-color'), <String>['rgba(0, 0, 0, 0.12)']);
+    expect(_styleValues('background-color'), <String>[
+      'light-dark(#ffffff, #2a2b2e)', // Card ← surface host default
+      'light-dark(rgba(0, 0, 0, 0.12), rgba(255, 255, 255, 0.16))', // Divider
+    ]);
 
     // A themed level styles only itself.
     await _mount(

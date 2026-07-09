@@ -12,7 +12,7 @@ import 'package:jaspr_flutter_embed/jaspr_flutter_embed.dart';
 import 'package:jaspr_router/jaspr_router.dart';
 
 import 'flutter_host.dart';
-import 'system_dark.dart';
+import 'theme_mode.dart';
 
 /// The "URL bar" screen: type the base URL of a **deployed** A2UI Craft project
 /// (e.g. `https://my-app.web.app/`) and load it over HTTP, exactly as a host app
@@ -30,18 +30,20 @@ class LoadScreen extends StatefulComponent {
 class _LoadScreenState extends State<LoadScreen> {
   final CraftProjectLoader _loader = CraftProjectLoader();
 
-  SystemDarkWatch? _darkWatch;
+  void Function()? _unsubscribeTheme;
 
   @override
   void initState() {
     super.initState();
-    // Re-theme the loaded project when the system preference flips, unless
-    // the user has taken over the mode picker.
-    _darkWatch = watchSystemDark((bool dark) {
-      final ProjectTheme? theme = _project?.manifest.theme;
-      if (_modeTouched || theme == null) return;
+    // Re-theme when the effective scheme changes (the global toggle, or the
+    // system preference flipping in System mode); a themed project re-picks
+    // its mode unless the user has taken over the mode picker.
+    _unsubscribeTheme = SiteTheme.onChange(() {
       setState(() {
-        _mode = theme.modeFor(dark: dark);
+        final ProjectTheme? theme = _project?.manifest.theme;
+        if (theme != null && !_modeTouched) {
+          _mode = theme.modeFor(dark: SiteTheme.effectiveDark);
+        }
         _bumpRender();
       });
     });
@@ -49,7 +51,7 @@ class _LoadScreenState extends State<LoadScreen> {
 
   @override
   void dispose() {
-    _darkWatch?.cancel();
+    _unsubscribeTheme?.call();
     super.dispose();
   }
 
@@ -76,9 +78,10 @@ class _LoadScreenState extends State<LoadScreen> {
       final LoadedProject project = await _loader.load(url);
       setState(() {
         _project = project;
-        // A themed project opens in the mode matching the system dark-light
-        // preference (host render-time config, §9.5).
-        _mode = project.manifest.theme?.modeFor(dark: systemPrefersDark());
+        // A themed project opens in the mode matching the effective scheme
+        // (system preference + toggle override — host render-time config,
+        // §9.5).
+        _mode = project.manifest.theme?.modeFor(dark: SiteTheme.effectiveDark);
         _modeTouched = false;
         _scenario = null;
         _log.clear();
@@ -176,6 +179,7 @@ class _LoadScreenState extends State<LoadScreen> {
           styles: _btn(true),
           <Component>[Component.text(_loading ? 'Loading…' : 'Load ▸')],
         ),
+        const ThemeToggle(),
       ],
     );
   }
@@ -314,6 +318,7 @@ class _LoadScreenState extends State<LoadScreen> {
       template: project.spec.catalogSource,
       schema: project.spec.catalogSchema,
       messages: _messages,
+      dark: SiteTheme.effectiveDark,
       onAction: _onAction,
       theme: _theme,
     );

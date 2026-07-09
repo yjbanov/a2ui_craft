@@ -5,9 +5,16 @@
   <title>A2UI Craft Jaspr Example</title>
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   <style>
+    /* Declare dark-mode support so the primitives' light-dark() host
+       fallbacks (and the page itself) follow the system setting. */
+    :root {
+      color-scheme: light dark;
+    }
     body {
       font-family: sans-serif;
       padding: 20px;
+      background: light-dark(#ffffff, #202124);
+      color: light-dark(#1f1f1f, #e8eaed);
     }
     button {
       margin-top: 10px;

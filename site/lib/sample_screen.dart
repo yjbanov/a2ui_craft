@@ -16,7 +16,7 @@ import 'package:jaspr_router/jaspr_router.dart';
 import 'package:web/web.dart' as web;
 
 import 'flutter_host.dart';
-import 'system_dark.dart';
+import 'theme_mode.dart';
 
 /// Width of the editor sidebar when open, in CSS px. Subtracted from the
 /// viewport to decide whether the preview pane is wide enough for side-by-side.
@@ -66,7 +66,7 @@ class _SampleScreenState extends State<SampleScreen> {
   // Null theme ⇒ no picker, surface blends into the host. The mode tracks the
   // system dark-light preference until the user touches the picker.
   late ProjectTheme? _project = ProjectTheme.tryParse(_raw.theme);
-  late CraftThemeMode? _mode = _project?.modeFor(dark: systemPrefersDark());
+  late CraftThemeMode? _mode = _project?.modeFor(dark: SiteTheme.effectiveDark);
   bool _modeTouched = false;
 
   CraftTheme? get _theme => _project?.resolve(_mode);
@@ -90,7 +90,7 @@ class _SampleScreenState extends State<SampleScreen> {
   Object? _flutterWidget;
 
   JSFunction? _resizeListener;
-  SystemDarkWatch? _darkWatch;
+  void Function()? _unsubscribeTheme;
 
   @override
   void initState() {
@@ -98,15 +98,17 @@ class _SampleScreenState extends State<SampleScreen> {
     _wide = _computeWide();
     _resizeListener = ((web.Event _) => _updateLayout()).toJS;
     web.window.addEventListener('resize', _resizeListener);
-    // Re-theme a themed project when the system preference flips, unless the
-    // user has taken over the mode picker. (Unthemed surfaces re-theme on
-    // their own: the Jaspr pane via the CSS variables, the embedded Flutter
-    // pane via ThemeMode.system.)
-    _darkWatch = watchSystemDark((bool dark) {
-      final ProjectTheme? project = _project;
-      if (_modeTouched || project == null) return;
+    // Re-theme when the effective scheme changes (the global toggle, or the
+    // system preference flipping in System mode). The Jaspr pane re-inks via
+    // CSS; the embedded Flutter shell needs a rebuild (its ThemeMode is
+    // passed explicitly), and a themed project re-picks its mode unless the
+    // user has taken over the mode picker.
+    _unsubscribeTheme = SiteTheme.onChange(() {
       setState(() {
-        _mode = project.modeFor(dark: dark);
+        final ProjectTheme? project = _project;
+        if (project != null && !_modeTouched) {
+          _mode = project.modeFor(dark: SiteTheme.effectiveDark);
+        }
         _flutterWidget = null;
         _renderKey++;
       });
@@ -118,7 +120,7 @@ class _SampleScreenState extends State<SampleScreen> {
     if (_resizeListener != null) {
       web.window.removeEventListener('resize', _resizeListener);
     }
-    _darkWatch?.cancel();
+    _unsubscribeTheme?.call();
     super.dispose();
   }
 
@@ -170,7 +172,7 @@ class _SampleScreenState extends State<SampleScreen> {
         } else if (_mode == null || !project.availableModes.contains(_mode)) {
           _mode = _modeTouched
               ? project.defaultMode
-              : project.modeFor(dark: systemPrefersDark());
+              : project.modeFor(dark: SiteTheme.effectiveDark);
         }
         _error = null;
         _flutterWidget = null;
@@ -194,6 +196,7 @@ class _SampleScreenState extends State<SampleScreen> {
       template: spec.catalogSource,
       schema: spec.catalogSchema,
       messages: spec.messages,
+      dark: SiteTheme.effectiveDark,
       onAction: _onAction,
       theme: _theme,
     );
@@ -389,6 +392,7 @@ class _SampleScreenState extends State<SampleScreen> {
           styles: Styles(raw: <String, String>{'margin': '0', 'flex': '1'}),
           [Component.text(_raw.label)],
         ),
+        const ThemeToggle(),
         if (_project != null) _modePicker(),
         button(
           onClick: () => setState(() {

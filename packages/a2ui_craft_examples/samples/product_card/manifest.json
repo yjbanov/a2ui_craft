@@ -1,3 +1,32 @@
 {
-  "name": "Product Card"
+  "name": "Product Card",
+  "theme": {
+    "tokens": {
+      "color": {
+        "$type": "color",
+        "$description": "Warm storefront brand — base layer (Light).",
+        "surface": { "$value": "#FFF8F0" },
+        "onSurface": { "$value": "#3E2723" },
+        "onSurfaceVariant": { "$value": "#8D6E63" },
+        "primary": { "$value": "#E65100" },
+        "onPrimary": { "$value": "#FFFFFF" },
+        "outline": { "$value": "#E0CFC2" },
+        "link": { "$value": "#E65100" }
+      }
+    },
+    "modes": {
+      "dark": {
+        "color": {
+          "$type": "color",
+          "surface": { "$value": "#2A1E17" },
+          "onSurface": { "$value": "#FFEFE0" },
+          "onSurfaceVariant": { "$value": "#BCAAA4" },
+          "primary": { "$value": "#FFB74D" },
+          "onPrimary": { "$value": "#2A1E17" },
+          "outline": { "$value": "#5D4037" },
+          "link": { "$value": "#FFB74D" }
+        }
+      }
+    }
+  }
 }

@@ -80,6 +80,11 @@ class _GalleryAppState extends State<GalleryApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      // Follow the platform dark-light setting; themed samples pick their
+      // matching mode (see Sample), unthemed ones blend into the host theme.
+      theme: ThemeData(useMaterial3: true),
+      darkTheme: ThemeData(useMaterial3: true, brightness: Brightness.dark),
+      themeMode: ThemeMode.system,
       home: Scaffold(
         body: Row(
           children: [

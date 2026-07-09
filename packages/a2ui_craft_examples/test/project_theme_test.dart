@@ -58,6 +58,110 @@ void main() {
         Rgba.decode('#123456'));
   });
 
+  test('an inline theme with a dark overlay is two modes; overlay layers over',
+      () {
+    // The base + per-mode-overlay shape (DESIGN.md §9.5) inlined: the base is
+    // Light; a "modes.dark" overlay merges over it before alias dereference.
+    final ProjectTheme? theme = ProjectTheme.tryParse('''
+      {
+        "tokens": {
+          "color": {
+            "\$type": "color",
+            "surface": { "\$value": "#FFF8F0" },
+            "outline": { "\$value": "#E0CFC2" }
+          }
+        },
+        "modes": {
+          "dark": {
+            "color": {
+              "\$type": "color",
+              "surface": { "\$value": "#2A1E17" }
+            }
+          },
+          "sepia": { "color": {} }
+        }
+      }
+    ''');
+    expect(theme, isNotNull);
+    expect(theme!.usesDefaultTheme, isFalse);
+    expect(theme.defaultMode, CraftThemeMode.light);
+    // The unknown "sepia" mode is ignored (totality).
+    expect(theme.availableModes,
+        <CraftThemeMode>[CraftThemeMode.light, CraftThemeMode.dark]);
+    expect(theme.resolve().tokens.color(ThemeRoles.surface),
+        Rgba.decode('#FFF8F0'));
+    expect(theme.resolve(CraftThemeMode.dark).tokens.color(ThemeRoles.surface),
+        Rgba.decode('#2A1E17'));
+    // A role the overlay does not restate falls through to the base layer.
+    expect(theme.resolve(CraftThemeMode.dark).tokens.color(ThemeRoles.outline),
+        Rgba.decode('#E0CFC2'));
+  });
+
+  test('an inline theme may declare its default mode', () {
+    final ProjectTheme? theme = ProjectTheme.tryParse('''
+      {
+        "tokens": { "color": { "\$type": "color",
+                               "surface": { "\$value": "#FFFFFF" } } },
+        "modes": { "dark": { "color": { "\$type": "color",
+                                        "surface": { "\$value": "#000000" } } } },
+        "mode": "dark"
+      }
+    ''');
+    expect(theme!.defaultMode, CraftThemeMode.dark);
+    expect(theme.resolve().tokens.color(ThemeRoles.surface),
+        Rgba.decode('#000000'));
+    // A declared mode with no matching layer falls back to light.
+    final ProjectTheme? noLayer = ProjectTheme.tryParse('''
+      { "tokens": { "color": {} }, "mode": "dark" }
+    ''');
+    expect(noLayer!.defaultMode, CraftThemeMode.light);
+  });
+
+  test('modeFor maps the system dark/light preference onto project modes', () {
+    // The default theme offers both: the preference wins over the author's
+    // default (host render-time config, DESIGN.md §9.5).
+    final ProjectTheme deflt =
+        ProjectTheme.tryParse('{ "theme": "default", "mode": "dark" }')!;
+    expect(deflt.modeFor(dark: false), CraftThemeMode.light);
+    expect(deflt.modeFor(dark: true), CraftThemeMode.dark);
+
+    // An inline theme with a dark overlay follows the preference too.
+    final ProjectTheme twoMode = ProjectTheme.tryParse('''
+      { "tokens": { "color": {} }, "modes": { "dark": { "color": {} } } }
+    ''')!;
+    expect(twoMode.modeFor(dark: false), CraftThemeMode.light);
+    expect(twoMode.modeFor(dark: true), CraftThemeMode.dark);
+
+    // A single-layer theme has no dark to offer: the default mode stands.
+    final ProjectTheme oneMode =
+        ProjectTheme.tryParse('{ "tokens": { "color": {} } }')!;
+    expect(oneMode.modeFor(dark: true), CraftThemeMode.light);
+  });
+
+  test('the custom-themed samples ship light + dark brand layers', () {
+    for (final (SampleSpec spec, String light, String dark)
+        in <(SampleSpec, String, String)>[
+      (productCardSpec('Jaspr'), '#FFF8F0', '#2A1E17'),
+      (chatMessageSpec('Jaspr'), '#F5F7FF', '#171A2C'),
+      (weatherSpec('Jaspr'), '#E8F4FD', '#0B1F33'),
+    ]) {
+      final ProjectTheme? theme = spec.theme;
+      expect(theme, isNotNull, reason: spec.label);
+      expect(theme!.usesDefaultTheme, isFalse, reason: spec.label);
+      expect(theme.availableModes,
+          <CraftThemeMode>[CraftThemeMode.light, CraftThemeMode.dark],
+          reason: spec.label);
+      expect(
+          theme.resolve(CraftThemeMode.light).tokens.color(ThemeRoles.surface),
+          Rgba.decode(light),
+          reason: spec.label);
+      expect(
+          theme.resolve(CraftThemeMode.dark).tokens.color(ThemeRoles.surface),
+          Rgba.decode(dark),
+          reason: spec.label);
+    }
+  });
+
   test('null, blank, malformed, and unrecognized input parse to null (total)',
       () {
     expect(ProjectTheme.tryParse(null), isNull);

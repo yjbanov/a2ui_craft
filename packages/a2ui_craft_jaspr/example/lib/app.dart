@@ -7,6 +7,7 @@ import 'package:jaspr/dom.dart';
 import 'package:jaspr/jaspr.dart';
 
 import 'sample.dart';
+import 'system_dark.dart';
 
 /// The shared sample specs, labelled for this adapter.
 final List<SampleSpec> _specs = sampleSpecs('Jaspr');
@@ -21,6 +22,17 @@ class App extends StatefulComponent {
 
 class _AppState extends State<App> {
   int _index = 0;
+
+  // The system dark-light preference; themed samples open in the matching
+  // mode and re-theme when it flips (host render-time config, DESIGN.md §9.5).
+  bool _dark = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _dark = systemPrefersDark();
+    watchSystemDark((bool dark) => setState(() => _dark = dark));
+  }
 
   @override
   Component build(BuildContext context) {
@@ -66,7 +78,7 @@ class _AppState extends State<App> {
                 radius: BorderRadius.circular(Unit.pixels(8)),
               ),
               // The key ensures a fresh, isolated sample on every switch.
-              [Sample(_specs[_index], key: ValueKey<int>(_index))],
+              [Sample(_specs[_index], dark: _dark, key: ValueKey<int>(_index))],
             ),
           ],
         ),

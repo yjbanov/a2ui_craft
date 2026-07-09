@@ -16,6 +16,7 @@ import 'package:jaspr_router/jaspr_router.dart';
 import 'package:web/web.dart' as web;
 
 import 'flutter_host.dart';
+import 'system_dark.dart';
 
 /// Width of the editor sidebar when open, in CSS px. Subtracted from the
 /// viewport to decide whether the preview pane is wide enough for side-by-side.
@@ -28,11 +29,16 @@ const int _sideBySideMin = 800;
 
 /// One sample on its own screen: a toolbar (back, title, edit, Jaspr/Flutter
 /// toggle) over the rendered surface and an action log, with an optional editor
-/// sidebar for the template / schema / messages with live Preview.
+/// sidebar — one tab per project file (template / schema / app bootstrap, plus
+/// the theme for a themed project) with live Preview.
 ///
 /// When the preview pane (viewport minus the editor) is at least
 /// [_sideBySideMin] wide, the Jaspr and Flutter renders show side by side;
 /// otherwise they collapse into a tab toggle.
+///
+/// A themed project's mode follows the browser/system dark-light preference
+/// until the user picks a mode explicitly; the site chrome follows it always
+/// (CSS variables in `web/index.html`).
 class SampleScreen extends StatefulComponent {
   const SampleScreen({required this.id, super.key});
 
@@ -55,28 +61,36 @@ class _SampleScreenState extends State<SampleScreen> {
   String? _error;
   final List<String> _log = <String>[];
 
-  // The project's theme, if it ships one (its `theme.json`, §10), and the
-  // mode the host has selected — the render-time n-ary mode input (§9.5). Null
-  // theme ⇒ no picker, surface blends into the host.
-  late final ProjectTheme? _project = ProjectTheme.tryParse(_raw.theme);
-  late CraftThemeMode? _mode = _project?.defaultMode;
+  // The project's theme, if it ships one (its manifest theme block, §10), and
+  // the mode the host has selected — the render-time n-ary mode input (§9.5).
+  // Null theme ⇒ no picker, surface blends into the host. The mode tracks the
+  // system dark-light preference until the user touches the picker.
+  late ProjectTheme? _project = ProjectTheme.tryParse(_raw.theme);
+  late CraftThemeMode? _mode = _project?.modeFor(dark: systemPrefersDark());
+  bool _modeTouched = false;
 
   CraftTheme? get _theme => _project?.resolve(_mode);
 
-  // The rendered (active) data; the editor edits separate drafts and commits
-  // them on Preview.
+  // The rendered (active) sources; the editor edits drafts and commits them on
+  // Preview. Drafts are what the editor fields display, so switching tabs
+  // never discards unprevewed edits.
   late String _template = _raw.template;
   late String _schema = _raw.schema;
   late String _messages = _raw.messages;
   late String _dTemplate = _template;
   late String _dSchema = _schema;
   late String _dMessages = _messages;
+  late String _dTheme = _raw.theme ?? '';
+
+  /// The active editor tab.
+  String _tab = 'Template';
 
   // The embedded Flutter widget is memoized so an action-log rebuild doesn't
   // tear down and re-run the Flutter surface; it is recreated only on Preview.
   Object? _flutterWidget;
 
   JSFunction? _resizeListener;
+  SystemDarkWatch? _darkWatch;
 
   @override
   void initState() {
@@ -84,6 +98,19 @@ class _SampleScreenState extends State<SampleScreen> {
     _wide = _computeWide();
     _resizeListener = ((web.Event _) => _updateLayout()).toJS;
     web.window.addEventListener('resize', _resizeListener);
+    // Re-theme a themed project when the system preference flips, unless the
+    // user has taken over the mode picker. (Unthemed surfaces re-theme on
+    // their own: the Jaspr pane via the CSS variables, the embedded Flutter
+    // pane via ThemeMode.system.)
+    _darkWatch = watchSystemDark((bool dark) {
+      final ProjectTheme? project = _project;
+      if (_modeTouched || project == null) return;
+      setState(() {
+        _mode = project.modeFor(dark: dark);
+        _flutterWidget = null;
+        _renderKey++;
+      });
+    });
   }
 
   @override
@@ -91,6 +118,7 @@ class _SampleScreenState extends State<SampleScreen> {
     if (_resizeListener != null) {
       web.window.removeEventListener('resize', _resizeListener);
     }
+    _darkWatch?.cancel();
     super.dispose();
   }
 
@@ -125,10 +153,25 @@ class _SampleScreenState extends State<SampleScreen> {
         messagesJson: _dMessages,
         framework: _framework,
       );
+      // ProjectTheme.tryParse is total (a broken theme silently unthemes), so
+      // surface JSON syntax errors here where the author can see them. An
+      // emptied theme editor deliberately unthemes the project.
+      if (_dTheme.trim().isNotEmpty) {
+        jsonDecode(_dTheme);
+      }
+      final ProjectTheme? project = ProjectTheme.tryParse(_dTheme);
       setState(() {
         _template = _dTemplate;
         _schema = _dSchema;
         _messages = _dMessages;
+        _project = project;
+        if (project == null) {
+          _mode = null;
+        } else if (_mode == null || !project.availableModes.contains(_mode)) {
+          _mode = _modeTouched
+              ? project.defaultMode
+              : project.modeFor(dark: systemPrefersDark());
+        }
         _error = null;
         _flutterWidget = null;
         _log.clear();
@@ -235,7 +278,7 @@ class _SampleScreenState extends State<SampleScreen> {
         'min-width': '0',
         'display': 'flex',
         'flex-direction': 'column',
-        if (borderRight) 'border-right': '1px solid #eee',
+        if (borderRight) 'border-right': '1px solid var(--border)',
       }),
       [
         div(
@@ -243,9 +286,9 @@ class _SampleScreenState extends State<SampleScreen> {
             'font': '600 11px system-ui',
             'letter-spacing': '.05em',
             'text-transform': 'uppercase',
-            'color': '#888',
+            'color': 'var(--subtle)',
             'padding': '8px 24px',
-            'border-bottom': '1px solid #f0f0f0',
+            'border-bottom': '1px solid var(--border)',
           }),
           [Component.text(label)],
         ),
@@ -287,7 +330,7 @@ class _SampleScreenState extends State<SampleScreen> {
       styles: Styles(raw: <String, String>{
         'width': '100%',
         'height': '640px',
-        'border': '1px solid #eee',
+        'border': '1px solid var(--border)',
         'border-radius': '10px',
         'overflow': 'hidden',
       }),
@@ -298,25 +341,25 @@ class _SampleScreenState extends State<SampleScreen> {
   Component _logPanel() {
     return div(
       styles: Styles(raw: <String, String>{
-        'border-top': '1px solid #eee',
+        'border-top': '1px solid var(--border)',
         'padding': '8px 24px',
         'max-height': '140px',
         'overflow': 'auto',
         'font': '12px ui-monospace, monospace',
-        'color': '#444',
-        'background': '#fafafa',
+        'color': 'var(--fg)',
+        'background': 'var(--panel)',
       }),
       [
         div(
           styles: Styles(raw: <String, String>{
-            'color': '#888',
+            'color': 'var(--subtle)',
             'margin-bottom': '4px',
           }),
           [Component.text('Action log (dispatched A2UI events)')],
         ),
         if (_log.isEmpty)
           div(
-              styles: Styles(raw: <String, String>{'color': '#bbb'}),
+              styles: Styles(raw: <String, String>{'color': 'var(--faint)'}),
               [Component.text('No events yet — interact with the sample.')])
         else
           for (final String line in _log)
@@ -334,7 +377,7 @@ class _SampleScreenState extends State<SampleScreen> {
         'align-items': 'center',
         'gap': '10px',
         'padding': '12px 20px',
-        'border-bottom': '1px solid #eee',
+        'border-bottom': '1px solid var(--border)',
       }),
       [
         button(
@@ -372,6 +415,7 @@ class _SampleScreenState extends State<SampleScreen> {
 
   /// The render-time n-ary **mode** input for a themed project (§9.5): pick
   /// among the project theme's available modes; both renders re-theme to it.
+  /// An explicit pick stops the mode from auto-following the system setting.
   Component _modePicker() {
     final ProjectTheme project = _project!;
     return select(
@@ -384,6 +428,7 @@ class _SampleScreenState extends State<SampleScreen> {
           orElse: () => project.defaultMode,
         );
         setState(() {
+          _modeTouched = true;
           _mode = next;
           // Rebuild both panes so the embedded Flutter render re-themes too.
           _flutterWidget = null;
@@ -392,10 +437,10 @@ class _SampleScreenState extends State<SampleScreen> {
       },
       styles: Styles(raw: <String, String>{
         'padding': '6px 10px',
-        'border': '1px solid #ccc',
+        'border': '1px solid var(--border-strong)',
         'border-radius': '6px',
-        'background': '#fff',
-        'color': '#333',
+        'background': 'var(--card)',
+        'color': 'var(--fg)',
         'cursor': 'pointer',
       }),
       <Component>[
@@ -405,22 +450,55 @@ class _SampleScreenState extends State<SampleScreen> {
     );
   }
 
+  /// The editor tabs: one per project file. The Theme tab appears only for a
+  /// project that ships a theme.
+  List<(String, String, String, ValueChanged<String>)> get _editorTabs =>
+      <(String, String, String, ValueChanged<String>)>[
+        (
+          'Template',
+          'Template (.craft)',
+          _dTemplate,
+          (String v) => _dTemplate = v
+        ),
+        ('Schema', 'Schema (JSON)', _dSchema, (String v) => _dSchema = v),
+        (
+          'App',
+          'App bootstrap (app.json)',
+          _dMessages,
+          (String v) => _dMessages = v
+        ),
+        if (_raw.theme != null)
+          (
+            'Theme',
+            'Theme (manifest theme block)',
+            _dTheme,
+            (String v) => _dTheme = v
+          ),
+      ];
+
   Component _editor() {
+    final List<(String, String, String, ValueChanged<String>)> tabs =
+        _editorTabs;
+    final String activeName = _tabOr(tabs);
+    final (String, String, String, ValueChanged<String>) active =
+        tabs.firstWhere(
+      ((String, String, String, ValueChanged<String>) t) => t.$1 == activeName,
+    );
     return div(
       styles: Styles(raw: <String, String>{
         'width': '${_editorWidth}px',
-        'border-left': '1px solid #eee',
+        'border-left': '1px solid var(--border)',
         'display': 'flex',
         'flex-direction': 'column',
-        'background': '#fcfcfc',
+        'background': 'var(--panel)',
         'overflow': 'auto',
       }),
       [
         if (_error != null)
           div(
             styles: Styles(raw: <String, String>{
-              'background': '#fdecea',
-              'color': '#b3261e',
+              'background': 'var(--error-bg)',
+              'color': 'var(--error-fg)',
               'padding': '8px 12px',
               'font': '12px ui-monospace, monospace',
               'white-space': 'pre-wrap',
@@ -429,8 +507,11 @@ class _SampleScreenState extends State<SampleScreen> {
           ),
         div(
           styles: Styles(raw: <String, String>{
+            'display': 'flex',
+            'align-items': 'center',
+            'gap': '6px',
             'padding': '10px 12px',
-            'border-bottom': '1px solid #eee',
+            'border-bottom': '1px solid var(--border)',
           }),
           [
             button(
@@ -439,8 +520,8 @@ class _SampleScreenState extends State<SampleScreen> {
                 'padding': '8px 16px',
                 'border': 'none',
                 'border-radius': '6px',
-                'background': '#1a73e8',
-                'color': '#fff',
+                'background': 'var(--accent)',
+                'color': 'var(--accent-fg)',
                 'cursor': 'pointer',
                 'font-weight': '600',
               }),
@@ -448,42 +529,88 @@ class _SampleScreenState extends State<SampleScreen> {
             ),
           ],
         ),
-        _field('Template (.craft)', _template, (String v) => _dTemplate = v),
-        _field('Schema (JSON)', _schema, (String v) => _dSchema = v),
-        _field('App bootstrap (app.json)', _messages,
-            (String v) => _dMessages = v),
+        _tabBar(tabs, activeName),
+        _field(active.$2, active.$3, active.$4),
       ],
     );
   }
+
+  Component _tabBar(
+    List<(String, String, String, ValueChanged<String>)> tabs,
+    String activeName,
+  ) {
+    return div(
+      styles: Styles(raw: <String, String>{
+        'display': 'flex',
+        'gap': '2px',
+        'padding': '8px 12px 0',
+        'border-bottom': '1px solid var(--border)',
+      }),
+      [
+        for (final (String, String, String, ValueChanged<String>) t in tabs)
+          button(
+            onClick: () => setState(() => _tab = t.$1),
+            styles: Styles(raw: <String, String>{
+              'padding': '7px 12px',
+              'border': '1px solid var(--border)',
+              'border-bottom': 'none',
+              'border-radius': '6px 6px 0 0',
+              'background': t.$1 == activeName ? 'var(--card)' : 'transparent',
+              'color': t.$1 == activeName ? 'var(--fg)' : 'var(--subtle)',
+              'font-weight': t.$1 == activeName ? '600' : '400',
+              'cursor': 'pointer',
+            }),
+            [Component.text(t.$1)],
+          ),
+      ],
+    );
+  }
+
+  /// The active tab name, snapped back to the first tab when the current one
+  /// no longer exists (e.g. Theme after an unthemed preview).
+  String _tabOr(List<(String, String, String, ValueChanged<String>)> tabs) =>
+      tabs.any(((String, String, String, ValueChanged<String>) t) =>
+              t.$1 == _tab)
+          ? _tab
+          : tabs.first.$1;
 
   Component _field(String label, String value, ValueChanged<String> onInput) {
     return div(
       styles: Styles(raw: <String, String>{
         'display': 'flex',
         'flex-direction': 'column',
-        'padding': '8px 12px',
+        'flex': '1',
+        'min-height': '0',
+        'padding': '8px 12px 12px',
       }),
       [
         div(
           styles: Styles(raw: <String, String>{
             'font': '600 12px system-ui',
-            'color': '#555',
-            'margin-bottom': '4px',
+            'color': 'var(--muted)',
+            'margin': '4px 0',
           }),
           [Component.text(label)],
         ),
         textarea(
+          // Keyed per tab so each tab mounts a fresh textarea seeded with its
+          // own draft (a reused DOM textarea would keep showing the previous
+          // tab's user-typed value).
+          key: ValueKey<String>('editor-$label'),
           [Component.text(value)],
-          rows: 12,
+          rows: 24,
           onInput: onInput,
           styles: Styles(raw: <String, String>{
             'width': '100%',
+            'flex': '1',
             'box-sizing': 'border-box',
             'font': '12px ui-monospace, monospace',
-            'border': '1px solid #ddd',
+            'border': '1px solid var(--border-strong)',
             'border-radius': '6px',
             'padding': '8px',
             'resize': 'vertical',
+            'background': 'var(--card)',
+            'color': 'var(--fg)',
           }),
         ),
       ],
@@ -492,10 +619,11 @@ class _SampleScreenState extends State<SampleScreen> {
 
   Styles _btn(bool active) => Styles(raw: <String, String>{
         'padding': '6px 12px',
-        'border': '1px solid ${active ? '#1a73e8' : '#ccc'}',
+        'border':
+            '1px solid ${active ? 'var(--accent)' : 'var(--border-strong)'}',
         'border-radius': '6px',
-        'background': active ? '#1a73e8' : '#fff',
-        'color': active ? '#fff' : '#333',
+        'background': active ? 'var(--accent)' : 'var(--card)',
+        'color': active ? 'var(--accent-fg)' : 'var(--fg)',
         'cursor': 'pointer',
       });
 }

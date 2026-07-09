@@ -8,9 +8,12 @@ import 'package:a2ui_craft_jaspr_example/sample.dart';
 import 'package:jaspr/jaspr.dart';
 import 'package:jaspr_test/jaspr_test.dart';
 
-/// Mounts a shared [SampleSpec] exactly as the gallery does.
-Future<void> _pump(ComponentTester tester, SampleSpec spec) async {
-  tester.pumpComponent(Sample(spec));
+/// Mounts a shared [SampleSpec] exactly as the gallery does. [dark] is the
+/// host's system dark-light preference (false on the test VM, matching the
+/// gallery's no-preference stub).
+Future<void> _pump(ComponentTester tester, SampleSpec spec,
+    {bool dark = false}) async {
+  tester.pumpComponent(Sample(spec, dark: dark));
   await tester.pump();
 }
 
@@ -108,26 +111,57 @@ void main() {
   });
 
   testComponents(
-      'Profile Card is a themed project — its theme.json paints it dark',
+      'Profile Card is a themed project — its mode follows the host darkness',
       (ComponentTester tester) async {
-    // The 4th trio file: profile_card ships `theme.json` ({theme:default,
-    // mode:dark}). Its SampleSpec carries a ProjectTheme (§10), the gallery
-    // Sample resolves it, and the surface renders under the default Dark theme —
-    // the two Cards get the dark surface role. Theming end-to-end from a data
-    // file, through the real A2UI-surface/adapter path.
+    // profile_card ships a manifest theme ({theme:default, mode:dark}). Its
+    // SampleSpec carries a ProjectTheme (§10); the gallery Sample maps the
+    // host's dark-light preference onto the theme's modes (host render-time
+    // config, §9.5), so the same project paints light or dark with the system.
     final SampleSpec spec = profileCardSpec('Jaspr');
     expect(spec.theme, isNotNull);
     expect(spec.theme!.usesDefaultTheme, isTrue);
     expect(spec.theme!.defaultMode.id, 'dark');
 
-    await _pump(tester, spec);
-    // Each of the two cards paints its surface (color.surface = #202124) and,
-    // via its Divider, the outline role (color.outline = #5F6368 in Dark).
+    // A dark host: each of the two cards paints its surface (color.surface =
+    // #202124) and, via its Divider, the outline role (#5F6368 in Dark).
+    await _pump(tester, spec, dark: true);
     expect(_styleValues('background-color'), <String>[
       'rgba(32, 33, 36, 1.0)', // card 1 ← surface
       'rgba(95, 99, 104, 1.0)', // card 1 divider ← outline
       'rgba(32, 33, 36, 1.0)', // card 2 ← surface
       'rgba(95, 99, 104, 1.0)', // card 2 divider ← outline
+    ]);
+
+    // A light host: the same project re-themes to the Light layer.
+    await _pump(tester, spec);
+    expect(_styleValues('background-color'), <String>[
+      'rgba(255, 255, 255, 1.0)', // card 1 ← surface
+      'rgba(218, 220, 224, 1.0)', // card 1 divider ← outline
+      'rgba(255, 255, 255, 1.0)', // card 2 ← surface
+      'rgba(218, 220, 224, 1.0)', // card 2 divider ← outline
+    ]);
+  });
+
+  testComponents(
+      'Product Card ships a custom inline theme with light + dark layers',
+      (ComponentTester tester) async {
+    // product_card's manifest inlines a bespoke brand: a base DTCG layer
+    // (Light) plus a "modes.dark" overlay (§9.5). The gallery Sample picks the
+    // layer matching the host's dark-light preference.
+    final SampleSpec spec = productCardSpec('Jaspr');
+    expect(spec.theme, isNotNull);
+    expect(spec.theme!.usesDefaultTheme, isFalse);
+
+    await _pump(tester, spec);
+    expect(_styleValues('background-color'), <String>[
+      'rgba(255, 248, 240, 1.0)', // card ← brand surface, Light
+      'rgba(224, 207, 194, 1.0)', // divider ← brand outline, Light
+    ]);
+
+    await _pump(tester, spec, dark: true);
+    expect(_styleValues('background-color'), <String>[
+      'rgba(42, 30, 23, 1.0)', // card ← brand surface, Dark
+      'rgba(93, 64, 55, 1.0)', // divider ← brand outline, Dark
     ]);
   });
 

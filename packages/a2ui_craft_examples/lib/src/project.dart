@@ -66,18 +66,21 @@ class ProjectManifest {
 ///   opened in the named [CraftThemeMode]. The mode is the project's *default*;
 ///   because the default theme is n-ary, a host may offer any of its
 ///   [availableModes] at render time.
-/// * `{ "tokens": { …DTCG… } }` — an inline single-layer theme (its own tokens,
-///   no modes); the escape hatch for a project that ships bespoke tokens rather
-///   than referencing the default theme.
+/// * `{ "tokens": { …DTCG… }, "modes": { "dark": { …DTCG overlay… } },
+///   "mode": "dark" }` — an inline **custom theme**: a base DTCG token layer
+///   (which is the Light mode) plus optional per-mode overlay layers, each
+///   merged over the base before alias dereference — the base + per-mode-overlay
+///   shape of DESIGN.md §9.5, inlined into the manifest. `modes` and `mode`
+///   are optional; a bare `{ "tokens": … }` is a single-layer theme.
 ///
-/// This is the theme-reference-plus-mode-wiring portion of the eventual project
-/// manifest; the name and catalog id already live alongside the trio (a sample's
-/// `label` and the shared `catalogId`).
+/// This is the theme-reference-plus-mode-wiring portion of the project
+/// manifest; the name and catalog id are the manifest's other fields.
 class ProjectTheme {
   const ProjectTheme._({
     required this.usesDefaultTheme,
     required this.defaultMode,
-    ResolvedTokens? inline,
+    Map<CraftThemeMode, ResolvedTokens> inline =
+        const <CraftThemeMode, ResolvedTokens>{},
   }) : _inline = inline;
 
   /// Parses a `theme.json` string; null/blank/unrecognized/malformed → null.
@@ -93,11 +96,30 @@ class ProjectTheme {
 
     final Object? tokens = decoded['tokens'];
     if (tokens != null) {
+      final DesignTokenSet base = parseDesignTokens(tokens);
+      // Each recognized per-mode overlay resolves as [base, overlay] — the
+      // layer-merge-then-dereference order that makes overlays re-point roles.
+      // Unknown mode names and non-map overlays are ignored (totality).
+      final Map<CraftThemeMode, ResolvedTokens> inline =
+          <CraftThemeMode, ResolvedTokens>{
+        CraftThemeMode.light: resolveDesignTokens(<DesignTokenSet>[base]),
+      };
+      final Object? modes = decoded['modes'];
+      if (modes is Map<String, Object?>) {
+        for (final MapEntry<String, Object?> entry in modes.entries) {
+          final CraftThemeMode? mode = _modeByName(entry.key);
+          if (mode == null || entry.value is! Map<String, Object?>) continue;
+          inline[mode] = resolveDesignTokens(
+              <DesignTokenSet>[base, parseDesignTokens(entry.value)]);
+        }
+      }
+      final CraftThemeMode? declared = _modeByName(decoded['mode']);
       return ProjectTheme._(
         usesDefaultTheme: false,
-        defaultMode: CraftThemeMode.light,
-        inline:
-            resolveDesignTokens(<DesignTokenSet>[parseDesignTokens(tokens)]),
+        defaultMode: declared != null && inline.containsKey(declared)
+            ? declared
+            : CraftThemeMode.light,
+        inline: inline,
       );
     }
     if (decoded['theme'] == 'default') {
@@ -110,24 +132,44 @@ class ProjectTheme {
   }
 
   /// True when this references the built-in [DefaultTheme] (and so exposes all
-  /// of its modes); false for an inline single-layer theme.
+  /// of its modes); false for an inline custom theme.
   final bool usesDefaultTheme;
 
-  /// The project's default (and, for an inline theme, only) mode.
+  /// The project's default mode.
   final CraftThemeMode defaultMode;
 
-  final ResolvedTokens? _inline;
+  /// For an inline theme: the resolved token snapshot per available mode.
+  final Map<CraftThemeMode, ResolvedTokens> _inline;
 
-  /// The modes a host may offer for this project: every [CraftThemeMode] for the
-  /// default theme, or just [defaultMode] for an inline theme.
-  List<CraftThemeMode> get availableModes =>
-      usesDefaultTheme ? CraftThemeMode.values : <CraftThemeMode>[defaultMode];
+  /// The modes a host may offer for this project: every [CraftThemeMode] for
+  /// the default theme; for an inline theme, the base (Light) plus each mode
+  /// with an overlay — in [CraftThemeMode] declaration order.
+  List<CraftThemeMode> get availableModes => usesDefaultTheme
+      ? CraftThemeMode.values
+      : <CraftThemeMode>[
+          for (final CraftThemeMode mode in CraftThemeMode.values)
+            if (_inline.containsKey(mode)) mode,
+        ];
+
+  /// The project mode matching the host's system dark/light preference: the
+  /// plain [CraftThemeMode.light] / [CraftThemeMode.dark] when the project
+  /// offers it, else [defaultMode]. This is host render-time configuration
+  /// (DESIGN.md §9.5) — the author's `mode` stays the fallback.
+  CraftThemeMode modeFor({required bool dark}) {
+    final CraftThemeMode preferred =
+        dark ? CraftThemeMode.dark : CraftThemeMode.light;
+    return availableModes.contains(preferred) ? preferred : defaultMode;
+  }
 
   /// Resolves an immutable [CraftTheme] snapshot for [mode] (defaulting to
-  /// [defaultMode]). An inline theme has a single layer and ignores [mode].
-  CraftTheme resolve([CraftThemeMode? mode]) => usesDefaultTheme
-      ? DefaultTheme.of(mode ?? defaultMode)
-      : CraftTheme(_inline!);
+  /// [defaultMode]). An inline theme falls back to its base layer for a mode
+  /// it has no overlay for.
+  CraftTheme resolve([CraftThemeMode? mode]) {
+    final CraftThemeMode m = mode ?? defaultMode;
+    if (usesDefaultTheme) return DefaultTheme.of(m);
+    return CraftTheme(
+        _inline[m] ?? _inline[CraftThemeMode.light] ?? ResolvedTokens.empty);
+  }
 
   static CraftThemeMode? _modeByName(Object? name) {
     for (final CraftThemeMode mode in CraftThemeMode.values) {

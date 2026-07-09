@@ -8,16 +8,26 @@ import 'package:jaspr/jaspr.dart';
 
 /// Renders a [SampleSpec] with the Jaspr adapter — a thin wrapper over the
 /// reusable [SampleView].
+///
+/// A themed project opens in the mode matching [dark] — the host's system
+/// dark-light preference (render-time config, DESIGN.md §9.5), supplied by
+/// the gallery shell. Unthemed samples ignore it and blend into the host.
 class Sample extends StatelessComponent {
-  const Sample(this.spec, {super.key});
+  const Sample(this.spec, {this.dark = false, super.key});
 
   final SampleSpec spec;
 
+  /// Whether the host prefers dark mode.
+  final bool dark;
+
   @override
-  Component build(BuildContext context) => SampleView(
-        template: spec.catalogSource,
-        schema: spec.catalogSchema,
-        messages: spec.messages,
-        theme: spec.theme?.resolve(),
-      );
+  Component build(BuildContext context) {
+    final ProjectTheme? theme = spec.theme;
+    return SampleView(
+      template: spec.catalogSource,
+      schema: spec.catalogSchema,
+      messages: spec.messages,
+      theme: theme?.resolve(theme.modeFor(dark: dark)),
+    );
+  }
 }

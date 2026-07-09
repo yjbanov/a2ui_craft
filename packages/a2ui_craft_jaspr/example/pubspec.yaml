@@ -14,6 +14,7 @@ dependencies:
   a2ui_craft_jaspr: ^0.0.1
   a2ui_core: any
   jaspr: ^0.23.1
+  web: ^1.0.0
 
 dev_dependencies:
   build_runner: ^2.15.0

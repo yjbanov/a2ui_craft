@@ -22,6 +22,51 @@
     <!-- The generated CSS (all @css declarations from your components). -->
     <link rel="stylesheet" href="main.css" />
 
+    <!-- The site's own chrome palette, following the browser/system dark-light
+         preference. Components reference these variables instead of literal
+         colors, so the whole host re-themes with `prefers-color-scheme`.
+         (Sample surfaces are themed separately, by their project theme.) -->
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #ffffff;
+        --fg: #333333;
+        --muted: #555555;
+        --subtle: #888888;
+        --faint: #bbbbbb;
+        --border: #eeeeee;
+        --border-strong: #cccccc;
+        --panel: #fafafa;
+        --card: #ffffff;
+        --accent: #1a73e8;
+        --accent-fg: #ffffff;
+        --error-bg: #fdecea;
+        --error-fg: #b3261e;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #202124;
+          --fg: #e8eaed;
+          --muted: #bdc1c6;
+          --subtle: #9aa0a6;
+          --faint: #5f6368;
+          --border: #3c4043;
+          --border-strong: #5f6368;
+          --panel: #28292c;
+          --card: #2a2b2e;
+          --accent: #8ab4f8;
+          --accent-fg: #202124;
+          --error-bg: #3c1d1b;
+          --error-fg: #f2b8b5;
+        }
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--fg);
+      }
+    </style>
+
     <!-- The Flutter manifest + bootstrap (embedded Flutter). -->
     <link rel="manifest" href="manifest.json" />
     <script src="flutter_bootstrap.js" async></script>

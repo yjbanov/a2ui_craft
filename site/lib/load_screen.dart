@@ -12,6 +12,7 @@ import 'package:jaspr_flutter_embed/jaspr_flutter_embed.dart';
 import 'package:jaspr_router/jaspr_router.dart';
 
 import 'flutter_host.dart';
+import 'system_dark.dart';
 
 /// The "URL bar" screen: type the base URL of a **deployed** A2UI Craft project
 /// (e.g. `https://my-app.web.app/`) and load it over HTTP, exactly as a host app
@@ -29,6 +30,29 @@ class LoadScreen extends StatefulComponent {
 class _LoadScreenState extends State<LoadScreen> {
   final CraftProjectLoader _loader = CraftProjectLoader();
 
+  SystemDarkWatch? _darkWatch;
+
+  @override
+  void initState() {
+    super.initState();
+    // Re-theme the loaded project when the system preference flips, unless
+    // the user has taken over the mode picker.
+    _darkWatch = watchSystemDark((bool dark) {
+      final ProjectTheme? theme = _project?.manifest.theme;
+      if (_modeTouched || theme == null) return;
+      setState(() {
+        _mode = theme.modeFor(dark: dark);
+        _bumpRender();
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _darkWatch?.cancel();
+    super.dispose();
+  }
+
   String _url = '';
   bool _loading = false;
   String? _error;
@@ -36,6 +60,7 @@ class _LoadScreenState extends State<LoadScreen> {
 
   String _framework = 'Jaspr';
   CraftThemeMode? _mode;
+  bool _modeTouched = false;
   String? _scenario; // null → the app.json bootstrap
   int _renderKey = 0;
   Object? _flutterWidget;
@@ -51,7 +76,10 @@ class _LoadScreenState extends State<LoadScreen> {
       final LoadedProject project = await _loader.load(url);
       setState(() {
         _project = project;
-        _mode = project.manifest.theme?.defaultMode;
+        // A themed project opens in the mode matching the system dark-light
+        // preference (host render-time config, §9.5).
+        _mode = project.manifest.theme?.modeFor(dark: systemPrefersDark());
+        _modeTouched = false;
         _scenario = null;
         _log.clear();
         _bumpRender();
@@ -117,7 +145,7 @@ class _LoadScreenState extends State<LoadScreen> {
         'align-items': 'center',
         'gap': '8px',
         'padding': '12px 20px',
-        'border-bottom': '1px solid #eee',
+        'border-bottom': '1px solid var(--border)',
       }),
       <Component>[
         button(
@@ -136,9 +164,11 @@ class _LoadScreenState extends State<LoadScreen> {
           styles: Styles(raw: <String, String>{
             'flex': '1',
             'padding': '8px 12px',
-            'border': '1px solid #ccc',
+            'border': '1px solid var(--border-strong)',
             'border-radius': '8px',
             'font': '14px ui-monospace, monospace',
+            'background': 'var(--card)',
+            'color': 'var(--fg)',
           }),
         ),
         button(
@@ -154,7 +184,7 @@ class _LoadScreenState extends State<LoadScreen> {
     return div(
       styles: Styles(raw: <String, String>{
         'padding': '48px 20px',
-        'color': '#777',
+        'color': 'var(--muted)',
         'max-width': '640px',
         'margin': '0 auto',
         'text-align': 'center',
@@ -178,7 +208,7 @@ class _LoadScreenState extends State<LoadScreen> {
         'flex-wrap': 'wrap',
         'gap': '10px',
         'padding': '10px 20px',
-        'border-bottom': '1px solid #f0f0f0',
+        'border-bottom': '1px solid var(--border)',
       }),
       <Component>[
         strong(<Component>[Component.text(project.manifest.name)]),
@@ -206,6 +236,7 @@ class _LoadScreenState extends State<LoadScreen> {
       onChange: (List<String> values) {
         final String id = values.isEmpty ? theme.defaultMode.id : values.first;
         setState(() {
+          _modeTouched = true;
           _mode = theme.availableModes.firstWhere(
             (CraftThemeMode m) => m.id == id,
             orElse: () => theme.defaultMode,
@@ -278,7 +309,7 @@ class _LoadScreenState extends State<LoadScreen> {
       styles: Styles(raw: <String, String>{
         'width': '100%',
         'height': '560px',
-        'border': '1px solid #eee',
+        'border': '1px solid var(--border)',
         'border-radius': '10px',
         'overflow': 'hidden',
       }),
@@ -289,18 +320,18 @@ class _LoadScreenState extends State<LoadScreen> {
   Component _logPanel() {
     return div(
       styles: Styles(raw: <String, String>{
-        'border-top': '1px solid #eee',
+        'border-top': '1px solid var(--border)',
         'padding': '8px 20px',
         'max-height': '120px',
         'overflow': 'auto',
         'font': '12px ui-monospace, monospace',
-        'color': '#444',
-        'background': '#fafafa',
+        'color': 'var(--fg)',
+        'background': 'var(--panel)',
       }),
       <Component>[
         if (_log.isEmpty)
           div(
-              styles: Styles(raw: <String, String>{'color': '#bbb'}),
+              styles: Styles(raw: <String, String>{'color': 'var(--faint)'}),
               <Component>[
                 Component.text('Action log — interact with the surface.')
               ])
@@ -316,8 +347,8 @@ class _LoadScreenState extends State<LoadScreen> {
   Component _errorBanner(String message) {
     return div(
       styles: Styles(raw: <String, String>{
-        'background': '#fdecea',
-        'color': '#b3261e',
+        'background': 'var(--error-bg)',
+        'color': 'var(--error-fg)',
         'padding': '10px 20px',
         'font': '13px ui-monospace, monospace',
         'white-space': 'pre-wrap',
@@ -328,18 +359,20 @@ class _LoadScreenState extends State<LoadScreen> {
 
   Styles _select() => Styles(raw: <String, String>{
         'padding': '6px 10px',
-        'border': '1px solid #ccc',
+        'border': '1px solid var(--border-strong)',
         'border-radius': '6px',
-        'background': '#fff',
+        'background': 'var(--card)',
+        'color': 'var(--fg)',
         'cursor': 'pointer',
       });
 
   Styles _btn(bool active) => Styles(raw: <String, String>{
         'padding': '8px 14px',
-        'border': '1px solid ${active ? '#1a73e8' : '#ccc'}',
+        'border':
+            '1px solid ${active ? 'var(--accent)' : 'var(--border-strong)'}',
         'border-radius': '8px',
-        'background': active ? '#1a73e8' : '#fff',
-        'color': active ? '#fff' : '#333',
+        'background': active ? 'var(--accent)' : 'var(--card)',
+        'color': active ? 'var(--accent-fg)' : 'var(--fg)',
         'cursor': 'pointer',
       });
 }

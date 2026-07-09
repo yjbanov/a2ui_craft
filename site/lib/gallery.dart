@@ -26,7 +26,8 @@ class GalleryScreen extends StatelessComponent {
             styles: Styles(raw: <String, String>{'margin': '0 0 4px'}),
             [Component.text('A2UI Craft')]),
         p(
-          styles: Styles(raw: <String, String>{'color': '#555', 'margin': '0'}),
+          styles: Styles(
+              raw: <String, String>{'color': 'var(--muted)', 'margin': '0'}),
           [
             Component.text(
                 'One UI protocol, two rendering engines. Open a sample, flip '
@@ -42,9 +43,9 @@ class GalleryScreen extends StatelessComponent {
             'display': 'inline-block',
             'margin-top': '12px',
             'padding': '8px 14px',
-            'border': '1px solid #1a73e8',
+            'border': '1px solid var(--accent)',
             'border-radius': '8px',
-            'color': '#1a73e8',
+            'color': 'var(--accent)',
             'text-decoration': 'none',
             'font-weight': '600',
           }),
@@ -68,11 +69,11 @@ class GalleryScreen extends StatelessComponent {
                 to: '/sample/${s.id}',
                 styles: Styles(raw: <String, String>{
                   'display': 'block',
-                  'border': '1px solid #e0e0e0',
+                  'border': '1px solid var(--border)',
                   'border-radius': '10px',
                   'padding': '16px',
                   'cursor': 'pointer',
-                  'background': '#fff',
+                  'background': 'var(--card)',
                   'color': 'inherit',
                   'text-decoration': 'none',
                   'transition': 'box-shadow .15s, border-color .15s',

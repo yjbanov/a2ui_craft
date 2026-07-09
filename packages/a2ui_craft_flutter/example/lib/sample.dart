@@ -8,16 +8,26 @@ import 'package:flutter/widgets.dart';
 
 /// Renders a [SampleSpec] with the Flutter adapter — a thin wrapper over the
 /// reusable [SampleView].
+///
+/// A themed project opens in the mode matching the platform's dark-light
+/// setting (host render-time config, DESIGN.md §9.5) and re-themes when it
+/// flips — `MediaQuery.platformBrightnessOf` subscribes this widget to
+/// brightness changes.
 class Sample extends StatelessWidget {
   const Sample(this.spec, {super.key});
 
   final SampleSpec spec;
 
   @override
-  Widget build(BuildContext context) => SampleView(
-        template: spec.catalogSource,
-        schema: spec.catalogSchema,
-        messages: spec.messages,
-        theme: spec.theme?.resolve(),
-      );
+  Widget build(BuildContext context) {
+    final ProjectTheme? theme = spec.theme;
+    final bool dark =
+        MediaQuery.platformBrightnessOf(context) == Brightness.dark;
+    return SampleView(
+      template: spec.catalogSource,
+      schema: spec.catalogSchema,
+      messages: spec.messages,
+      theme: theme?.resolve(theme.modeFor(dark: dark)),
+    );
+  }
 }

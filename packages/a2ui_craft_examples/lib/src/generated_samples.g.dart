@@ -1317,6 +1317,65 @@ widget Weather = Card(child: Column(crossAxisAlignment: "center", gap: 6.0,
   }
 ]
 ''',
+    theme: r'''
+{
+  "tokens": {
+    "color": {
+      "$type": "color",
+      "$description": "Sky brand — base layer (Light).",
+      "surface": {
+        "$value": "#E8F4FD"
+      },
+      "onSurface": {
+        "$value": "#0D3B66"
+      },
+      "onSurfaceVariant": {
+        "$value": "#4A7BA6"
+      },
+      "primary": {
+        "$value": "#0277BD"
+      },
+      "onPrimary": {
+        "$value": "#FFFFFF"
+      },
+      "outline": {
+        "$value": "#BBDEFB"
+      },
+      "link": {
+        "$value": "#0277BD"
+      }
+    }
+  },
+  "modes": {
+    "dark": {
+      "color": {
+        "$type": "color",
+        "surface": {
+          "$value": "#0B1F33"
+        },
+        "onSurface": {
+          "$value": "#D6EBFF"
+        },
+        "onSurfaceVariant": {
+          "$value": "#7FA8CC"
+        },
+        "primary": {
+          "$value": "#4FC3F7"
+        },
+        "onPrimary": {
+          "$value": "#0B1F33"
+        },
+        "outline": {
+          "$value": "#274B6D"
+        },
+        "link": {
+          "$value": "#4FC3F7"
+        }
+      }
+    }
+  }
+}
+''',
   ),
   RawSample(
     id: 'product_card',
@@ -1424,6 +1483,65 @@ widget ProductCard { qty: 1 } = Card(child: Column(gap: 8.0, children: [
     }
   }
 ]
+''',
+    theme: r'''
+{
+  "tokens": {
+    "color": {
+      "$type": "color",
+      "$description": "Warm storefront brand — base layer (Light).",
+      "surface": {
+        "$value": "#FFF8F0"
+      },
+      "onSurface": {
+        "$value": "#3E2723"
+      },
+      "onSurfaceVariant": {
+        "$value": "#8D6E63"
+      },
+      "primary": {
+        "$value": "#E65100"
+      },
+      "onPrimary": {
+        "$value": "#FFFFFF"
+      },
+      "outline": {
+        "$value": "#E0CFC2"
+      },
+      "link": {
+        "$value": "#E65100"
+      }
+    }
+  },
+  "modes": {
+    "dark": {
+      "color": {
+        "$type": "color",
+        "surface": {
+          "$value": "#2A1E17"
+        },
+        "onSurface": {
+          "$value": "#FFEFE0"
+        },
+        "onSurfaceVariant": {
+          "$value": "#BCAAA4"
+        },
+        "primary": {
+          "$value": "#FFB74D"
+        },
+        "onPrimary": {
+          "$value": "#2A1E17"
+        },
+        "outline": {
+          "$value": "#5D4037"
+        },
+        "link": {
+          "$value": "#FFB74D"
+        }
+      }
+    }
+  }
+}
 ''',
   ),
   RawSample(
@@ -3000,6 +3118,65 @@ widget ChatMessage = Card(child: Column(gap: 8.0, children: [
     }
   }
 ]
+''',
+    theme: r'''
+{
+  "tokens": {
+    "color": {
+      "$type": "color",
+      "$description": "Indigo messaging brand — base layer (Light).",
+      "surface": {
+        "$value": "#F5F7FF"
+      },
+      "onSurface": {
+        "$value": "#1A1C2E"
+      },
+      "onSurfaceVariant": {
+        "$value": "#646B8C"
+      },
+      "primary": {
+        "$value": "#3F51B5"
+      },
+      "onPrimary": {
+        "$value": "#FFFFFF"
+      },
+      "outline": {
+        "$value": "#D5DAF0"
+      },
+      "link": {
+        "$value": "#3F51B5"
+      }
+    }
+  },
+  "modes": {
+    "dark": {
+      "color": {
+        "$type": "color",
+        "surface": {
+          "$value": "#171A2C"
+        },
+        "onSurface": {
+          "$value": "#E4E7FF"
+        },
+        "onSurfaceVariant": {
+          "$value": "#9FA8DA"
+        },
+        "primary": {
+          "$value": "#7986CB"
+        },
+        "onPrimary": {
+          "$value": "#171A2C"
+        },
+        "outline": {
+          "$value": "#3A3F5C"
+        },
+        "link": {
+          "$value": "#7986CB"
+        }
+      }
+    }
+  }
+}
 ''',
   ),
   RawSample(

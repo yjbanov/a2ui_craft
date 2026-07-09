@@ -24,9 +24,14 @@ Widget flutterSampleApp({
   final Rgba? surface = theme?.tokens.color('color.surface');
   return MaterialApp(
     debugShowCheckedModeBanner: false,
+    // Follow the browser/system dark-light preference (Flutter web maps
+    // `prefers-color-scheme` onto the platform brightness); a themed project's
+    // surface color overrides the scaffold either way.
     theme: ThemeData(useMaterial3: true),
+    darkTheme: ThemeData(useMaterial3: true, brightness: Brightness.dark),
+    themeMode: ThemeMode.system,
     home: Scaffold(
-      backgroundColor: surface == null ? Colors.white : Color(surface.value),
+      backgroundColor: surface == null ? null : Color(surface.value),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),

@@ -524,6 +524,21 @@
           top-level per-entry label — which became a plain gallery-order id list.
           The migration was behavior-preserving: the generated samples file came
           out byte-identical.
+        - [x] **6. System dark/light + custom themes.** Hosts map the
+          browser/system `prefers-color-scheme` onto a themed project's modes
+          (`ProjectTheme.modeFor` — host render-time config, §9.5) and
+          re-theme live when it flips; the site chrome follows via CSS
+          variables and the embedded Flutter shell via `ThemeMode.system`; the
+          Flutter gallery reads platform brightness, the Jaspr gallery a
+          conditionally-imported `prefers-color-scheme` watcher. The inline
+          `ProjectTheme` shape gained per-mode overlays (`"modes"`, each
+          resolved `[base, overlay]` — §9.5's file shape inlined) and an
+          optional default `"mode"`; `product_card` / `chat_message` /
+          `weather` ship bespoke light+dark brands. The site's editor sidebar
+          became tabbed (Template / Schema / App bootstrap / Theme), the Theme
+          tab editing a themed project's manifest theme block with Preview
+          re-parse. Pinned by inline-modes/`modeFor` units and light↔dark
+          re-theme tests in both example galleries (default + custom themes).
 - [ ] **Project authoring & deployment tooling (§10).** Show a project is a
       *separate, ephemerally loadable artifact* from its host, publishable to a
       CDN with no compile step. Thin slices:

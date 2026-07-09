@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "site",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": ["-c", "cd site && jaspr serve --port 8080"],
+      "port": 8080
+    }
+  ]
+}

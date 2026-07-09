@@ -246,8 +246,15 @@ class _LoadScreenState extends State<LoadScreen> {
       },
       styles: _select(),
       <Component>[
+        // `selected` marks the active option explicitly: the select's `value`
+        // is applied before the options mount, so on first render the browser
+        // would otherwise display the first option regardless of the mode.
         for (final CraftThemeMode m in theme.availableModes)
-          option(value: m.id, <Component>[Component.text(m.label)]),
+          option(
+            value: m.id,
+            selected: m == (_mode ?? theme.defaultMode),
+            <Component>[Component.text(m.label)],
+          ),
       ],
     );
   }
@@ -265,9 +272,15 @@ class _LoadScreenState extends State<LoadScreen> {
       },
       styles: _select(),
       <Component>[
-        option(value: boot, const <Component>[Component.text(boot)]),
+        option(
+            value: boot,
+            selected: _scenario == null,
+            const <Component>[Component.text(boot)]),
         for (final String name in project.tests.keys)
-          option(value: name, <Component>[Component.text('test: $name')]),
+          option(
+              value: name,
+              selected: _scenario == name,
+              <Component>[Component.text('test: $name')]),
       ],
     );
   }

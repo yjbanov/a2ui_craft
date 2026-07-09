@@ -444,8 +444,15 @@ class _SampleScreenState extends State<SampleScreen> {
         'cursor': 'pointer',
       }),
       <Component>[
+        // `selected` marks the active option explicitly: the select's `value`
+        // is applied before the options mount, so on first render the browser
+        // would otherwise display the first option regardless of the mode.
         for (final CraftThemeMode m in project.availableModes)
-          option(value: m.id, [Component.text(m.label)]),
+          option(
+            value: m.id,
+            selected: m == (_mode ?? project.defaultMode),
+            [Component.text(m.label)],
+          ),
       ],
     );
   }

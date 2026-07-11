@@ -627,15 +627,42 @@
         change-vs-click event choice (deferred to the Radio-group sample /
         `RadioGroup` API settling); a shared conformance probe for glyph
         colors (per-adapter pins cover the mapping today).
-      - [ ] **4. `TextField`** — chrome spec (border/padding via `outline`,
-        ink via `onSurface`); the one control with no `.adaptive` path.
-      - [ ] **5. `Slider`** — the hardest paint (track/thumb); role mapping
-        `primary` active track + thumb, `outline` inactive track.
-      - [ ] **6. `Switch` + `Select`** — new primitives once the pattern
-        exists (also fills the controls sample gap above).
+      - [x] **4. `TextField`** — chrome per the role mapping, degrading
+        role-by-role: `outline` draws the 1px box border (stock 6px corner,
+        8/12 padding), `primary` the focused border + caret, `onSurface` the
+        text ink; unthemed = host stock field. Flutter: `InputDecoration`
+        (the shared `_fieldDecorationFor`); Jaspr: inline chrome + a
+        `--craft-focus` custom property the control stylesheet's
+        `:focus`/`:focus-visible` rules read (the pseudo-class boundary,
+        crossed the same way as the Button state layer).
+      - [x] **5. `Slider`** — Flutter on Material's knobs (active/inactive
+        colors); Jaspr adapter-painted when themed: primary→outline gradient
+        track split at the bound value (controlled element), thumb via
+        `--craft-slider-thumb` + pseudo-element rules, `color-mix` fallback
+        for a missing outline. `accent-color` fully retired.
+      - [x] **6. `Switch` + `Select`** — new primitives in `corePrimitives`.
+        Switch: two-way bound; Material knobs on Flutter; on the web there is
+        **no stock switch element**, so the Jaspr control is always
+        adapter-painted (pill + radial-gradient thumb, `role=switch`,
+        scheme-adaptive fallbacks). Select: single-choice over string
+        options, two-way; `DropdownButtonFormField` over the shared field
+        chrome (wrapped in `IntrinsicWidth` — hugs like the web `<select>`);
+        native `<select>` + `selected:` options on Jaspr. Conformance:
+        Switch toggle round-trip (new `toggleSwitch` probe) + Select shows
+        its bound option live; interactive option-picking is per-idiom (the
+        Flutter popup renders options only while open).
+      - [x] **6b. `settings` sample** — the controls showcase: a themed
+        (teal, light+dark) project exercising every control through the role
+        mapping; Switch/Select/TextField/Checkbox two-way via the A2UI data
+        model, the Radio group via template state + `equals()` ("grouping is
+        the template's job"), Save dispatching an A2UI action. Labeled
+        controls/theming/functions/a2ui — the two thinnest filter properties
+        each gain a carrier.
       - [ ] **7. Cupertino idiom preview** — `ThemeData.platform` toggle in
         the site's Flutter pane steering the `.adaptive` constructors;
         per-idiom role-limit tables authored per control (DESIGN.md §13).
+        (Also still open: interactive Select conformance, and the Radio
+        grouping / change-vs-click TODO — see slice 3.)
 - [ ] **Project authoring & deployment tooling (§10).** Show a project is a
       *separate, ephemerally loadable artifact* from its host, publishable to a
       CDN with no compile step. Thin slices:

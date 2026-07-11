@@ -6,11 +6,6 @@ renders declarative UI templates — written in the [Remote Flutter Widgets
 the client is built on (currently **Flutter** and **Jaspr**), binding them to a
 reactive data model.
 
-The guiding hypothesis: *RFW's language and runtime are not actually
-Flutter-specific, and one engine can drive many rendering engines.* See
-[`DESIGN.md`](DESIGN.md) for the full rationale, scope, and architecture — it is
-the source of truth for the project.
-
 ## Architecture at a glance
 
 ```
@@ -30,15 +25,6 @@ Every adapter exposes the **same API**, keeping RFW's upstream public names
 client code reads identically across frameworks. What each adapter may and may not
 change is specified in [`DESIGN.md` §7](DESIGN.md) and enforced by the project
 skills in [`skills/`](skills).
-
-## Why not compile templates to A2UI Transport directly?
-
-Templates are *declarative* (`data → UI`); A2UI Transport is an *imperative*
-protocol that mutates a live, stateful UI. Bridging the two requires evaluating
-the template against data and reconciling it against the previous tree — a
-*runtime* concern, not something an ahead-of-time compiler can do. So A2UI Craft
-is a client-side engine, and A2UI simply treats its templates as an
-implementation of an A2UI **catalog**. (Full reasoning in [`DESIGN.md` §4](DESIGN.md).)
 
 ## Getting started
 

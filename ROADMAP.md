@@ -658,11 +658,20 @@
         the template's job"), Save dispatching an A2UI action. Labeled
         controls/theming/functions/a2ui — the two thinnest filter properties
         each gain a carrier.
-      - [ ] **7. Cupertino idiom preview** — `ThemeData.platform` toggle in
-        the site's Flutter pane steering the `.adaptive` constructors;
-        per-idiom role-limit tables authored per control (DESIGN.md §13).
-        (Also still open: interactive Select conformance, and the Radio
-        grouping / change-vs-click TODO — see slice 3.)
+      - [x] **7. Cupertino idiom preview** — the idiom is host-selected:
+        Checkbox/Switch/Slider moved to their `.adaptive` constructors
+        (CupertinoSlider ignores `outline` — the first exercised per-idiom
+        limit); the Button swaps its state layer (composite pressed-fade at
+        0.4 via the InkWell highlight state, no splash) and corner style
+        (`RoundedSuperellipseBorder`) under iOS/macOS; the site's Flutter
+        pane header gained a Material/Cupertino picker steering
+        `ThemeData.platform`. DESIGN.md §8 carries the v1 per-idiom
+        role-limit tables. **Remaining gaps** (DESIGN.md §13): TextField and
+        Select render their Material form under the Cupertino preview (no
+        `.adaptive` path); Radio keeps its custom glyph in both idioms; the
+        `/load` screen has no idiom picker yet. Also still open from earlier
+        slices: interactive Select conformance, the Radio grouping /
+        change-vs-click TODO, disabled-button visuals.
 - [ ] **Project authoring & deployment tooling (§10).** Show a project is a
       *separate, ephemerally loadable artifact* from its host, publishable to a
       CDN with no compile step. Thin slices:

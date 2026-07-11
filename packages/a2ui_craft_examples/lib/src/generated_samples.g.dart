@@ -526,6 +526,311 @@ widget Calculator { display: 0, acc: 0, op: "" } = Card(child: Column(
     demonstrates: <String>['layout', 'controls', 'functions', 'theming'],
   ),
   RawSample(
+    id: 'settings',
+    label: 'Settings',
+    template: r'''
+import core;
+
+// A settings panel exercising the control primitives end to end: Switch,
+// Select, a Radio group, Checkbox, TextField, and the Button — every control
+// inked by this project's theme through the role mapping (DESIGN.md §8), with
+// no explicit color anywhere in the template.
+//
+// Two data flows, side by side:
+// - Switch / Select / TextField / Checkbox are **two-way bound to the A2UI
+//   data model**: `args.setValue` is a2ui_core's setter for the bound path,
+//   so a change round-trips through the surface's data model (the `form`
+//   pattern).
+// - The Radio group is **pure template state**: each radio "selects me" by
+//   writing its literal into `state.units`, and `equals()` marks the chosen
+//   one — grouping is the template's job, not the primitive's.
+
+widget Panel = Card(child: Column(
+  crossAxisAlignment: "start", gap: 12.0, children: args.children));
+
+widget Title = Heading(text: args.text, level: 3);
+
+// A labeled on/off switch, two-way bound to the data model.
+widget ToggleRow = Row(
+  mainAxisAlignment: "spaceBetween", crossAxisAlignment: "center",
+  width: "fill", gap: 12.0, children: [
+    Text(text: args.label),
+    Switch(value: args.value, onChanged: args.setValue),
+]);
+
+// A labeled single-choice dropdown; the options are this catalog's decision.
+widget PlanRow = Row(
+  mainAxisAlignment: "spaceBetween", crossAxisAlignment: "center",
+  width: "fill", gap: 12.0, children: [
+    Text(text: args.label),
+    Select(value: args.value, options: ["Free", "Pro", "Team"],
+      onChanged: args.setValue),
+]);
+
+// A radio group over template state.
+widget UnitsRow { units: "Metric" } = Row(
+  gap: 8.0, crossAxisAlignment: "center", children: [
+    Text(text: args.label),
+    Radio(selected: equals(a: state.units, b: "Metric"),
+      onChanged: set state.units = "Metric"),
+    Text(text: "Metric"),
+    Radio(selected: equals(a: state.units, b: "Imperial"),
+      onChanged: set state.units = "Imperial"),
+    Text(text: "Imperial"),
+]);
+
+widget NameField = Column(gap: 4.0, crossAxisAlignment: "start", children: [
+  Text(text: args.label, variant: "caption"),
+  TextField(value: args.value, onChanged: args.setValue),
+]);
+
+widget AgreeRow = Row(gap: 8.0, crossAxisAlignment: "center", children: [
+  Checkbox(value: args.value, onChanged: args.setValue),
+  Text(text: args.label),
+]);
+
+widget SaveButton = Button(onPressed: args.action,
+  child: Text(text: args.label));
+''',
+    schema: r'''
+{
+  "catalogId": "demo",
+  "components": {
+    "Panel": {
+      "properties": {
+        "children": {
+          "$ref": "ChildList"
+        }
+      },
+      "required": [
+        "children"
+      ]
+    },
+    "Title": {
+      "properties": {
+        "text": {
+          "$ref": "DynamicString"
+        }
+      },
+      "required": [
+        "text"
+      ]
+    },
+    "ToggleRow": {
+      "properties": {
+        "label": {
+          "$ref": "DynamicString"
+        },
+        "value": {
+          "$ref": "DynamicBoolean"
+        }
+      }
+    },
+    "PlanRow": {
+      "properties": {
+        "label": {
+          "$ref": "DynamicString"
+        },
+        "value": {
+          "$ref": "DynamicString"
+        }
+      }
+    },
+    "UnitsRow": {
+      "properties": {
+        "label": {
+          "$ref": "DynamicString"
+        }
+      }
+    },
+    "NameField": {
+      "properties": {
+        "label": {
+          "$ref": "DynamicString"
+        },
+        "value": {
+          "$ref": "DynamicString"
+        }
+      }
+    },
+    "AgreeRow": {
+      "properties": {
+        "label": {
+          "$ref": "DynamicString"
+        },
+        "value": {
+          "$ref": "DynamicBoolean"
+        }
+      }
+    },
+    "SaveButton": {
+      "properties": {
+        "label": {
+          "$ref": "DynamicString"
+        },
+        "action": {
+          "$ref": "Action"
+        }
+      }
+    }
+  }
+}
+''',
+    messages: r'''
+[
+  {
+    "version": "v0.9",
+    "createSurface": {
+      "surfaceId": "demo",
+      "catalogId": "demo",
+      "sendDataModel": false
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateDataModel": {
+      "surfaceId": "demo",
+      "path": "/",
+      "value": {
+        "notify": true,
+        "plan": "Pro",
+        "name": "",
+        "agree": false
+      }
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateComponents": {
+      "surfaceId": "demo",
+      "components": [
+        {
+          "id": "root",
+          "component": "Panel",
+          "children": [
+            "title",
+            "notify",
+            "plan",
+            "units",
+            "name",
+            "agree",
+            "save"
+          ]
+        },
+        {
+          "id": "title",
+          "component": "Title",
+          "text": "Settings"
+        },
+        {
+          "id": "notify",
+          "component": "ToggleRow",
+          "label": "Notifications",
+          "value": {
+            "path": "/notify"
+          }
+        },
+        {
+          "id": "plan",
+          "component": "PlanRow",
+          "label": "Plan",
+          "value": {
+            "path": "/plan"
+          }
+        },
+        {
+          "id": "units",
+          "component": "UnitsRow",
+          "label": "Units"
+        },
+        {
+          "id": "name",
+          "component": "NameField",
+          "label": "Display name",
+          "value": {
+            "path": "/name"
+          }
+        },
+        {
+          "id": "agree",
+          "component": "AgreeRow",
+          "label": "Email me product updates",
+          "value": {
+            "path": "/agree"
+          }
+        },
+        {
+          "id": "save",
+          "component": "SaveButton",
+          "label": "Save changes",
+          "action": {
+            "event": {
+              "name": "save",
+              "context": {}
+            }
+          }
+        }
+      ]
+    }
+  }
+]
+''',
+    theme: r'''
+{
+  "tokens": {
+    "color": {
+      "$type": "color",
+      "$description": "Teal settings panel — base layer (Light).",
+      "surface": {
+        "$value": "#F4FBFA"
+      },
+      "onSurface": {
+        "$value": "#12312B"
+      },
+      "onSurfaceVariant": {
+        "$value": "#4A6B65"
+      },
+      "primary": {
+        "$value": "#00796B"
+      },
+      "onPrimary": {
+        "$value": "#FFFFFF"
+      },
+      "outline": {
+        "$value": "#A7CFC9"
+      }
+    }
+  },
+  "modes": {
+    "dark": {
+      "color": {
+        "$type": "color",
+        "surface": {
+          "$value": "#101E1B"
+        },
+        "onSurface": {
+          "$value": "#DCEFEB"
+        },
+        "onSurfaceVariant": {
+          "$value": "#93B5AF"
+        },
+        "primary": {
+          "$value": "#4DB6AC"
+        },
+        "onPrimary": {
+          "$value": "#0B211D"
+        },
+        "outline": {
+          "$value": "#37544E"
+        }
+      }
+    }
+  }
+}
+''',
+    demonstrates: <String>['controls', 'theming', 'functions', 'a2ui'],
+  ),
+  RawSample(
     id: 'boxes',
     label: 'Boxes',
     template: r'''
@@ -4299,71 +4604,72 @@ SampleSpec greetingSpec(String framework) => rawSamples[0].toSpec(framework);
 SampleSpec counterSpec(String framework) => rawSamples[1].toSpec(framework);
 SampleSpec toggleSpec(String framework) => rawSamples[2].toSpec(framework);
 SampleSpec calculatorSpec(String framework) => rawSamples[3].toSpec(framework);
-SampleSpec boxesSpec(String framework) => rawSamples[4].toSpec(framework);
-SampleSpec layoutSpec(String framework) => rawSamples[5].toSpec(framework);
-SampleSpec contactCardSpec(String framework) => rawSamples[6].toSpec(framework);
-SampleSpec statsCardSpec(String framework) => rawSamples[7].toSpec(framework);
-SampleSpec profileCardSpec(String framework) => rawSamples[8].toSpec(framework);
-SampleSpec gallerySpec(String framework) => rawSamples[9].toSpec(framework);
-SampleSpec formSpec(String framework) => rawSamples[10].toSpec(framework);
-SampleSpec simpleTextSpec(String framework) => rawSamples[11].toSpec(framework);
+SampleSpec settingsSpec(String framework) => rawSamples[4].toSpec(framework);
+SampleSpec boxesSpec(String framework) => rawSamples[5].toSpec(framework);
+SampleSpec layoutSpec(String framework) => rawSamples[6].toSpec(framework);
+SampleSpec contactCardSpec(String framework) => rawSamples[7].toSpec(framework);
+SampleSpec statsCardSpec(String framework) => rawSamples[8].toSpec(framework);
+SampleSpec profileCardSpec(String framework) => rawSamples[9].toSpec(framework);
+SampleSpec gallerySpec(String framework) => rawSamples[10].toSpec(framework);
+SampleSpec formSpec(String framework) => rawSamples[11].toSpec(framework);
+SampleSpec simpleTextSpec(String framework) => rawSamples[12].toSpec(framework);
 SampleSpec interactiveButtonSpec(String framework) =>
-    rawSamples[12].toSpec(framework);
-SampleSpec loginFormSpec(String framework) => rawSamples[13].toSpec(framework);
-SampleSpec weatherSpec(String framework) => rawSamples[14].toSpec(framework);
+    rawSamples[13].toSpec(framework);
+SampleSpec loginFormSpec(String framework) => rawSamples[14].toSpec(framework);
+SampleSpec weatherSpec(String framework) => rawSamples[15].toSpec(framework);
 SampleSpec productCardSpec(String framework) =>
-    rawSamples[15].toSpec(framework);
-SampleSpec restaurantCardSpec(String framework) =>
     rawSamples[16].toSpec(framework);
-SampleSpec accountBalanceSpec(String framework) =>
+SampleSpec restaurantCardSpec(String framework) =>
     rawSamples[17].toSpec(framework);
-SampleSpec shippingStatusSpec(String framework) =>
+SampleSpec accountBalanceSpec(String framework) =>
     rawSamples[18].toSpec(framework);
-SampleSpec flightStatusSpec(String framework) =>
+SampleSpec shippingStatusSpec(String framework) =>
     rawSamples[19].toSpec(framework);
-SampleSpec purchaseCompleteSpec(String framework) =>
+SampleSpec flightStatusSpec(String framework) =>
     rawSamples[20].toSpec(framework);
-SampleSpec coffeeOrderSpec(String framework) =>
+SampleSpec purchaseCompleteSpec(String framework) =>
     rawSamples[21].toSpec(framework);
-SampleSpec creditCardSpec(String framework) => rawSamples[22].toSpec(framework);
+SampleSpec coffeeOrderSpec(String framework) =>
+    rawSamples[22].toSpec(framework);
+SampleSpec creditCardSpec(String framework) => rawSamples[23].toSpec(framework);
 SampleSpec childListTemplateSpec(String framework) =>
-    rawSamples[23].toSpec(framework);
-SampleSpec markdownTextSpec(String framework) =>
     rawSamples[24].toSpec(framework);
-SampleSpec musicPlayerSpec(String framework) =>
+SampleSpec markdownTextSpec(String framework) =>
     rawSamples[25].toSpec(framework);
-SampleSpec notificationPermissionSpec(String framework) =>
+SampleSpec musicPlayerSpec(String framework) =>
     rawSamples[26].toSpec(framework);
-SampleSpec sportsPlayerSpec(String framework) =>
+SampleSpec notificationPermissionSpec(String framework) =>
     rawSamples[27].toSpec(framework);
-SampleSpec eventDetailSpec(String framework) =>
+SampleSpec sportsPlayerSpec(String framework) =>
     rawSamples[28].toSpec(framework);
-SampleSpec stepCounterSpec(String framework) =>
+SampleSpec eventDetailSpec(String framework) =>
     rawSamples[29].toSpec(framework);
-SampleSpec countdownTimerSpec(String framework) =>
+SampleSpec stepCounterSpec(String framework) =>
     rawSamples[30].toSpec(framework);
-SampleSpec rowLayoutSpec(String framework) => rawSamples[31].toSpec(framework);
+SampleSpec countdownTimerSpec(String framework) =>
+    rawSamples[31].toSpec(framework);
+SampleSpec rowLayoutSpec(String framework) => rawSamples[32].toSpec(framework);
 SampleSpec userProfileSpec(String framework) =>
-    rawSamples[32].toSpec(framework);
-SampleSpec chatMessageSpec(String framework) =>
     rawSamples[33].toSpec(framework);
-SampleSpec workoutSummarySpec(String framework) =>
+SampleSpec chatMessageSpec(String framework) =>
     rawSamples[34].toSpec(framework);
-SampleSpec trackListSpec(String framework) => rawSamples[35].toSpec(framework);
+SampleSpec workoutSummarySpec(String framework) =>
+    rawSamples[35].toSpec(framework);
+SampleSpec trackListSpec(String framework) => rawSamples[36].toSpec(framework);
 SampleSpec financialDataGridSpec(String framework) =>
-    rawSamples[36].toSpec(framework);
-SampleSpec formattedTextSpec(String framework) =>
     rawSamples[37].toSpec(framework);
-SampleSpec incrementalSpec(String framework) =>
+SampleSpec formattedTextSpec(String framework) =>
     rawSamples[38].toSpec(framework);
-SampleSpec complexLayoutSpec(String framework) =>
+SampleSpec incrementalSpec(String framework) =>
     rawSamples[39].toSpec(framework);
-SampleSpec emailComposeSpec(String framework) =>
+SampleSpec complexLayoutSpec(String framework) =>
     rawSamples[40].toSpec(framework);
-SampleSpec calendarDaySpec(String framework) =>
+SampleSpec emailComposeSpec(String framework) =>
     rawSamples[41].toSpec(framework);
-SampleSpec signInSpec(String framework) => rawSamples[42].toSpec(framework);
+SampleSpec calendarDaySpec(String framework) =>
+    rawSamples[42].toSpec(framework);
+SampleSpec signInSpec(String framework) => rawSamples[43].toSpec(framework);
 SampleSpec incrementalDashboardSpec(String framework) =>
-    rawSamples[43].toSpec(framework);
-SampleSpec formValidatorSpec(String framework) =>
     rawSamples[44].toSpec(framework);
+SampleSpec formValidatorSpec(String framework) =>
+    rawSamples[45].toSpec(framework);

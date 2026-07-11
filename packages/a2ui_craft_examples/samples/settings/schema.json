@@ -1,0 +1,82 @@
+{
+  "catalogId": "demo",
+  "components": {
+    "Panel": {
+      "properties": {
+        "children": {
+          "$ref": "ChildList"
+        }
+      },
+      "required": [
+        "children"
+      ]
+    },
+    "Title": {
+      "properties": {
+        "text": {
+          "$ref": "DynamicString"
+        }
+      },
+      "required": [
+        "text"
+      ]
+    },
+    "ToggleRow": {
+      "properties": {
+        "label": {
+          "$ref": "DynamicString"
+        },
+        "value": {
+          "$ref": "DynamicBoolean"
+        }
+      }
+    },
+    "PlanRow": {
+      "properties": {
+        "label": {
+          "$ref": "DynamicString"
+        },
+        "value": {
+          "$ref": "DynamicString"
+        }
+      }
+    },
+    "UnitsRow": {
+      "properties": {
+        "label": {
+          "$ref": "DynamicString"
+        }
+      }
+    },
+    "NameField": {
+      "properties": {
+        "label": {
+          "$ref": "DynamicString"
+        },
+        "value": {
+          "$ref": "DynamicString"
+        }
+      }
+    },
+    "AgreeRow": {
+      "properties": {
+        "label": {
+          "$ref": "DynamicString"
+        },
+        "value": {
+          "$ref": "DynamicBoolean"
+        }
+      }
+    },
+    "SaveButton": {
+      "properties": {
+        "label": {
+          "$ref": "DynamicString"
+        },
+        "action": {
+          "$ref": "Action"
+        }
+      }
+    }
+  }
+}

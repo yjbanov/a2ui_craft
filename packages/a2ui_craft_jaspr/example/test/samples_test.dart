@@ -213,6 +213,26 @@ void main() {
     expect(find.tag('input'), findsNComponents(2));
   });
 
+  testComponents('Settings renders every control, themed per its layers',
+      (ComponentTester tester) async {
+    await _pump(tester, settingsSpec('Jaspr'));
+    expect(find.text('Settings'), findsOneComponent);
+    expect(find.text('Save changes'), findsOneComponent);
+    // switch + 2 radios + checkbox + text field.
+    expect(find.tag('input'), findsNComponents(5));
+    expect(find.tag('select'), findsOneComponent);
+    expect(find.tag('option'), findsNComponents(3));
+    // Themed project: the light layer's primary fills the Save button and
+    // the switch's active track (the teal role mapping, DESIGN.md §8).
+    final Iterable<String> backgrounds = _styleValues('background-color');
+    expect(backgrounds, contains('rgba(0, 121, 107, 1.0)'));
+
+    // Dark host: the dark layer re-inks.
+    await _pump(tester, settingsSpec('Jaspr'), dark: true);
+    expect(
+        _styleValues('background-color'), contains('rgba(77, 182, 172, 1.0)'));
+  });
+
   // --- Templatized A2UI Basic Catalog gallery examples. ---
 
   testComponents('Simple Text renders the templatized text',

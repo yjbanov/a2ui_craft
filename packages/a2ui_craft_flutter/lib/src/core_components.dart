@@ -316,7 +316,11 @@ LocalWidgetLibrary createCoreComponents() {
             (String v) => trigger(<String, Object?>{'value': v}),
       );
       final Color? ink = _roleColor(context, ThemeRoles.onSurface);
-      return DropdownButtonFormField<String>(
+      // Hug the content, like the web's native <select> (and unlike
+      // Material's fill-the-parent InputDecorator, which also rejects the
+      // unbounded width a hug-sized Row hands its children).
+      return IntrinsicWidth(
+          child: DropdownButtonFormField<String>(
         // An unknown/absent value renders no selection rather than throwing.
         initialValue: options.contains(value) ? value : null,
         decoration: _fieldDecoration(context),
@@ -330,7 +334,7 @@ LocalWidgetLibrary createCoreComponents() {
             : (String? v) {
                 if (v != null) onChanged(v);
               },
-      );
+      ));
     },
     // A bare numeric slider (no label — that is a template's choice). Two-way
     // bound: `onChanged` is a2ui_core's setter for the bound `value`.

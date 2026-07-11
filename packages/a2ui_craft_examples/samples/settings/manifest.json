@@ -1,0 +1,36 @@
+{
+  "name": "Settings",
+  "demonstrates": [
+    "controls",
+    "theming",
+    "functions",
+    "a2ui"
+  ],
+  "theme": {
+    "tokens": {
+      "color": {
+        "$type": "color",
+        "$description": "Teal settings panel — base layer (Light).",
+        "surface": { "$value": "#F4FBFA" },
+        "onSurface": { "$value": "#12312B" },
+        "onSurfaceVariant": { "$value": "#4A6B65" },
+        "primary": { "$value": "#00796B" },
+        "onPrimary": { "$value": "#FFFFFF" },
+        "outline": { "$value": "#A7CFC9" }
+      }
+    },
+    "modes": {
+      "dark": {
+        "color": {
+          "$type": "color",
+          "surface": { "$value": "#101E1B" },
+          "onSurface": { "$value": "#DCEFEB" },
+          "onSurfaceVariant": { "$value": "#93B5AF" },
+          "primary": { "$value": "#4DB6AC" },
+          "onPrimary": { "$value": "#0B211D" },
+          "outline": { "$value": "#37544E" }
+        }
+      }
+    }
+  }
+}

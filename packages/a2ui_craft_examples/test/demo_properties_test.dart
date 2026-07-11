@@ -53,6 +53,7 @@ void main() {
       'chat_message',
       'weather',
       'calculator',
+      'settings',
     ]) {
       expect(byId(id).demonstrates, contains('theming'), reason: id);
     }

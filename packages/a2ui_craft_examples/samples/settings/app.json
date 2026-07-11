@@ -1,0 +1,97 @@
+[
+  {
+    "version": "v0.9",
+    "createSurface": {
+      "surfaceId": "demo",
+      "catalogId": "demo",
+      "sendDataModel": false
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateDataModel": {
+      "surfaceId": "demo",
+      "path": "/",
+      "value": {
+        "notify": true,
+        "plan": "Pro",
+        "name": "",
+        "agree": false
+      }
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateComponents": {
+      "surfaceId": "demo",
+      "components": [
+        {
+          "id": "root",
+          "component": "Panel",
+          "children": [
+            "title",
+            "notify",
+            "plan",
+            "units",
+            "name",
+            "agree",
+            "save"
+          ]
+        },
+        {
+          "id": "title",
+          "component": "Title",
+          "text": "Settings"
+        },
+        {
+          "id": "notify",
+          "component": "ToggleRow",
+          "label": "Notifications",
+          "value": {
+            "path": "/notify"
+          }
+        },
+        {
+          "id": "plan",
+          "component": "PlanRow",
+          "label": "Plan",
+          "value": {
+            "path": "/plan"
+          }
+        },
+        {
+          "id": "units",
+          "component": "UnitsRow",
+          "label": "Units"
+        },
+        {
+          "id": "name",
+          "component": "NameField",
+          "label": "Display name",
+          "value": {
+            "path": "/name"
+          }
+        },
+        {
+          "id": "agree",
+          "component": "AgreeRow",
+          "label": "Email me product updates",
+          "value": {
+            "path": "/agree"
+          }
+        },
+        {
+          "id": "save",
+          "component": "SaveButton",
+          "label": "Save changes",
+          "action": {
+            "event": {
+              "name": "save",
+              "context": {}
+            }
+          }
+        }
+      ]
+    }
+  }
+]

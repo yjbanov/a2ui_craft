@@ -1,0 +1,62 @@
+import core;
+
+// A settings panel exercising the control primitives end to end: Switch,
+// Select, a Radio group, Checkbox, TextField, and the Button — every control
+// inked by this project's theme through the role mapping (DESIGN.md §8), with
+// no explicit color anywhere in the template.
+//
+// Two data flows, side by side:
+// - Switch / Select / TextField / Checkbox are **two-way bound to the A2UI
+//   data model**: `args.setValue` is a2ui_core's setter for the bound path,
+//   so a change round-trips through the surface's data model (the `form`
+//   pattern).
+// - The Radio group is **pure template state**: each radio "selects me" by
+//   writing its literal into `state.units`, and `equals()` marks the chosen
+//   one — grouping is the template's job, not the primitive's.
+
+widget Panel = Card(child: Column(
+  crossAxisAlignment: "start", gap: 12.0, children: args.children));
+
+widget Title = Heading(text: args.text, level: 3);
+
+// A labeled on/off switch, two-way bound to the data model.
+widget ToggleRow = Row(
+  mainAxisAlignment: "spaceBetween", crossAxisAlignment: "center",
+  width: "fill", gap: 12.0, children: [
+    Text(text: args.label),
+    Switch(value: args.value, onChanged: args.setValue),
+]);
+
+// A labeled single-choice dropdown; the options are this catalog's decision.
+widget PlanRow = Row(
+  mainAxisAlignment: "spaceBetween", crossAxisAlignment: "center",
+  width: "fill", gap: 12.0, children: [
+    Text(text: args.label),
+    Select(value: args.value, options: ["Free", "Pro", "Team"],
+      onChanged: args.setValue),
+]);
+
+// A radio group over template state.
+widget UnitsRow { units: "Metric" } = Row(
+  gap: 8.0, crossAxisAlignment: "center", children: [
+    Text(text: args.label),
+    Radio(selected: equals(a: state.units, b: "Metric"),
+      onChanged: set state.units = "Metric"),
+    Text(text: "Metric"),
+    Radio(selected: equals(a: state.units, b: "Imperial"),
+      onChanged: set state.units = "Imperial"),
+    Text(text: "Imperial"),
+]);
+
+widget NameField = Column(gap: 4.0, crossAxisAlignment: "start", children: [
+  Text(text: args.label, variant: "caption"),
+  TextField(value: args.value, onChanged: args.setValue),
+]);
+
+widget AgreeRow = Row(gap: 8.0, crossAxisAlignment: "center", children: [
+  Checkbox(value: args.value, onChanged: args.setValue),
+  Text(text: args.label),
+]);
+
+widget SaveButton = Button(onPressed: args.action,
+  child: Text(text: args.label));

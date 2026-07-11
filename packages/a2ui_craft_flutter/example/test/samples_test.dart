@@ -71,6 +71,24 @@ void main() {
     expect(find.text('10'), findsOneWidget);
   });
 
+  testWidgets('Settings renders every control; the radio group selects',
+      (WidgetTester tester) async {
+    await _pump(tester, settingsSpec('Flutter'));
+    expect(find.text('Settings'), findsOneWidget);
+    expect(find.byType(Switch), findsOneWidget);
+    expect(find.text('Pro'), findsOneWidget); // Select shows the bound plan
+    expect(find.byType(Checkbox), findsOneWidget);
+    expect(find.byType(TextField), findsOneWidget);
+    expect(find.text('Save changes'), findsOneWidget);
+
+    // The template-state radio group: Imperial "selects me".
+    expect(find.byIcon(Icons.radio_button_checked), findsOneWidget);
+    await tester.tap(find.byIcon(Icons.radio_button_off).last);
+    await tester.pump();
+    // Still exactly one selected — the group moved, it didn't grow.
+    expect(find.byIcon(Icons.radio_button_checked), findsOneWidget);
+  });
+
   testWidgets('Boxes renders the nested-box layout',
       (WidgetTester tester) async {
     await _pump(tester, boxesSpec('Flutter'));

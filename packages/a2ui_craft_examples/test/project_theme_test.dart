@@ -145,6 +145,7 @@ void main() {
       (chatMessageSpec('Jaspr'), '#F5F7FF', '#171A2C'),
       (weatherSpec('Jaspr'), '#E8F4FD', '#0B1F33'),
       (calculatorSpec('Jaspr'), '#F8FAFC', '#1E2126'),
+      (settingsSpec('Jaspr'), '#F4FBFA', '#101E1B'),
     ]) {
       final ProjectTheme? theme = spec.theme;
       expect(theme, isNotNull, reason: spec.label);

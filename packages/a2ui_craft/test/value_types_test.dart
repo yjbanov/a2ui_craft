@@ -176,6 +176,28 @@ void main() {
     });
   });
 
+  group('CornerRadius.decode', () {
+    test('a non-negative number is a radius in px', () {
+      expect(CornerRadius.decode(8), const CornerRadius(8));
+      expect(CornerRadius.decode(8.5), const CornerRadius(8.5));
+      expect(CornerRadius.decode(0), CornerRadius.none);
+      expect(CornerRadius.decode(0).isSharp, isTrue);
+      expect(CornerRadius.decode(9999).isSharp, isFalse);
+    });
+
+    test('anything else is total: falls back (default sharp)', () {
+      expect(CornerRadius.decode(null), CornerRadius.none);
+      expect(CornerRadius.decode(-4), CornerRadius.none);
+      expect(CornerRadius.decode(double.nan), CornerRadius.none);
+      expect(CornerRadius.decode(double.infinity), CornerRadius.none);
+      // A per-corner form is reserved, not misread.
+      expect(CornerRadius.decode(<Object>[4, 4, 0, 0]), CornerRadius.none);
+      expect(CornerRadius.decode('8'), CornerRadius.none);
+      expect(CornerRadius.decode(null, fallback: const CornerRadius(8)),
+          const CornerRadius(8));
+    });
+  });
+
   group('TextVariant.parse', () {
     test('parses canonical names; defaults to body', () {
       expect(TextVariant.parse('caption'), TextVariant.caption);

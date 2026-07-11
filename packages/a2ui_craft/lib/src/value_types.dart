@@ -5,10 +5,11 @@
 /// Framework-neutral value types for the primitives.
 ///
 /// A small set of types — sizing ([Dimension]), the flex [FlexAxis] and
-/// alignments ([MainAxisAlign]/[CrossAxisAlign]), edge [Insets], and [Rgba]
-/// color — each with a single canonical representation. Every renderer maps these
-/// onto its own native layout, so a template that uses them means the same thing
-/// regardless of the framework drawing it.
+/// alignments ([MainAxisAlign]/[CrossAxisAlign]), edge [Insets], [Rgba]
+/// color, and corner rounding ([CornerRadius]) — each with a single canonical
+/// representation. Every renderer maps these onto its own native layout, so a
+/// template that uses them means the same thing regardless of the framework
+/// drawing it.
 ///
 /// Each type exposes a `decode`/`parse` entry point that turns a raw argument
 /// value into the type; callers read the raw value from their data source and
@@ -397,6 +398,52 @@ final class Insets {
 
   @override
   String toString() => 'Insets($top, $right, $bottom, $left)';
+}
+
+/// The rounding of a box's corners: a single radius in logical pixels.
+///
+/// The amount of rounding is the author's input; how the corner *curves* — a
+/// circular arc, or a platform's continuous curve — is the rendering idiom's
+/// decision (DESIGN.md §8, "Corner radius is an amount; corner style is
+/// idiom"). `0` is sharp; a value larger than half the box's smaller extent
+/// reads as "as round as possible" (pill / circle): both engines reduce
+/// overlapping corner curves proportionally — Skia's `RRect` radius scaling
+/// and CSS's overlapping-curves rule are the same algorithm — so adapters pass
+/// the value through and the clamp agrees natively.
+final class CornerRadius {
+  const CornerRadius(this.pixels);
+
+  /// Sharp corners — no rounding.
+  static const CornerRadius none = CornerRadius(0);
+
+  /// The corner radius in logical pixels (never negative).
+  final double pixels;
+
+  /// Whether the corners are sharp (no rounding to draw).
+  bool get isSharp => pixels <= 0;
+
+  /// Decodes a raw argument value into a [CornerRadius].
+  ///
+  /// Accepts a non-negative finite number. Anything else (negative, NaN,
+  /// non-numeric, absent) yields [fallback] (default [none]) — a per-corner
+  /// form is a reserved future extension, not silently misread.
+  static CornerRadius decode(Object? raw,
+      {CornerRadius fallback = CornerRadius.none}) {
+    if (raw is num && raw.isFinite && raw >= 0) {
+      return CornerRadius(raw.toDouble());
+    }
+    return fallback;
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is CornerRadius && other.pixels == pixels;
+
+  @override
+  int get hashCode => Object.hash(CornerRadius, pixels);
+
+  @override
+  String toString() => 'CornerRadius($pixels)';
 }
 
 /// A color stored as a 32-bit ARGB integer (`0xAARRGGBB`).

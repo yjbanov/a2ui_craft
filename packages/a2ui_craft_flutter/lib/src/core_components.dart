@@ -251,7 +251,10 @@ LocalWidgetLibrary createCoreComponents() {
       // Material look (blend in, §9.1) — same split as the Jaspr adapter's
       // native-vs-painted glyph.
       final Color? outline = _roleColor(context, ThemeRoles.outline);
-      return Checkbox(
+      // `.adaptive`: the host-selected idiom (ThemeData.platform, DESIGN.md
+      // §8) picks the Material or Cupertino rendering; CupertinoCheckbox
+      // honors the same three role knobs.
+      return Checkbox.adaptive(
         value: value,
         activeColor: _roleColor(context, ThemeRoles.primary),
         checkColor: _roleColor(context, ThemeRoles.onPrimary),
@@ -290,7 +293,10 @@ LocalWidgetLibrary createCoreComponents() {
             (bool v) => trigger(<String, Object?>{'value': v}),
       );
       final Color? outline = _roleColor(context, ThemeRoles.outline);
-      return Switch(
+      // `.adaptive`: under the Cupertino idiom the switch takes the iOS look
+      // while honoring the same knobs (Flutter's adaptive switch is a
+      // Material implementation that restyles itself).
+      return Switch.adaptive(
         value: value,
         activeTrackColor: _roleColor(context, ThemeRoles.primary),
         activeThumbColor: _roleColor(context, ThemeRoles.onPrimary),
@@ -351,8 +357,11 @@ LocalWidgetLibrary createCoreComponents() {
       );
       // The role mapping (DESIGN.md §8): `primary` inks the active track and
       // the thumb (Material's thumbColor follows activeColor), `outline` the
-      // inactive track; null keeps the host look.
-      return Slider(
+      // inactive track; null keeps the host look. `.adaptive`: under the
+      // Cupertino idiom this renders a real CupertinoSlider, which has no
+      // inactive-track knob — a per-idiom limit: `outline` is ignored there,
+      // never repurposed.
+      return Slider.adaptive(
         min: min,
         max: max,
         value: value,
@@ -789,7 +798,7 @@ class _ContentInk extends InheritedWidget {
 /// enabled/disabled state, participates in focus traversal, and activates from
 /// the keyboard ([InkWell] handles Space/Enter via the app-level activation
 /// intents).
-class _CoreButton extends StatelessWidget {
+class _CoreButton extends StatefulWidget {
   const _CoreButton({
     required this.onPressed,
     required this.surface,
@@ -813,37 +822,66 @@ class _CoreButton extends StatelessWidget {
   final Widget child;
 
   @override
+  State<_CoreButton> createState() => _CoreButtonState();
+}
+
+class _CoreButtonState extends State<_CoreButton> {
+  /// Whether the pointer is down — drives the Cupertino idiom's composite
+  /// pressed-fade (layer 4 of the paint model).
+  bool _pressed = false;
+
+  @override
   Widget build(BuildContext context) {
-    final bool enabled = onPressed != null;
-    final RoundedRectangleBorder shape = RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(cornerRadius),
-    );
+    final bool enabled = widget.onPressed != null;
+    // The idiom is host-selected (ThemeData.platform, DESIGN.md §8). It
+    // decides the corner *style* for the same cornerRadius amount — Apple's
+    // continuous superellipse vs. a circular arc — and the state layer:
+    // Material draws an ink splash on the surface under the content;
+    // Cupertino fades the whole composite while pressed.
+    final bool cupertino = switch (Theme.of(context).platform) {
+      TargetPlatform.iOS || TargetPlatform.macOS => true,
+      _ => false,
+    };
+    final BorderRadius radius = BorderRadius.circular(widget.cornerRadius);
+    final OutlinedBorder shape = cupertino
+        ? RoundedSuperellipseBorder(borderRadius: radius)
+        : RoundedRectangleBorder(borderRadius: radius);
     Widget content = Padding(
-      padding: padding,
+      padding: widget.padding,
       // Hug the content, but center it when the parent stretches the button
       // (e.g. a stretched cross axis) — the Jaspr side is inline-flex with
       // centered alignment.
-      child: Center(widthFactor: 1.0, heightFactor: 1.0, child: child),
+      child: Center(widthFactor: 1.0, heightFactor: 1.0, child: widget.child),
     );
-    if (ink != null) {
-      content = _ContentInk(color: ink!, child: content);
+    if (widget.ink != null) {
+      content = _ContentInk(color: widget.ink!, child: content);
+    }
+    Widget button = Material(
+      color: widget.surface ?? Colors.transparent,
+      shape: shape,
+      // Clip the state layer (ink splash) to the surface's corners.
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        customBorder: shape,
+        onTap: widget.onPressed,
+        splashFactory: cupertino ? NoSplash.splashFactory : null,
+        highlightColor: cupertino ? Colors.transparent : null,
+        hoverColor: cupertino ? Colors.transparent : null,
+        onHighlightChanged:
+            cupertino ? (bool value) => setState(() => _pressed = value) : null,
+        child: content,
+      ),
+    );
+    if (cupertino) {
+      button = AnimatedOpacity(
+        // CupertinoButton's pressed opacity and fade cadence.
+        opacity: _pressed ? 0.4 : 1.0,
+        duration: const Duration(milliseconds: 120),
+        child: button,
+      );
     }
     return MergeSemantics(
-      child: Semantics(
-        button: true,
-        enabled: enabled,
-        child: Material(
-          color: surface ?? Colors.transparent,
-          shape: shape,
-          // Clip the state layer (ink splash) to the surface's corners.
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            customBorder: shape,
-            onTap: onPressed,
-            child: content,
-          ),
-        ),
-      ),
+      child: Semantics(button: true, enabled: enabled, child: button),
     );
   }
 }

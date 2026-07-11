@@ -897,10 +897,20 @@ adapter, several idioms. The Jaspr adapter renders the web idiom with
 controls accept only a tint (`accent-color`), which cannot satisfy the role
 mapping.
 
-**Per-idiom limits.** An idiom may **ignore** a role it does not surface (a
-Cupertino switch has no `outline` to ink); each control's spec states which
-roles each idiom consumes. An idiom must never *repurpose* a role onto a
-different part.
+**Per-idiom limits.** An idiom may **ignore** a role it does not surface;
+each control's spec states which roles each idiom consumes. An idiom must
+never *repurpose* a role onto a different part. The v1 tables (the Cupertino
+column is the `.adaptive` preview):
+
+| Control | Material | Cupertino | Web |
+| --- | --- | --- | --- |
+| `Button` | full mapping; ink-splash state layer; circular-arc corner | same mapping; **pressed-fade** state layer (composite, 0.4); **superellipse** corner | same mapping; hover/active-brightness state layer; `border-radius` corner |
+| `Checkbox` | `primary` fill, `onPrimary` mark, `outline` box | same (CupertinoCheckbox honors all three) | same (painted glyph) |
+| `Radio` | `primary` selected, `outline` ring (custom glyph; grouping TODO) | same custom glyph — no adaptive rendering yet | same (painted glyph) |
+| `Switch` | `primary` active track, `onPrimary` on-thumb, `outline` inactive | same (the adaptive switch takes the iOS look, same knobs) | same (always adapter-painted — the web has no stock switch) |
+| `Slider` | `primary` active track + thumb, `outline` inactive track | **`outline` ignored** (CupertinoSlider has no inactive-track knob) | same as Material |
+| `TextField` | full field chrome (`outline` box, `primary` focus + caret, `onSurface` ink) | **no adaptive path — renders the Material chrome** (§13) | same as Material |
+| `Select` | full field chrome | same as Material (no adaptive dropdown) | same as Material |
 
 #### The paint model: four layers, one owner
 
@@ -1341,12 +1351,12 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
 - **Type model:** the precise canonical shapes of the §8 value types, and how
   `Dimension`'s `flex`/`fill`/`hug` interact with nested scroll/intrinsic-sizing
   edge cases.
-- **Per-idiom role limits (§8):** the control contract lets an idiom ignore a
-  role it does not surface; the concrete tables — which roles the Material,
-  Cupertino, and web renderings of each control consume — are authored
-  control-by-control as the controls land. Same for `TextField` under Cupertino,
-  which has no `.adaptive` constructor (a separate `CupertinoTextField`
-  mapping, or Material-only at first).
+- **Per-idiom gaps in the Cupertino preview (§8):** the v1 role-limit tables
+  are authored, but two controls render their Material form under the
+  Cupertino idiom — `TextField` (no `.adaptive` constructor; a
+  `CupertinoTextField` mapping is a candidate) and `Select` (no adaptive
+  dropdown). Whether to hand-map those, and whether `Radio` should gain an
+  adaptive glyph, is open.
 - **Catalog packaging & versioning:** the project (§10) answers how templates
   are authored and bundled; still open is how catalogs and their templates are
   **versioned** as they evolve — what a host pins, and how a project declares

@@ -6,6 +6,15 @@
       "runtimeExecutable": "sh",
       "runtimeArgs": ["-c", "cd site && jaspr serve --port 8080"],
       "port": 8080
+    },
+    {
+      "name": "site-static",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "/private/tmp/claude-502/-Users-yjbanov/7302c51d-a1a6-4b67-a428-1a47f489d11c/scratchpad/serve_site.py"
+      ],
+      "port": 8137,
+      "autoPort": true
     }
   ]
 }

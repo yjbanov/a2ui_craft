@@ -30,13 +30,16 @@ final CraftTheme _fullTheme = _theme(<String, Object?>{
 });
 
 Future<void> _mount(WidgetTester tester, String template,
-    {CraftTheme? theme, Brightness brightness = Brightness.light}) async {
+    {CraftTheme? theme,
+    Brightness brightness = Brightness.light,
+    TargetPlatform? platform}) async {
   final Runtime runtime = Runtime()
     ..update(const LibraryName(<String>['core']), createCoreComponents())
     ..registerFunctions(createCoreFunctions())
     ..update(const LibraryName(<String>['main']), parseLibraryFile(template));
   await tester.pumpWidget(MaterialApp(
-    theme: ThemeData(useMaterial3: true, brightness: brightness),
+    theme: ThemeData(
+        useMaterial3: true, brightness: brightness, platform: platform),
     home: Scaffold(
       body: RemoteWidget(
         runtime: runtime,
@@ -147,6 +150,53 @@ void main() {
     // Select: the closed control shows the bound option, chromed like the
     // TextField (the shared _fieldDecoration).
     expect(find.text('B'), findsOneWidget);
+  });
+
+  testWidgets(
+      'the Cupertino idiom keeps the role mapping; the Button swaps its '
+      'state layer', (WidgetTester tester) async {
+    // The idiom is host-selected (ThemeData.platform, DESIGN.md §8): the
+    // same template and theme, previewed as iOS. The role mapping is
+    // idiom-invariant — the same knobs land — while the state layer and
+    // corner style change: no ink splash, a composite pressed-fade, and
+    // Apple's continuous superellipse corner for the same cornerRadius.
+    await _mount(
+        tester,
+        '''
+      import core;
+      widget root = Column(children: [
+        Button(onPressed: event "go" {}, child: Text(text: "Go")),
+        Checkbox(value: true),
+        Switch(value: true, onChanged: event "a" {}),
+      ]);
+    ''',
+        theme: _fullTheme,
+        platform: TargetPlatform.iOS);
+
+    final Checkbox box = tester.widget<Checkbox>(find.byType(Checkbox));
+    expect(box.activeColor, const Color(0xFFAA0000));
+    expect(box.side, const BorderSide(color: Color(0xFF223344), width: 2));
+    final Switch sw = tester.widget<Switch>(find.byType(Switch));
+    expect(sw.activeTrackColor, const Color(0xFFAA0000));
+
+    // The Button surface: same role, superellipse corner style.
+    final Material surface = tester.widget<Material>(find
+        .ancestor(of: find.text('Go'), matching: find.byType(Material))
+        .first);
+    expect(surface.color, const Color(0xFFAA0000));
+    expect(surface.shape, isA<RoundedSuperellipseBorder>());
+
+    // The state layer: pressing fades the composite (CupertinoButton's 0.4)
+    // instead of splashing ink; releasing restores it.
+    final TestGesture gesture =
+        await tester.startGesture(tester.getCenter(find.text('Go')));
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(tester.widget<AnimatedOpacity>(find.byType(AnimatedOpacity)).opacity,
+        0.4);
+    await gesture.up();
+    await tester.pumpAndSettle();
+    expect(tester.widget<AnimatedOpacity>(find.byType(AnimatedOpacity)).opacity,
+        1.0);
   });
 
   testWidgets('link inks Markdown hyperlinks; onSurface inks its body',

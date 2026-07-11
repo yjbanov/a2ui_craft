@@ -144,6 +144,7 @@ void main() {
       (productCardSpec('Jaspr'), '#FFF8F0', '#2A1E17'),
       (chatMessageSpec('Jaspr'), '#F5F7FF', '#171A2C'),
       (weatherSpec('Jaspr'), '#E8F4FD', '#0B1F33'),
+      (calculatorSpec('Jaspr'), '#F8FAFC', '#1E2126'),
     ]) {
       final ProjectTheme? theme = spec.theme;
       expect(theme, isNotNull, reason: spec.label);

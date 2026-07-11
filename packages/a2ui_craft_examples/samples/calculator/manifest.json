@@ -3,6 +3,47 @@
   "demonstrates": [
     "layout",
     "controls",
-    "functions"
-  ]
+    "functions",
+    "theming"
+  ],
+  "theme": {
+    "tokens": {
+      "color": {
+        "$type": "color",
+        "$description": "Slate calculator body — base layer (Light).",
+        "surface": { "$value": "#F8FAFC" },
+        "onSurface": { "$value": "#0F172A" },
+        "onSurfaceVariant": { "$value": "#475569" },
+        "outline": { "$value": "#CBD5E1" }
+      },
+      "keypad": {
+        "$type": "color",
+        "$description": "Custom tokens referenced explicitly by the template (theme.keypad.*).",
+        "display": { "$value": "#F1F5F9" },
+        "key": { "$value": "#E2E8F0" },
+        "op": { "$value": "#CBD5E1" },
+        "clear": { "$value": "#FCA5A5" },
+        "equals": { "$value": "#86EFAC" }
+      }
+    },
+    "modes": {
+      "dark": {
+        "color": {
+          "$type": "color",
+          "surface": { "$value": "#1E2126" },
+          "onSurface": { "$value": "#E7EAF0" },
+          "onSurfaceVariant": { "$value": "#9AA3AF" },
+          "outline": { "$value": "#3A3F47" }
+        },
+        "keypad": {
+          "$type": "color",
+          "display": { "$value": "#14161A" },
+          "key": { "$value": "#3A4048" },
+          "op": { "$value": "#4C5560" },
+          "clear": { "$value": "#7F3B3B" },
+          "equals": { "$value": "#2F6B44" }
+        }
+      }
+    }
+  }
 }

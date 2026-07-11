@@ -66,6 +66,34 @@ void main() {
     expect(find.tag('button'), findsNComponents(16));
   });
 
+  testComponents('Calculator keypad re-inks with its theme mode',
+      (ComponentTester tester) async {
+    // The keypad fills are **explicit theme references** (theme.keypad.*,
+    // custom tokens in the manifest theme) passed through the Key template's
+    // args — hardcoded light fills under the mode-following ambient ink were
+    // unreadable in dark mode. Pin that each mode paints its own layer.
+    final SampleSpec spec = calculatorSpec('Jaspr');
+    expect(spec.theme, isNotNull);
+
+    await _pump(tester, spec);
+    expect(
+        _styleValues('background-color'),
+        containsAll(<String>[
+          'rgba(241, 245, 249, 1.0)', // display ← keypad.display, Light
+          'rgba(226, 232, 240, 1.0)', // digit key ← keypad.key, Light
+          'rgba(134, 239, 172, 1.0)', // equals ← keypad.equals, Light
+        ]));
+
+    await _pump(tester, spec, dark: true);
+    expect(
+        _styleValues('background-color'),
+        containsAll(<String>[
+          'rgba(20, 22, 26, 1.0)', // display ← keypad.display, Dark
+          'rgba(58, 64, 72, 1.0)', // digit key ← keypad.key, Dark
+          'rgba(47, 107, 68, 1.0)', // equals ← keypad.equals, Dark
+        ]));
+  });
+
   testComponents('Boxes renders the nested-box layout',
       (ComponentTester tester) async {
     await _pump(tester, boxesSpec('Jaspr'));

@@ -282,6 +282,12 @@ import core;
 // the new operator, and clears `display` for the next operand — three state
 // writes in one press. Equals applies the pending operation. It behaves
 // identically on the Flutter and Jaspr adapters.
+//
+// The keypad is inked through **explicit theme references** (`theme.keypad.*`,
+// custom tokens from this project's manifest theme) rather than hardcoded
+// colors, so the fills flip with the light/dark mode together with the ambient
+// text ink — hardcoded light fills under mode-following ink is unreadable in
+// dark mode.
 
 // One key: a button showing [label] that runs [press] (a `set state`, or a list
 // of them). The handler is passed in as an arg, so the state stays on the
@@ -304,19 +310,19 @@ widget Calculator { display: 0, acc: 0, op: "" } = Card(child: Column(
     Box(
       width: 202.0,
       padding: [10.0, 12.0, 10.0, 12.0],
-      color: "#f1f5f9",
+      color: theme.keypad.display,
       child: Row(mainAxisAlignment: "end", width: "fill", children: [
         Heading(text: state.display, level: 2),
       ]),
     ),
     Row(gap: 6.0, children: [
-      Key(label: "7", color: "#e2e8f0",
+      Key(label: "7", color: theme.keypad.key,
         press: set state.display = add(a: multiply(a: state.display, b: 10), b: 7)),
-      Key(label: "8", color: "#e2e8f0",
+      Key(label: "8", color: theme.keypad.key,
         press: set state.display = add(a: multiply(a: state.display, b: 10), b: 8)),
-      Key(label: "9", color: "#e2e8f0",
+      Key(label: "9", color: theme.keypad.key,
         press: set state.display = add(a: multiply(a: state.display, b: 10), b: 9)),
-      Key(label: "÷", color: "#cbd5e1", press: [
+      Key(label: "÷", color: theme.keypad.op, press: [
         set state.acc = switch state.op {
           "add": add(a: state.acc, b: state.display),
           "subtract": subtract(a: state.acc, b: state.display),
@@ -329,13 +335,13 @@ widget Calculator { display: 0, acc: 0, op: "" } = Card(child: Column(
       ]),
     ]),
     Row(gap: 6.0, children: [
-      Key(label: "4", color: "#e2e8f0",
+      Key(label: "4", color: theme.keypad.key,
         press: set state.display = add(a: multiply(a: state.display, b: 10), b: 4)),
-      Key(label: "5", color: "#e2e8f0",
+      Key(label: "5", color: theme.keypad.key,
         press: set state.display = add(a: multiply(a: state.display, b: 10), b: 5)),
-      Key(label: "6", color: "#e2e8f0",
+      Key(label: "6", color: theme.keypad.key,
         press: set state.display = add(a: multiply(a: state.display, b: 10), b: 6)),
-      Key(label: "×", color: "#cbd5e1", press: [
+      Key(label: "×", color: theme.keypad.op, press: [
         set state.acc = switch state.op {
           "add": add(a: state.acc, b: state.display),
           "subtract": subtract(a: state.acc, b: state.display),
@@ -348,13 +354,13 @@ widget Calculator { display: 0, acc: 0, op: "" } = Card(child: Column(
       ]),
     ]),
     Row(gap: 6.0, children: [
-      Key(label: "1", color: "#e2e8f0",
+      Key(label: "1", color: theme.keypad.key,
         press: set state.display = add(a: multiply(a: state.display, b: 10), b: 1)),
-      Key(label: "2", color: "#e2e8f0",
+      Key(label: "2", color: theme.keypad.key,
         press: set state.display = add(a: multiply(a: state.display, b: 10), b: 2)),
-      Key(label: "3", color: "#e2e8f0",
+      Key(label: "3", color: theme.keypad.key,
         press: set state.display = add(a: multiply(a: state.display, b: 10), b: 3)),
-      Key(label: "−", color: "#cbd5e1", press: [
+      Key(label: "−", color: theme.keypad.op, press: [
         set state.acc = switch state.op {
           "add": add(a: state.acc, b: state.display),
           "subtract": subtract(a: state.acc, b: state.display),
@@ -367,14 +373,14 @@ widget Calculator { display: 0, acc: 0, op: "" } = Card(child: Column(
       ]),
     ]),
     Row(gap: 6.0, children: [
-      Key(label: "C", color: "#fca5a5", press: [
+      Key(label: "C", color: theme.keypad.clear, press: [
         set state.display = 0,
         set state.acc = 0,
         set state.op = "",
       ]),
-      Key(label: "0", color: "#e2e8f0",
+      Key(label: "0", color: theme.keypad.key,
         press: set state.display = multiply(a: state.display, b: 10)),
-      Key(label: "=", color: "#86efac", press: [
+      Key(label: "=", color: theme.keypad.equals, press: [
         set state.display = switch state.op {
           "add": add(a: state.acc, b: state.display),
           "subtract": subtract(a: state.acc, b: state.display),
@@ -385,7 +391,7 @@ widget Calculator { display: 0, acc: 0, op: "" } = Card(child: Column(
         set state.op = "",
         set state.acc = 0,
       ]),
-      Key(label: "+", color: "#cbd5e1", press: [
+      Key(label: "+", color: theme.keypad.op, press: [
         set state.acc = switch state.op {
           "add": add(a: state.acc, b: state.display),
           "subtract": subtract(a: state.acc, b: state.display),
@@ -434,7 +440,85 @@ widget Calculator { display: 0, acc: 0, op: "" } = Card(child: Column(
   }
 ]
 ''',
-    demonstrates: <String>['layout', 'controls', 'functions'],
+    theme: r'''
+{
+  "tokens": {
+    "color": {
+      "$type": "color",
+      "$description": "Slate calculator body — base layer (Light).",
+      "surface": {
+        "$value": "#F8FAFC"
+      },
+      "onSurface": {
+        "$value": "#0F172A"
+      },
+      "onSurfaceVariant": {
+        "$value": "#475569"
+      },
+      "outline": {
+        "$value": "#CBD5E1"
+      }
+    },
+    "keypad": {
+      "$type": "color",
+      "$description": "Custom tokens referenced explicitly by the template (theme.keypad.*).",
+      "display": {
+        "$value": "#F1F5F9"
+      },
+      "key": {
+        "$value": "#E2E8F0"
+      },
+      "op": {
+        "$value": "#CBD5E1"
+      },
+      "clear": {
+        "$value": "#FCA5A5"
+      },
+      "equals": {
+        "$value": "#86EFAC"
+      }
+    }
+  },
+  "modes": {
+    "dark": {
+      "color": {
+        "$type": "color",
+        "surface": {
+          "$value": "#1E2126"
+        },
+        "onSurface": {
+          "$value": "#E7EAF0"
+        },
+        "onSurfaceVariant": {
+          "$value": "#9AA3AF"
+        },
+        "outline": {
+          "$value": "#3A3F47"
+        }
+      },
+      "keypad": {
+        "$type": "color",
+        "display": {
+          "$value": "#14161A"
+        },
+        "key": {
+          "$value": "#3A4048"
+        },
+        "op": {
+          "$value": "#4C5560"
+        },
+        "clear": {
+          "$value": "#7F3B3B"
+        },
+        "equals": {
+          "$value": "#2F6B44"
+        }
+      }
+    }
+  }
+}
+''',
+    demonstrates: <String>['layout', 'controls', 'functions', 'theming'],
   ),
   RawSample(
     id: 'boxes',

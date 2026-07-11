@@ -612,10 +612,21 @@
         buttons as static decoration — revisit when they stop) and the
         composite-effects idiom split (Cupertino pressed-fade waits for the
         slice-7 platform toggle).
-      - [ ] **3. `Checkbox` + `Radio`** — pattern-setters for painted glyph
-        controls: `appearance: none` custom rendering on Jaspr (accent-color
-        can only tint); role mapping (`primary` active fill, `outline` box,
-        `onPrimary` mark); resolves both adapters' Radio TODOs.
+      - [x] **3. `Checkbox` + `Radio`** — pattern-setters for painted glyph
+        controls, with the principled split: **unthemed = the host stock
+        control** (blend in, §9.1 — native UA input / host Material);
+        **themed = adapter-painted per the role mapping** (`outline` unchecked
+        box/ring, `primary` full checked fill + radio dot, `onPrimary`
+        checkmark). Jaspr paints `appearance: none` glyphs with the checked
+        state styled inline (controlled element — no pseudo-classes; SVG
+        checkmark stroked with the resolved onPrimary, radial-gradient dot);
+        `accent-color` remains only on the range input. Flutter lands the
+        mapping on Material's knobs (activeColor/checkColor/side; unselected
+        radio ring ← outline). Pinned per adapter in theming_defaults tests.
+        **Still open from the Radio TODOs:** native radio *grouping* and the
+        change-vs-click event choice (deferred to the Radio-group sample /
+        `RadioGroup` API settling); a shared conformance probe for glyph
+        colors (per-adapter pins cover the mapping today).
       - [ ] **4. `TextField`** — chrome spec (border/padding via `outline`,
         ink via `onSurface`); the one control with no `.adaptive` path.
       - [ ] **5. `Slider`** — the hardest paint (track/thumb); role mapping

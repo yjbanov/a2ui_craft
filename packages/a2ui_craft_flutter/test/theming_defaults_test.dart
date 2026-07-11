@@ -79,8 +79,11 @@ void main() {
     expect(box.activeColor, const Color(0xFFAA0000));
     expect(box.checkColor, isNull);
     expect(box.side, const BorderSide(color: Color(0xFF223344), width: 2));
-    expect(tester.widget<Slider>(find.byType(Slider)).activeColor,
-        const Color(0xFFAA0000));
+    // Slider: primary inks the active track + thumb, outline the inactive
+    // track.
+    final Slider slider = tester.widget<Slider>(find.byType(Slider));
+    expect(slider.activeColor, const Color(0xFFAA0000));
+    expect(slider.inactiveColor, const Color(0xFF223344));
     final InputDecoration decoration =
         tester.widget<TextField>(find.byType(TextField)).decoration!;
     expect(decoration.enabledBorder!.borderSide.color, const Color(0xFF223344));

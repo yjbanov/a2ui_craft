@@ -82,10 +82,19 @@ void main() {
       'rgba(170, 0, 0, 1.0)', // checked Checkbox glyph ← primary (full fill)
       'transparent', // TextField chrome — the surface shows through
     ]);
-    // Only the range input still tints via accent-color; the checkbox glyph
-    // is adapter-painted when themed (accent-color cannot fill per the role
-    // mapping).
-    expect(_styleValues('accent-color'), <String>['rgba(170, 0, 0, 1.0)']);
+    // Nothing tints via accent-color any more: every themed control is
+    // adapter-painted (accent-color can only tint, never fill per the role
+    // mapping). The slider's track is a primary→outline gradient split at
+    // the bound value (0 here), its thumb inked via the custom property the
+    // control stylesheet's pseudo-element thumbs read.
+    expect(_styleValues('accent-color'), isEmpty);
+    expect(_styleValues('background'), <String>[
+      'linear-gradient(to right, rgba(170, 0, 0, 1.0) 0%, '
+          'rgba(170, 0, 0, 1.0) 0%, rgba(34, 51, 68, 1.0) 0%, '
+          'rgba(34, 51, 68, 1.0) 100%)',
+    ]);
+    expect(
+        _styleValues('--craft-slider-thumb'), <String>['rgba(170, 0, 0, 1.0)']);
     // The checked box's glyph border ← primary; the TextField chrome ←
     // outline (1px box border; its focus border/caret ride primary). The
     // leading 'none' is the Divider resetting the UA hr border.

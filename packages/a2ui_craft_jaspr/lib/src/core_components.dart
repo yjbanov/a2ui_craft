@@ -451,10 +451,15 @@ LocalWidgetLibrary createCoreComponents() {
         (HandlerTrigger trigger) => (String v) =>
             trigger(<String, Object?>{'value': double.tryParse(v) ?? min}),
       );
+      ensureCoreControlStyleSheet(coreControlStyleSheet);
       return input<String>(
         type: InputType.range,
         value: '$value',
-        styles: _accentStyle(context),
+        classes: _roleColor(context, ThemeRoles.primary) == null
+            ? null
+            : 'craft-slider',
+        styles: _sliderStyles(context,
+            fraction: max > min ? (value - min) / (max - min) : 0),
         attributes: <String, String>{
           'min': '$min',
           'max': '$max',
@@ -834,15 +839,6 @@ Styles? _bodyStyle(BuildContext context) {
   });
 }
 
-/// The `accent-color` style carrying [ThemeRoles.primary] to the native
-/// range input, or null for the host default.
-Styles? _accentStyle(BuildContext context) {
-  final String? accent = _roleColor(context, ThemeRoles.primary);
-  return accent == null
-      ? null
-      : Styles(raw: <String, String>{'accent-color': accent});
-}
-
 /// The themed Checkbox glyph — adapter-owned painting (DESIGN.md §8).
 ///
 /// Unthemed (no `primary`), the native UA checkbox is the web idiom's stock
@@ -890,6 +886,31 @@ Styles? _radioStyles(BuildContext context, {required bool selected}) {
     if (selected)
       'background-image':
           'radial-gradient(circle, $primary 0 40%, transparent 45%)',
+  });
+}
+
+/// The themed Slider track — adapter-owned painting (DESIGN.md §8).
+///
+/// Unthemed (no `primary`), the native UA range input is the stock look:
+/// return null. Themed, `accent-color` can only tint the thumb, so the track
+/// is painted from scratch: `primary` fills the active portion (a gradient
+/// stop at the bound value's [fraction] — the input is controlled, so the
+/// fill tracks re-renders) and inks the thumb (via the `--craft-slider-thumb`
+/// custom property the control stylesheet's pseudo-element thumbs read);
+/// `outline` inks the inactive track, falling back to a translucent primary.
+Styles? _sliderStyles(BuildContext context, {required double fraction}) {
+  final String? primary = _roleColor(context, ThemeRoles.primary);
+  if (primary == null) return null;
+  final String track = _roleColor(context, ThemeRoles.outline) ??
+      'color-mix(in srgb, $primary 30%, transparent)';
+  final String pct = '${numberToDisplayString(fraction.clamp(0, 1) * 100)}%';
+  return Styles(raw: <String, String>{
+    'appearance': 'none',
+    'height': '4px',
+    'border-radius': '2px',
+    'background':
+        'linear-gradient(to right, $primary 0%, $primary $pct, $track $pct, $track 100%)',
+    '--craft-slider-thumb': primary,
   });
 }
 
@@ -950,6 +971,9 @@ const String coreControlStyleSheet = '''
 .craft-checkbox:not(:disabled), .craft-radio:not(:disabled) { cursor: pointer; }
 .craft-textfield:focus { border-color: var(--craft-focus); }
 .craft-textfield:focus-visible { outline: 2px solid var(--craft-focus); outline-offset: 1px; }
+.craft-slider:not(:disabled) { cursor: pointer; }
+.craft-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 16px; height: 16px; border-radius: 50%; border: none; background: var(--craft-slider-thumb); }
+.craft-slider::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; border: none; background: var(--craft-slider-thumb); }
 ''';
 
 /// The content ink a control installs over its subtree — layer 3 of the

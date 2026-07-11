@@ -289,11 +289,15 @@ LocalWidgetLibrary createCoreComponents() {
         (HandlerTrigger trigger) =>
             (double v) => trigger(<String, Object?>{'value': v}),
       );
+      // The role mapping (DESIGN.md §8): `primary` inks the active track and
+      // the thumb (Material's thumbColor follows activeColor), `outline` the
+      // inactive track; null keeps the host look.
       return Slider(
         min: min,
         max: max,
         value: value,
         activeColor: _roleColor(context, ThemeRoles.primary),
+        inactiveColor: _roleColor(context, ThemeRoles.outline),
         divisions: (steps != null && steps > 0) ? steps : null,
         onChanged: onChanged,
       );

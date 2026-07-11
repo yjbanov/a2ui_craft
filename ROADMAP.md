@@ -581,22 +581,37 @@
         child_list_template, markdown_text, sports_player, event_detail,
         countdown_timer, user_profile, workout_summary, incremental) —
         candidates for upgrading or for a future "catalog breadth" property.
-- [ ] **Control normalization (DESIGN.md §8, "The controls").** Give every
+- [~] **Control normalization (DESIGN.md §8, "The controls").** Give every
       control primitive its specified, theme-driven, platform-idiomatic look —
       the H2 proof for controls: framework never visible, platform may be;
       each role inks the same part to the same degree on both adapters.
       Control-by-control slices, each spec → both adapters → conformance →
       samples:
-      - [ ] **1. `CornerRadius` value type** in the shared vocabulary (Pillar
-        B): scalar px, half-extent clamp specified; corner *style* left to the
-        idiom.
-      - [ ] **2. `Button`** — the four-layer paint model (surface / state layer
-        / content / composite effects; child is content, never chrome). Props
-        `color`, `cornerRadius`; default = idiom's stock button on
-        `primary`/`onPrimary`; transparent surface = text button. Flutter:
-        `Material` + `InkWell(customBorder:)`; Jaspr: strip UA chrome, hover /
-        active overlays + `:focus-visible` ring. Simplify the calculator `Key`
-        onto it.
+      - [x] **1. `CornerRadius` value type** in the shared vocabulary (Pillar
+        B): scalar px; the half-extent pill/circle clamp is engine-native on
+        both adapters (Skia RRect scaling ≡ CSS overlapping-curves); corner
+        *style* left to the idiom; the reserved per-corner list form is
+        rejected, not misread.
+      - [x] **2. `Button`** — the four-layer paint model landed on both
+        adapters (surface `color`/`cornerRadius`/`padding` props; state layer
+        = Material ink splash clipped to the corner shape vs. a head-injected
+        `.craft-button` hover/active stylesheet — pseudo-classes can't be
+        inline, and the injection is imperative+idempotent because surfaces
+        render under several roots; content layer = stock 8/16 padding,
+        hug-then-center, and a **content-ink scope** that Text/Icon/caption
+        consult before their ambient roles, so the default button inks
+        `onPrimary` without leaking to siblings). Unstyled = idiom's stock
+        button on `primary`/`onPrimary` (host fallbacks: `ColorScheme` on
+        Flutter, `light-dark()` blues on Jaspr); explicit color owns the whole
+        surface, ambient ink stands; transparent = text button. Conformance:
+        `buttonSurfaceColorOf` probe + role-mapping cases (default per theme,
+        re-theme re-inks, explicit fill, transparent). The calculator `Key`
+        colors the Button directly (`padding: 0` keeps fixed key size) and
+        gained press feedback; live-verified in both panes, both modes.
+        **Deferred:** disabled visual dimming (samples still use handler-less
+        buttons as static decoration — revisit when they stop) and the
+        composite-effects idiom split (Cupertino pressed-fade waits for the
+        slice-7 platform toggle).
       - [ ] **3. `Checkbox` + `Radio`** — pattern-setters for painted glyph
         controls: `appearance: none` custom rendering on Jaspr (accent-color
         can only tint); role mapping (`primary` active fill, `outline` box,

@@ -41,4 +41,6 @@ const Set<String> corePrimitives = <String>{
   'Checkbox',
   'Radio',
   'Slider',
+  'Switch',
+  'Select',
 };

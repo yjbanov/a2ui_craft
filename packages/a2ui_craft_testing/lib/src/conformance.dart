@@ -160,6 +160,9 @@ abstract interface class CraftTester {
   /// Toggles the (single) rendered checkbox, as a user click would.
   Future<void> toggleCheckbox();
 
+  /// Toggles the (single) rendered switch, as a user click would.
+  Future<void> toggleSwitch();
+
   /// Creates a framework-specific adapter for the A2UI component [id] in
   /// [surface], rendering it against the demo catalog ([a2uiDemoCatalogName]).
   Object buildAdapter(SurfaceModel<ComponentApi> surface, String id);
@@ -449,6 +452,52 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
     expect(dispatched, isEmpty);
     await tester.activate('r');
     expect(dispatched, <String>['picked']);
+  });
+
+  driver.defineTest('Switch reflects and toggles its bound state', (
+    CraftTester tester,
+  ) async {
+    await tester.mount('''
+      import core;
+      widget root { on: false } = Column(children: [
+        Switch(
+          value: state.on,
+          onChanged: set state.on = switch state.on { true: false, default: true },
+        ),
+        Text(text: switch state.on { true: "ON", default: "OFF" }),
+      ]);
+    ''');
+
+    expect(tester.hasText('OFF'), isTrue);
+    await tester.toggleSwitch();
+    expect(tester.hasText('ON'), isTrue);
+    await tester.toggleSwitch();
+    expect(tester.hasText('OFF'), isTrue);
+  });
+
+  driver.defineTest('Select shows its bound option', (
+    CraftTester tester,
+  ) async {
+    // The closed control displays the bound choice on every adapter (what
+    // the popup/option list looks like is idiom latitude — Flutter renders
+    // options only while open, the DOM keeps them mounted — so only the
+    // selected option's visibility is cross-adapter behavior).
+    final DynamicContent data = DynamicContent();
+    data.update('size', 'Medium');
+    await tester.mount('''
+      import core;
+      widget root = Select(
+        value: data.size,
+        options: ["Small", "Medium", "Large"],
+        onChanged: event "sized" {},
+      );
+    ''', data: data);
+    expect(tester.hasText('Medium'), isTrue);
+
+    // The bound value is live: a data update re-selects.
+    data.update('size', 'Large');
+    await tester.pump();
+    expect(tester.hasText('Large'), isTrue);
   });
 
   driver.defineTest('Slider mounts with its bound value', (

@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:a2ui_craft/a2ui_craft.dart';
+// The template-language model's `Switch` (the RFW switch expression) is not
+// used here and would shadow Material's `Switch` control.
+import 'package:a2ui_craft/a2ui_craft.dart' hide Switch;
 import 'package:flutter/material.dart';
 
 import 'runtime.dart';
@@ -274,6 +276,60 @@ LocalWidgetLibrary createCoreComponents() {
         // `outline` rings the unselected one; null keeps the host look.
         accent: _roleColor(context, ThemeRoles.primary),
         outline: _roleColor(context, ThemeRoles.outline),
+      );
+    },
+    // A bare on/off switch. Two-way bound like Checkbox; the role mapping
+    // (DESIGN.md §8): `primary` fully fills the active track (`onPrimary`
+    // inks the thumb riding it), `outline` inks the inactive track's border
+    // and thumb; null keeps the host Material look (blend in, §9.1).
+    'Switch': (BuildContext context, DataSource source) {
+      final bool value = source.v<bool>(['value']) ?? false;
+      final ValueChanged<bool>? onChanged = source.handler<ValueChanged<bool>>(
+        ['onChanged'],
+        (HandlerTrigger trigger) =>
+            (bool v) => trigger(<String, Object?>{'value': v}),
+      );
+      final Color? outline = _roleColor(context, ThemeRoles.outline);
+      return Switch(
+        value: value,
+        activeTrackColor: _roleColor(context, ThemeRoles.primary),
+        activeThumbColor: _roleColor(context, ThemeRoles.onPrimary),
+        inactiveThumbColor: outline,
+        trackOutlineColor: outline == null
+            ? null
+            : WidgetStateProperty.resolveWith((Set<WidgetState> states) =>
+                states.contains(WidgetState.selected) ? null : outline),
+        onChanged: onChanged,
+      );
+    },
+    // A single-choice dropdown over string `options` — the bare control;
+    // label placement is a template's choice, like TextField. Two-way bound:
+    // `onChanged` is a2ui_core's setter for the bound `value`. Shares the
+    // TextField chrome (`outline`/`primary`) and ink (`onSurface`).
+    'Select': (BuildContext context, DataSource source) {
+      final List<String> options = _stringList(source, 'options');
+      final String? value = source.v<String>(['value']);
+      final ValueChanged<String>? onChanged =
+          source.handler<ValueChanged<String>>(
+        ['onChanged'],
+        (HandlerTrigger trigger) =>
+            (String v) => trigger(<String, Object?>{'value': v}),
+      );
+      final Color? ink = _roleColor(context, ThemeRoles.onSurface);
+      return DropdownButtonFormField<String>(
+        // An unknown/absent value renders no selection rather than throwing.
+        initialValue: options.contains(value) ? value : null,
+        decoration: _fieldDecoration(context),
+        style: ink == null ? null : TextStyle(color: ink),
+        items: <DropdownMenuItem<String>>[
+          for (final String option in options)
+            DropdownMenuItem<String>(value: option, child: Text(option)),
+        ],
+        onChanged: onChanged == null
+            ? null
+            : (String? v) {
+                if (v != null) onChanged(v);
+              },
       );
     },
     // A bare numeric slider (no label — that is a template's choice). Two-way
@@ -898,33 +954,49 @@ class _CoreTextFieldState extends State<_CoreTextField> {
 
   @override
   Widget build(BuildContext context) {
-    // The role mapping (DESIGN.md §8), degrading role-by-role: `outline`
-    // draws the box chrome, `primary` the focus border + caret, `onSurface`
-    // the text ink. The Jaspr adapter paints the same spec (border/radius/
-    // padding inline; focus via the control stylesheet).
-    InputDecoration decoration = const InputDecoration();
-    if (widget.outline != null) {
-      final BorderRadius radius = BorderRadius.circular(6);
-      decoration = InputDecoration(
-        isDense: true,
-        contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: radius,
-          borderSide: BorderSide(color: widget.outline!),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: radius,
-          borderSide:
-              BorderSide(color: widget.accent ?? widget.outline!, width: 2),
-        ),
-      );
-    }
     return TextField(
       controller: _controller,
       style: widget.ink == null ? null : TextStyle(color: widget.ink),
       cursorColor: widget.accent,
-      decoration: decoration,
+      decoration: _fieldDecorationFor(widget.outline, widget.accent),
       onChanged: widget.onChanged,
     );
   }
+}
+
+/// The shared field chrome (DESIGN.md §8), degrading role-by-role: `outline`
+/// draws the box (1px border, the stock 6px control corner, 8/12 padding);
+/// `primary` the focused border. Used by `TextField` and `Select`; the Jaspr
+/// adapter paints the same spec (border/radius/padding inline; focus via the
+/// control stylesheet). Unthemed keeps the host's default decoration.
+InputDecoration _fieldDecorationFor(Color? outline, Color? accent) {
+  if (outline == null) return const InputDecoration();
+  final BorderRadius radius = BorderRadius.circular(6);
+  return InputDecoration(
+    isDense: true,
+    contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: radius,
+      borderSide: BorderSide(color: outline),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: radius,
+      borderSide: BorderSide(color: accent ?? outline, width: 2),
+    ),
+  );
+}
+
+/// [_fieldDecorationFor], reading the roles from the ambient theme.
+InputDecoration _fieldDecoration(BuildContext context) => _fieldDecorationFor(
+      _roleColor(context, ThemeRoles.outline),
+      _roleColor(context, ThemeRoles.primary),
+    );
+
+/// Reads a list-of-strings argument (e.g. a Select's `options`).
+List<String> _stringList(DataSource source, String key) {
+  if (!source.isList([key])) return const <String>[];
+  final int n = source.length([key]);
+  return <String>[
+    for (int i = 0; i < n; i++) source.v<String>([key, i]) ?? '',
+  ];
 }

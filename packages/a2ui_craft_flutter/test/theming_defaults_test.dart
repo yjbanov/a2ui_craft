@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:a2ui_craft/a2ui_craft.dart';
+import 'package:a2ui_craft/a2ui_craft.dart' hide Switch;
 import 'package:a2ui_craft_flutter/a2ui_craft_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -114,6 +114,39 @@ void main() {
     final Icon ring = tester.widget<Icon>(find.byWidgetPredicate(
         (Widget w) => w is Icon && w.icon == Icons.radio_button_off));
     expect(ring.color, const Color(0xFF223344));
+  });
+
+  testWidgets('Switch and Select follow the role mapping',
+      (WidgetTester tester) async {
+    await _mount(
+        tester,
+        '''
+      import core;
+      widget root = Column(children: [
+        Switch(value: true, onChanged: event "a" {}),
+        Select(value: "B", options: ["A", "B"], onChanged: event "c" {}),
+      ]);
+    ''',
+        theme: _fullTheme);
+
+    // Switch: primary fills the active track; outline inks the inactive
+    // thumb and the off-state track outline (selected clears it — Material
+    // hides the outline when on). _fullTheme names no onPrimary → the active
+    // thumb keeps the host look.
+    final Switch sw = tester.widget<Switch>(find.byType(Switch));
+    expect(sw.activeTrackColor, const Color(0xFFAA0000));
+    expect(sw.activeThumbColor, isNull);
+    expect(sw.inactiveThumbColor, const Color(0xFF223344));
+    expect(sw.trackOutlineColor!.resolve(const <WidgetState>{}),
+        const Color(0xFF223344));
+    expect(
+        sw.trackOutlineColor!.resolve(const <WidgetState>{
+          WidgetState.selected,
+        }),
+        isNull);
+    // Select: the closed control shows the bound option, chromed like the
+    // TextField (the shared _fieldDecoration).
+    expect(find.text('B'), findsOneWidget);
   });
 
   testWidgets('link inks Markdown hyperlinks; onSurface inks its body',

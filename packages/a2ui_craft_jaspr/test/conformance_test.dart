@@ -175,6 +175,17 @@ class _JasprCraftTester implements CraftTester {
     _tester.dispatchEvent(find.tag('input'), 'change');
     await _tester.pump();
   }
+
+  @override
+  Future<void> toggleSwitch() async {
+    // The switch is a checkbox input carrying `role=switch`.
+    _tester.dispatchEvent(
+      find.byComponentPredicate((Component c) =>
+          c is DomComponent && c.attributes?['role'] == 'switch'),
+      'change',
+    );
+    await _tester.pump();
+  }
 }
 
 /// Owns the mounted surface's theme so [_JasprCraftTester.retheme] can swap it

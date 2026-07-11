@@ -437,6 +437,99 @@ LocalWidgetLibrary createCoreComponents() {
             : <String, EventCallback>{'click': (_) => onChanged()},
       );
     },
+    // A bare on/off switch. Two-way bound like Checkbox. The web has no
+    // stock switch element, so this control is **always** adapter-painted
+    // (the one control with no native fallback): a pill track with a
+    // radial-gradient thumb whose position flips with the bound value (a
+    // controlled element — no pseudo-elements needed). Role mapping
+    // (DESIGN.md §8): `primary` fills the active track (`onPrimary` inks the
+    // thumb riding it), `outline` the inactive track; unthemed falls back to
+    // the button's scheme-adaptive pair. `role=switch` gives the checkbox
+    // input switch semantics (on/off from `checked`).
+    'Switch': (BuildContext context, DataSource source) {
+      ensureCoreControlStyleSheet(coreControlStyleSheet);
+      final bool value = source.v<bool>(['value']) ?? false;
+      final onChanged = source.handler<ValueChanged<bool>>(
+        ['onChanged'],
+        (HandlerTrigger trigger) =>
+            (bool v) => trigger(<String, Object?>{'value': v}),
+      );
+      final String onTrack =
+          _roleColor(context, ThemeRoles.primary) ?? _kButtonSurfaceFallback;
+      final String onThumb =
+          _roleColor(context, ThemeRoles.onPrimary) ?? _kButtonInkFallback;
+      final String offTrack =
+          _roleColor(context, ThemeRoles.outline) ?? _kSwitchOffTrackFallback;
+      final String thumb = value ? onThumb : _kSwitchOffThumbFallback;
+      final String at = value ? '25px 10px' : '11px 10px';
+      return input(
+        type: InputType.checkbox,
+        checked: value,
+        classes: 'craft-switch',
+        attributes: const <String, String>{'role': 'switch'},
+        styles: Styles(raw: <String, String>{
+          'appearance': 'none',
+          'width': '36px',
+          'height': '20px',
+          'margin': '0',
+          'border': 'none',
+          'border-radius': '10px',
+          'vertical-align': 'middle',
+          'background': 'radial-gradient(circle at $at, $thumb 0 7px, '
+              'transparent 8px), ${value ? onTrack : offTrack}',
+        }),
+        events: onChanged == null
+            ? null
+            : <String, EventCallback>{'change': (_) => onChanged(!value)},
+      );
+    },
+    // A single-choice dropdown over string `options` — the bare control;
+    // label placement is a template's choice, like TextField. Two-way bound:
+    // `onChanged` is a2ui_core's setter for the bound `value`. Shares the
+    // TextField chrome roles; unthemed stays the native UA select (§9.1).
+    'Select': (BuildContext context, DataSource source) {
+      ensureCoreControlStyleSheet(coreControlStyleSheet);
+      final List<String> options = _stringList(source, 'options');
+      final String? value = source.v<String>(['value']);
+      final onChanged = source.handler<ValueChanged<String>>(
+        ['onChanged'],
+        (HandlerTrigger trigger) =>
+            (String v) => trigger(<String, Object?>{'value': v}),
+      );
+      final String? outline = _roleColor(context, ThemeRoles.outline);
+      final String? accent = _roleColor(context, ThemeRoles.primary);
+      final String? ink = _roleColor(context, ThemeRoles.onSurface);
+      final bool unthemed = outline == null && accent == null && ink == null;
+      return select(
+        classes: outline == null ? null : 'craft-select',
+        styles: unthemed
+            ? null
+            : Styles(raw: <String, String>{
+                if (outline != null) ...<String, String>{
+                  'border': '1px solid $outline',
+                  'border-radius': '6px',
+                  'padding': '8px 12px',
+                  'background-color': 'transparent',
+                  'font': 'inherit',
+                  '--craft-focus': accent ?? outline,
+                },
+                if (ink != null) 'color': ink,
+              }),
+        onChange: onChanged == null
+            ? null
+            : (List<String> values) {
+                if (values.isNotEmpty) onChanged(values.first);
+              },
+        <Component>[
+          for (final String o in options)
+            // `selected:` on the matching option, not `value` on the select:
+            // the select's value is applied before its options mount.
+            option(value: o, selected: o == value, <Component>[
+              Component.text(o),
+            ]),
+        ],
+      );
+    },
     // A bare numeric slider (no label — that is a template's choice). Two-way
     // bound: `onChanged` is a2ui_core's setter for the bound `value`.
     'Slider': (BuildContext context, DataSource source) {
@@ -839,6 +932,15 @@ Styles? _bodyStyle(BuildContext context) {
   });
 }
 
+/// Reads a list-of-strings argument (e.g. a Select's `options`).
+List<String> _stringList(DataSource source, String key) {
+  if (!source.isList([key])) return const <String>[];
+  final int n = source.length([key]);
+  return <String>[
+    for (int i = 0; i < n; i++) source.v<String>([key, i]) ?? '',
+  ];
+}
+
 /// The themed Checkbox glyph — adapter-owned painting (DESIGN.md §8).
 ///
 /// Unthemed (no `primary`), the native UA checkbox is the web idiom's stock
@@ -948,6 +1050,10 @@ const String _kCaptionFallback = 'light-dark(#5f6368, #9aa0a6)';
 // instead: per-idiom latitude, DESIGN.md §8.)
 const String _kButtonSurfaceFallback = 'light-dark(#1a73e8, #8ab4f8)';
 const String _kButtonInkFallback = 'light-dark(#ffffff, #202124)';
+// The Switch is always adapter-painted (no UA stock switch exists), so its
+// off state needs scheme-adaptive fallbacks too.
+const String _kSwitchOffTrackFallback = 'light-dark(#c4c7c5, #5f6368)';
+const String _kSwitchOffThumbFallback = 'light-dark(#ffffff, #202124)';
 
 /// The stock corner rounding of an unstyled `Button` — the neutral Craft
 /// default, shared with the Flutter adapter so the two web panes agree.
@@ -968,9 +1074,9 @@ const String coreControlStyleSheet = '''
 .craft-button:not(:disabled) { cursor: pointer; }
 .craft-button:not(:disabled):hover { filter: brightness(0.94); }
 .craft-button:not(:disabled):active { filter: brightness(0.86); }
-.craft-checkbox:not(:disabled), .craft-radio:not(:disabled) { cursor: pointer; }
-.craft-textfield:focus { border-color: var(--craft-focus); }
-.craft-textfield:focus-visible { outline: 2px solid var(--craft-focus); outline-offset: 1px; }
+.craft-checkbox:not(:disabled), .craft-radio:not(:disabled), .craft-switch:not(:disabled) { cursor: pointer; }
+.craft-textfield:focus, .craft-select:focus { border-color: var(--craft-focus); }
+.craft-textfield:focus-visible, .craft-select:focus-visible { outline: 2px solid var(--craft-focus); outline-offset: 1px; }
 .craft-slider:not(:disabled) { cursor: pointer; }
 .craft-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 16px; height: 16px; border-radius: 50%; border: none; background: var(--craft-slider-thumb); }
 .craft-slider::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; border: none; background: var(--craft-slider-thumb); }

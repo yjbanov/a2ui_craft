@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 import 'package:a2ui_core/a2ui_core.dart';
-import 'package:a2ui_craft/a2ui_craft.dart';
+// The model's `Switch` (the RFW switch expression) would shadow Material's.
+import 'package:a2ui_craft/a2ui_craft.dart' hide Switch;
 import 'package:a2ui_craft_flutter/a2ui_craft_flutter.dart';
 import 'package:a2ui_craft_testing/a2ui_craft_testing.dart';
 import 'package:flutter/material.dart';
@@ -132,6 +133,12 @@ class _FlutterCraftTester implements CraftTester {
   @override
   Future<void> toggleCheckbox() async {
     await _tester.tap(find.byType(Checkbox));
+    await _tester.pump();
+  }
+
+  @override
+  Future<void> toggleSwitch() async {
+    await _tester.tap(find.byType(Switch));
     await _tester.pump();
   }
 }

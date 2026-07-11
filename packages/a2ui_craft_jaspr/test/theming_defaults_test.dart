@@ -145,6 +145,52 @@ void main() {
         'radial-gradient(circle, rgba(170, 0, 0, 1.0) 0 40%, transparent 45%)');
   });
 
+  testComponents('Switch/Select follow the role mapping; Switch never UA',
+      (ComponentTester tester) async {
+    // Switch is the one control with no native fallback (the web has no
+    // stock switch), so it is adapter-painted in every state: primary fills
+    // the active track (the thumb keeps the scheme-adaptive fallback —
+    // _fullTheme names no onPrimary), outline the inactive track. Select
+    // shares the TextField chrome roles.
+    await _mount(
+        tester,
+        '''
+      import core;
+      widget root = Column(children: [
+        Switch(value: true, onChanged: event "a" {}),
+        Switch(value: false, onChanged: event "b" {}),
+        Select(value: "B", options: ["A", "B"], onChanged: event "c" {}),
+      ]);
+    ''',
+        theme: _fullTheme);
+
+    expect(_styleValues('background'), <String>[
+      'radial-gradient(circle at 25px 10px, light-dark(#ffffff, #202124) '
+          '0 7px, transparent 8px), rgba(170, 0, 0, 1.0)',
+      'radial-gradient(circle at 11px 10px, light-dark(#ffffff, #202124) '
+          '0 7px, transparent 8px), rgba(34, 51, 68, 1.0)',
+    ]);
+    expect(_styleValues('border'),
+        <String>['none', 'none', '1px solid rgba(34, 51, 68, 1.0)']);
+    expect(_styleValues('--craft-focus'), <String>['rgba(170, 0, 0, 1.0)']);
+    expect(_styleValues('color'), <String>['rgba(17, 34, 51, 1.0)']);
+
+    // Unthemed, the Switch still paints — with the scheme-adaptive fallback
+    // pair — while the Select reverts to the native UA control.
+    await _mount(tester, '''
+      import core;
+      widget root = Column(children: [
+        Switch(value: true, onChanged: event "a" {}),
+        Select(value: "B", options: ["A", "B"], onChanged: event "c" {}),
+      ]);
+    ''');
+    expect(_styleValues('background'), <String>[
+      'radial-gradient(circle at 25px 10px, light-dark(#ffffff, #202124) '
+          '0 7px, transparent 8px), light-dark(#1a73e8, #8ab4f8)',
+    ]);
+    expect(_styleValues('border'), <String>['none']);
+  });
+
   testComponents('unthemed Checkbox/Radio stay the native UA controls',
       (ComponentTester tester) async {
     // No theme: blend in (§9.1) — the web idiom's stock look is the UA

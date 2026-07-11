@@ -581,6 +581,35 @@
         child_list_template, markdown_text, sports_player, event_detail,
         countdown_timer, user_profile, workout_summary, incremental) —
         candidates for upgrading or for a future "catalog breadth" property.
+- [ ] **Control normalization (DESIGN.md §8, "The controls").** Give every
+      control primitive its specified, theme-driven, platform-idiomatic look —
+      the H2 proof for controls: framework never visible, platform may be;
+      each role inks the same part to the same degree on both adapters.
+      Control-by-control slices, each spec → both adapters → conformance →
+      samples:
+      - [ ] **1. `CornerRadius` value type** in the shared vocabulary (Pillar
+        B): scalar px, half-extent clamp specified; corner *style* left to the
+        idiom.
+      - [ ] **2. `Button`** — the four-layer paint model (surface / state layer
+        / content / composite effects; child is content, never chrome). Props
+        `color`, `cornerRadius`; default = idiom's stock button on
+        `primary`/`onPrimary`; transparent surface = text button. Flutter:
+        `Material` + `InkWell(customBorder:)`; Jaspr: strip UA chrome, hover /
+        active overlays + `:focus-visible` ring. Simplify the calculator `Key`
+        onto it.
+      - [ ] **3. `Checkbox` + `Radio`** — pattern-setters for painted glyph
+        controls: `appearance: none` custom rendering on Jaspr (accent-color
+        can only tint); role mapping (`primary` active fill, `outline` box,
+        `onPrimary` mark); resolves both adapters' Radio TODOs.
+      - [ ] **4. `TextField`** — chrome spec (border/padding via `outline`,
+        ink via `onSurface`); the one control with no `.adaptive` path.
+      - [ ] **5. `Slider`** — the hardest paint (track/thumb); role mapping
+        `primary` active track + thumb, `outline` inactive track.
+      - [ ] **6. `Switch` + `Select`** — new primitives once the pattern
+        exists (also fills the controls sample gap above).
+      - [ ] **7. Cupertino idiom preview** — `ThemeData.platform` toggle in
+        the site's Flutter pane steering the `.adaptive` constructors;
+        per-idiom role-limit tables authored per control (DESIGN.md §13).
 - [ ] **Project authoring & deployment tooling (§10).** Show a project is a
       *separate, ephemerally loadable artifact* from its host, publishable to a
       CDN with no compile step. Thin slices:

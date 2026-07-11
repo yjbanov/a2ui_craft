@@ -528,9 +528,11 @@ This section is the contract that keeps the adapters honest. It is mirrored by
 the project skill that governs adapter work.
 
 The goal is **behavioral identity, not pixel identity** — like Flutter's Material
-vs. Cupertino, the same contract can look different per framework. "Behavior"
-means: the same template renders the same content, the same data bindings update
-the same way, and the same interactions dispatch the same events.
+vs. Cupertino, the same contract can look different per **platform idiom**; what
+it may never do is look different because of the *framework* (the consistency
+principle, §8). "Behavior" means: the same template renders the same content,
+the same data bindings update the same way, and the same interactions dispatch
+the same events.
 
 ### MUST be identical across every adapter (no deviation)
 
@@ -808,6 +810,7 @@ framework-neutral replacement for RFW's intensely Flutter-specific
 | `Dimension` | `hug` \| `fill` \| `fixed(px)` \| `flex(n)` | the explicit-sizing decision; removes default-divergence |
 | `Color` | RGBA | |
 | `EdgeInsets` | per-side px (padding / margin) | |
+| `CornerRadius` | scalar px; large values clamp to half the box (pill / circle) | corner *style* (arc vs. continuous curve) is platform idiom (the controls, below); a per-corner form is a reserved extension |
 | `MainAxisAlignment` / `CrossAxisAlignment` | flexbox-aligned enums | map per the table above |
 | `Axis` | `horizontal` \| `vertical` | `Row`/`Column` are `Flex` + this |
 | `TextStyle` | size, weight, color, … | |
@@ -854,6 +857,94 @@ The order is **depth-first on layout + the value types**: `Flex`, `Box`, and the
 `Dimension`/`EdgeInsets`/alignment types are where Pillars A–C are proven and where
 cross-framework divergence is hardest. Controls and atoms then compose on that
 proven foundation, so breadth is comparatively cheap.
+
+### The controls: one spec, platform-idiomatic renderings
+
+Layout primitives are look-free: they arrange, and whatever they contain
+provides the pixels. **Controls cannot be look-free.** A checkbox glyph, a
+slider's track and thumb, a button's pressed feedback must be *painted*, and
+none of it can be composed out of other primitives — there is no templatizing a
+thumb drag, or an ink splash spreading under a label. Micro-interactions are
+exactly the kind of thing the template language must never be asked to express
+(§4): the cost of native-grade interaction lives in **adapter code**, written
+once per framework with the full power of that framework, not in templates. So
+each control primitive owns a **specified default look**, and its spec (Pillar
+A) pins three things: its props and behavior (§7), its **role mapping** (which
+theme roles ink which parts, §9.4), and its **paint model** (below).
+
+#### The consistency principle: the framework must never be visible; the platform may be
+
+A control renders as a function of *(spec, platform idiom, theme)* — and
+nothing else. Idiom variance is intentional; it is the point of native
+rendering: a switch *should* look Material on Android, Cupertino on iOS, and
+web-native in a browser. (The demo site's side-by-side panes deliberately show
+two idioms at once — "this is the web; this is mobile.") What H2 forbids is
+variance that traces to the *framework*:
+
+- Two adapters rendering the **same idiom** must agree on the role mapping and
+  the geometry envelope.
+- Two idioms rendering the **same template** must agree on behavior and on role
+  *semantics*: a role inks the same part of the control to the same degree —
+  `primary` **fully fills** the active state everywhere, never a full fill on
+  one adapter and a partial tint on another.
+- Pixel identity remains a non-goal (§7).
+
+The idiom is **host-selected, not framework-implied**. The Flutter adapter
+renders Material or Cupertino from render-time configuration (mechanically:
+`ThemeData.platform` steering the `.adaptive` control constructors) — one
+adapter, several idioms. The Jaspr adapter renders the web idiom with
+**adapter-owned styling** (`appearance: none` + explicit CSS): UA-styled
+controls accept only a tint (`accent-color`), which cannot satisfy the role
+mapping.
+
+**Per-idiom limits.** An idiom may **ignore** a role it does not surface (a
+Cupertino switch has no `outline` to ink); each control's spec states which
+roles each idiom consumes. An idiom must never *repurpose* a role onto a
+different part.
+
+#### The paint model: four layers, one owner
+
+| # | Layer | What it paints |
+| --- | --- | --- |
+| 1 | **Surface** | background color, border, corner shape |
+| 2 | **State layer** | hover / pressed overlays and ink splash, clipped to the surface |
+| 3 | **Content** | the child (label, icon, row), placed with padding + alignment |
+| 4 | **Composite effects** | pressed-fade, disabled dimming — applied to the whole stack |
+
+The control owns **all four layers**. The state layer *interleaves* the others
+— Material draws ink on the surface **under** the label; a hover wash sits
+above the background but below the content; Cupertino's pressed state fades the
+composite, label included — so no decomposition in which the child supplies the
+surface can order the layers correctly. Hence the rule: **a control's child is
+content, never chrome.**
+
+`Button` is the control this rule bites hardest. It owns its surface (`color`,
+`cornerRadius` props), its state layer in the active idiom (ink splash under
+Material, pressed-fade under Cupertino, hover/active overlays and a
+`:focus-visible` ring on the web), its content placement, and its composite
+effects. Unstyled, it is the idiom's stock button inked by
+`primary`/`onPrimary`; a transparent surface is the "text button" degenerate
+case — so there is **no separate look-free pressable primitive**, and a fully
+bespoke button is the replacement escape hatch (above).
+
+#### Corner radius is an amount; corner style is idiom
+
+`CornerRadius` is a **scalar** in the shared value vocabulary (Pillar B): `0`
+is sharp, `n` rounds, and a large value clamps to half the box's smaller extent
+(pill / circle — the clamp is specified so both adapters agree). How the corner
+*curves* is the idiom's decision — a circular arc under Material and on the web
+(`border-radius`), Apple's continuous superellipse under Cupertino
+(`RoundedSuperellipseBorder`). The template says how *much*, never *which
+curve*. There is deliberately **no `shape` prop**: it would push a per-platform
+geometry decision onto template authors, and the web could not honor most of it
+anyway. A per-corner form is a reserved additive extension; anything beyond
+rounded rectangles is the replacement escape hatch.
+
+#### Control conformance
+
+Pillar C extends per control, on both adapters, in light and dark: the default
+look reads its mapped roles, and re-theming a role re-inks the mapped part —
+asserted with the painted-probe pattern (§9.6), never pixels.
 
 ### What this is not
 
@@ -941,10 +1032,12 @@ data, and most of it turns out to be ephemeral-capable already:
    item 2 below: branded catalog templates.)
 2. **Component styling / variants** — "our button is pill-shaped with our accent."
    **Already the author's job, already ephemeral:** a branded component is a
-   *catalog template* over primitives (`widget Button = Box(color: …, radius: …,
-   child: …)`), and the author *owns the catalog the agent draws from*. Tokens make
-   this clean — the branded templates reference tokens instead of hardcoded values,
-   so a re-skin swaps tokens, not templates.
+   *catalog template* over primitives (`widget BrandButton = Button(color:
+   theme.color.brand, cornerRadius: …, child: …)` — styling the control's
+   surface while its state layer and feedback stay the control's, §8), and the
+   author *owns the catalog the agent draws from*. Tokens make this clean — the
+   branded templates reference tokens instead of hardcoded values, so a re-skin
+   swaps tokens, not templates.
 3. **New render code / novel interaction behaviors** — a genuinely new painted
    widget, a custom gesture or animation. These **cannot** be ephemeral (same limit
    as custom primitives; this is the "Later — ephemeral sandboxed logic" layer in
@@ -963,10 +1056,9 @@ Three tiers, increasingly explicit — again the CSS model:
 - **Ambient role-defaults (the cascade).** The runtime holds the resolved active
   theme; each primitive reads its role default when a prop is unset — an unstyled
   `Text` takes `color.onSurface` and the type scale, a `Checkbox` accent takes
-  `color.primary`. (`Button` deliberately reads *nothing*: the primitive is a
-  look-free accessible pressable, and branded buttons are catalog *templates*
-  referencing roles explicitly.) This is what lets an *unmodified* template pick
-  up the brand with zero per-widget work. When a role is unset in the theme, the
+  `color.primary`, an unstyled `Button` takes a `color.primary` surface with
+  `color.onPrimary` content ink (the control paint model, §8). This is what lets
+  an *unmodified* template pick up the brand with zero per-widget work. When a role is unset in the theme, the
   primitive falls back to the **host** default (Flutter `Theme.of` / CSS
   inherit) — so "blend in" is simply the base layer of the cascade, and a
   partial theme overrides only what it names.
@@ -997,7 +1089,8 @@ M3 ∩ shadcn intersection — so existing exports map on without translation:
 `color.surface`/`onSurface`/`onSurfaceVariant`, `color.primary` (the accent),
 `color.outline`, `color.link`, plus a sizes-only type scale
 (`type.body.size`, `type.caption.size`, `type.heading.<n>.size`);
-`onPrimary`/`error`/`onError` are named-now-consumed-later. Radius/spacing
+`onPrimary` is consumed by the control paint model (§8);
+`error`/`onError` are named-now-consumed-later. Radius/spacing
 scales, font families/weights, and `color.background` are deliberately deferred.
 
 **No selectors — a deliberate divergence from CSS.** A CSS stylesheet can
@@ -1248,6 +1341,12 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
 - **Type model:** the precise canonical shapes of the §8 value types, and how
   `Dimension`'s `flex`/`fill`/`hug` interact with nested scroll/intrinsic-sizing
   edge cases.
+- **Per-idiom role limits (§8):** the control contract lets an idiom ignore a
+  role it does not surface; the concrete tables — which roles the Material,
+  Cupertino, and web renderings of each control consume — are authored
+  control-by-control as the controls land. Same for `TextField` under Cupertino,
+  which has no `.adaptive` constructor (a separate `CupertinoTextField`
+  mapping, or Material-only at first).
 - **Catalog packaging & versioning:** the project (§10) answers how templates
   are authored and bundled; still open is how catalogs and their templates are
   **versioned** as they evolve — what a host pins, and how a project declares

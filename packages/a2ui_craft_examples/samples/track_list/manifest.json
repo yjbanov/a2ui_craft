@@ -1,3 +1,6 @@
 {
-  "name": "Track List"
+  "name": "Track List",
+  "demonstrates": [
+    "layout"
+  ]
 }

@@ -1,3 +1,7 @@
 {
-  "name": "Form"
+  "name": "Form",
+  "demonstrates": [
+    "controls",
+    "a2ui"
+  ]
 }

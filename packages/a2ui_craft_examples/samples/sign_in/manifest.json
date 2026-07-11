@@ -1,3 +1,6 @@
 {
-  "name": "Sign In"
+  "name": "Sign In",
+  "demonstrates": [
+    "controls"
+  ]
 }

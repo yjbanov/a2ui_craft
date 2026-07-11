@@ -1,3 +1,6 @@
 {
-  "name": "Email Compose"
+  "name": "Email Compose",
+  "demonstrates": [
+    "controls"
+  ]
 }

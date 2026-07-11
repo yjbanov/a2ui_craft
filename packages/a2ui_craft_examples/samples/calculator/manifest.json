@@ -1,3 +1,8 @@
 {
-  "name": "Calculator"
+  "name": "Calculator",
+  "demonstrates": [
+    "layout",
+    "controls",
+    "functions"
+  ]
 }

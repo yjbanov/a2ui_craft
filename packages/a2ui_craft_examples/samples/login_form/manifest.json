@@ -1,3 +1,6 @@
 {
-  "name": "Login Form"
+  "name": "Login Form",
+  "demonstrates": [
+    "controls"
+  ]
 }

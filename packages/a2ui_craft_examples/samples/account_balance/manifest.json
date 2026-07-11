@@ -1,3 +1,7 @@
 {
-  "name": "Account Balance"
+  "name": "Account Balance",
+  "demonstrates": [
+    "controls",
+    "functions"
+  ]
 }

@@ -1,3 +1,6 @@
 {
-  "name": "Interactive Button"
+  "name": "Interactive Button",
+  "demonstrates": [
+    "controls"
+  ]
 }

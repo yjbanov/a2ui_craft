@@ -1,3 +1,7 @@
 {
-  "name": "Greeting"
+  "name": "Greeting",
+  "demonstrates": [
+    "controls",
+    "a2ui"
+  ]
 }

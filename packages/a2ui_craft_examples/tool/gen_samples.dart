@@ -48,6 +48,7 @@ void main() {
     ..writeln('    required this.schema,')
     ..writeln('    required this.messages,')
     ..writeln('    this.theme,')
+    ..writeln('    this.demonstrates = const <String>[],')
     ..writeln('  });')
     ..writeln()
     ..writeln('  final String id;')
@@ -59,6 +60,13 @@ void main() {
     ..writeln('  /// The project manifest\'s optional `theme` block (a '
         'ProjectTheme config), or null.')
     ..writeln('  final String? theme;')
+    ..writeln()
+    ..writeln('  /// The demonstrated-property ids from the manifest\'s '
+        '`demonstrates` list')
+    ..writeln('  /// (see `demo_properties.dart`); empty when the sample '
+        'demonstrates none')
+    ..writeln('  /// of the tracked properties.')
+    ..writeln('  final List<String> demonstrates;')
     ..writeln()
     ..writeln('  /// Builds a [SampleSpec], substituting `{{framework}}`; the '
         'host supplies')
@@ -93,6 +101,9 @@ void main() {
     final Object? themeConfig = project['theme'];
     final String? theme =
         themeConfig == null ? null : '${_pretty.convert(themeConfig)}\n';
+    // The manifest's demonstrated-property labels (demo-catalog metadata).
+    final List<String> demonstrates =
+        (project['demonstrates'] as List<dynamic>? ?? <dynamic>[]).cast();
     for (final String? s in <String?>[template, schema, messages, theme]) {
       if (s != null && s.contains("'''")) {
         stderr.writeln("Sample '$id' contains ''' — cannot raw-embed.");
@@ -117,6 +128,10 @@ void main() {
         ..writeln("    theme: r'''")
         ..write(theme)
         ..writeln("''',");
+    }
+    if (demonstrates.isNotEmpty) {
+      final String items = demonstrates.map((String d) => "'$d'").join(', ');
+      b.writeln('    demonstrates: <String>[$items],');
     }
     b.writeln('  ),');
   }

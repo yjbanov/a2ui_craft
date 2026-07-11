@@ -1,3 +1,6 @@
 {
-  "name": "Row Layout"
+  "name": "Row Layout",
+  "demonstrates": [
+    "layout"
+  ]
 }

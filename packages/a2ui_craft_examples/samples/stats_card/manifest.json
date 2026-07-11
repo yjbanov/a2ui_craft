@@ -1,3 +1,7 @@
 {
-  "name": "Stats Card"
+  "name": "Stats Card",
+  "demonstrates": [
+    "layout",
+    "controls"
+  ]
 }

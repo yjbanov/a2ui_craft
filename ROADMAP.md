@@ -556,6 +556,31 @@
           what CSS can't reach (a themed project's mode, the embedded Flutter
           shell's explicit ThemeMode). Pinned by per-adapter fallback tests
           (light-dark pairs on Jaspr; light/dark brightness on Flutter).
+- [~] **Demonstrated-property labels + gallery filter.** Every sample manifest
+      carries a `demonstrates` list from a fixed vocabulary
+      (`demo_properties.dart`: layout / controls & state / theming / functions
+      / a2ui), baked into `RawSample` and surfaced as the gallery's checkbox
+      filter bar (AND semantics, per-property counts, tag chips on cards).
+      Labeling is deliberately strict, so the counts double as a coverage
+      audit. **Gaps it exposed** (each a follow-up sample candidate):
+      - [ ] **A2UI integration is the thinnest (3/45):** only `greeting`,
+        `profile_card`, and `form` compose multiple components by id refs or
+        touch the data model; everything else is a single-component
+        `updateComponents`. No sample uses an A2UI-level `ChildList`
+        (`child_list_template`, despite the name, loops *inside* its
+        template), and none demonstrates streamed/incremental surface updates
+        (`incremental` / `incremental_dashboard` are single-shot).
+      - [ ] **Layout gaps:** no sample (and no primitive) demonstrates Stack/
+        z-order, baseline alignment, margin, or transform — matching the §8
+        Pillar D backlog.
+      - [ ] **Controls gaps:** no Switch, no Radio-group sample, no tabs, no
+        Select in any sample.
+      - [ ] **16 samples demonstrate none of the tracked properties** (static
+        showcase cards: contact_card, gallery, simple_text, restaurant_card,
+        shipping_status, flight_status, purchase_complete, credit_card,
+        child_list_template, markdown_text, sports_player, event_detail,
+        countdown_timer, user_profile, workout_summary, incremental) —
+        candidates for upgrading or for a future "catalog breadth" property.
 - [ ] **Project authoring & deployment tooling (§10).** Show a project is a
       *separate, ephemerally loadable artifact* from its host, publishable to a
       CDN with no compile step. Thin slices:

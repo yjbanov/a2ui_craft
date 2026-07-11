@@ -17,6 +17,7 @@ class RawSample {
     required this.schema,
     required this.messages,
     this.theme,
+    this.demonstrates = const <String>[],
   });
 
   final String id;
@@ -27,6 +28,11 @@ class RawSample {
 
   /// The project manifest's optional `theme` block (a ProjectTheme config), or null.
   final String? theme;
+
+  /// The demonstrated-property ids from the manifest's `demonstrates` list
+  /// (see `demo_properties.dart`); empty when the sample demonstrates none
+  /// of the tracked properties.
+  final List<String> demonstrates;
 
   /// Builds a [SampleSpec], substituting `{{framework}}`; the host supplies
   /// any action handling separately.
@@ -122,6 +128,7 @@ widget Greeting = Column(children: [
   }
 ]
 ''',
+    demonstrates: <String>['controls', 'a2ui'],
   ),
   RawSample(
     id: 'counter',
@@ -186,6 +193,7 @@ widget Counter { count: 0 } = Column(children: [
   }
 ]
 ''',
+    demonstrates: <String>['controls', 'functions'],
   ),
   RawSample(
     id: 'toggle',
@@ -253,6 +261,7 @@ widget Toggle { open: false } =
   }
 ]
 ''',
+    demonstrates: <String>['controls'],
   ),
   RawSample(
     id: 'calculator',
@@ -425,6 +434,7 @@ widget Calculator { display: 0, acc: 0, op: "" } = Card(child: Column(
   }
 ]
 ''',
+    demonstrates: <String>['layout', 'controls', 'functions'],
   ),
   RawSample(
     id: 'boxes',
@@ -498,6 +508,7 @@ widget Boxes = Column(gap: 20, children: [
   }
 ]
 ''',
+    demonstrates: <String>['layout'],
   ),
   RawSample(
     id: 'layout',
@@ -567,6 +578,7 @@ widget LayoutDemo = Column(gap: 12, children: [
   }
 ]
 ''',
+    demonstrates: <String>['layout'],
   ),
   RawSample(
     id: 'contact_card',
@@ -736,6 +748,7 @@ widget StatsCard = Box(width: 300.0, child: Card(child: Column(gap: 12.0, childr
   }
 ]
 ''',
+    demonstrates: <String>['layout', 'controls'],
   ),
   RawSample(
     id: 'profile_card',
@@ -833,6 +846,7 @@ widget ProfileCard = Card(child: Column(children: [
   "mode": "dark"
 }
 ''',
+    demonstrates: <String>['theming', 'a2ui'],
   ),
   RawSample(
     id: 'gallery',
@@ -1011,6 +1025,7 @@ widget Toggle = Checkbox(value: args.value, onChanged: args.setValue);
   }
 ]
 ''',
+    demonstrates: <String>['controls', 'a2ui'],
   ),
   RawSample(
     id: 'simple_text',
@@ -1120,6 +1135,7 @@ widget InteractiveButton = Column(crossAxisAlignment: "center",
   }
 ]
 ''',
+    demonstrates: <String>['controls'],
   ),
   RawSample(
     id: 'login_form',
@@ -1208,6 +1224,7 @@ widget LoginForm = Column(gap: 12.0, crossAxisAlignment: "stretch", children: [
   }
 ]
 ''',
+    demonstrates: <String>['controls'],
   ),
   RawSample(
     id: 'weather',
@@ -1376,6 +1393,7 @@ widget Weather = Card(child: Column(crossAxisAlignment: "center", gap: 6.0,
   }
 }
 ''',
+    demonstrates: <String>['theming'],
   ),
   RawSample(
     id: 'product_card',
@@ -1543,6 +1561,7 @@ widget ProductCard { qty: 1 } = Card(child: Column(gap: 8.0, children: [
   }
 }
 ''',
+    demonstrates: <String>['theming', 'controls', 'functions'],
   ),
   RawSample(
     id: 'restaurant_card',
@@ -1712,6 +1731,7 @@ widget AccountBalance { balance: 1245832 } = Card(child: Column(gap: 8.0,
   }
 ]
 ''',
+    demonstrates: <String>['controls', 'functions'],
   ),
   RawSample(
     id: 'shipping_status',
@@ -2128,6 +2148,7 @@ widget CoffeeOrder { qty1: 1, qty2: 1 } = Card(child: Column(gap: 8.0, children:
   }
 ]
 ''',
+    demonstrates: <String>['controls', 'functions'],
   ),
   RawSample(
     id: 'credit_card',
@@ -2424,6 +2445,7 @@ widget MusicPlayer = Card(child: Column(crossAxisAlignment: "center", gap: 8.0,
   }
 ]
 ''',
+    demonstrates: <String>['controls'],
   ),
   RawSample(
     id: 'notification_permission',
@@ -2497,6 +2519,7 @@ widget NotificationPermission = Card(child: Column(crossAxisAlignment: "center",
   }
 ]
 ''',
+    demonstrates: <String>['controls'],
   ),
   RawSample(
     id: 'sports_player',
@@ -2791,6 +2814,7 @@ widget StepCounter { steps: 0 } = Card(child: Column(
   }
 ]
 ''',
+    demonstrates: <String>['controls', 'functions'],
   ),
   RawSample(
     id: 'countdown_timer',
@@ -2935,6 +2959,7 @@ widget RowLayout = Row(mainAxisAlignment: "spaceBetween",
   }
 ]
 ''',
+    demonstrates: <String>['layout'],
   ),
   RawSample(
     id: 'user_profile',
@@ -3178,6 +3203,7 @@ widget ChatMessage = Card(child: Column(gap: 8.0, children: [
   }
 }
 ''',
+    demonstrates: <String>['theming'],
   ),
   RawSample(
     id: 'workout_summary',
@@ -3356,6 +3382,7 @@ widget TrackList = Card(child: Column(crossAxisAlignment: "stretch", gap: 8.0,
   }
 ]
 ''',
+    demonstrates: <String>['layout'],
   ),
   RawSample(
     id: 'financial_data_grid',
@@ -3456,6 +3483,7 @@ widget FinancialGrid = Card(child: Column(crossAxisAlignment: "stretch",
   }
 ]
 ''',
+    demonstrates: <String>['layout'],
   ),
   RawSample(
     id: 'formatted_text',
@@ -3526,6 +3554,7 @@ widget FormattedText = Column(crossAxisAlignment: "stretch", gap: 8.0,
   }
 ]
 ''',
+    demonstrates: <String>['controls'],
   ),
   RawSample(
     id: 'incremental',
@@ -3690,6 +3719,7 @@ widget ComplexLayout = SizedBox(width: 360.0, child: Column(
   }
 ]
 ''',
+    demonstrates: <String>['layout', 'controls'],
   ),
   RawSample(
     id: 'email_compose',
@@ -3783,6 +3813,7 @@ widget EmailCompose = SizedBox(width: 360.0, child: Card(child: Column(
   }
 ]
 ''',
+    demonstrates: <String>['controls'],
   ),
   RawSample(
     id: 'calendar_day',
@@ -3876,6 +3907,7 @@ widget CalendarDay = Card(child: Column(crossAxisAlignment: "stretch", gap: 8.0,
   }
 ]
 ''',
+    demonstrates: <String>['layout'],
   ),
   RawSample(
     id: 'sign_in',
@@ -3976,6 +4008,7 @@ widget SignIn = Card(child: Column(crossAxisAlignment: "stretch", gap: 10.0,
   }
 ]
 ''',
+    demonstrates: <String>['controls'],
   ),
   RawSample(
     id: 'incremental_dashboard',
@@ -4067,6 +4100,7 @@ widget Dashboard = Column(crossAxisAlignment: "stretch", gap: 10.0, children: [
   }
 ]
 ''',
+    demonstrates: <String>['layout'],
   ),
   RawSample(
     id: 'form_validator',
@@ -4167,6 +4201,7 @@ widget FormValidator = Card(child: Column(crossAxisAlignment: "stretch",
   }
 ]
 ''',
+    demonstrates: <String>['controls'],
   ),
 ];
 

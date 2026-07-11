@@ -1,3 +1,6 @@
 {
-  "name": "Calendar Day"
+  "name": "Calendar Day",
+  "demonstrates": [
+    "layout"
+  ]
 }

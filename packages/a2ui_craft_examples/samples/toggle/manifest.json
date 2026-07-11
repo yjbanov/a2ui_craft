@@ -1,3 +1,6 @@
 {
-  "name": "Toggle"
+  "name": "Toggle",
+  "demonstrates": [
+    "controls"
+  ]
 }

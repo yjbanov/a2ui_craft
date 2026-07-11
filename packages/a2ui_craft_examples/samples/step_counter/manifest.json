@@ -1,3 +1,7 @@
 {
-  "name": "Step Counter"
+  "name": "Step Counter",
+  "demonstrates": [
+    "controls",
+    "functions"
+  ]
 }

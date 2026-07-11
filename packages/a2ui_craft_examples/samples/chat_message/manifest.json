@@ -1,30 +1,61 @@
 {
   "name": "Chat",
+  "demonstrates": [
+    "theming"
+  ],
   "theme": {
     "tokens": {
       "color": {
         "$type": "color",
         "$description": "Indigo messaging brand — base layer (Light).",
-        "surface": { "$value": "#F5F7FF" },
-        "onSurface": { "$value": "#1A1C2E" },
-        "onSurfaceVariant": { "$value": "#646B8C" },
-        "primary": { "$value": "#3F51B5" },
-        "onPrimary": { "$value": "#FFFFFF" },
-        "outline": { "$value": "#D5DAF0" },
-        "link": { "$value": "#3F51B5" }
+        "surface": {
+          "$value": "#F5F7FF"
+        },
+        "onSurface": {
+          "$value": "#1A1C2E"
+        },
+        "onSurfaceVariant": {
+          "$value": "#646B8C"
+        },
+        "primary": {
+          "$value": "#3F51B5"
+        },
+        "onPrimary": {
+          "$value": "#FFFFFF"
+        },
+        "outline": {
+          "$value": "#D5DAF0"
+        },
+        "link": {
+          "$value": "#3F51B5"
+        }
       }
     },
     "modes": {
       "dark": {
         "color": {
           "$type": "color",
-          "surface": { "$value": "#171A2C" },
-          "onSurface": { "$value": "#E4E7FF" },
-          "onSurfaceVariant": { "$value": "#9FA8DA" },
-          "primary": { "$value": "#7986CB" },
-          "onPrimary": { "$value": "#171A2C" },
-          "outline": { "$value": "#3A3F5C" },
-          "link": { "$value": "#7986CB" }
+          "surface": {
+            "$value": "#171A2C"
+          },
+          "onSurface": {
+            "$value": "#E4E7FF"
+          },
+          "onSurfaceVariant": {
+            "$value": "#9FA8DA"
+          },
+          "primary": {
+            "$value": "#7986CB"
+          },
+          "onPrimary": {
+            "$value": "#171A2C"
+          },
+          "outline": {
+            "$value": "#3A3F5C"
+          },
+          "link": {
+            "$value": "#7986CB"
+          }
         }
       }
     }

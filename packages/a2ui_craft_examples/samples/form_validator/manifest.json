@@ -1,3 +1,6 @@
 {
-  "name": "Form Validator"
+  "name": "Form Validator",
+  "demonstrates": [
+    "controls"
+  ]
 }

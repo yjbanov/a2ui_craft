@@ -1,3 +1,7 @@
 {
-  "name": "Counter"
+  "name": "Counter",
+  "demonstrates": [
+    "controls",
+    "functions"
+  ]
 }

@@ -1,3 +1,6 @@
 {
-  "name": "Music Player"
+  "name": "Music Player",
+  "demonstrates": [
+    "controls"
+  ]
 }

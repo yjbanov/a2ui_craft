@@ -1,3 +1,7 @@
 {
-  "name": "Coffee Order"
+  "name": "Coffee Order",
+  "demonstrates": [
+    "controls",
+    "functions"
+  ]
 }

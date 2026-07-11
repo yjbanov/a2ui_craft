@@ -1,3 +1,6 @@
 {
-  "name": "Formatted Text"
+  "name": "Formatted Text",
+  "demonstrates": [
+    "controls"
+  ]
 }

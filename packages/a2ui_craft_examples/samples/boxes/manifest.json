@@ -1,3 +1,6 @@
 {
-  "name": "Boxes"
+  "name": "Boxes",
+  "demonstrates": [
+    "layout"
+  ]
 }

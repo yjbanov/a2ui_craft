@@ -1,3 +1,7 @@
 {
-  "name": "Complex Layout"
+  "name": "Complex Layout",
+  "demonstrates": [
+    "layout",
+    "controls"
+  ]
 }

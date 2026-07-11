@@ -1,3 +1,6 @@
 {
-  "name": "Dashboard"
+  "name": "Dashboard",
+  "demonstrates": [
+    "layout"
+  ]
 }

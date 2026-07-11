@@ -7,7 +7,6 @@
 import 'package:a2ui_craft/a2ui_craft.dart';
 import 'package:jaspr/jaspr.dart';
 
-import 'core_components.dart';
 import 'runtime.dart';
 
 export 'package:a2ui_craft/a2ui_craft.dart' show DynamicMap, LibraryName;
@@ -111,17 +110,8 @@ class _RemoteWidgetState extends State<RemoteWidget> {
 
   @override
   Component build(BuildContext context) {
-    return Component.fragment(<Component>[
-      // The core controls' state layer (hover/pressed pseudo-classes,
-      // DESIGN.md §8) — inline styles cannot express it, so each mounted
-      // surface carries the stylesheet. Duplicates are idempotent.
-      Component.element(
-        tag: 'style',
-        children: <Component>[Component.text(coreControlStyleSheet)],
-      ),
-      component.runtime.build(
-          context, component.widget, component.data, _eventHandler,
-          theme: component.theme),
-    ]);
+    return component.runtime.build(
+        context, component.widget, component.data, _eventHandler,
+        theme: component.theme);
   }
 }

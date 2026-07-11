@@ -6,6 +6,8 @@ import 'package:a2ui_craft/a2ui_craft.dart';
 import 'package:jaspr/dom.dart';
 import 'package:jaspr/jaspr.dart';
 
+import 'control_styles_stub.dart'
+    if (dart.library.js_interop) 'control_styles_web.dart';
 import 'runtime.dart';
 
 // Design notes (not part of the public API):
@@ -84,6 +86,11 @@ LocalWidgetLibrary createCoreComponents() {
       );
     },
     'Button': (BuildContext context, DataSource source) {
+      // The state layer (hover/pressed, layer 2) needs pseudo-classes, which
+      // inline styles cannot express; install the shared control stylesheet
+      // into the document head once (a no-op off-web and after the first
+      // control).
+      ensureCoreControlStyleSheet(coreControlStyleSheet);
       final onPressed = source.voidHandler(['onPressed']);
       final Rgba? color = Rgba.decode(source.v<String>(['color']));
       final CornerRadius radius = CornerRadius.decode(
@@ -844,11 +851,12 @@ const CornerRadius _kButtonCornerRadius = CornerRadius(6);
 const Insets _kButtonPadding = Insets.symmetric(vertical: 8, horizontal: 16);
 
 /// The state layer (layer 2 of the control paint model, DESIGN.md §8) of the
-/// core controls, as a stylesheet: hover/pressed feedback needs pseudo-classes,
-/// which inline styles cannot express. [RemoteWidget] renders this once per
-/// mounted surface (duplicate tags are idempotent). The `:focus-visible` ring
-/// stays the UA default — never removed. Disabled buttons get no visual
-/// dimming yet: samples still use handler-less buttons as static decoration.
+/// core controls, as a stylesheet: hover/pressed feedback needs
+/// pseudo-classes, which inline styles cannot express. Installed into the
+/// document head by the first control build (idempotent; a no-op off-web).
+/// The `:focus-visible` ring stays the UA default — never removed. Disabled
+/// buttons get no visual dimming yet: samples still use handler-less buttons
+/// as static decoration.
 const String coreControlStyleSheet = '''
 .craft-button:not(:disabled) { cursor: pointer; }
 .craft-button:not(:disabled):hover { filter: brightness(0.94); }

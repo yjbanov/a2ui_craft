@@ -33,7 +33,8 @@ LocalWidgetLibrary createCoreComponents() {
         return span(
           styles: Styles(raw: <String, String>{
             'font-size': _roleSize(context, ThemeRoles.captionSize) ?? '12px',
-            'color': _roleColor(context, ThemeRoles.onSurfaceVariant) ??
+            'color': _ContentInk.of(context) ??
+                _roleColor(context, ThemeRoles.onSurfaceVariant) ??
                 _kCaptionFallback,
           }),
           <Component>[Component.text(text)],
@@ -84,16 +85,66 @@ LocalWidgetLibrary createCoreComponents() {
     },
     'Button': (BuildContext context, DataSource source) {
       final onPressed = source.voidHandler(['onPressed']);
+      final Rgba? color = Rgba.decode(source.v<String>(['color']));
+      final CornerRadius radius = CornerRadius.decode(
+          _numArg(source, 'cornerRadius'),
+          fallback: _kButtonCornerRadius);
+      final Object? rawPadding = _insetsRaw(source, 'padding');
+      final Insets padding =
+          rawPadding == null ? _kButtonPadding : Insets.decode(rawPadding);
+      // Surface + content ink per the role mapping (DESIGN.md §8): unstyled,
+      // the idiom's stock button — `primary` surface, `onPrimary` content
+      // ink. An explicit color is the author's surface; the ambient ink
+      // stands (the author owns the pairing). A transparent color is the
+      // "text button" degenerate case: no surface, no ink override.
+      final String? surface;
+      final String? ink;
+      if (color != null) {
+        surface = color.alpha == 0 ? null : color.toCssString();
+        ink = null;
+      } else {
+        surface =
+            _roleColor(context, ThemeRoles.primary) ?? _kButtonSurfaceFallback;
+        ink = _roleColor(context, ThemeRoles.onPrimary) ?? _kButtonInkFallback;
+      }
+      Component content = source.child(['child']);
+      if (ink != null) {
+        // Layer 3 ownership: themed content primitives (Text/Icon) consult
+        // this before their ambient roles; unthemed bare text nodes inherit
+        // the CSS `color` set on the element below.
+        content = _ContentInk(color: ink, child: content);
+      }
       return button(
         // `type=button` opts out of implicit form submission; `disabled` keeps
         // a handler-less button out of the tab order and announced as disabled
         // — parity with the Flutter adapter's Semantics(enabled: false).
         type: ButtonType.button,
+        // The state layer (hover/active, layer 2) lives in
+        // [coreControlStyleSheet] keyed off this class — pseudo-classes cannot
+        // be expressed as inline styles.
+        classes: 'craft-button',
         disabled: onPressed == null,
         onClick: onPressed == null ? null : () => onPressed(),
-        [
-          source.child(['child'])
-        ],
+        styles: Styles(raw: <String, String>{
+          // Layer 1 — the surface: color and corner shape, no UA chrome.
+          'appearance': 'none',
+          'border': 'none',
+          'background-color': surface ?? 'transparent',
+          'border-radius': '${numberToDisplayString(radius.pixels)}px',
+          // Layer 3 — content placement. `font: inherit` drops the UA button
+          // font so button text reads like the surrounding template; the
+          // Flutter side centers via the same hug-then-center rule.
+          'padding': '${numberToDisplayString(padding.top)}px '
+              '${numberToDisplayString(padding.right)}px '
+              '${numberToDisplayString(padding.bottom)}px '
+              '${numberToDisplayString(padding.left)}px',
+          'font': 'inherit',
+          'display': 'inline-flex',
+          'align-items': 'center',
+          'justify-content': 'center',
+          if (ink != null) 'color': ink,
+        }),
+        [content],
       );
     },
     'Center': (BuildContext context, DataSource source) {
@@ -206,7 +257,8 @@ LocalWidgetLibrary createCoreComponents() {
     'Box': (BuildContext context, DataSource source) => _buildBox(source),
     'Image': (BuildContext context, DataSource source) => _buildImage(source),
     'Icon': (BuildContext context, DataSource source) {
-      final String? color = _roleColor(context, ThemeRoles.onSurface);
+      final String? color =
+          _ContentInk.of(context) ?? _roleColor(context, ThemeRoles.onSurface);
       return i(
         classes: 'material-icons',
         styles: color == null
@@ -735,7 +787,12 @@ Component _mdSpan(MarkdownSpan span, BuildContext context) {
 /// The ambient body-text style, or null when neither role is themed — an
 /// unthemed surface must render exactly the pre-theming DOM (DESIGN.md §9.4).
 Styles? _bodyStyle(BuildContext context) {
-  final String? color = _roleColor(context, ThemeRoles.onSurface);
+  // A control's content ink (e.g. a Button's `onPrimary`) is nearer than the
+  // ambient `onSurface` role — the control owns its content layer (DESIGN.md
+  // §8, the paint model). Unthemed bare text nodes need no styled wrapper:
+  // they inherit the CSS `color` the control sets on its own element.
+  final String? color =
+      _ContentInk.of(context) ?? _roleColor(context, ThemeRoles.onSurface);
   final String? size = _roleSize(context, ThemeRoles.bodySize);
   if (color == null && size == null) return null;
   return Styles(raw: <String, String>{
@@ -771,6 +828,52 @@ const String _kSurfaceFallback = 'light-dark(#ffffff, #2a2b2e)';
 const String _kDividerFallback =
     'light-dark(rgba(0, 0, 0, 0.12), rgba(255, 255, 255, 0.16))';
 const String _kCaptionFallback = 'light-dark(#5f6368, #9aa0a6)';
+// The unthemed Button surface/ink pair — the same blue family as the link
+// fallback, so the unthemed web idiom stays one palette. (The Flutter side
+// resolves through `Theme.of(context).colorScheme.primary`/`onPrimary`
+// instead: per-idiom latitude, DESIGN.md §8.)
+const String _kButtonSurfaceFallback = 'light-dark(#1a73e8, #8ab4f8)';
+const String _kButtonInkFallback = 'light-dark(#ffffff, #202124)';
+
+/// The stock corner rounding of an unstyled `Button` — the neutral Craft
+/// default, shared with the Flutter adapter so the two web panes agree.
+const CornerRadius _kButtonCornerRadius = CornerRadius(6);
+
+/// The stock content padding of a `Button` (layer 3 of the paint model);
+/// `padding: 0` opts a fully sized child (e.g. a fixed Box) out of it.
+const Insets _kButtonPadding = Insets.symmetric(vertical: 8, horizontal: 16);
+
+/// The state layer (layer 2 of the control paint model, DESIGN.md §8) of the
+/// core controls, as a stylesheet: hover/pressed feedback needs pseudo-classes,
+/// which inline styles cannot express. [RemoteWidget] renders this once per
+/// mounted surface (duplicate tags are idempotent). The `:focus-visible` ring
+/// stays the UA default — never removed. Disabled buttons get no visual
+/// dimming yet: samples still use handler-less buttons as static decoration.
+const String coreControlStyleSheet = '''
+.craft-button:not(:disabled) { cursor: pointer; }
+.craft-button:not(:disabled):hover { filter: brightness(0.94); }
+.craft-button:not(:disabled):active { filter: brightness(0.86); }
+''';
+
+/// The content ink a control installs over its subtree — layer 3 of the
+/// control paint model (DESIGN.md §8): a `Button` painting its default
+/// `primary` surface inks its content `onPrimary`, overriding the ambient
+/// `onSurface`/`onSurfaceVariant` role defaults that [_bodyStyle], the
+/// caption style, and `Icon` would otherwise read. Content primitives consult
+/// this *before* the ambient roles; explicit per-widget props still win over
+/// both (the cascade, DESIGN.md §9.5).
+class _ContentInk extends InheritedComponent {
+  const _ContentInk({required this.color, required super.child});
+
+  final String color;
+
+  static String? of(BuildContext context) =>
+      context.dependOnInheritedComponentOfExactType<_ContentInk>()?.color;
+
+  @override
+  bool updateShouldNotify(_ContentInk oldComponent) =>
+      color != oldComponent.color;
+}
 
 /// Reads a role size (a `dimension` token) as a CSS px length, or null for
 /// the host default.

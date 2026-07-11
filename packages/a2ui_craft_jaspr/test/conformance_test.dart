@@ -96,9 +96,11 @@ class _JasprCraftTester implements CraftTester {
   }
 
   /// The [property] the primitive explicitly set for [text]: read off the
-  /// nearest DOM ancestor carrying it. Conformance templates style a probed
-  /// property from exactly one ancestor, so `single` also guards against
-  /// ambiguous probes.
+  /// nearest DOM ancestor carrying it (the ancestor finder yields
+  /// nearest-first). An enclosing control may legitimately carry the same
+  /// property farther out — a Button sets `color` on its own element so bare
+  /// text inherits its content ink — and CSS resolves nearest-wins, so the
+  /// probe does too.
   String? _textStyleProperty(String text, String property) {
     final Iterable<Element> styled = find
         .ancestor(
@@ -109,9 +111,24 @@ class _JasprCraftTester implements CraftTester {
         )
         .evaluate();
     if (styled.isEmpty) return null;
-    return (styled.single.component as DomComponent)
+    return (styled.first.component as DomComponent)
         .styles!
         .properties[property];
+  }
+
+  @override
+  String? buttonSurfaceColorOf(String label) {
+    // The `<button>` element is the Button's surface (layer 1 of the paint
+    // model); nearest-first, like [_textStyleProperty].
+    final Iterable<Element> buttons = find
+        .ancestor(of: find.text(label), matching: find.tag('button'))
+        .evaluate();
+    if (buttons.isEmpty) return null;
+    final String? css = (buttons.first.component as DomComponent)
+        .styles
+        ?.properties['background-color'];
+    if (css == null || css == 'transparent') return null;
+    return _canonicalCssColor(css);
   }
 
   /// Canonicalizes the CSS color forms the primitives emit — hex defaults,

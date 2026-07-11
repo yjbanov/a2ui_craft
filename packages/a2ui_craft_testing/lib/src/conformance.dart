@@ -143,6 +143,16 @@ abstract interface class CraftTester {
   /// text node equal to [text], or null when the host default shows through.
   double? textFontSizeOf(String text);
 
+  /// The surface color (layer 1 of the control paint model, DESIGN.md §8)
+  /// the `Button` whose accessible name is [label] painted, canonicalized to
+  /// `#AARRGGBB` — or null when the button paints no surface (the transparent
+  /// "text button" case).
+  ///
+  /// Like [textColorOf], this probes the decision the primitive made (the
+  /// role mapping: the same role inks the same part to the same degree on
+  /// every adapter), never pixels.
+  String? buttonSurfaceColorOf(String label);
+
   /// Activates (taps/clicks) the interactive element carrying the given
   /// component `key`.
   Future<void> activate(String key);
@@ -961,12 +971,11 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
   driver.defineTest(
     'Button announces a button role, named by its child, on and off',
     (CraftTester tester) async {
-      // The primitive is look-free (the child is the appearance — branding is
-      // a catalog template's job), but the *accessibility* contract is the
-      // primitive's: a button role whose accessible name derives from the
-      // child, and an explicit disabled state when there is no handler.
-      // Flutter merges the child into a button semantics node; Jaspr renders a
-      // native <button> — same announcement either way.
+      // The *accessibility* contract of the control: a button role whose
+      // accessible name derives from the child (the content layer), and an
+      // explicit disabled state when there is no handler. Flutter merges the
+      // child into a button semantics node; Jaspr renders a native <button> —
+      // same announcement either way.
       await tester.mount('''
         import core;
         widget root = Column(children: [
@@ -983,6 +992,81 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
       // A handler-less button still announces as a (disabled) button rather
       // than vanishing from the a11y tree.
       expect(tester.buttonCount('Unavailable'), 1);
+    },
+  );
+
+  driver.defineTest(
+    'Button paints the primary surface with onPrimary content ink, per theme',
+    (CraftTester tester) async {
+      // The control paint model (DESIGN.md §8): an unstyled Button is the
+      // idiom's stock button — the `primary` role fully fills the surface
+      // (layer 1) and `onPrimary` inks the content (layer 3), overriding the
+      // ambient `onSurface` the label would otherwise read. Re-theming
+      // re-inks both, in place. Same role → same part, same degree, on every
+      // adapter.
+      CraftTheme theme(String primary, String onPrimary) =>
+          CraftTheme(resolveDesignTokens(<DesignTokenSet>[
+            parseDesignTokens(<String, Object?>{
+              'color': <String, Object?>{
+                r'$type': 'color',
+                'primary': <String, Object?>{r'$value': primary},
+                'onPrimary': <String, Object?>{r'$value': onPrimary},
+                'onSurface': <String, Object?>{r'$value': '#112233'},
+              },
+            }),
+          ]));
+
+      await tester.mount('''
+        import core;
+        widget root = Column(children: [
+          Button(onPressed: event "go" {}, child: Text(text: "Go")),
+          Text(text: "outside"),
+        ]);
+      ''', theme: theme('#6200EE', '#F1F2F3'));
+
+      expect(tester.buttonSurfaceColorOf('Go'), '#FF6200EE');
+      expect(tester.textColorOf('Go'), '#FFF1F2F3');
+      // The content ink is scoped to the control: siblings keep onSurface.
+      expect(tester.textColorOf('outside'), '#FF112233');
+
+      await tester.retheme(theme('#00695C', '#FFFFFF'));
+      expect(tester.buttonSurfaceColorOf('Go'), '#FF00695C');
+      expect(tester.textColorOf('Go'), '#FFFFFFFF');
+    },
+  );
+
+  driver.defineTest(
+    'an explicit Button color owns the whole surface; the ambient ink stands',
+    (CraftTester tester) async {
+      // An author-supplied surface fully fills the control on every adapter
+      // (never a partial tint), and the author owns the surface/ink pairing:
+      // the label keeps the ambient `onSurface`, exactly as it would outside
+      // the button (the calculator-keypad pattern).
+      final CraftTheme theme = CraftTheme(resolveDesignTokens(<DesignTokenSet>[
+        parseDesignTokens(<String, Object?>{
+          'color': <String, Object?>{
+            r'$type': 'color',
+            'primary': <String, Object?>{r'$value': '#6200EE'},
+            'onPrimary': <String, Object?>{r'$value': '#FFFFFF'},
+            'onSurface': <String, Object?>{r'$value': '#112233'},
+          },
+        }),
+      ]));
+
+      await tester.mount('''
+        import core;
+        widget root = Column(children: [
+          Button(color: "#ABCDEF", child: Text(text: "Custom")),
+          Button(color: "#00000000", child: Text(text: "Quiet")),
+        ]);
+      ''', theme: theme);
+
+      expect(tester.buttonSurfaceColorOf('Custom'), '#FFABCDEF');
+      expect(tester.textColorOf('Custom'), '#FF112233');
+      // A transparent color is the "text button" degenerate case: no painted
+      // surface, ambient ink.
+      expect(tester.buttonSurfaceColorOf('Quiet'), isNull);
+      expect(tester.textColorOf('Quiet'), '#FF112233');
     },
   );
 

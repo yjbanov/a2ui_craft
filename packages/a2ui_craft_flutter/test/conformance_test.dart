@@ -109,6 +109,21 @@ class _FlutterCraftTester implements CraftTester {
       _tester.widget<Text>(find.text(text)).style?.fontSize;
 
   @override
+  String? buttonSurfaceColorOf(String label) {
+    // The nearest Material ancestor of the label is the Button's surface
+    // (layer 1 of the paint model); the ancestor finder yields nearest-first.
+    final Iterable<Element> surfaces = find
+        .ancestor(of: find.text(label), matching: find.byType(Material))
+        .evaluate();
+    if (surfaces.isEmpty) return null;
+    final Color? color = (surfaces.first.widget as Material).color;
+    if (color == null) return null;
+    final int argb = color.toARGB32();
+    if (argb >>> 24 == 0) return null; // Transparent: no painted surface.
+    return '#${argb.toRadixString(16).padLeft(8, '0').toUpperCase()}';
+  }
+
+  @override
   Future<void> activate(String key) async {
     await _tester.tap(find.byKey(ValueKey<String>(key)));
     await _tester.pump();

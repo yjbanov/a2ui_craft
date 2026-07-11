@@ -184,12 +184,18 @@ void main() {
     expect(_styleValues('background-color'), <String>[
       'rgba(255, 248, 240, 1.0)', // card ← brand surface, Light
       'rgba(224, 207, 194, 1.0)', // divider ← brand outline, Light
+      'rgba(230, 81, 0, 1.0)', // − stepper ← brand primary, Light
+      'rgba(230, 81, 0, 1.0)', // + stepper ← brand primary, Light
+      'rgba(230, 81, 0, 1.0)', // CTA button ← brand primary, Light
     ]);
 
     await _pump(tester, spec, dark: true);
     expect(_styleValues('background-color'), <String>[
       'rgba(42, 30, 23, 1.0)', // card ← brand surface, Dark
       'rgba(93, 64, 55, 1.0)', // divider ← brand outline, Dark
+      'rgba(255, 183, 77, 1.0)', // − stepper ← brand primary, Dark
+      'rgba(255, 183, 77, 1.0)', // + stepper ← brand primary, Dark
+      'rgba(255, 183, 77, 1.0)', // CTA button ← brand primary, Dark
     ]);
   });
 

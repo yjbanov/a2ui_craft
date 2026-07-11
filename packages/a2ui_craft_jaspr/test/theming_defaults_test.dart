@@ -150,4 +150,30 @@ void main() {
         }));
     expect(_styleValues('font-size'), <String>['30px']);
   });
+
+  testComponents('an unthemed Button is the web idiom stock button',
+      (ComponentTester tester) async {
+    // The control paint model (DESIGN.md §8) unthemed: the surface/ink pair
+    // falls back to scheme-adaptive `light-dark()` blues (the link-fallback
+    // family), the stock 6px corner + 8/16 padding land, and the UA chrome is
+    // stripped (`appearance: none`, no border) so the web idiom is
+    // adapter-owned rather than UA-owned.
+    await _mount(tester, '''
+      import core;
+      widget root = Button(onPressed: event "go" {}, child: Text(text: "Go"));
+    ''');
+    expect(_styleValues('background-color'), <String>[
+      'light-dark(#1a73e8, #8ab4f8)', // surface ← primary host default
+    ]);
+    expect(_styleValues('color'), <String>[
+      // The content ink (← onPrimary host default) lands twice: on the button
+      // element (bare text nodes inherit it) and on the label, whose Text
+      // consults the control's content ink before the ambient roles.
+      'light-dark(#ffffff, #202124)',
+      'light-dark(#ffffff, #202124)',
+    ]);
+    expect(_styleValues('border-radius'), <String>['6px']);
+    expect(_styleValues('padding'), <String>['8px 16px 8px 16px']);
+    expect(_styleValues('appearance'), <String>['none']);
+  });
 }

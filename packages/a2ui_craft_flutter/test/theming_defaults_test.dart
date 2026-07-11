@@ -196,4 +196,36 @@ void main() {
     });
     expect(linkStyle?.color, const Color(0xFF8AB4F8));
   });
+
+  testWidgets('an unthemed Button is the host Material stock button',
+      (WidgetTester tester) async {
+    // The control paint model (DESIGN.md §8) unthemed: the surface/ink pair
+    // resolves through the host's `ColorScheme.primary`/`onPrimary` (per-idiom
+    // latitude — the Jaspr side pins its own `light-dark()` blues), so the
+    // stock button follows the host theme, brightness included.
+    const String template = '''
+      import core;
+      widget root = Button(onPressed: event "go" {}, child: Text(text: "Go"));
+    ''';
+
+    await _mount(tester, template);
+    ThemeData host =
+        ThemeData(useMaterial3: true, brightness: Brightness.light);
+    Material surface = tester.widget<Material>(find
+        .ancestor(of: find.text('Go'), matching: find.byType(Material))
+        .first);
+    expect(surface.color, host.colorScheme.primary);
+    expect(tester.widget<Text>(find.text('Go')).style!.color,
+        host.colorScheme.onPrimary);
+
+    await _mount(tester, template, brightness: Brightness.dark);
+    await tester.pumpAndSettle();
+    host = ThemeData(useMaterial3: true, brightness: Brightness.dark);
+    surface = tester.widget<Material>(find
+        .ancestor(of: find.text('Go'), matching: find.byType(Material))
+        .first);
+    expect(surface.color, host.colorScheme.primary);
+    expect(tester.widget<Text>(find.text('Go')).style!.color,
+        host.colorScheme.onPrimary);
+  });
 }

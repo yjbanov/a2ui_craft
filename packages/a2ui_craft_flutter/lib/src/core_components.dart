@@ -32,7 +32,8 @@ LocalWidgetLibrary createCoreComponents() {
         style: variant == TextVariant.caption
             ? TextStyle(
                 fontSize: _roleSize(context, ThemeRoles.captionSize) ?? 12,
-                color: _roleColor(context, ThemeRoles.onSurfaceVariant) ??
+                color: _ContentInk.of(context) ??
+                    _roleColor(context, ThemeRoles.onSurfaceVariant) ??
                     _captionFallback(context),
               )
             : _bodyStyle(context),
@@ -71,8 +72,34 @@ LocalWidgetLibrary createCoreComponents() {
     },
     'Button': (BuildContext context, DataSource source) {
       final VoidCallback? onPressed = source.voidHandler(['onPressed']);
+      final Rgba? color = _rgba(source, 'color');
+      final CornerRadius radius = CornerRadius.decode(
+          _numArg(source, 'cornerRadius'),
+          fallback: _kButtonCornerRadius);
+      final Object? rawPadding = _insetsRaw(source, 'padding');
+      final Insets padding =
+          rawPadding == null ? _kButtonPadding : Insets.decode(rawPadding);
+      // Surface + content ink per the role mapping (DESIGN.md §8): unstyled,
+      // the idiom's stock button — `primary` surface, `onPrimary` content ink.
+      // An explicit color is the author's surface; the ambient ink stands
+      // (the author owns the pairing). A transparent color is the "text
+      // button" degenerate case: no surface, no ink override.
+      final Color? surface;
+      final Color? ink;
+      if (color != null) {
+        surface = color.alpha == 0 ? null : Color(color.value);
+        ink = null;
+      } else {
+        final ColorScheme host = Theme.of(context).colorScheme;
+        surface = _roleColor(context, ThemeRoles.primary) ?? host.primary;
+        ink = _roleColor(context, ThemeRoles.onPrimary) ?? host.onPrimary;
+      }
       return _CoreButton(
         onPressed: onPressed,
+        surface: surface,
+        ink: ink,
+        cornerRadius: radius.pixels,
+        padding: _toEdgeInsets(padding),
         child: source.child(['child']),
       );
     },
@@ -142,7 +169,8 @@ LocalWidgetLibrary createCoreComponents() {
     'Icon': (BuildContext context, DataSource source) {
       return Icon(
         _iconData(source.v<String>(['icon'])),
-        color: _roleColor(context, ThemeRoles.onSurface),
+        color: _ContentInk.of(context) ??
+            _roleColor(context, ThemeRoles.onSurface),
       );
     },
     'Divider': (BuildContext context, DataSource source) {
@@ -387,7 +415,11 @@ TextStyle _mdHeadingStyle(int level, BuildContext context) {
 /// default shows through untouched — an unthemed surface must render exactly
 /// as before the semantic contract existed).
 TextStyle? _bodyStyle(BuildContext context) {
-  final Color? color = _roleColor(context, ThemeRoles.onSurface);
+  // A control's content ink (e.g. a Button's `onPrimary`) is nearer than the
+  // ambient `onSurface` role — the control owns its content layer (DESIGN.md
+  // §8, the paint model).
+  final Color? color =
+      _ContentInk.of(context) ?? _roleColor(context, ThemeRoles.onSurface);
   final double? size = _roleSize(context, ThemeRoles.bodySize);
   if (color == null && size == null) return null;
   return TextStyle(color: color, fontSize: size);
@@ -643,44 +675,97 @@ CrossAxisAlignment _toCrossAxisAlignment(CrossAxisAlign a) => switch (a) {
       CrossAxisAlign.stretch => CrossAxisAlignment.stretch,
     };
 
-/// The look-free pressable behind the `Button` primitive.
+/// The stock corner rounding of an unstyled `Button` — the neutral Craft
+/// default, shared with the Jaspr adapter so the two web panes agree.
+const CornerRadius _kButtonCornerRadius = CornerRadius(6);
+
+/// The stock content padding of a `Button` (layer 3 of the paint model);
+/// `padding: 0` opts a fully sized child (e.g. a fixed Box) out of it.
+const Insets _kButtonPadding = Insets.symmetric(vertical: 8, horizontal: 16);
+
+/// The content ink a control installs over its subtree — layer 3 of the
+/// control paint model (DESIGN.md §8): a `Button` painting its default
+/// `primary` surface inks its content `onPrimary`, overriding the ambient
+/// `onSurface`/`onSurfaceVariant` role defaults that [_bodyStyle], the caption
+/// style, and `Icon` would otherwise read. Content primitives consult this
+/// *before* the ambient roles; explicit per-widget props still win over both
+/// (the cascade, DESIGN.md §9.5).
+class _ContentInk extends InheritedWidget {
+  const _ContentInk({required this.color, required super.child});
+
+  final Color color;
+
+  static Color? of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<_ContentInk>()?.color;
+
+  @override
+  bool updateShouldNotify(_ContentInk oldWidget) => color != oldWidget.color;
+}
+
+/// The control behind the `Button` primitive — owner of all four paint layers
+/// (DESIGN.md §8): the [surface] (color + corner shape), the state layer
+/// (Material ink splash + hover/focus highlights, drawn on the surface *under*
+/// the content), the content placement ([padding], centered), and the
+/// composite effects. The child is content, never chrome.
 ///
-/// Matches the Jaspr adapter's native `<button>`: announces a **button role**
-/// whose accessible name merges from the child, exposes the enabled/disabled
-/// state, participates in focus traversal, and activates from the keyboard
-/// (Space/Enter arrive as [ActivateIntent]/[ButtonActivateIntent] via the
-/// app-level default shortcuts). Appearance stays the child's job (DESIGN.md
-/// §4, bias to templatize) — this widget paints nothing.
+/// Behavioral contract (parity with the Jaspr `<button>`): announces a
+/// **button role** whose accessible name merges from the child, exposes the
+/// enabled/disabled state, participates in focus traversal, and activates from
+/// the keyboard ([InkWell] handles Space/Enter via the app-level activation
+/// intents).
 class _CoreButton extends StatelessWidget {
-  const _CoreButton({required this.onPressed, required this.child});
+  const _CoreButton({
+    required this.onPressed,
+    required this.surface,
+    required this.ink,
+    required this.cornerRadius,
+    required this.padding,
+    required this.child,
+  });
 
   final VoidCallback? onPressed;
+
+  /// The surface color; null paints nothing (the "text button" case).
+  final Color? surface;
+
+  /// The content ink installed over the child ([_ContentInk]); null leaves the
+  /// ambient ink standing (an explicit author surface owns its own pairing).
+  final Color? ink;
+
+  final double cornerRadius;
+  final EdgeInsets padding;
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
     final bool enabled = onPressed != null;
+    final RoundedRectangleBorder shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(cornerRadius),
+    );
+    Widget content = Padding(
+      padding: padding,
+      // Hug the content, but center it when the parent stretches the button
+      // (e.g. a stretched cross axis) — the Jaspr side is inline-flex with
+      // centered alignment.
+      child: Center(widthFactor: 1.0, heightFactor: 1.0, child: child),
+    );
+    if (ink != null) {
+      content = _ContentInk(color: ink!, child: content);
+    }
     return MergeSemantics(
       child: Semantics(
         button: true,
         enabled: enabled,
-        child: FocusableActionDetector(
-          enabled: enabled,
-          actions: <Type, Action<Intent>>{
-            ActivateIntent: CallbackAction<ActivateIntent>(
-              onInvoke: (ActivateIntent intent) {
-                onPressed!();
-                return null;
-              },
-            ),
-            ButtonActivateIntent: CallbackAction<ButtonActivateIntent>(
-              onInvoke: (ButtonActivateIntent intent) {
-                onPressed!();
-                return null;
-              },
-            ),
-          },
-          child: GestureDetector(onTap: onPressed, child: child),
+        child: Material(
+          color: surface ?? Colors.transparent,
+          shape: shape,
+          // Clip the state layer (ink splash) to the surface's corners.
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            customBorder: shape,
+            onTap: onPressed,
+            child: content,
+          ),
         ),
       ),
     );

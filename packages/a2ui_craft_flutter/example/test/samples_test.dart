@@ -16,7 +16,12 @@ import 'package:network_image_mock/network_image_mock.dart';
 /// image-free samples).
 Future<void> _pump(WidgetTester tester, SampleSpec spec) {
   return mockNetworkImagesFor(
-    () => tester.pumpWidget(MaterialApp(home: Scaffold(body: Sample(spec)))),
+    // The scroll view hosts the sample the way the demo site embeds Flutter
+    // (unbounded height, content sizes itself), so a sample taller than the
+    // test viewport lays out instead of overflowing the 600px test surface.
+    () => tester.pumpWidget(MaterialApp(
+      home: Scaffold(body: SingleChildScrollView(child: Sample(spec))),
+    )),
   );
 }
 

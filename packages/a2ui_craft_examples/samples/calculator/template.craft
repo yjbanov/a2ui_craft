@@ -22,13 +22,18 @@ import core;
 
 // One key: a button showing [label] that runs [press] (a `set state`, or a list
 // of them). The handler is passed in as an arg, so the state stays on the
-// Calculator and the key itself is stateless.
+// Calculator and the key itself is stateless. The keypad token colors the
+// Button's own surface (the control owns background, corner shape, and
+// press feedback; the child is content only) — a fixed-size Box keeps every
+// key the same size, so the Button's stock padding is switched off.
 widget Key = Button(
   onPressed: args.press,
+  color: args.color,
+  cornerRadius: 6.0,
+  padding: 0.0,
   child: Box(
     width: 46.0,
     height: 44.0,
-    color: args.color,
     child: Center(child: Text(text: args.label)),
   ),
 );

@@ -29,19 +29,26 @@ Widget flutterSampleApp({
   required Map<String, Object?> schema,
   required List<A2uiMessage> messages,
   required bool dark,
+  bool cupertino = false,
   void Function(A2uiClientAction action)? onAction,
   ValueChanged<double>? onContentHeight,
   CraftTheme? theme,
 }) {
   final Rgba? surface = theme?.tokens.color('color.surface');
+  // The Flutter pane previews a *mobile platform* (DESIGN.md §8): [cupertino]
+  // steers ThemeData.platform, which selects the controls' idiom (the
+  // .adaptive renderings, the Button's pressed-fade + superellipse corner).
+  final TargetPlatform platform =
+      cupertino ? TargetPlatform.iOS : TargetPlatform.android;
   return MaterialApp(
     debugShowCheckedModeBanner: false,
     // [dark] is the site's effective scheme (system preference + the global
     // toggle's override) — explicit rather than ThemeMode.system, because the
     // embedded engine only sees the browser preference, never the override. A
     // themed project's surface color overrides the scaffold either way.
-    theme: ThemeData(useMaterial3: true),
-    darkTheme: ThemeData(useMaterial3: true, brightness: Brightness.dark),
+    theme: ThemeData(useMaterial3: true, platform: platform),
+    darkTheme: ThemeData(
+        useMaterial3: true, brightness: Brightness.dark, platform: platform),
     themeMode: dark ? ThemeMode.dark : ThemeMode.light,
     home: Scaffold(
       backgroundColor: surface == null ? null : Color(surface.value),

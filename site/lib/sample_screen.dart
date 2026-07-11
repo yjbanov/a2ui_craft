@@ -57,6 +57,9 @@ class _SampleScreenState extends State<SampleScreen> {
   String _framework = 'Jaspr';
   bool _editorOpen = false;
   bool _wide = false;
+  // The Flutter pane previews a *mobile platform* (DESIGN.md §8); this picks
+  // which idiom the embedded app renders its controls in.
+  bool _cupertino = false;
   int _renderKey = 0;
   String? _error;
   final List<String> _log = <String>[];
@@ -202,6 +205,7 @@ class _SampleScreenState extends State<SampleScreen> {
       schema: spec.catalogSchema,
       messages: spec.messages,
       dark: SiteTheme.effectiveDark,
+      cupertino: _cupertino,
       onAction: _onAction,
       onContentHeight: (double height) {
         // Reported from Flutter's frame callbacks — may land after this
@@ -275,7 +279,8 @@ class _SampleScreenState extends State<SampleScreen> {
         }),
         [
           _pane('Jaspr', _jasprView(), borderRight: true),
-          _pane('Flutter', _flutterView(), borderRight: false),
+          _pane('Flutter', _flutterView(),
+              borderRight: false, trailing: _idiomToggle()),
         ],
       );
     }
@@ -283,11 +288,41 @@ class _SampleScreenState extends State<SampleScreen> {
       _framework,
       _framework == 'Jaspr' ? _jasprView() : _flutterView(),
       borderRight: false,
+      trailing: _framework == 'Flutter' ? _idiomToggle() : null,
+    );
+  }
+
+  /// The Flutter pane previews a mobile platform; this picks the idiom the
+  /// embedded app renders its controls in (ThemeData.platform steering the
+  /// .adaptive constructors, the Button's state layer and corner style).
+  Component _idiomToggle() {
+    return select(
+      styles: Styles(raw: <String, String>{'font': '11px system-ui'}),
+      onChange: (List<String> values) {
+        final bool next = values.isNotEmpty && values.first == 'cupertino';
+        if (next == _cupertino) return;
+        setState(() {
+          _cupertino = next;
+          // Rebuild the embedded app so ThemeData.platform re-resolves.
+          _flutterWidget = null;
+        });
+      },
+      [
+        option(
+            value: 'material',
+            selected: !_cupertino,
+            [Component.text('Material')]),
+        option(
+            value: 'cupertino',
+            selected: _cupertino,
+            [Component.text('Cupertino')]),
+      ],
     );
   }
 
   /// A labeled, independently scrolling render column.
-  Component _pane(String label, Component child, {required bool borderRight}) {
+  Component _pane(String label, Component child,
+      {required bool borderRight, Component? trailing}) {
     return div(
       styles: Styles(raw: <String, String>{
         'flex': '1',
@@ -305,8 +340,15 @@ class _SampleScreenState extends State<SampleScreen> {
             'color': 'var(--subtle)',
             'padding': '8px 24px',
             'border-bottom': '1px solid var(--border)',
+            'display': 'flex',
+            'align-items': 'center',
+            'justify-content': 'space-between',
+            'gap': '12px',
           }),
-          [Component.text(label)],
+          [
+            Component.text(label),
+            if (trailing != null) trailing,
+          ],
         ),
         div(
           styles: Styles(raw: <String, String>{

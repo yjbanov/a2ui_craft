@@ -65,6 +65,10 @@ class _LoadScreenState extends State<LoadScreen> {
   bool _modeTouched = false;
   String? _scenario; // null → the app.json bootstrap
   int _renderKey = 0;
+  // The Jaspr pane's element identity (see SampleScreen._jasprKey): stable
+  // across re-theming so the surface's interaction state survives; replaced
+  // only when the rendered messages actually change (load, scenario pick).
+  GlobalKey _jasprKey = GlobalKey();
   Object? _flutterWidget;
 
   // The Flutter content's self-measured height (see flutterSampleApp).
@@ -89,6 +93,8 @@ class _LoadScreenState extends State<LoadScreen> {
         _scenario = null;
         _log.clear();
         _bumpRender();
+        // A freshly loaded project re-processes from scratch.
+        _jasprKey = GlobalKey();
         _loading = false;
       });
     } on ProjectLoadException catch (e) {
@@ -275,6 +281,8 @@ class _LoadScreenState extends State<LoadScreen> {
         setState(() {
           _scenario = choice == boot ? null : choice;
           _bumpRender();
+          // A scenario renders different messages: re-process from scratch.
+          _jasprKey = GlobalKey();
         });
       },
       styles: _select(),
@@ -306,7 +314,7 @@ class _LoadScreenState extends State<LoadScreen> {
   Component _jasprView() {
     final LoadedProject project = _project!;
     return SampleView(
-      key: ValueKey<String>('jaspr-$_renderKey'),
+      key: _jasprKey,
       template: project.spec.catalogSource,
       schema: project.spec.catalogSchema,
       messages: _messages,

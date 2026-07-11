@@ -61,6 +61,15 @@ class _SampleScreenState extends State<SampleScreen> {
   // which idiom the embedded app renders its controls in.
   bool _cupertino = false;
   int _renderKey = 0;
+  // The Jaspr pane's element identity — a *global* key, because the pane
+  // re-parents when [_wide] flips (one pane ⇄ two) and a local key cannot
+  // match across parents: with a ValueKey the flip silently remounted
+  // SampleView, re-processing the messages and wiping any interaction state
+  // in the surface's data model (observed when the Flutter embed's boot
+  // coincided with a window resize). Theme and mode changes keep this key
+  // too — the Jaspr pane re-themes in place via SampleView's `theme` prop —
+  // so only Preview, which commits a genuinely new spec, replaces it.
+  GlobalKey _jasprKey = GlobalKey();
   String? _error;
   final List<String> _log = <String>[];
 
@@ -186,6 +195,9 @@ class _SampleScreenState extends State<SampleScreen> {
         _flutterWidget = null;
         _log.clear();
         _renderKey++;
+        // A new spec must re-process from scratch: swap the Jaspr pane's
+        // identity so a fresh SampleView (and data model) mounts.
+        _jasprKey = GlobalKey();
       });
     } catch (e) {
       setState(() => _error = '$e');
@@ -372,7 +384,7 @@ class _SampleScreenState extends State<SampleScreen> {
       framework: 'Jaspr',
     );
     return SampleView(
-      key: ValueKey<String>('jaspr-$_renderKey'),
+      key: _jasprKey,
       template: spec.catalogSource,
       schema: spec.catalogSchema,
       messages: spec.messages,
@@ -491,7 +503,8 @@ class _SampleScreenState extends State<SampleScreen> {
         setState(() {
           _modeTouched = true;
           _mode = next;
-          // Rebuild both panes so the embedded Flutter render re-themes too.
+          // Recreate the embedded Flutter app so it re-themes; the Jaspr
+          // pane re-themes in place via its `theme` prop, keeping its state.
           _flutterWidget = null;
           _renderKey++;
         });

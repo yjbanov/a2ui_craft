@@ -224,7 +224,9 @@ LocalWidgetLibrary createCoreComponents() {
     'TextField': (BuildContext context, DataSource source) {
       return _CoreTextField(
         value: source.v<String>(['value']),
-        borderColor: _roleColor(context, ThemeRoles.outline),
+        outline: _roleColor(context, ThemeRoles.outline),
+        accent: _roleColor(context, ThemeRoles.primary),
+        ink: _roleColor(context, ThemeRoles.onSurface),
         // The `onChanged` arg is a2ui_core's two-way setter (a resolved
         // callback), accepted directly by the runtime's handler affordance.
         onChanged: source.handler<ValueChanged<String>>(
@@ -847,15 +849,24 @@ class _CoreRadio extends StatelessWidget {
 /// the cursor mid-edit) and reports edits through [onChanged] — the two halves
 /// of two-way binding.
 class _CoreTextField extends StatefulWidget {
-  const _CoreTextField({this.value, this.onChanged, this.borderColor});
+  const _CoreTextField(
+      {this.value, this.onChanged, this.outline, this.accent, this.ink});
 
   final String? value;
   final ValueChanged<String>? onChanged;
 
-  /// The `color.outline` role for the (enabled) underline; null keeps the
-  /// host's default decoration. Focused/error states keep the host emphasis
-  /// until the contract grows state roles.
-  final Color? borderColor;
+  /// The `color.outline` role — the field's chrome (a 1px box border, the
+  /// stock 6px control corner, 8/12 content padding); null keeps the host's
+  /// default decoration (blend in, §9.1). Error states keep the host
+  /// emphasis until the contract grows state roles.
+  final Color? outline;
+
+  /// The `color.primary` role — the focused border and the caret; null keeps
+  /// the host emphasis.
+  final Color? accent;
+
+  /// The `color.onSurface` role — the typed text's ink; null inherits.
+  final Color? ink;
 
   @override
   State<_CoreTextField> createState() => _CoreTextFieldState();
@@ -883,15 +894,32 @@ class _CoreTextFieldState extends State<_CoreTextField> {
 
   @override
   Widget build(BuildContext context) {
+    // The role mapping (DESIGN.md §8), degrading role-by-role: `outline`
+    // draws the box chrome, `primary` the focus border + caret, `onSurface`
+    // the text ink. The Jaspr adapter paints the same spec (border/radius/
+    // padding inline; focus via the control stylesheet).
+    InputDecoration decoration = const InputDecoration();
+    if (widget.outline != null) {
+      final BorderRadius radius = BorderRadius.circular(6);
+      decoration = InputDecoration(
+        isDense: true,
+        contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: radius,
+          borderSide: BorderSide(color: widget.outline!),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: radius,
+          borderSide:
+              BorderSide(color: widget.accent ?? widget.outline!, width: 2),
+        ),
+      );
+    }
     return TextField(
       controller: _controller,
-      decoration: widget.borderColor == null
-          ? const InputDecoration()
-          : InputDecoration(
-              enabledBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: widget.borderColor!),
-              ),
-            ),
+      style: widget.ink == null ? null : TextStyle(color: widget.ink),
+      cursorColor: widget.accent,
+      decoration: decoration,
       onChanged: widget.onChanged,
     );
   }

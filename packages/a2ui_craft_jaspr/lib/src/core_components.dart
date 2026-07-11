@@ -366,13 +366,35 @@ LocalWidgetLibrary createCoreComponents() {
         (HandlerTrigger trigger) =>
             (String value) => trigger(<String, Object?>{'value': value}),
       );
-      final String? border = _roleColor(context, ThemeRoles.outline);
+      // The role mapping (DESIGN.md §8), degrading role-by-role: `outline`
+      // draws the box chrome (1px border, stock 6px corner, 8/12 padding),
+      // `primary` the focus border + caret, `onSurface` the text ink. The
+      // focus state needs pseudo-classes, so the chrome exports its color as
+      // a custom property the control stylesheet reads. Fully unthemed, the
+      // native UA field is the stock look (blend in, §9.1).
+      ensureCoreControlStyleSheet(coreControlStyleSheet);
+      final String? outline = _roleColor(context, ThemeRoles.outline);
+      final String? accent = _roleColor(context, ThemeRoles.primary);
+      final String? ink = _roleColor(context, ThemeRoles.onSurface);
+      final bool unthemed = outline == null && accent == null && ink == null;
       return input<String>(
         type: InputType.text,
         value: source.v<String>(['value']) ?? '',
-        styles: border == null
+        classes: outline == null ? null : 'craft-textfield',
+        styles: unthemed
             ? null
-            : Styles(raw: <String, String>{'border-color': border}),
+            : Styles(raw: <String, String>{
+                if (outline != null) ...<String, String>{
+                  'border': '1px solid $outline',
+                  'border-radius': '6px',
+                  'padding': '8px 12px',
+                  'background-color': 'transparent',
+                  'font': 'inherit',
+                  '--craft-focus': accent ?? outline,
+                },
+                if (ink != null) 'color': ink,
+                if (accent != null) 'caret-color': accent,
+              }),
         onInput: onChanged,
       );
     },
@@ -926,6 +948,8 @@ const String coreControlStyleSheet = '''
 .craft-button:not(:disabled):hover { filter: brightness(0.94); }
 .craft-button:not(:disabled):active { filter: brightness(0.86); }
 .craft-checkbox:not(:disabled), .craft-radio:not(:disabled) { cursor: pointer; }
+.craft-textfield:focus { border-color: var(--craft-focus); }
+.craft-textfield:focus-visible { outline: 2px solid var(--craft-focus); outline-offset: 1px; }
 ''';
 
 /// The content ink a control installs over its subtree — layer 3 of the

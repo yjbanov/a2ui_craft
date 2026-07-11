@@ -80,12 +80,22 @@ void main() {
       'rgba(250, 251, 252, 1.0)', // Card ← surface
       'rgba(34, 51, 68, 1.0)', // Divider ← outline
       'rgba(170, 0, 0, 1.0)', // checked Checkbox glyph ← primary (full fill)
+      'transparent', // TextField chrome — the surface shows through
     ]);
     // Only the range input still tints via accent-color; the checkbox glyph
     // is adapter-painted when themed (accent-color cannot fill per the role
     // mapping).
     expect(_styleValues('accent-color'), <String>['rgba(170, 0, 0, 1.0)']);
-    expect(_styleValues('border-color'), <String>['rgba(34, 51, 68, 1.0)']);
+    // The checked box's glyph border ← primary; the TextField chrome ←
+    // outline (1px box border; its focus border/caret ride primary). The
+    // leading 'none' is the Divider resetting the UA hr border.
+    expect(_styleValues('border'), <String>[
+      'none',
+      '2px solid rgba(170, 0, 0, 1.0)',
+      '1px solid rgba(34, 51, 68, 1.0)',
+    ]);
+    expect(_styleValues('caret-color'), <String>['rgba(170, 0, 0, 1.0)']);
+    expect(_styleValues('--craft-focus'), <String>['rgba(170, 0, 0, 1.0)']);
   });
 
   testComponents('themed Checkbox/Radio glyphs are adapter-painted per role',

@@ -76,12 +76,69 @@ void main() {
     ''',
         theme: _fullTheme);
 
-    expect(_styleValues('background-color'),
-        <String>['rgba(250, 251, 252, 1.0)', 'rgba(34, 51, 68, 1.0)']);
-    // Checkbox and Slider both carry the accent.
-    expect(_styleValues('accent-color'),
-        <String>['rgba(170, 0, 0, 1.0)', 'rgba(170, 0, 0, 1.0)']);
+    expect(_styleValues('background-color'), <String>[
+      'rgba(250, 251, 252, 1.0)', // Card ← surface
+      'rgba(34, 51, 68, 1.0)', // Divider ← outline
+      'rgba(170, 0, 0, 1.0)', // checked Checkbox glyph ← primary (full fill)
+    ]);
+    // Only the range input still tints via accent-color; the checkbox glyph
+    // is adapter-painted when themed (accent-color cannot fill per the role
+    // mapping).
+    expect(_styleValues('accent-color'), <String>['rgba(170, 0, 0, 1.0)']);
     expect(_styleValues('border-color'), <String>['rgba(34, 51, 68, 1.0)']);
+  });
+
+  testComponents('themed Checkbox/Radio glyphs are adapter-painted per role',
+      (ComponentTester tester) async {
+    // The painted-glyph controls (DESIGN.md §8): `outline` inks the unchecked
+    // box/ring, `primary` fully fills the checked state (and draws the
+    // radio's dot), `onPrimary` strokes the checkmark — appearance: none, so
+    // the UA look cannot leak through a themed control.
+    await _mount(
+        tester,
+        '''
+      import core;
+      widget root = Column(children: [
+        Checkbox(value: true),
+        Checkbox(value: false),
+        Radio(selected: true, onChanged: event "a" {}),
+        Radio(selected: false, onChanged: event "b" {}),
+      ]);
+    ''',
+        theme: _fullTheme);
+
+    expect(_styleValues('appearance'), everyElement('none'));
+    expect(_styleValues('appearance'), hasLength(4));
+    expect(_styleValues('border'), <String>[
+      '2px solid rgba(170, 0, 0, 1.0)', // checked box ← primary
+      '2px solid rgba(34, 51, 68, 1.0)', // unchecked box ← outline
+      '2px solid rgba(170, 0, 0, 1.0)', // selected ring ← primary
+      '2px solid rgba(34, 51, 68, 1.0)', // unselected ring ← outline
+    ]);
+    final List<String> images = _styleValues('background-image');
+    expect(images, hasLength(2));
+    // The checkmark is an inline SVG stroked with onPrimary; _fullTheme names
+    // no onPrimary, so the white fallback strokes it.
+    expect(images[0], contains('data:image/svg+xml'));
+    expect(images[0], contains(Uri.encodeComponent('#ffffff')));
+    // The radio dot is a primary radial fill.
+    expect(images[1],
+        'radial-gradient(circle, rgba(170, 0, 0, 1.0) 0 40%, transparent 45%)');
+  });
+
+  testComponents('unthemed Checkbox/Radio stay the native UA controls',
+      (ComponentTester tester) async {
+    // No theme: blend in (§9.1) — the web idiom's stock look is the UA
+    // control itself, so the inputs carry no styling at all.
+    await _mount(tester, '''
+      import core;
+      widget root = Column(children: [
+        Checkbox(value: true),
+        Radio(selected: true, onChanged: event "a" {}),
+      ]);
+    ''');
+    expect(_styleValues('appearance'), isEmpty);
+    expect(_styleValues('background-color'), isEmpty);
   });
 
   testComponents('onSurface inks the Icon; link inks Markdown hyperlinks',

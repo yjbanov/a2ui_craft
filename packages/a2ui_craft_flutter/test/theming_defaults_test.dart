@@ -72,8 +72,13 @@ void main() {
         tester.widget<Card>(find.byType(Card)).color, const Color(0xFFFAFBFC));
     expect(tester.widget<Divider>(find.byType(Divider)).color,
         const Color(0xFF223344));
-    expect(tester.widget<Checkbox>(find.byType(Checkbox)).activeColor,
-        const Color(0xFFAA0000));
+    // The Checkbox role mapping (DESIGN.md §8) on Material's knobs: primary
+    // fills the checked state, outline inks the unchecked box; _fullTheme
+    // names no onPrimary, so the mark keeps the host default (null).
+    final Checkbox box = tester.widget<Checkbox>(find.byType(Checkbox));
+    expect(box.activeColor, const Color(0xFFAA0000));
+    expect(box.checkColor, isNull);
+    expect(box.side, const BorderSide(color: Color(0xFF223344), width: 2));
     expect(tester.widget<Slider>(find.byType(Slider)).activeColor,
         const Color(0xFFAA0000));
     final InputDecoration decoration =
@@ -90,6 +95,7 @@ void main() {
       widget root = Column(children: [
         Icon(icon: "add"),
         Radio(selected: true, onChanged: event "a" {}),
+        Radio(selected: false, onChanged: event "b" {}),
       ]);
     ''',
         theme: _fullTheme);
@@ -100,6 +106,11 @@ void main() {
     final Icon glyph = tester.widget<Icon>(find.byWidgetPredicate(
         (Widget w) => w is Icon && w.icon == Icons.radio_button_checked));
     expect(glyph.color, const Color(0xFFAA0000));
+    // The unselected ring inks the outline role (DESIGN.md §8) — mirroring
+    // the Jaspr adapter's painted glyph.
+    final Icon ring = tester.widget<Icon>(find.byWidgetPredicate(
+        (Widget w) => w is Icon && w.icon == Icons.radio_button_off));
+    expect(ring.color, const Color(0xFF223344));
   });
 
   testWidgets('link inks Markdown hyperlinks; onSurface inks its body',

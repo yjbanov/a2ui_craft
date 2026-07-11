@@ -385,10 +385,12 @@ LocalWidgetLibrary createCoreComponents() {
       );
       // Toggle from the bound value rather than reading the event target, so the
       // handler works without a live DOM (e.g. in component tests).
+      ensureCoreControlStyleSheet(coreControlStyleSheet);
       return input(
         type: InputType.checkbox,
         checked: value,
-        styles: _accentStyle(context),
+        classes: 'craft-checkbox',
+        styles: _checkboxStyles(context, checked: value),
         events: onChanged == null
             ? null
             : <String, EventCallback>{'change': (_) => onChanged(!value)},
@@ -402,10 +404,12 @@ LocalWidgetLibrary createCoreComponents() {
     'Radio': (BuildContext context, DataSource source) {
       final bool selected = source.v<bool>(['selected']) ?? false;
       final onChanged = source.voidHandler(['onChanged']);
+      ensureCoreControlStyleSheet(coreControlStyleSheet);
       return input(
         type: InputType.radio,
         checked: selected,
-        styles: _accentStyle(context),
+        classes: 'craft-radio',
+        styles: _radioStyles(context, selected: selected),
         events: onChanged == null
             ? null
             : <String, EventCallback>{'click': (_) => onChanged()},
@@ -809,12 +813,72 @@ Styles? _bodyStyle(BuildContext context) {
 }
 
 /// The `accent-color` style carrying [ThemeRoles.primary] to the native
-/// checkbox/radio/range inputs, or null for the host default.
+/// range input, or null for the host default.
 Styles? _accentStyle(BuildContext context) {
   final String? accent = _roleColor(context, ThemeRoles.primary);
   return accent == null
       ? null
       : Styles(raw: <String, String>{'accent-color': accent});
+}
+
+/// The themed Checkbox glyph — adapter-owned painting (DESIGN.md §8).
+///
+/// Unthemed (no `primary`), the native UA checkbox is the web idiom's stock
+/// look and the control blends in (§9.1): return null, exactly the
+/// pre-contract DOM. Themed, `accent-color` can only *tint* the UA glyph —
+/// it cannot fill per the role mapping — so the glyph is painted from
+/// scratch (`appearance: none`): `outline` inks the box border, `primary`
+/// fully fills the checked state, `onPrimary` draws the mark. The input is a
+/// controlled element (re-rendered on every toggle), so the checked state
+/// styles inline — no pseudo-classes needed.
+Styles? _checkboxStyles(BuildContext context, {required bool checked}) {
+  final String? primary = _roleColor(context, ThemeRoles.primary);
+  if (primary == null) return null;
+  final String border = _roleColor(context, ThemeRoles.outline) ?? primary;
+  final String mark = _roleColor(context, ThemeRoles.onPrimary) ?? '#ffffff';
+  return Styles(raw: <String, String>{
+    'appearance': 'none',
+    'width': '18px',
+    'height': '18px',
+    'margin': '0',
+    'vertical-align': 'middle',
+    'border': '2px solid ${checked ? primary : border}',
+    'border-radius': '4px',
+    'background-color': checked ? primary : 'transparent',
+    if (checked) 'background-image': _checkmarkImage(mark),
+    if (checked) 'background-size': '100% 100%',
+  });
+}
+
+/// The themed Radio glyph; same contract as [_checkboxStyles] — `outline`
+/// rings the unselected circle, `primary` inks the selected ring and dot.
+Styles? _radioStyles(BuildContext context, {required bool selected}) {
+  final String? primary = _roleColor(context, ThemeRoles.primary);
+  if (primary == null) return null;
+  final String border = _roleColor(context, ThemeRoles.outline) ?? primary;
+  return Styles(raw: <String, String>{
+    'appearance': 'none',
+    'width': '18px',
+    'height': '18px',
+    'margin': '0',
+    'vertical-align': 'middle',
+    'border': '2px solid ${selected ? primary : border}',
+    'border-radius': '50%',
+    'background-color': 'transparent',
+    if (selected)
+      'background-image':
+          'radial-gradient(circle, $primary 0 40%, transparent 45%)',
+  });
+}
+
+/// A checkmark as an inline SVG `background-image`, stroked with the resolved
+/// [color] (URL-encoded — data URIs cannot reference CSS values).
+String _checkmarkImage(String color) {
+  final String stroke = Uri.encodeComponent(color);
+  return 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' '
+      'viewBox=\'0 0 24 24\'%3E%3Cpath fill=\'none\' stroke=\'$stroke\' '
+      'stroke-width=\'4\' stroke-linecap=\'round\' stroke-linejoin=\'round\' '
+      'd=\'M5 13l4 4L19 7\'/%3E%3C/svg%3E")';
 }
 
 /// Reads a role color from the ambient theme as a CSS color string, or null
@@ -861,6 +925,7 @@ const String coreControlStyleSheet = '''
 .craft-button:not(:disabled) { cursor: pointer; }
 .craft-button:not(:disabled):hover { filter: brightness(0.94); }
 .craft-button:not(:disabled):active { filter: brightness(0.86); }
+.craft-checkbox:not(:disabled), .craft-radio:not(:disabled) { cursor: pointer; }
 ''';
 
 /// The content ink a control installs over its subtree — layer 3 of the

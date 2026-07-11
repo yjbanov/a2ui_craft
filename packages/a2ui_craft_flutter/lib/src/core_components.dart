@@ -241,9 +241,17 @@ LocalWidgetLibrary createCoreComponents() {
         (HandlerTrigger trigger) =>
             (bool v) => trigger(<String, Object?>{'value': v}),
       );
+      // The role mapping (DESIGN.md §8), on the Material idiom's own knobs:
+      // `primary` fully fills the checked state, `onPrimary` draws the mark,
+      // `outline` inks the unchecked box. Null falls through to the host
+      // Material look (blend in, §9.1) — same split as the Jaspr adapter's
+      // native-vs-painted glyph.
+      final Color? outline = _roleColor(context, ThemeRoles.outline);
       return Checkbox(
         value: value,
         activeColor: _roleColor(context, ThemeRoles.primary),
+        checkColor: _roleColor(context, ThemeRoles.onPrimary),
+        side: outline == null ? null : BorderSide(color: outline, width: 2),
         onChanged:
             onChanged == null ? null : (bool? v) => onChanged(v ?? !value),
       );
@@ -260,8 +268,10 @@ LocalWidgetLibrary createCoreComponents() {
       return _CoreRadio(
         selected: selected,
         onChanged: onChanged,
-        // The selected glyph shows the accent; unselected keeps the host look.
+        // The role mapping (DESIGN.md §8): `primary` inks the selected glyph,
+        // `outline` rings the unselected one; null keeps the host look.
         accent: _roleColor(context, ThemeRoles.primary),
+        outline: _roleColor(context, ThemeRoles.outline),
       );
     },
     // A bare numeric slider (no label — that is a template's choice). Two-way
@@ -782,6 +792,7 @@ class _CoreRadio extends StatelessWidget {
     required this.selected,
     required this.onChanged,
     this.accent,
+    this.outline,
   });
 
   final bool selected;
@@ -790,6 +801,10 @@ class _CoreRadio extends StatelessWidget {
   /// The `color.primary` role, shown by the selected glyph; null keeps the
   /// host look.
   final Color? accent;
+
+  /// The `color.outline` role, ringing the unselected glyph; null keeps the
+  /// host look.
+  final Color? outline;
 
   @override
   Widget build(BuildContext context) {
@@ -819,7 +834,7 @@ class _CoreRadio extends StatelessWidget {
             onTap: onChanged,
             child: Icon(
               selected ? Icons.radio_button_checked : Icons.radio_button_off,
-              color: selected ? accent : null,
+              color: selected ? accent : outline,
             ),
           ),
         ),

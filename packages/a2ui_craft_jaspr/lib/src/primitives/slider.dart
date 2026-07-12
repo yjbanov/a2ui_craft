@@ -20,15 +20,16 @@ Component buildSlider(BuildContext context, DataSource source) {
   final double max = numArg(source, 'max') ?? 1.0;
   final double value = (numArg(source, 'value') ?? min).clamp(min, max);
   final int? steps = source.v<int>(['steps']);
-  // Read the raw string value and parse it, so we don't depend on the DOM
-  // value being pre-typed.
-  final onChanged = source.handler<ValueChanged<String>>(
+  // The browser delivers a range input's value as `valueAsNumber` — jaspr
+  // types the event value by InputType, so the handler takes a num (a plain
+  // String handler would throw a cast error on the first real drag).
+  final onChanged = source.handler<ValueChanged<num>>(
     ['onChanged'],
-    (HandlerTrigger trigger) => (String v) =>
-        trigger(<String, Object?>{'value': double.tryParse(v) ?? min}),
+    (HandlerTrigger trigger) =>
+        (num v) => trigger(<String, Object?>{'value': v.toDouble()}),
   );
   ensureCoreControlStyleSheet(coreControlStyleSheet);
-  return input<String>(
+  return input<num>(
     type: InputType.range,
     value: '$value',
     classes:

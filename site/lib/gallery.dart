@@ -70,21 +70,22 @@ class _GalleryScreenState extends State<GalleryScreen> {
                 'and messages live.'),
           ],
         ),
-        // The production path: load a *deployed* project over HTTP, the way a
-        // real host app would — proof it's a separate, ephemeral artifact.
-        Link(
-          to: '/load',
+        div(
           styles: Styles(raw: <String, String>{
-            'display': 'inline-block',
+            'display': 'flex',
+            'flex-wrap': 'wrap',
+            'gap': '10px',
             'margin-top': '12px',
-            'padding': '8px 14px',
-            'border': '1px solid var(--accent)',
-            'border-radius': '8px',
-            'color': 'var(--accent)',
-            'text-decoration': 'none',
-            'font-weight': '600',
           }),
-          child: Component.text('Load a project from a URL →'),
+          [
+            // The production path: load a *deployed* project over HTTP, the
+            // way a real host app would — proof it's a separate, ephemeral
+            // artifact.
+            _actionLink('/load', 'Load a project from a URL →'),
+            // The specimen page: every core primitive rendered live under the
+            // default theme.
+            _actionLink('/primitives', 'Browse the core primitives →'),
+          ],
         ),
         _filterBar(visible.length),
         div(
@@ -215,6 +216,22 @@ class _GalleryScreenState extends State<GalleryScreen> {
         ),
         Component.text('${property.label} (${_countFor(property.id)})'),
       ],
+    );
+  }
+
+  Component _actionLink(String to, String text) {
+    return Link(
+      to: to,
+      styles: Styles(raw: <String, String>{
+        'display': 'inline-block',
+        'padding': '8px 14px',
+        'border': '1px solid var(--accent)',
+        'border-radius': '8px',
+        'color': 'var(--accent)',
+        'text-decoration': 'none',
+        'font-weight': '600',
+      }),
+      child: Component.text(text),
     );
   }
 

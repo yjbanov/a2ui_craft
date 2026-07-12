@@ -6,6 +6,7 @@ import 'package:jaspr/jaspr.dart';
 import 'package:jaspr_router/jaspr_router.dart';
 
 import 'gallery.dart';
+import 'kitchen_sink.dart';
 import 'load_screen.dart';
 import 'sample_screen.dart';
 
@@ -34,6 +35,12 @@ class App extends StatelessComponent {
           title: 'Load a project',
           builder: (BuildContext context, RouteState state) =>
               const LoadScreen(),
+        ),
+        Route(
+          path: '/primitives',
+          title: 'Core primitives',
+          builder: (BuildContext context, RouteState state) =>
+              const KitchenSinkScreen(),
         ),
       ],
     );

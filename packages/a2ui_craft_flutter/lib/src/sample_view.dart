@@ -9,7 +9,7 @@ import 'package:a2ui_craft_bridge/a2ui_craft_bridge.dart';
 import 'package:flutter/widgets.dart';
 
 import 'a2ui_to_rfw_adapter.dart';
-import 'primitives/primitives.dart';
+import 'primitives.dart';
 import 'runtime.dart';
 
 const LibraryName _coreName = LibraryName(<String>['core']);

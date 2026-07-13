@@ -10,17 +10,21 @@ import 'package:jaspr/dom.dart';
 import 'package:jaspr/jaspr.dart';
 import 'package:jaspr_router/jaspr_router.dart';
 
+import 'flutter_specimen.dart';
 import 'theme_mode.dart';
 
-/// The kitchen sink: every core primitive, rendered live through the Jaspr
-/// adapter under the **default theme** (DESIGN.md §9.5), one specimen card per
-/// primitive family — the layout of the design-language showcase page.
+/// The kitchen sink: every core primitive, rendered live under the **default
+/// theme** (DESIGN.md §9.5), one specimen card per primitive family — the
+/// layout of the design-language showcase page.
 ///
 /// Nothing on this page is hand-written HTML posing as a primitive: each
-/// specimen is a real `.craft` template rendered by the real runtime
-/// ([SampleView]), so what it shows is what a template author gets. The
-/// interactive specimens (buttons, controls, the slider) run on the same two
-/// data flows as the samples — template state and the A2UI data model.
+/// specimen is a real `.craft` template rendered by the real runtime, so what
+/// it shows is what a template author gets. A page-level Jaspr/Flutter toggle
+/// swaps *which adapter* renders every specimen — the Jaspr DOM render or an
+/// embedded Flutter render of the same trio — proving the framework-agnostic
+/// claim primitive by primitive. The interactive specimens (buttons, controls,
+/// the slider) run on the same two data flows as the samples — template state
+/// and the A2UI data model — on whichever adapter is active.
 class KitchenSinkScreen extends StatefulComponent {
   const KitchenSinkScreen({super.key});
 
@@ -32,6 +36,10 @@ class _KitchenSinkScreenState extends State<KitchenSinkScreen> {
   /// The page-local high-contrast axis; combined with the site's light-dark
   /// choice it selects one of the default theme's four n-ary modes.
   bool _highContrast = false;
+
+  /// Which adapter renders every specimen: `'Jaspr'` (DOM) or `'Flutter'`
+  /// (embedded). Flipping it swaps all specimens at once.
+  String _framework = 'Jaspr';
 
   void Function()? _unsubscribe;
 
@@ -100,6 +108,7 @@ class _KitchenSinkScreenState extends State<KitchenSinkScreen> {
           }),
           [Component.text('A2UI Craft · default theme')],
         ),
+        _frameworkToggle(),
         label(
           styles: Styles(raw: <String, String>{
             'display': 'inline-flex',
@@ -125,6 +134,41 @@ class _KitchenSinkScreenState extends State<KitchenSinkScreen> {
           ],
         ),
         const ThemeToggle(),
+      ],
+    );
+  }
+
+  /// The adapter toggle: a segmented Jaspr / Flutter control that swaps which
+  /// adapter renders every specimen on the page.
+  Component _frameworkToggle() {
+    return div(
+      attributes: const <String, String>{
+        'role': 'group',
+        'aria-label': 'Rendering adapter',
+      },
+      styles: Styles(raw: <String, String>{
+        'display': 'inline-flex',
+        'border': '1px solid var(--border-strong)',
+        'border-radius': '6px',
+        'overflow': 'hidden',
+      }),
+      [
+        for (final String fw in const <String>['Jaspr', 'Flutter'])
+          button(
+            onClick: () {
+              if (fw == _framework) return;
+              setState(() => _framework = fw);
+            },
+            styles: Styles(raw: <String, String>{
+              'padding': '6px 14px',
+              'border': 'none',
+              'background': _framework == fw ? 'var(--accent)' : 'var(--card)',
+              'color': _framework == fw ? 'var(--accent-fg)' : 'var(--fg)',
+              'font': '13px system-ui',
+              'cursor': 'pointer',
+            }),
+            [Component.text(fw)],
+          ),
       ],
     );
   }
@@ -159,9 +203,10 @@ class _KitchenSinkScreenState extends State<KitchenSinkScreen> {
             Component.text(
                 'Every specimen below is a real template rendered by the '
                 'runtime — the same primitives the samples compose, under the '
-                'default theme\'s semantic contract. Flip the modes above to '
-                'see the same roles resolve across light, dark, and '
-                'high-contrast; the interactive specimens are live.'),
+                'default theme\'s semantic contract. Flip Jaspr / Flutter to '
+                'render every one on the other adapter; flip the modes to see '
+                'the same roles resolve across light, dark, and high-contrast. '
+                'The interactive specimens are live on either adapter.'),
           ],
         ),
         div(
@@ -170,7 +215,10 @@ class _KitchenSinkScreenState extends State<KitchenSinkScreen> {
             'font': '12px ui-monospace, SFMono-Regular, Menlo, monospace',
             'color': 'var(--subtle)',
           }),
-          [Component.text('active mode → ${_mode.id}')],
+          [
+            Component.text(
+                'adapter → $_framework  ·  active mode → ${_mode.id}')
+          ],
         ),
       ],
     );
@@ -204,23 +252,12 @@ class _KitchenSinkScreenState extends State<KitchenSinkScreen> {
           [Component.text(s.blurb)],
         ),
         div(
-          // The specimen itself. Keyed by section (stable across mode flips),
-          // so control/template state survives re-theming — the same
-          // re-theme-in-place contract the sample screens rely on.
-          key: ValueKey<String>('specimen-${s.title}'),
-          [
-            SampleView(
-              template: s.template,
-              schema: <String, Object?>{
-                'catalogId': s.surfaceId,
-                'components': <String, Object?>{
-                  'Root': <String, Object?>{'properties': s.schema},
-                },
-              },
-              messages: _messagesFor(s),
-              theme: _theme,
-            ),
-          ],
+          // The specimen itself. Keyed by section + adapter: stable across
+          // mode flips (so control/template state survives re-theming, the
+          // same re-theme-in-place contract the sample screens rely on), and
+          // remounted when the adapter flips.
+          key: ValueKey<String>('specimen-${s.title}-$_framework'),
+          [_specimen(s)],
         ),
         if (s.footnote != null)
           div(
@@ -234,6 +271,37 @@ class _KitchenSinkScreenState extends State<KitchenSinkScreen> {
             [Component.text(s.footnote!)],
           ),
       ],
+    );
+  }
+
+  /// Renders one specimen on the active adapter: the Jaspr [SampleView] DOM
+  /// render, or an embedded [FlutterSpecimen] render of the same trio. Both
+  /// consume the identical template + schema + messages, so the specimen is
+  /// the cross-adapter claim made concrete.
+  Component _specimen(_Section s) {
+    final Map<String, Object?> schema = <String, Object?>{
+      'catalogId': s.surfaceId,
+      'components': <String, Object?>{
+        'Root': <String, Object?>{'properties': s.schema},
+      },
+    };
+    final List<A2uiMessage> messages = _messagesFor(s);
+    if (_framework == 'Flutter') {
+      return FlutterSpecimen(
+        key: ValueKey<String>('flutter-${s.title}'),
+        template: s.template,
+        schema: schema,
+        messages: messages,
+        dark: SiteTheme.effectiveDark,
+        theme: _theme,
+      );
+    }
+    return SampleView(
+      key: ValueKey<String>('jaspr-${s.title}'),
+      template: s.template,
+      schema: schema,
+      messages: messages,
+      theme: _theme,
     );
   }
 
@@ -505,29 +573,22 @@ widget Root = Card(child: Column(gap: 10.0, crossAxisAlignment: "start", childre
   ),
   _Section(
     title: 'ScrollView · List',
-    blurb: 'Scrollable content — drag or scroll the rows sideways. Both are '
-        'shown horizontal here, bounded by the page; a vertical scroller '
-        'needs a bounded host box.',
+    blurb: 'ScrollView is a scroll viewport around one child; List is the A2UI '
+        'catalog scroller — shown horizontal here, scroll it sideways.',
     template: r'''
 import core;
 
-widget Tile = Box(padding: [14.0, 20.0], color: args.c,
+widget Tile = Box(padding: [12.0, 20.0], color: args.c,
   child: Text(text: args.t, variant: "caption"));
 
 widget Root = Column(gap: 6.0, crossAxisAlignment: "stretch", children: [
-  Text(text: "ScrollView over a wide Row", variant: "caption"),
-  ScrollView(child: Row(gap: 8.0, children: [
+  Text(text: "ScrollView wrapping a column of rows", variant: "caption"),
+  ScrollView(child: Column(gap: 6.0, crossAxisAlignment: "stretch", children: [
     Tile(c: "#331A73E8", t: "one"), Tile(c: "#33669DF6", t: "two"),
-    Tile(c: "#331A73E8", t: "three"), Tile(c: "#33669DF6", t: "four"),
-    Tile(c: "#331A73E8", t: "five"), Tile(c: "#33669DF6", t: "six"),
-    Tile(c: "#331A73E8", t: "seven"), Tile(c: "#33669DF6", t: "eight"),
-    Tile(c: "#331A73E8", t: "nine"), Tile(c: "#33669DF6", t: "ten"),
-    Tile(c: "#331A73E8", t: "eleven"), Tile(c: "#33669DF6", t: "twelve"),
-    Tile(c: "#331A73E8", t: "thirteen"), Tile(c: "#33669DF6", t: "fourteen"),
-    Tile(c: "#331A73E8", t: "fifteen"), Tile(c: "#33669DF6", t: "sixteen"),
+    Tile(c: "#331A73E8", t: "three"),
   ])),
   SizedBox(height: 8.0),
-  Text(text: "List(direction: \"horizontal\")", variant: "caption"),
+  Text(text: "List(direction: \"horizontal\") — scroll it sideways", variant: "caption"),
   List(direction: "horizontal", children: [
     Tile(c: "#331A73E8", t: "alpha"), Tile(c: "#33669DF6", t: "beta"),
     Tile(c: "#331A73E8", t: "gamma"), Tile(c: "#33669DF6", t: "delta"),
@@ -539,7 +600,7 @@ widget Root = Column(gap: 6.0, crossAxisAlignment: "stretch", children: [
   ]),
 ]);
 ''',
-    footnote: 'List is the A2UI catalog scroller · axis via direction',
+    footnote: 'List scrolls along its axis; a scroller needs a bounded extent',
   ),
   _Section(
     title: 'Button',

@@ -89,6 +89,18 @@ class _KitchenSinkScreenState extends State<KitchenSinkScreen> {
         'align-items': 'center',
         'flex-wrap': 'wrap',
         'gap': '10px 16px',
+        // Keep the adapter + mode controls reachable after scrolling. Stuck to
+        // the viewport top with the page background behind it; the negative
+        // side margin + matching padding stretch it to the column's edges (the
+        // container insets 20px), and the divider separates it from content
+        // that scrolls underneath.
+        'position': 'sticky',
+        'top': '0',
+        'z-index': '20',
+        'background': 'var(--bg)',
+        'margin': '-32px -20px 0',
+        'padding': '20px 20px 12px',
+        'border-bottom': '1px solid var(--border)',
       }),
       [
         Link(

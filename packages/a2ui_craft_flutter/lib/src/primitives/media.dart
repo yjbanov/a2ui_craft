@@ -36,18 +36,67 @@ Widget buildImage(BuildContext context, DataSource source) {
   return box;
 }
 
-/// Builds `Card`: an elevated surface with the stock 16px content padding.
+/// Builds `Card`: a grouping surface with the specified default decoration
+/// (`CardDefaults`) — an outlined surface with a soft shadow.
+///
+/// The primitive **owns its paint** (a `DecoratedBox`, not Material's `Card`):
+/// so its look is our shared spec, identical to the Jaspr render up to idiom,
+/// rather than whatever stock chrome the framework supplies (DESIGN.md §8 — the
+/// framework must never be visible). The fill inks `color.surface`, the border
+/// inks `color.outline`; corner and elevation are specified defaults; every part
+/// is overridable by a prop. Material's default 4px `Card` margin is gone with
+/// it — spacing between cards is the layout's job (a `Column` `gap`).
 Widget buildCard(BuildContext context, DataSource source) {
-  return Card(
-    // Material's `Card` defaults to `margin: EdgeInsets.all(4)`, which the
-    // Jaspr `Card` (a plain div) has no equivalent for — it would add an
-    // invisible 4px inset (and ~8px between stacked cards) on Flutter only.
-    // Zero it so the primitive is spacing-neutral on both adapters; spacing
-    // between cards is the layout's job (a `Column` `gap`).
-    margin: EdgeInsets.zero,
-    color: roleColor(context, ThemeRoles.surface),
+  final Rgba? colorArg = rgbaArg(source, 'color');
+  final Color surface = colorArg != null
+      ? Color(colorArg.value)
+      : roleColor(context, ThemeRoles.surface) ??
+          Theme.of(context).colorScheme.surface;
+
+  final CornerRadius radius = CornerRadius.decode(
+      numArg(source, 'cornerRadius'),
+      fallback: CardDefaults.cornerRadius);
+  final BorderSpec border = BorderSpec.decode(borderRaw(source, 'border'),
+      fallback: CardDefaults.border);
+  final Elevation elevation = Elevation.decode(numArg(source, 'elevation'),
+      fallback: CardDefaults.elevation);
+  final Object? padRaw = insetsRaw(source, 'padding');
+  final Insets padding =
+      padRaw == null ? CardDefaults.padding : Insets.decode(padRaw);
+
+  final Color? borderColor = border.isNone
+      ? null
+      : border.color != null
+          ? Color(border.color!.value)
+          : roleColor(context, ThemeRoles.outline) ??
+              Theme.of(context).colorScheme.outlineVariant;
+
+  // `DecoratedBox` paints the border straddling the box edge without reserving
+  // layout for it, whereas the CSS border-box insets content by the border
+  // width. Add the border width to the padding so the child sits the same
+  // distance from the edge on both adapters (the geometry conformance pins it).
+  final EdgeInsets contentPadding = toEdgeInsets(padding) +
+      (border.isNone ? EdgeInsets.zero : EdgeInsets.all(border.width));
+
+  return DecoratedBox(
+    decoration: BoxDecoration(
+      color: surface,
+      borderRadius: BorderRadius.circular(radius.pixels),
+      border: borderColor == null
+          ? null
+          : Border.all(color: borderColor, width: border.width),
+      boxShadow: <BoxShadow>[
+        for (final ShadowSpec s in elevation.shadows)
+          BoxShadow(
+            color: Color(s.color.value),
+            offset: Offset(0, s.offsetY),
+            blurRadius: s.blur,
+            spreadRadius: s.spread,
+          ),
+      ],
+    ),
     child: Padding(
-      padding: const EdgeInsets.all(16.0),
+      padding: contentPadding,
       child: source.child(['child']),
     ),
   );

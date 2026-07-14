@@ -125,6 +125,39 @@ class _FlutterCraftTester implements CraftTester {
   }
 
   @override
+  String? surfaceColorOf(String text) {
+    final Color? color = _nearestBoxDecoration(text)?.color;
+    return color == null ? null : _argbHex(color);
+  }
+
+  @override
+  String? borderColorOf(String text) {
+    final BoxBorder? border = _nearestBoxDecoration(text)?.border;
+    if (border is Border &&
+        border.top.style != BorderStyle.none &&
+        border.top.width > 0) {
+      return _argbHex(border.top.color);
+    }
+    return null;
+  }
+
+  /// The [BoxDecoration] of the nearest `DecoratedBox` painted above the text
+  /// node equal to [text] (a `Card`'s surface); nearest-first, like the other
+  /// painted-decision probes.
+  BoxDecoration? _nearestBoxDecoration(String text) {
+    for (final Element e in find
+        .ancestor(of: find.text(text), matching: find.byType(DecoratedBox))
+        .evaluate()) {
+      final Decoration decoration = (e.widget as DecoratedBox).decoration;
+      if (decoration is BoxDecoration) return decoration;
+    }
+    return null;
+  }
+
+  String _argbHex(Color color) =>
+      '#${color.toARGB32().toRadixString(16).padLeft(8, '0').toUpperCase()}';
+
+  @override
   Future<void> activate(String key) async {
     await _tester.tap(find.byKey(ValueKey<String>(key)));
     await _tester.pump();

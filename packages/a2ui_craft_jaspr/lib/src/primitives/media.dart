@@ -33,28 +33,54 @@ Component buildImage(BuildContext context, DataSource source) {
   return img(src: url, styles: Styles(raw: raw));
 }
 
-/// Builds `Card`: an elevated surface with the stock 16px content padding.
+/// Builds `Card`: a grouping surface with the specified default decoration
+/// (`CardDefaults`) — an outlined surface with a soft shadow.
+///
+/// The same shared spec the Flutter adapter paints (DESIGN.md §8): the fill inks
+/// `color.surface`, the border inks `color.outline`, and the shadow is
+/// [Elevation]'s canonical `box-shadow` — so the look agrees up to idiom (the
+/// corner curve, the blur raster) rather than diverging by framework. Corner and
+/// elevation are specified defaults; every part is overridable by a prop.
 Component buildCard(BuildContext context, DataSource source) {
-  final Rgba? surface =
-      ambientCraftTheme(context)?.tokens.color(ThemeRoles.surface);
-  return div(
-    styles: Styles(
-      padding: Padding.all(Unit.pixels(16)),
-      radius: BorderRadius.circular(Unit.pixels(8)),
-      shadow: BoxShadow(
-        color: Color.rgba(0, 0, 0, 0.25),
-        blur: Unit.pixels(4),
-        offsetX: Unit.zero,
-        offsetY: Unit.pixels(2),
-      ),
-      backgroundColor: surface == null
-          ? const Color(kSurfaceFallback)
-          : Color(surface.toCssString()),
-    ),
-    [
-      source.child(['child'])
-    ],
-  );
+  final Rgba? colorArg = Rgba.decode(source.v<String>(['color']));
+  final String surface = colorArg != null
+      ? colorArg.toCssString()
+      : roleColor(context, ThemeRoles.surface) ?? kSurfaceFallback;
+
+  final CornerRadius radius = CornerRadius.decode(
+      numArg(source, 'cornerRadius'),
+      fallback: CardDefaults.cornerRadius);
+  final BorderSpec border = BorderSpec.decode(borderRaw(source, 'border'),
+      fallback: CardDefaults.border);
+  final Elevation elevation = Elevation.decode(numArg(source, 'elevation'),
+      fallback: CardDefaults.elevation);
+  final Object? padRaw = insetsRaw(source, 'padding');
+  final Insets padding =
+      padRaw == null ? CardDefaults.padding : Insets.decode(padRaw);
+
+  final Map<String, String> raw = <String, String>{
+    // border-box so the border shares the content-inset model the Flutter
+    // adapter reproduces by adding the border width to its padding.
+    'box-sizing': 'border-box',
+    'background-color': surface,
+    'border-radius': '${px(radius.pixels)}px',
+    'padding': cssInsets(padding),
+  };
+  if (!border.isNone) {
+    final String borderColor = border.color != null
+        ? border.color!.toCssString()
+        : roleColor(context, ThemeRoles.outline) ?? kDividerFallback;
+    raw['border'] = '${px(border.width)}px solid $borderColor';
+  }
+  final String shadow = elevation.shadows
+      .map((ShadowSpec s) =>
+          '0 ${px(s.offsetY)}px ${px(s.blur)}px ${px(s.spread)}px ${s.color.toCssString()}')
+      .join(', ');
+  if (shadow.isNotEmpty) raw['box-shadow'] = shadow;
+
+  return div(styles: Styles(raw: raw), [
+    source.child(['child'])
+  ]);
 }
 
 /// Builds `Divider`: a hairline rule along `axis`, inked by the `outline` role.

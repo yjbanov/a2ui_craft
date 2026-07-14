@@ -198,6 +198,61 @@ void main() {
     });
   });
 
+  group('BorderSpec.decode', () {
+    test('a positive number is a role-inked stroke of that width', () {
+      expect(BorderSpec.decode(1), const BorderSpec(width: 1));
+      expect(BorderSpec.decode(2.5), const BorderSpec(width: 2.5));
+      expect(BorderSpec.decode(1).color, isNull); // inks the mapped role
+      expect(BorderSpec.decode(1).isNone, isFalse);
+    });
+
+    test('a {width, color} map is an explicit stroke', () {
+      final BorderSpec b =
+          BorderSpec.decode(<String, Object?>{'width': 2, 'color': '#FF0000'});
+      expect(b.width, 2);
+      expect(b.color, const Rgba(0xFFFF0000));
+      // Missing/invalid color leaves it role-inked.
+      expect(BorderSpec.decode(<String, Object?>{'width': 2}).color, isNull);
+    });
+
+    test('zero, false, and malformed collapse to none; true keeps the default',
+        () {
+      expect(BorderSpec.decode(0), BorderSpec.none);
+      expect(BorderSpec.decode(-1), BorderSpec.none);
+      expect(BorderSpec.decode(false), BorderSpec.none);
+      expect(BorderSpec.decode(<String, Object?>{'width': 0}), BorderSpec.none);
+      expect(BorderSpec.none.isNone, isTrue);
+      // Absent falls back; `true` means "keep the fallback".
+      expect(BorderSpec.decode(null, fallback: const BorderSpec(width: 1)),
+          const BorderSpec(width: 1));
+      expect(BorderSpec.decode(true, fallback: const BorderSpec(width: 1)),
+          const BorderSpec(width: 1));
+    });
+  });
+
+  group('Elevation.decode / shadowForElevation', () {
+    test('a non-negative number is a depth; anything else falls back', () {
+      expect(Elevation.decode(2), const Elevation(2));
+      expect(Elevation.decode(0), Elevation.none);
+      expect(Elevation.decode(0).isFlat, isTrue);
+      expect(Elevation.decode(-1), Elevation.none);
+      expect(Elevation.decode(double.nan), Elevation.none);
+      expect(Elevation.decode(null, fallback: const Elevation(2)),
+          const Elevation(2));
+    });
+
+    test('flat casts no shadow; a depth scales offset=dp, blur=2*dp', () {
+      expect(shadowForElevation(0), isEmpty);
+      expect(const Elevation(0).shadows, isEmpty);
+      final List<ShadowSpec> s = shadowForElevation(2);
+      expect(s, hasLength(1));
+      expect(s.single.offsetY, 2);
+      expect(s.single.blur, 4);
+      expect(s.single.spread, 0);
+      expect(s.single.color, const Rgba(0x33000000)); // 20% black
+    });
+  });
+
   group('TextVariant.parse', () {
     test('parses canonical names; defaults to body', () {
       expect(TextVariant.parse('caption'), TextVariant.caption);

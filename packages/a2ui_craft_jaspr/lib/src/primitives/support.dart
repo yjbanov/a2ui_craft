@@ -38,6 +38,22 @@ Object? insetsRaw(DataSource source, String key) {
   return source.v<double>([key]) ?? source.v<int>([key])?.toDouble();
 }
 
+/// Gathers a raw `border` value (a width number, a `{width, color}` map, or a
+/// bool) so the framework-neutral `BorderSpec.decode` can interpret it. Only the
+/// extraction is adapter-specific; the interpretation lives in the core.
+Object? borderRaw(DataSource source, String key) {
+  if (source.isMap([key])) {
+    return <String, Object?>{
+      'width': source.v<double>([key, 'width']) ??
+          source.v<int>([key, 'width'])?.toDouble(),
+      'color': source.v<String>([key, 'color']),
+    };
+  }
+  final bool? flag = source.v<bool>([key]);
+  if (flag != null) return flag;
+  return source.v<double>([key]) ?? source.v<int>([key])?.toDouble();
+}
+
 /// Reads a list-of-strings argument (e.g. a Select's `options`).
 List<String> stringList(DataSource source, String key) {
   if (!source.isList([key])) return const <String>[];

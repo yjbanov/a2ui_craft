@@ -464,15 +464,18 @@ void runLayoutGeometryConformance(CraftGeometryDriver driver) {
 /// The shared **geometric** specification for the `Card` container.
 ///
 /// Pins that `Card` is **spacing-neutral and identical across adapters**: its
-/// only inset is the 16px content padding, with no framework-default margin.
-/// Flutter's Material `Card` defaults to `margin: EdgeInsets.all(4)`, which the
-/// Jaspr `Card` (a plain div) has no equivalent for; the adapter zeroes it so a
-/// layout's spacing (a `Column` `gap`) is the single source of inter-card space.
-/// This guards the fix in the profile-card work — a regression (the 4px margin
-/// returning) turns it red on Flutter.
+/// only inset is the specified default decoration — the 16px content padding
+/// plus the 1px default hairline border (`CardDefaults`) — with no
+/// framework-default margin. The child therefore sits 17px in on both adapters:
+/// the CSS border-box insets content by the border, and the Flutter adapter
+/// (whose `DecoratedBox` border does not reserve layout) adds the border width
+/// to its padding to match. Since the Card now owns its paint (no Material
+/// `Card`), Material's default 4px margin is gone by construction; a regression
+/// that reintroduced a margin, or that let the border-inset diverge, turns this
+/// red.
 void runCardGeometryConformance(CraftGeometryDriver driver) {
   driver.defineTest(
-    'Card adds no framework-default margin (content inset is padding only)',
+    'Card content inset is padding + border only, identical across adapters',
     (CraftGeometryTester tester) async {
       await tester.mountTemplate('''
         import core;
@@ -482,11 +485,9 @@ void runCardGeometryConformance(CraftGeometryDriver driver) {
       ''');
       final CraftRect box = await tester.rectOf('box');
       final CraftRect inner = await tester.rectOf('inner');
-      // The content is inset from the box by the Card's 16px padding only — no
-      // extra framework margin. (Material's default 4px Card margin would inset
-      // it to 20.)
-      expect(inner.left - box.left, closeTo(16, _tol));
-      expect(inner.top - box.top, closeTo(16, _tol));
+      // 16px padding + 1px default border, no framework margin.
+      expect(inner.left - box.left, closeTo(17, _tol));
+      expect(inner.top - box.top, closeTo(17, _tol));
     },
   );
 }

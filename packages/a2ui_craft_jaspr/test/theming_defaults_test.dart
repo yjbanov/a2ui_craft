@@ -95,10 +95,12 @@ void main() {
     ]);
     expect(
         _styleValues('--craft-slider-thumb'), <String>['rgba(170, 0, 0, 1.0)']);
-    // The checked box's glyph border ← primary; the TextField chrome ←
-    // outline (1px box border; its focus border/caret ride primary). The
-    // leading 'none' is the Divider resetting the UA hr border.
+    // The Card's default hairline border ← outline; the checked box's glyph
+    // border ← primary; the TextField chrome ← outline (1px box border; its
+    // focus border/caret ride primary). The 'none' is the Divider resetting
+    // the UA hr border.
     expect(_styleValues('border'), <String>[
+      '1px solid rgba(34, 51, 68, 1.0)', // Card ← outline
       'none',
       '2px solid rgba(170, 0, 0, 1.0)',
       '1px solid rgba(34, 51, 68, 1.0)',

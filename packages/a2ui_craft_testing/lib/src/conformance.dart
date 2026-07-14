@@ -153,6 +153,21 @@ abstract interface class CraftTester {
   /// every adapter), never pixels.
   String? buttonSurfaceColorOf(String label);
 
+  /// The **fill** of the nearest container painting a background above the
+  /// displayed text node equal to [text] (a `Card`'s surface), canonicalized to
+  /// `#AARRGGBB`, or null when none paints a fill.
+  ///
+  /// The container analogue of [buttonSurfaceColorOf]: the painted-decision
+  /// probe (§9.6) for surface primitives, asserting `color.surface` lands the
+  /// same on every adapter, never pixels.
+  String? surfaceColorOf(String text);
+
+  /// The **border color** of the nearest container drawing a border above the
+  /// displayed text node equal to [text] (a `Card`'s outline), canonicalized to
+  /// `#AARRGGBB`, or null when none draws a border. The painted-decision probe
+  /// for `color.outline` on a container.
+  String? borderColorOf(String text);
+
   /// Activates (taps/clicks) the interactive element carrying the given
   /// component `key`.
   Future<void> activate(String key);
@@ -1172,6 +1187,61 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
       // The high-contrast axis is a distinct mode, not a toggle on Dark.
       await tester.retheme(DefaultTheme.of(CraftThemeMode.darkHighContrast));
       expect(tester.textColorOf('body copy'), '#FFFFFFFF');
+    },
+  );
+
+  driver.defineTest(
+    'Card inks its surface fill and outline border, per theme, on both adapters',
+    (CraftTester tester) async {
+      // Card is layer 1 (Surface) of the paint model standalone (DESIGN.md §8):
+      // the fill reads `color.surface` and the default hairline border reads
+      // `color.outline`. Same role → same part, same degree, every adapter; a
+      // re-theme re-inks both in place. Corner and elevation are specified
+      // defaults, not roles, so they are not asserted here.
+      CraftTheme theme(String surface, String outline) =>
+          CraftTheme(resolveDesignTokens(<DesignTokenSet>[
+            parseDesignTokens(<String, Object?>{
+              'color': <String, Object?>{
+                r'$type': 'color',
+                'surface': <String, Object?>{r'$value': surface},
+                'outline': <String, Object?>{r'$value': outline},
+              },
+            }),
+          ]));
+
+      await tester.mount('''
+        import core;
+        widget root = Card(child: Text(text: "grouped"));
+      ''', theme: theme('#101820', '#33475B'));
+
+      expect(tester.surfaceColorOf('grouped'), '#FF101820');
+      expect(tester.borderColorOf('grouped'), '#FF33475B');
+
+      // Re-theming re-inks both parts in place.
+      await tester.retheme(theme('#FFFDF7', '#E0D6C4'));
+      expect(tester.surfaceColorOf('grouped'), '#FFFFFDF7');
+      expect(tester.borderColorOf('grouped'), '#FFE0D6C4');
+    },
+  );
+
+  driver.defineTest(
+    'an explicit Card color and border override the roles; border: 0 removes it',
+    (CraftTester tester) async {
+      // Author-supplied decoration wins over the role defaults, and `border: 0`
+      // is an explicit "no border" (the elevated-only look).
+      await tester.mount('''
+        import core;
+        widget root = Column(children: [
+          Card(color: "#ABCDEF", border: { width: 2.0, color: "#123456" },
+            child: Text(text: "explicit")),
+          Card(border: 0.0, child: Text(text: "borderless")),
+        ]);
+      ''', theme: DefaultTheme.of(CraftThemeMode.light));
+
+      expect(tester.surfaceColorOf('explicit'), '#FFABCDEF');
+      expect(tester.borderColorOf('explicit'), '#FF123456');
+      // No border drawn when the author zeroes it.
+      expect(tester.borderColorOf('borderless'), isNull);
     },
   );
 }

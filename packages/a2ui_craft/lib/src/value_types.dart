@@ -6,10 +6,10 @@
 ///
 /// A small set of types — sizing ([Dimension]), the flex [FlexAxis] and
 /// alignments ([MainAxisAlign]/[CrossAxisAlign]), edge [Insets], [Rgba]
-/// color, and corner rounding ([CornerRadius]) — each with a single canonical
-/// representation. Every renderer maps these onto its own native layout, so a
-/// template that uses them means the same thing regardless of the framework
-/// drawing it.
+/// color, corner rounding ([CornerRadius]), and container decoration
+/// ([BorderSpec], [Elevation]) — each with a single canonical representation.
+/// Every renderer maps these onto its own native layout, so a template that uses
+/// them means the same thing regardless of the framework drawing it.
 ///
 /// Each type exposes a `decode`/`parse` entry point that turns a raw argument
 /// value into the type; callers read the raw value from their data source and
@@ -444,6 +444,171 @@ final class CornerRadius {
 
   @override
   String toString() => 'CornerRadius($pixels)';
+}
+
+/// A box's border: a uniform stroke of [width] logical pixels, optionally in an
+/// explicit [color].
+///
+/// A [color] of `null` means the stroke is inked by the primitive's mapped role
+/// (a `Card`'s border takes `color.outline`), degrading to the host default when
+/// unthemed — the same rule as every other role (DESIGN.md §9.4). A [width] of
+/// `0` is [none]. Border *style* (the dashed / double / groove forms CSS offers)
+/// is deliberately not modeled: a solid hairline is the one form both frameworks
+/// render identically, and anything richer is the replacement escape hatch.
+// Named `BorderSpec` (not `Border`) because both Flutter and Jaspr export a
+// `Border` class — the same non-collision rule as `Rgba`/`Insets`/`CornerRadius`.
+final class BorderSpec {
+  const BorderSpec({required this.width, this.color});
+
+  /// No border.
+  static const BorderSpec none = BorderSpec(width: 0);
+
+  /// The stroke width in logical pixels (never negative).
+  final double width;
+
+  /// The explicit stroke color, or null to ink the mapped role / host default.
+  final Rgba? color;
+
+  /// Whether there is no stroke to draw.
+  bool get isNone => width <= 0;
+
+  /// Decodes a raw argument value into a [BorderSpec].
+  ///
+  /// Accepts:
+  /// - `num`: a role-inked stroke of that width (`<= 0` → [none]).
+  /// - `{ "width": n, "color": "#RRGGBB"? }`: an explicit width and color.
+  /// - `false`: [none] (an explicit "no border", to override a default);
+  ///   `true`: [fallback] (keep the default).
+  ///
+  /// Anything else (absent, malformed) yields [fallback].
+  static BorderSpec decode(Object? raw, {BorderSpec fallback = none}) {
+    if (raw is bool) return raw ? fallback : none;
+    if (raw is num) {
+      return raw > 0 ? BorderSpec(width: raw.toDouble()) : none;
+    }
+    if (raw is Map) {
+      final Object? w = raw['width'];
+      if (w is num) {
+        return w > 0
+            ? BorderSpec(width: w.toDouble(), color: Rgba.decode(raw['color']))
+            : none;
+      }
+    }
+    return fallback;
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is BorderSpec && other.width == width && other.color == color;
+
+  @override
+  int get hashCode => Object.hash(BorderSpec, width, color);
+
+  @override
+  String toString() => 'BorderSpec(width: $width, color: $color)';
+}
+
+/// One drop-shadow layer in the framework-neutral vocabulary, produced by
+/// [shadowForElevation] and painted by the adapters (Flutter `BoxShadow`, CSS
+/// `box-shadow`).
+///
+/// Defining the shadow ourselves — rather than leaning on Material's stock
+/// elevation on one side and a hand-tuned `box-shadow` on the other — is what
+/// keeps the depth cue from diverging by *framework* (DESIGN.md §8).
+// `ShadowSpec` (not `Shadow`) — Flutter exports `Shadow`/`BoxShadow`.
+final class ShadowSpec {
+  const ShadowSpec({
+    required this.offsetY,
+    required this.blur,
+    required this.spread,
+    required this.color,
+  });
+
+  /// Vertical offset in logical pixels (shadows fall straight down; no x-offset).
+  final double offsetY;
+
+  /// Gaussian blur radius in logical pixels.
+  final double blur;
+
+  /// How much the shadow expands (+) or contracts (−) before blurring.
+  final double spread;
+
+  /// The shadow color (typically translucent black).
+  final Rgba color;
+
+  @override
+  bool operator ==(Object other) =>
+      other is ShadowSpec &&
+      other.offsetY == offsetY &&
+      other.blur == blur &&
+      other.spread == spread &&
+      other.color == color;
+
+  @override
+  int get hashCode => Object.hash(offsetY, blur, spread, color);
+
+  @override
+  String toString() =>
+      'ShadowSpec(offsetY: $offsetY, blur: $blur, spread: $spread, $color)';
+}
+
+/// A box's elevation: a non-negative depth in logical pixels ("dp"), mapped to a
+/// canonical shadow by [shadowForElevation].
+///
+/// The *amount* of depth is the author's input and shared across adapters; how
+/// the engine rasterizes the blur is idiom, exactly like corner *style* is idiom
+/// while corner *amount* ([CornerRadius]) is shared (DESIGN.md §8). `0` is flat.
+final class Elevation {
+  const Elevation(this.dp);
+
+  /// Flat — casts no shadow.
+  static const Elevation none = Elevation(0);
+
+  /// The depth in logical pixels (never negative).
+  final double dp;
+
+  /// Whether there is no shadow to cast.
+  bool get isFlat => dp <= 0;
+
+  /// The canonical shadow layers for this depth (empty when flat).
+  List<ShadowSpec> get shadows => shadowForElevation(dp);
+
+  /// Decodes a raw argument value into an [Elevation].
+  ///
+  /// Accepts a non-negative finite number; anything else yields [fallback].
+  static Elevation decode(Object? raw, {Elevation fallback = none}) {
+    if (raw is num && raw.isFinite && raw >= 0)
+      return Elevation(raw.toDouble());
+    return fallback;
+  }
+
+  @override
+  bool operator ==(Object other) => other is Elevation && other.dp == dp;
+
+  @override
+  int get hashCode => Object.hash(Elevation, dp);
+
+  @override
+  String toString() => 'Elevation($dp)';
+}
+
+/// The canonical shadow for an elevation of [dp] logical pixels: a single soft
+/// ambient shadow that scales with depth — vertical offset `dp`, blur `2·dp`, no
+/// spread, at 20% black. `dp <= 0` casts nothing.
+///
+/// Shared by both adapters so the raised look matches within tolerance (the
+/// amount is specified; the raster is idiom — DESIGN.md §8). A richer multi-layer
+/// elevation ramp is a compatible future refinement of this one function.
+List<ShadowSpec> shadowForElevation(double dp) {
+  if (dp <= 0) return const <ShadowSpec>[];
+  return <ShadowSpec>[
+    ShadowSpec(
+      offsetY: dp,
+      blur: dp * 2,
+      spread: 0,
+      color: const Rgba(0x33000000), // rgba(0, 0, 0, 0.2)
+    ),
+  ];
 }
 
 /// A color stored as a 32-bit ARGB integer (`0xAARRGGBB`).

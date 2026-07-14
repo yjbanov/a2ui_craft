@@ -25,6 +25,15 @@ Future<void> _pump(WidgetTester tester, SampleSpec spec) {
   );
 }
 
+/// The `Card` primitive now owns its paint (a `DecoratedBox`, not Material's
+/// `Card`); its decoration is the one carrying an elevation shadow, so that
+/// identifies a rendered Card among the tree's decorated boxes.
+Iterable<BoxDecoration> _cardDecorations(WidgetTester tester) => tester
+    .widgetList<DecoratedBox>(find.byType(DecoratedBox))
+    .map((DecoratedBox d) => d.decoration)
+    .whereType<BoxDecoration>()
+    .where((BoxDecoration d) => d.boxShadow?.isNotEmpty ?? false);
+
 void main() {
   testWidgets('Greeting renders its title, bound message, and button',
       (WidgetTester tester) async {
@@ -132,7 +141,7 @@ void main() {
       expect(find.text('Flutter Framework'), findsOneWidget);
       expect(find.text('Build apps for any screen.'), findsOneWidget);
       expect(find.text('Dart'), findsOneWidget);
-      expect(find.byType(Card), findsNWidgets(2));
+      expect(_cardDecorations(tester).length, 2);
     });
   });
 
@@ -148,8 +157,7 @@ void main() {
     expect(spec.theme!.usesDefaultTheme, isTrue);
     expect(spec.theme!.defaultMode.id, 'dark');
 
-    Color cardColor() =>
-        tester.widgetList<Card>(find.byType(Card)).first.color!;
+    Color cardColor() => _cardDecorations(tester).first.color!;
 
     await mockNetworkImagesFor(() async {
       // Test platform brightness defaults to light → the Light surface.
@@ -175,8 +183,7 @@ void main() {
     expect(spec.theme, isNotNull);
     expect(spec.theme!.usesDefaultTheme, isFalse);
 
-    Color cardColor() =>
-        tester.widgetList<Card>(find.byType(Card)).first.color!;
+    Color cardColor() => _cardDecorations(tester).first.color!;
 
     await mockNetworkImagesFor(() async {
       await _pump(tester, spec);

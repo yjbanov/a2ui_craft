@@ -131,6 +131,21 @@ class _JasprCraftTester implements CraftTester {
     return _canonicalCssColor(css);
   }
 
+  @override
+  String? surfaceColorOf(String text) =>
+      _canonicalCssColor(_textStyleProperty(text, 'background-color'));
+
+  @override
+  String? borderColorOf(String text) {
+    // The Card writes the `border` shorthand ("<w>px solid <color>"); the color
+    // is the token after `solid`.
+    final String? border = _textStyleProperty(text, 'border');
+    if (border == null) return null;
+    final int i = border.indexOf('solid');
+    if (i < 0) return null;
+    return _canonicalCssColor(border.substring(i + 'solid'.length).trim());
+  }
+
   /// Canonicalizes the CSS color forms the primitives emit — hex defaults,
   /// `rgba(...)` themed values, and `light-dark(...)` host fallbacks — to
   /// `#AARRGGBB`. This tester is a light host, so `light-dark()` resolves to

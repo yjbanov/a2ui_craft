@@ -71,8 +71,15 @@ void main() {
     ''',
         theme: _fullTheme);
 
+    // Card owns its paint (a DecoratedBox, not Material's Card): the fill inks
+    // surface, the default hairline border inks outline.
+    final BoxDecoration cardDecoration = tester
+        .widgetList<DecoratedBox>(find.byType(DecoratedBox))
+        .map((DecoratedBox d) => d.decoration)
+        .whereType<BoxDecoration>()
+        .firstWhere((BoxDecoration d) => d.color == const Color(0xFFFAFBFC));
     expect(
-        tester.widget<Card>(find.byType(Card)).color, const Color(0xFFFAFBFC));
+        (cardDecoration.border! as Border).top.color, const Color(0xFF223344));
     expect(tester.widget<Divider>(find.byType(Divider)).color,
         const Color(0xFF223344));
     // The Checkbox role mapping (DESIGN.md §8) on Material's knobs: primary

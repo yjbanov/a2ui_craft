@@ -17,19 +17,32 @@ import 'package:flutter/rendering.dart';
 /// on a mismatched page.
 ///
 /// The embed's host element has no intrinsic size (to the DOM it is a canvas),
-/// so the browser cannot lay it out from the Flutter content. Instead the
-/// content measures *itself* — the scroll view gives it unbounded height, so it
-/// takes its intrinsic height under the host width — and reports it through
-/// [onContentHeight]; the Jaspr side then sizes the host element to match.
-/// (The widget and the Jaspr host compile into one Dart app, so this is a
-/// plain callback, not a JS bridge.) Re-reports on any layout change: a width
-/// resize, or the sample's own content growing at runtime.
+/// so it must be told how tall to be. Two strategies, chosen by [autoSize]:
+///
+/// - **[autoSize] `false` (default).** A full [MaterialApp]/[Scaffold] shell.
+///   The host element is sized by the caller, and the content measures
+///   *itself* — the scroll view gives it unbounded height, so it takes its
+///   intrinsic height under the host width — reporting it through
+///   [onContentHeight] for the caller to apply. Re-reports on any layout
+///   change: a width resize, or the sample's own content growing at runtime.
+///
+/// - **[autoSize] `true`.** The embedded view is given *unbounded-height* view
+///   constraints (see [FlutterEmbedView.constraints]) so the Flutter engine
+///   sizes the view to its content along the vertical axis, filling the host's
+///   width — no measurement, no fixed canvas. A `MaterialApp`/`Scaffold`/
+///   `Overlay` *fills* its constraints and cannot live under an unbounded
+///   height, so this uses a lightweight, **hugging** Material shell
+///   ([_AutoSizeSurface]) with a transparent background, so the surface blends
+///   into the host card exactly as the Jaspr render does. Suited to a page
+///   that stacks many independent specimens (the kitchen sink); [onContentHeight]
+///   is unused.
 Widget flutterSampleApp({
   required String template,
   required Map<String, Object?> schema,
   required List<A2uiMessage> messages,
   required bool dark,
   bool cupertino = false,
+  bool autoSize = false,
   void Function(A2uiClientAction action)? onAction,
   ValueChanged<double>? onContentHeight,
   CraftTheme? theme,
@@ -40,6 +53,25 @@ Widget flutterSampleApp({
   // .adaptive renderings, the Button's pressed-fade + superellipse corner).
   final TargetPlatform platform =
       cupertino ? TargetPlatform.iOS : TargetPlatform.android;
+  final SampleView sample = SampleView(
+    template: template,
+    schema: schema,
+    messages: messages,
+    onAction: onAction,
+    theme: theme,
+  );
+
+  if (autoSize) {
+    return _AutoSizeSurface(
+      theme: ThemeData(
+        useMaterial3: true,
+        brightness: dark ? Brightness.dark : Brightness.light,
+        platform: platform,
+      ),
+      child: sample,
+    );
+  }
+
   return MaterialApp(
     debugShowCheckedModeBanner: false,
     // [dark] is the site's effective scheme (system preference + the global
@@ -59,18 +91,66 @@ Widget flutterSampleApp({
         child: SingleChildScrollView(
           child: _ReportHeight(
             onHeight: onContentHeight,
-            child: SampleView(
-              template: template,
-              schema: schema,
-              messages: messages,
-              onAction: onAction,
-              theme: theme,
-            ),
+            child: sample,
           ),
         ),
       ),
     ),
   );
+}
+
+/// A **hug-height** Material shell for an auto-sizing embedded view: it provides
+/// everything the core widgets need (a theme, a [Material] ink surface,
+/// localizations, a scroll behavior, a [MediaQuery] and [Directionality]) but,
+/// unlike `MaterialApp`/`Scaffold`, sizes itself to its child — so the Flutter
+/// engine can size the view to the content when the view height is unbounded.
+///
+/// The background is transparent so the host card shows through, matching the
+/// Jaspr render (the specimen paints no surface of its own — a `Card` primitive
+/// inside it still paints its own). A full-width [SizedBox] lets the content
+/// fill the available horizontal space, as the block-level Jaspr render does.
+///
+/// It omits the `Overlay`/`Navigator` (which also fill), so overlay-backed
+/// affordances — the `Select` dropdown menu, text-selection toolbars — do not
+/// open; the controls still render and take their primary interactions.
+///
+/// The engine clamps an unbounded view `maxHeight` to a large finite value, so
+/// a `sizedByParent` **fill-height** widget (a bare `Slider`) fills that
+/// instead of taking its natural height. Such a widget must be given a bounded
+/// height by its template (e.g. a fixed-height `Box`); the shell itself only
+/// fills the available width and otherwise hugs.
+class _AutoSizeSurface extends StatelessWidget {
+  const _AutoSizeSurface({required this.theme, required this.child});
+
+  final ThemeData theme;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return MediaQuery.fromView(
+      view: View.of(context),
+      child: Directionality(
+        textDirection: TextDirection.ltr,
+        child: Localizations(
+          locale: const Locale('en', 'US'),
+          delegates: const <LocalizationsDelegate<dynamic>>[
+            DefaultMaterialLocalizations.delegate,
+            DefaultWidgetsLocalizations.delegate,
+          ],
+          child: ScrollConfiguration(
+            behavior: const MaterialScrollBehavior(),
+            child: Theme(
+              data: theme,
+              child: Material(
+                type: MaterialType.transparency,
+                child: SizedBox(width: double.infinity, child: child),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// The vertical padding [_ReportHeight] wraps around the sample, included in

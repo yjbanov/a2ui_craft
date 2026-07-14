@@ -573,8 +573,8 @@ widget Root = Card(child: Column(gap: 10.0, crossAxisAlignment: "start", childre
   ),
   _Section(
     title: 'ScrollView · List',
-    blurb: 'ScrollView is a scroll viewport around one child; List is the A2UI '
-        'catalog scroller — shown horizontal here, scroll it sideways.',
+    blurb: 'Scroll them — ScrollView scrolls a taller column inside a bounded '
+        'box; List is the A2UI catalog scroller, shown horizontal here.',
     template: r'''
 import core;
 
@@ -582,14 +582,17 @@ widget Tile = Box(padding: [12.0, 20.0], color: args.c,
   child: Text(text: args.t, variant: "caption"));
 
 widget Root = Column(gap: 6.0, crossAxisAlignment: "stretch", children: [
-  Text(text: "ScrollView wrapping a column of rows", variant: "caption"),
-  ScrollView(child: Column(gap: 6.0, crossAxisAlignment: "stretch", children: [
-    Tile(c: "#331A73E8", t: "one"), Tile(c: "#33669DF6", t: "two"),
-    Tile(c: "#331A73E8", t: "three"),
-  ])),
+  Text(text: "ScrollView · a 120px box scrolls its taller column", variant: "caption"),
+  Box(width: "fill", height: 120.0, color: "#22000000",
+    child: ScrollView(child: Column(gap: 6.0, crossAxisAlignment: "stretch", children: [
+      Tile(c: "#331A73E8", t: "one"), Tile(c: "#33669DF6", t: "two"),
+      Tile(c: "#331A73E8", t: "three"), Tile(c: "#33669DF6", t: "four"),
+      Tile(c: "#331A73E8", t: "five"), Tile(c: "#33669DF6", t: "six"),
+      Tile(c: "#331A73E8", t: "seven"), Tile(c: "#33669DF6", t: "eight"),
+    ]))),
   SizedBox(height: 8.0),
   Text(text: "List(direction: \"horizontal\") — scroll it sideways", variant: "caption"),
-  List(direction: "horizontal", children: [
+  List(direction: "horizontal", align: "center", children: [
     Tile(c: "#331A73E8", t: "alpha"), Tile(c: "#33669DF6", t: "beta"),
     Tile(c: "#331A73E8", t: "gamma"), Tile(c: "#33669DF6", t: "delta"),
     Tile(c: "#331A73E8", t: "epsilon"), Tile(c: "#33669DF6", t: "zeta"),
@@ -600,7 +603,8 @@ widget Root = Column(gap: 6.0, crossAxisAlignment: "stretch", children: [
   ]),
 ]);
 ''',
-    footnote: 'List scrolls along its axis; a scroller needs a bounded extent',
+    footnote: 'ScrollView fills a bounded ancestor and scrolls; List scrolls '
+        'along its axis',
   ),
   _Section(
     title: 'Button',
@@ -712,10 +716,10 @@ widget Root { check: true, sync: true, ship: "Standard" } =
     template: r'''
 import core;
 
-widget Root = Row(gap: 12.0, crossAxisAlignment: "center", children: [
+widget Root = Row(width: "fill", gap: 12.0, crossAxisAlignment: "center", children: [
   Text(text: "Brightness"),
-  Slider(min: 0.0, max: 100.0, steps: 100,
-    value: args.value, onChanged: args.setValue),
+  Expanded(child: Box(height: 44.0, child: Slider(min: 0.0, max: 100.0,
+    steps: 100, value: args.value, onChanged: args.setValue))),
   Text(text: args.value, variant: "caption"),
 ]);
 ''',

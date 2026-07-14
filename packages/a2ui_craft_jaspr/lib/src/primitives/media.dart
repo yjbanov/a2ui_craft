@@ -90,9 +90,15 @@ Component buildDivider(BuildContext context, DataSource source) {
 }
 
 /// Builds `ScrollView`: a scrollable viewport around one child.
+///
+/// `height: 100%` fills a bounded ancestor so the viewport scrolls within it
+/// (mirroring Flutter's `SingleChildScrollView`, which fills its bounded
+/// parent); against an auto-height ancestor a percentage height resolves to
+/// `auto`, so this is a no-op and the viewport hugs its content as before.
 Component buildScrollView(BuildContext context, DataSource source) {
   return div(
     styles: Styles(
+      height: 100.percent,
       overflow: Overflow.auto,
     ),
     [

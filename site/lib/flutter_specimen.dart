@@ -22,22 +22,21 @@ import 'flutter_host.dart';
 /// engine (jaspr_flutter_embed's multi-view mode); this widget is one view on
 /// it.
 ///
-/// **Fixed-canvas, clipped to content.** A Flutter view has no intrinsic DOM
-/// size, and *resizing* an embedded view re-lays-out its content, which re-runs
-/// self-measurement — a feedback loop that, across many multi-view embeds,
-/// never settles. So the view canvas is a **constant** [_canvasHeight] and is
-/// never resized; the content lays out once and reports its height, and the
-/// *container* is clipped (`overflow: hidden`) to that height. The content is
-/// top-anchored (a Scaffold), so clipping the empty remainder is exactly right,
-/// and the embed ends up hugging its content like the Jaspr render does. Until
-/// the first report lands the full canvas shows.
+/// **Self-sizing via view constraints.** A Flutter view has no intrinsic DOM
+/// size, so the view is given *unbounded-height* view constraints
+/// (https://docs.flutter.dev/platform-integration/web/embedding-flutter-web#view-constraints):
+/// the engine then sizes the view to its content along the vertical axis while
+/// filling the host element's width, and grows the host element to match — no
+/// measurement loop, no fixed canvas. `flutterSampleApp(autoSize: true)` pairs
+/// this with a hug-height Material shell (a `MaterialApp`/`Scaffold` would fill
+/// the unbounded height instead).
 ///
 /// **Lazy-mounted.** Every live Flutter view is a full CanvasKit surface
 /// competing for frames; a page like the kitchen sink stacks many. So the view
 /// mounts only while this element is near the viewport (an
 /// `IntersectionObserver`, with a margin so it is warm before scrolling in) and
 /// unmounts once well past it; off-screen, a plain spacer holds the last
-/// measured height so the page doesn't jump.
+/// rendered height so the page doesn't jump.
 ///
 /// The embedded app reads its dark-light input and theme explicitly (the engine
 /// only ever sees the browser preference), so a change to either [dark] or
@@ -52,7 +51,7 @@ class FlutterSpecimen extends StatefulComponent {
     required this.dark,
     this.theme,
     this.onAction,
-    this.minHeight = 220,
+    this.minHeight = 120,
   });
 
   /// The catalog as RFW template source (`import core; widget Root = …;`).
@@ -76,9 +75,8 @@ class FlutterSpecimen extends StatefulComponent {
   /// Called when the rendered surface dispatches an A2UI action.
   final void Function(A2uiClientAction action)? onAction;
 
-  /// The spacer height (px) for an off-screen, not-yet-measured specimen — a
-  /// rough estimate that only affects the scrollbar length before the embed
-  /// has ever mounted.
+  /// The spacer height (px) held before this specimen has ever rendered — only
+  /// affects the scrollbar length until the first mount measures the real one.
   final double minHeight;
 
   @override
@@ -92,12 +90,6 @@ int _specimenSeq = 0;
 /// past scrolling — wide enough that it is warm by the time it is on screen.
 const String _mountMargin = '600px 0px';
 
-/// The constant height (px) of every embedded view's canvas. It never changes,
-/// so the content lays out exactly once; the container is clipped to the
-/// measured content height. Only needs to exceed the tallest specimen — content
-/// past it would be clipped (no specimen comes close).
-const double _canvasHeight = 900;
-
 class _FlutterSpecimenState extends State<FlutterSpecimen> {
   late final String _domId = 'flutter-specimen-${_specimenSeq++}';
 
@@ -109,10 +101,9 @@ class _FlutterSpecimenState extends State<FlutterSpecimen> {
   // when the theme or dark-light input changes (or the view is remounted).
   Object? _widget;
 
-  // The Flutter content's self-measured height (see flutterSampleApp) — the
-  // height the fixed-canvas view is *clipped* to, and the spacer height while
-  // off-screen. Null until the first report lands.
-  double? _height;
+  // The rendered height captured just before the view is unmounted, so the
+  // off-screen spacer holds the same space and the page doesn't jump.
+  double? _placeholderHeight;
 
   // Bumped whenever the widget is recreated, to swap the FlutterEmbedView's
   // key so a fresh view mounts.
@@ -139,6 +130,12 @@ class _FlutterSpecimenState extends State<FlutterSpecimen> {
             if (e.isIntersecting) near = true;
           }
           if (!mounted || near == _visible) return;
+          // Capture the auto-sized height before dropping the view, so the
+          // spacer that replaces it holds the same space.
+          if (!near) {
+            final double h = host.getBoundingClientRect().height;
+            if (h > 0) _placeholderHeight = h;
+          }
           setState(() => _visible = near);
         }.toJS,
         web.IntersectionObserverInit(rootMargin: _mountMargin),
@@ -154,7 +151,6 @@ class _FlutterSpecimenState extends State<FlutterSpecimen> {
     if (oldComponent.dark != component.dark ||
         !identical(oldComponent.theme, component.theme)) {
       _widget = null;
-      _height = null;
       _renderKey++;
     }
   }
@@ -173,56 +169,43 @@ class _FlutterSpecimenState extends State<FlutterSpecimen> {
       dark: component.dark,
       onAction: component.onAction,
       theme: component.theme,
-      onContentHeight: (double height) {
-        // Reported once the content lays out (the fixed canvas never resizes,
-        // so it does not re-measure). May land after this element unmounted
-        // (embed teardown is async).
-        if (!mounted) return;
-        // A greedy scroller under the (unbounded) measuring viewport can report
-        // an infinite intrinsic height; ignore it (the full canvas shows) — a
-        // template that scrolls must bound its own height.
-        if (!height.isFinite) return;
-        final double px = height.ceilToDouble();
-        if (_height == px) return;
-        setState(() => _height = px);
-      },
+      autoSize: true,
     );
   }
 
   @override
   Component build(BuildContext context) {
     // The host (#_domId) is stable so the observer stays attached across
-    // mount/unmount, and is clipped to the measured content height.
-    final Component child;
-    final double hostHeight;
+    // mount/unmount. While visible it is auto-height (the embedded view sizes
+    // itself and grows it); off-screen a spacer holds the last rendered height.
     if (_visible) {
       _widget ??= _make();
-      // Show the full canvas until the content measures, then clip to it.
-      hostHeight = _height ?? _canvasHeight;
-      // A constant-height canvas (never resized → measures once); the host
-      // clips it to the content height.
-      child = FlutterEmbedView(
-        key: ValueKey<String>('flutter-$_renderKey'),
-        styles: Styles(raw: <String, String>{
-          'width': '100%',
-          'height': '${_canvasHeight.ceil()}px',
-        }),
-        widget: _widget as dynamic,
+      return div(
+        id: _domId,
+        styles: Styles(raw: const <String, String>{'width': '100%'}),
+        [
+          FlutterEmbedView(
+            key: ValueKey<String>('flutter-$_renderKey'),
+            // Unbounded height → the engine sizes the view to its content and
+            // grows the host element; width fills the host (its `100%`).
+            constraints:
+                ViewConstraints(minHeight: 0, maxHeight: double.infinity),
+            styles: Styles(raw: const <String, String>{'width': '100%'}),
+            widget: _widget as dynamic,
+          ),
+        ],
       );
-    } else {
-      // Dropped the view: recreate the widget on the next reveal so it boots
-      // fresh (a removed Flutter view cannot be re-added).
-      _widget = null;
-      hostHeight = _height ?? component.minHeight;
-      child = const _Spacer();
     }
+    // Dropped the view: recreate the widget on the next reveal so it boots
+    // fresh (a removed Flutter view cannot be re-added).
+    _widget = null;
     return div(
       id: _domId,
       styles: Styles(raw: <String, String>{
-        'height': '${hostHeight.ceil()}px',
-        'overflow': 'hidden',
+        'width': '100%',
+        'height': '${(_placeholderHeight ?? component.minHeight).ceil()}px',
       }),
-      [child],
+      const [_Spacer()],
     );
   }
 }

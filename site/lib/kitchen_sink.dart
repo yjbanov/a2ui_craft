@@ -3,13 +3,14 @@
 // found in the LICENSE file.
 
 import 'package:a2ui_core/a2ui_core.dart' show A2uiMessage;
-import 'package:a2ui_craft/a2ui_craft.dart'
-    show CraftTheme, CraftThemeMode, DefaultTheme;
+import 'package:a2ui_craft/a2ui_craft.dart' show CraftTheme, CraftThemeMode;
 import 'package:a2ui_craft_jaspr/a2ui_craft_jaspr.dart' show SampleView;
 import 'package:jaspr/dom.dart';
 import 'package:jaspr/jaspr.dart';
 import 'package:jaspr_router/jaspr_router.dart';
+import 'package:web/web.dart' as web;
 
+import 'brand_themes.dart';
 import 'flutter_specimen.dart';
 import 'theme_mode.dart';
 
@@ -41,16 +42,27 @@ class _KitchenSinkScreenState extends State<KitchenSinkScreen> {
   /// (embedded). Flipping it swaps all specimens at once.
   String _framework = 'Jaspr';
 
+  /// The active brand — an axis orthogonal to light/dark and high-contrast. It
+  /// drives both the specimen [CraftTheme] and the page chrome (corners, border
+  /// weights, fonts) via CSS variables on the document root.
+  Brand _brand = kBrands.first;
+
   void Function()? _unsubscribe;
 
   @override
   void initState() {
     super.initState();
-    _unsubscribe = SiteTheme.onChange(() => setState(() {}));
+    // A dark-light flip re-themes the specimens and re-derives the chrome.
+    _unsubscribe = SiteTheme.onChange(() {
+      setState(() {});
+      _applyChrome();
+    });
+    _applyChrome();
   }
 
   @override
   void dispose() {
+    _clearChrome();
     _unsubscribe?.call();
     super.dispose();
   }
@@ -63,7 +75,36 @@ class _KitchenSinkScreenState extends State<KitchenSinkScreen> {
         (true, true) => CraftThemeMode.darkHighContrast,
       };
 
-  CraftTheme get _theme => DefaultTheme.of(_mode);
+  CraftTheme get _theme => _brand.craftTheme(_mode);
+
+  /// Pushes the active brand's chrome variables onto the document root (so the
+  /// page background, cards, and controls re-brand), or removes them for the
+  /// default brand so the site's stock palette shows through. Deliberately
+  /// outside Jaspr's render tree — the same escape hatch [SiteTheme] uses to
+  /// drive `color-scheme`.
+  void _applyChrome() {
+    final web.CSSStyleDeclaration style =
+        (web.document.documentElement! as web.HTMLElement).style;
+    final Map<String, String> vars = _brand.chromeVars(_mode);
+    for (final String key in kChromeVarKeys) {
+      final String? value = vars[key];
+      if (value == null) {
+        style.removeProperty(key);
+      } else {
+        style.setProperty(key, value);
+      }
+    }
+  }
+
+  /// Restores the site's stock chrome — on unmount, so other screens aren't
+  /// left branded.
+  void _clearChrome() {
+    final web.CSSStyleDeclaration style =
+        (web.document.documentElement! as web.HTMLElement).style;
+    for (final String key in kChromeVarKeys) {
+      style.removeProperty(key);
+    }
+  }
 
   @override
   Component build(BuildContext context) {
@@ -72,7 +113,8 @@ class _KitchenSinkScreenState extends State<KitchenSinkScreen> {
         'max-width': '860px',
         'margin': '0 auto',
         'padding': '32px 20px 64px',
-        'font-family': 'system-ui, -apple-system, sans-serif',
+        'font-family':
+            'var(--brand-font, system-ui, -apple-system, sans-serif)',
       }),
       [
         _header(),
@@ -118,8 +160,9 @@ class _KitchenSinkScreenState extends State<KitchenSinkScreen> {
             'font-size': '20px',
             'flex': '1',
           }),
-          [Component.text('A2UI Craft · default theme')],
+          [Component.text('A2UI Craft')],
         ),
+        _brandPicker(),
         _frameworkToggle(),
         label(
           styles: Styles(raw: <String, String>{
@@ -135,8 +178,11 @@ class _KitchenSinkScreenState extends State<KitchenSinkScreen> {
             input(
               type: InputType.checkbox,
               checked: _highContrast,
-              onChange: (dynamic _) =>
-                  setState(() => _highContrast = !_highContrast),
+              onChange: (dynamic _) {
+                setState(() => _highContrast = !_highContrast);
+                // High contrast is a chrome axis too — re-derive the CSS vars.
+                _applyChrome();
+              },
               styles: Styles(raw: <String, String>{
                 'accent-color': 'var(--accent)',
                 'cursor': 'pointer',
@@ -146,6 +192,44 @@ class _KitchenSinkScreenState extends State<KitchenSinkScreen> {
           ],
         ),
         const ThemeToggle(),
+      ],
+    );
+  }
+
+  /// The brand picker: a segmented control (like the adapter toggle) that swaps
+  /// the whole page's brand — the specimen colors and the chrome's corners,
+  /// borders, and font — while light/dark and high-contrast stay independent.
+  Component _brandPicker() {
+    return div(
+      attributes: const <String, String>{
+        'role': 'group',
+        'aria-label': 'Brand theme',
+      },
+      styles: Styles(raw: <String, String>{
+        'display': 'inline-flex',
+        'border': '1px solid var(--border-strong)',
+        'border-radius': 'var(--control-radius, 6px)',
+        'overflow': 'hidden',
+      }),
+      [
+        for (final Brand b in kBrands)
+          button(
+            onClick: () {
+              if (identical(b, _brand)) return;
+              setState(() => _brand = b);
+              _applyChrome();
+            },
+            styles: Styles(raw: <String, String>{
+              'padding': '6px 12px',
+              'border': 'none',
+              'background':
+                  identical(b, _brand) ? 'var(--accent)' : 'var(--card)',
+              'color': identical(b, _brand) ? 'var(--accent-fg)' : 'var(--fg)',
+              'font': '13px inherit',
+              'cursor': 'pointer',
+            }),
+            [Component.text(b.label)],
+          ),
       ],
     );
   }
@@ -161,7 +245,7 @@ class _KitchenSinkScreenState extends State<KitchenSinkScreen> {
       styles: Styles(raw: <String, String>{
         'display': 'inline-flex',
         'border': '1px solid var(--border-strong)',
-        'border-radius': '6px',
+        'border-radius': 'var(--control-radius, 6px)',
         'overflow': 'hidden',
       }),
       [
@@ -176,7 +260,7 @@ class _KitchenSinkScreenState extends State<KitchenSinkScreen> {
               'border': 'none',
               'background': _framework == fw ? 'var(--accent)' : 'var(--card)',
               'color': _framework == fw ? 'var(--accent-fg)' : 'var(--fg)',
-              'font': '13px system-ui',
+              'font': '13px inherit',
               'cursor': 'pointer',
             }),
             [Component.text(fw)],
@@ -228,8 +312,8 @@ class _KitchenSinkScreenState extends State<KitchenSinkScreen> {
             'color': 'var(--subtle)',
           }),
           [
-            Component.text(
-                'adapter → $_framework  ·  active mode → ${_mode.id}')
+            Component.text('brand → ${_brand.label}  ·  adapter → $_framework'
+                '  ·  active mode → ${_mode.id}')
           ],
         ),
       ],
@@ -240,8 +324,9 @@ class _KitchenSinkScreenState extends State<KitchenSinkScreen> {
     return section(
       styles: Styles(raw: <String, String>{
         'margin-top': '24px',
-        'border': '1px solid var(--border)',
-        'border-radius': '16px',
+        'border':
+            'var(--card-border-width, 1px) solid var(--card-border-color, var(--border))',
+        'border-radius': 'var(--card-radius, 16px)',
         'padding': '22px 24px',
         'background': 'var(--card)',
       }),

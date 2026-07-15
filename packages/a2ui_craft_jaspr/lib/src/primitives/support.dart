@@ -138,6 +138,7 @@ const String coreControlStyleSheet = '''
 .craft-textfield:focus, .craft-select:focus { border-color: var(--craft-focus); }
 .craft-textfield:focus-visible, .craft-select:focus-visible { outline: 2px solid var(--craft-focus); outline-offset: 1px; }
 .craft-slider:not(:disabled) { cursor: pointer; }
+.craft-slider:disabled { opacity: 0.5; cursor: not-allowed; }
 .craft-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 16px; height: 16px; border-radius: 50%; border: none; background: var(--craft-slider-thumb); }
 .craft-slider::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; border: none; background: var(--craft-slider-thumb); }
 ''';

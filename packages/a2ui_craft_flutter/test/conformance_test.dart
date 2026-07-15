@@ -174,6 +174,10 @@ class _FlutterCraftTester implements CraftTester {
     await _tester.tap(find.byType(Switch));
     await _tester.pump();
   }
+
+  @override
+  bool sliderEnabled() =>
+      _tester.widget<Slider>(find.byType(Slider)).onChanged != null;
 }
 
 class _FlutterConformanceDriver implements CraftConformanceDriver {

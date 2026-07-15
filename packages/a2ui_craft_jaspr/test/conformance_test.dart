@@ -201,6 +201,19 @@ class _JasprCraftTester implements CraftTester {
     );
     await _tester.pump();
   }
+
+  @override
+  bool sliderEnabled() {
+    // The typed element flattens to a DomComponent in the built tree; the
+    // range input carries `disabled` in its attributes only when disabled.
+    for (final Element e in find.tag('input').evaluate()) {
+      final DomComponent c = e.component as DomComponent;
+      if (c.attributes?['type'] == 'range') {
+        return !(c.attributes?.containsKey('disabled') ?? false);
+      }
+    }
+    return false;
+  }
 }
 
 /// Owns the mounted surface's theme so [_JasprCraftTester.retheme] can swap it

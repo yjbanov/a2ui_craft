@@ -178,6 +178,13 @@ abstract interface class CraftTester {
   /// Toggles the (single) rendered switch, as a user click would.
   Future<void> toggleSwitch();
 
+  /// Whether the (single) rendered slider is interactive rather than disabled.
+  /// Flutter: the `Slider`'s `onChanged` is non-null; Jaspr: the range input is
+  /// not `disabled`. A slider with no value listener cannot report changes, so
+  /// it must be disabled identically on every adapter (the presence of the
+  /// handler drives it, matching the handler-less `Button`).
+  bool sliderEnabled();
+
   /// Creates a framework-specific adapter for the A2UI component [id] in
   /// [surface], rendering it against the demo catalog ([a2uiDemoCatalogName]).
   Object buildAdapter(SurfaceModel<ComponentApi> surface, String id);
@@ -1187,6 +1194,35 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
       // The high-contrast axis is a distinct mode, not a toggle on Dark.
       await tester.retheme(DefaultTheme.of(CraftThemeMode.darkHighContrast));
       expect(tester.textColorOf('body copy'), '#FFFFFFFF');
+    },
+  );
+
+  driver.defineTest(
+    'a Slider without a value listener is disabled, on both adapters',
+    (CraftTester tester) async {
+      // The presence of `onChanged` drives the enabled state, identically on
+      // every adapter: a slider with no listener cannot report changes, so it
+      // is disabled (Flutter's `Slider(onChanged: null)` renders the disabled
+      // state; the Jaspr range input carries `disabled`). Behaviorally
+      // identical — neither accepts a drag — rather than one adapter dropping
+      // drags the other honors. Matches the handler-less `Button`.
+      await tester.mount('''
+        import core;
+        widget root = Slider(value: 0.5, min: 0.0, max: 1.0);
+      ''');
+      expect(tester.sliderEnabled(), isFalse);
+    },
+  );
+
+  driver.defineTest(
+    'a Slider with a value listener is interactive, on both adapters',
+    (CraftTester tester) async {
+      await tester.mount('''
+        import core;
+        widget root =
+          Slider(value: 0.5, min: 0.0, max: 1.0, onChanged: event "s" {});
+      ''');
+      expect(tester.sliderEnabled(), isTrue);
     },
   );
 

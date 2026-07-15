@@ -32,6 +32,12 @@ Component buildSlider(BuildContext context, DataSource source) {
   return input<num>(
     type: InputType.range,
     value: '$value',
+    // No `onChanged` → no value listener → the control cannot report changes,
+    // so it is disabled (non-draggable, dimmed), matching the Flutter adapter
+    // (`Slider(onChanged: null)` renders Material's disabled state) and the
+    // handler-less `Button`. Behaviorally identical: both adapters then show
+    // the value read-only rather than one accepting drags the other drops.
+    disabled: onChanged == null,
     classes:
         roleColor(context, ThemeRoles.primary) == null ? null : 'craft-slider',
     styles: _sliderStyles(context,

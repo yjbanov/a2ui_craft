@@ -1266,6 +1266,29 @@ abstract class _CurriedWidget extends BlobNode {
   String toString() => '$fullName ${initialState ?? "{}"} $arguments';
 }
 
+/// The attribute stamped on every core-primitive DOM element, naming the widget
+/// that produced it (e.g. `data-craft="Column"`), so the rendered HTML is
+/// legible when debugging — a `<div>` reads as a `Box`, `Row`, or `Column` at a
+/// glance. A `data-*` attribute is used rather than `is` (which is reserved for
+/// customized built-in elements) so it is a pure, side-effect-free marker.
+const String kCraftWidgetAttribute = 'data-craft';
+
+/// Returns [built] wrapped so [kCraftWidgetAttribute] naming [widget] is merged
+/// onto its root element.
+///
+/// Applied centrally by the runtime at the one point a primitive's builder is
+/// invoked, so no primitive annotates itself and only its root element is
+/// stamped (composite template widgets expand to primitives and own no element).
+/// [Component.wrapElement] merges the attribute onto the child's element without
+/// adding a DOM node of its own — so it works for whatever element a primitive
+/// returns (`<div>`, `<input>`, `<button>`, …) and never perturbs layout.
+Component _annotateCraftWidget(String widget, Component built) {
+  return Component.wrapElement(
+    attributes: <String, String>{kCraftWidgetAttribute: widget},
+    child: built,
+  );
+}
+
 class _CurriedLocalWidget extends _CurriedWidget {
   const _CurriedLocalWidget(
     FullyQualifiedWidgetName fullName,
@@ -1297,7 +1320,7 @@ class _CurriedLocalWidget extends _CurriedWidget {
     _DataResolverCallback dataResolver,
     _WidgetBuilderArgResolverCallback widgetBuilderArgResolver,
   ) {
-    return child(context, source);
+    return _annotateCraftWidget(fullName.widget, child(context, source));
   }
 }
 

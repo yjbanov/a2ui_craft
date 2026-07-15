@@ -154,8 +154,15 @@ Component buildSizedBox(BuildContext context, DataSource source) {
 }
 
 /// Builds a `Box` — the catalog's single container primitive (size + padding +
-/// margin + background) — from the spec, on the same explicit-sizing and
+/// margin + decoration) — from the spec, on the same explicit-sizing and
 /// border-box model the Flutter adapter renders.
+///
+/// **Decoration is opt-in** (unlike `Card`): a bare `Box` paints nothing. When
+/// set, the same shared value types the `Card` uses drive it — `color`,
+/// `cornerRadius`, `border` (`color.outline` when its color is unset),
+/// `elevation`. `box-sizing: border-box` insets the content by the border, the
+/// model the Flutter adapter reproduces by folding the border width into its
+/// padding.
 ///
 /// `margin` is rendered as an **outer wrapper** rather than CSS `margin`, so the
 /// keyed node's `getBoundingClientRect` *includes* the margin band — matching the
@@ -169,6 +176,10 @@ Component buildBox(BuildContext context, DataSource source) {
   final Insets padding = Insets.decode(insetsRaw(source, 'padding'));
   final Insets margin = Insets.decode(insetsRaw(source, 'margin'));
   final Rgba? color = _rgba(source, 'color');
+  final CornerRadius radius =
+      CornerRadius.decode(numArg(source, 'cornerRadius'));
+  final BorderSpec border = BorderSpec.decode(borderRaw(source, 'border'));
+  final Elevation elevation = Elevation.decode(numArg(source, 'elevation'));
   final Component? child = source.optionalChild(['child']);
 
   final Map<String, String> inner = <String, String>{
@@ -178,6 +189,18 @@ Component buildBox(BuildContext context, DataSource source) {
   };
   if (!padding.isZero) inner['padding'] = cssInsets(padding);
   if (color != null) inner['background-color'] = color.toCssString();
+  if (!radius.isSharp) inner['border-radius'] = '${px(radius.pixels)}px';
+  if (!border.isNone) {
+    final String borderColor = border.color != null
+        ? border.color!.toCssString()
+        : roleColor(context, ThemeRoles.outline) ?? kDividerFallback;
+    inner['border'] = '${px(border.width)}px solid $borderColor';
+  }
+  final String shadow = elevation.shadows
+      .map((ShadowSpec s) =>
+          '0 ${px(s.offsetY)}px ${px(s.blur)}px ${px(s.spread)}px ${s.color.toCssString()}')
+      .join(', ');
+  if (shadow.isNotEmpty) inner['box-shadow'] = shadow;
 
   Component box = div(styles: Styles(raw: inner), _childList(child));
 

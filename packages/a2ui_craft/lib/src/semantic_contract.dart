@@ -41,7 +41,7 @@ library;
 /// | [onSurface] | `Text` (body), `Heading`, `Markdown` body, `Icon` |
 /// | [onSurfaceVariant] | `Text` (caption) |
 /// | [primary] | `Checkbox`, `Slider`, `Radio` accents |
-/// | [outline] | `Divider`, `TextField` border, `Card` border |
+/// | [outline] | `Divider`, `TextField` border, `Card` border, `Box` border |
 /// | [link] | `Markdown` links |
 ///
 /// The `type.*` roles (sizes only in v1; families/weights are later phases):
@@ -73,7 +73,7 @@ abstract final class ThemeRoles {
   /// consumer yet.
   static const String onPrimary = 'color.onPrimary';
 
-  /// Borders and separators (`Divider`, `TextField`, `Card`).
+  /// Borders and separators (`Divider`, `TextField`, `Card`, `Box` border).
   static const String outline = 'color.outline';
 
   /// Hyperlinks (`Markdown`). Typically aliased to `{color.primary}` by

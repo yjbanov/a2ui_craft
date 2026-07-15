@@ -109,13 +109,21 @@ Widget buildSizedBox(BuildContext context, DataSource source) {
 }
 
 /// Builds a `Box` — the catalog's single container primitive (size + padding +
-/// margin + background) — from the spec, on the same explicit-sizing and
+/// margin + decoration) — from the spec, on the same explicit-sizing and
 /// border-box model the Jaspr adapter renders.
 ///
-/// Composition, inside-out: child → padding → fixed/fill size (child placed
-/// top-left, like CSS block flow) → background (fills the padded box, not the
-/// margin) → margin. `Container` is deliberately *not* used: with an alignment
-/// it expands to fill when unsized, which would break `hug`.
+/// Composition, inside-out: child → padding (+ border) → fixed/fill size (child
+/// placed top-left, like CSS block flow) → decoration (background, border,
+/// corner, shadow — around the padded box, not the margin) → margin. `Container`
+/// is deliberately *not* used: with an alignment it expands to fill when
+/// unsized, which would break `hug`.
+///
+/// **Decoration is opt-in** (unlike `Card`, which carries a specified default):
+/// a bare `Box` paints nothing. When set, the same shared value types the `Card`
+/// uses drive it — `color`, `cornerRadius`, `border` (`color.outline` when its
+/// color is unset), `elevation`. Since `DecoratedBox` does not reserve layout for
+/// its border while the CSS border-box does, the border width is added to the
+/// padding so content sits the same distance from the edge on both adapters.
 ///
 /// `margin` is rendered as an outer `Padding`, so the keyed node's measured rect
 /// includes the margin — matching how the Jaspr adapter wraps margin. Measuring
@@ -127,11 +135,25 @@ Widget buildBox(BuildContext context, DataSource source) {
   final Insets padding = Insets.decode(insetsRaw(source, 'padding'));
   final Insets margin = Insets.decode(insetsRaw(source, 'margin'));
   final Rgba? color = rgbaArg(source, 'color');
+  final CornerRadius radius =
+      CornerRadius.decode(numArg(source, 'cornerRadius'));
+  final BorderSpec border = BorderSpec.decode(borderRaw(source, 'border'));
+  final Elevation elevation = Elevation.decode(numArg(source, 'elevation'));
+
+  final Color? borderColor = border.isNone
+      ? null
+      : border.color != null
+          ? Color(border.color!.value)
+          : roleColor(context, ThemeRoles.outline) ??
+              Theme.of(context).colorScheme.outlineVariant;
 
   Widget box = source.optionalChild(['child']) ?? const SizedBox.shrink();
 
-  if (!padding.isZero) {
-    box = Padding(padding: toEdgeInsets(padding), child: box);
+  // Border-box content inset: the padding plus the border width (see above).
+  final EdgeInsets contentInset = toEdgeInsets(padding) +
+      (border.isNone ? EdgeInsets.zero : EdgeInsets.all(border.width));
+  if (contentInset != EdgeInsets.zero) {
+    box = Padding(padding: contentInset, child: box);
   }
 
   final double? w = _extent(width);
@@ -146,8 +168,27 @@ Widget buildBox(BuildContext context, DataSource source) {
     );
   }
 
-  if (color != null) {
-    box = ColoredBox(color: Color(color.value), child: box);
+  if (color != null || borderColor != null || !elevation.isFlat) {
+    box = DecoratedBox(
+      decoration: BoxDecoration(
+        color: color == null ? null : Color(color.value),
+        borderRadius:
+            radius.isSharp ? null : BorderRadius.circular(radius.pixels),
+        border: borderColor == null
+            ? null
+            : Border.all(color: borderColor, width: border.width),
+        boxShadow: <BoxShadow>[
+          for (final ShadowSpec s in elevation.shadows)
+            BoxShadow(
+              color: Color(s.color.value),
+              offset: Offset(0, s.offsetY),
+              blurRadius: s.blur,
+              spreadRadius: s.spread,
+            ),
+        ],
+      ),
+      child: box,
+    );
   }
 
   if (!margin.isZero) {

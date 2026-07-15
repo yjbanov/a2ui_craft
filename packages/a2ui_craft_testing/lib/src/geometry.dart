@@ -328,6 +328,30 @@ void runBoxGeometryConformance(CraftGeometryDriver driver) {
       expect(mid.height, closeTo(90, _tol));
     },
   );
+
+  driver.defineTest(
+    'Box: a border insets content by padding + border, identically per adapter',
+    (CraftGeometryTester tester) async {
+      await tester.mountTemplate('''
+        import core;
+        widget root = Box(key: "outer", width: 100.0, height: 100.0,
+          padding: 10.0, border: 4.0,
+          child: Box(key: "inner", width: "fill", height: "fill"));
+      ''');
+      // border-box: the 100x100 footprint is unchanged by the border; the fill
+      // child sits padding (10) + border (4) = 14 in on every side. The CSS
+      // border-box does this natively; the Flutter adapter folds the border
+      // width into its padding so a `DecoratedBox` (which doesn't reserve
+      // border layout) agrees.
+      final CraftRect outer = await tester.rectOf('outer');
+      final CraftRect inner = await tester.rectOf('inner');
+      expect(outer.width, closeTo(100, _tol));
+      expect(inner.left - outer.left, closeTo(14, _tol));
+      expect(inner.top - outer.top, closeTo(14, _tol));
+      expect(inner.width, closeTo(100 - 28, _tol));
+      expect(inner.height, closeTo(100 - 28, _tol));
+    },
+  );
 }
 
 /// The shared **geometric** specification for the atoms slice — `Image` variant

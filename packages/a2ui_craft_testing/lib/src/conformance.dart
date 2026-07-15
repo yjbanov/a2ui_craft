@@ -1244,6 +1244,49 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
       expect(tester.borderColorOf('borderless'), isNull);
     },
   );
+
+  driver.defineTest(
+    'Box decoration is opt-in; a bordered Box inks outline, per theme',
+    (CraftTester tester) async {
+      // Box is a bare container: decoration paints nothing unless asked (unlike
+      // Card). A `border` with no explicit color inks `color.outline`; an
+      // explicit color/border overrides. `color` is always the author's — Box
+      // reads no surface role.
+      CraftTheme outlineTheme(String outline) =>
+          CraftTheme(resolveDesignTokens(<DesignTokenSet>[
+            parseDesignTokens(<String, Object?>{
+              'color': <String, Object?>{
+                r'$type': 'color',
+                'outline': <String, Object?>{r'$value': outline},
+              },
+            }),
+          ]));
+
+      await tester.mount('''
+        import core;
+        widget root = Column(children: [
+          Box(color: "#101010", child: Text(text: "plain")),
+          Box(border: 1.0, child: Text(text: "outlined")),
+          Box(color: "#ABCDEF", border: { width: 2.0, color: "#123456" },
+            child: Text(text: "explicit")),
+        ]);
+      ''', theme: outlineTheme('#33475B'));
+
+      // A bare Box paints its fill but no border.
+      expect(tester.surfaceColorOf('plain'), '#FF101010');
+      expect(tester.borderColorOf('plain'), isNull);
+      // A role-inked border reads outline; no fill was set.
+      expect(tester.borderColorOf('outlined'), '#FF33475B');
+      expect(tester.surfaceColorOf('outlined'), isNull);
+      // Explicit fill and border win over the role.
+      expect(tester.surfaceColorOf('explicit'), '#FFABCDEF');
+      expect(tester.borderColorOf('explicit'), '#FF123456');
+
+      // Re-theming re-inks the role-driven border in place.
+      await tester.retheme(outlineTheme('#E0D6C4'));
+      expect(tester.borderColorOf('outlined'), '#FFE0D6C4');
+    },
+  );
 }
 
 /// The shared behavioral specification for rendering an **A2UI surface**

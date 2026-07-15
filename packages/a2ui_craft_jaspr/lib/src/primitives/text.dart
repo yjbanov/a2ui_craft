@@ -124,7 +124,10 @@ Component _markdown(String source, BuildContext context) {
 Component _mdBlock(MarkdownBlock block, BuildContext context) =>
     switch (block) {
       MarkdownHeading(:final int level, :final List<MarkdownSpan> spans) =>
-        _mdHeading(level, context, _mdInline(spans, context)),
+        // Match the Flutter adapter's per-block heading padding
+        // (`EdgeInsets.symmetric(vertical: 4)`), now that the UA margin is off.
+        _mdHeading(level, context, _mdInline(spans, context),
+            blockPadding: '4px 0'),
       MarkdownParagraph(:final List<MarkdownSpan> spans) =>
         p(_mdInline(spans, context)),
       MarkdownList(
@@ -142,18 +145,24 @@ Component _mdBlock(MarkdownBlock block, BuildContext context) =>
               ]),
     };
 
-Component _mdHeading(
-    int level, BuildContext context, List<Component> children) {
+Component _mdHeading(int level, BuildContext context, List<Component> children,
+    {String? blockPadding}) {
   final String? size = roleSize(context, ThemeRoles.headingSize(level));
   final String? color = roleColor(context, ThemeRoles.onSurface);
-  // Unthemed headings keep the browser's default h1–h6 rendering (the host
-  // default on this adapter, as the Flutter ramp is on that one).
-  final Styles? styles = (size == null && color == null)
-      ? null
-      : Styles(raw: <String, String>{
-          if (size != null) 'font-size': size,
-          if (color != null) 'color': color,
-        });
+  // A Heading is a sized text line with **no intrinsic margin**, matching the
+  // Flutter adapter (a bare `Text`). Reset the browser's default h1–h6 margin
+  // (~0.83em top and bottom) — left on, it inflates any heading in a tight box
+  // (the calculator display gained ~40px the Flutter side never has). The font
+  // size/weight still degrade to the browser's when unthemed (the host default,
+  // as the ramp is on the Flutter side). Block rhythm is the caller's job:
+  // `Markdown` passes [blockPadding] to match its Flutter per-block padding, and
+  // a standalone `Heading` passes none.
+  final Styles styles = Styles(raw: <String, String>{
+    'margin': '0',
+    if (blockPadding != null) 'padding': blockPadding,
+    if (size != null) 'font-size': size,
+    if (color != null) 'color': color,
+  });
   return switch (level) {
     1 => h1(styles: styles, children),
     2 => h2(styles: styles, children),

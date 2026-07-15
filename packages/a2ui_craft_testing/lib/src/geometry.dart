@@ -379,6 +379,26 @@ void runBoxGeometryConformance(CraftGeometryDriver driver) {
       expect(inner.height, closeTo(100 - 28, _tol));
     },
   );
+
+  driver.defineTest(
+    'a Heading adds no margin: it sits at the padding offset on both adapters',
+    (CraftGeometryTester tester) async {
+      // A Heading is a bare sized text line — no intrinsic margin (like the
+      // Flutter `Text`). On the web the browser's default h1–h6 margin would
+      // otherwise push it ~0.83em down and inflate any tight container (the
+      // calculator-display regression). Pinned via the offset (font-independent:
+      // driven by the padding, not the line height).
+      await tester.mountTemplate('''
+        import core;
+        widget root = Box(key: "box", padding: 10.0,
+          child: Heading(key: "h", text: "Hi", level: 2));
+      ''');
+      final CraftRect box = await tester.rectOf('box');
+      final CraftRect heading = await tester.rectOf('h');
+      expect(heading.top - box.top, closeTo(10, _tol));
+      expect(heading.left - box.left, closeTo(10, _tol));
+    },
+  );
 }
 
 /// The shared **geometric** specification for the atoms slice — `Image` variant

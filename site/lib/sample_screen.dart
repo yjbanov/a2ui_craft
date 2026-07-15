@@ -15,6 +15,7 @@ import 'package:jaspr_flutter_embed/jaspr_flutter_embed.dart';
 import 'package:jaspr_router/jaspr_router.dart';
 import 'package:web/web.dart' as web;
 
+import 'brand_themes.dart';
 import 'flutter_host.dart';
 import 'theme_mode.dart';
 
@@ -464,6 +465,7 @@ class _SampleScreenState extends State<SampleScreen> {
           styles: Styles(raw: <String, String>{'margin': '0', 'flex': '1'}),
           [Component.text(_raw.label)],
         ),
+        _themePicker(),
         const ThemeToggle(),
         if (_project != null) _modePicker(),
         button(
@@ -534,8 +536,107 @@ class _SampleScreenState extends State<SampleScreen> {
     );
   }
 
-  /// The editor tabs: one per project file. The Theme tab appears only for a
-  /// project that ships a theme.
+  /// The brand-theme picker: a segmented control (like the `/primitives` page's)
+  /// that restyles this sample. Picking a brand drops its theme block into the
+  /// editable **Theme** tab and applies it live; **Default** clears the theme,
+  /// so the sample blends into the host again. A brand is highlighted only while
+  /// the Theme draft still matches it verbatim — hand-edit the JSON and the
+  /// selection reads as custom (no segment lit).
+  Component _themePicker() {
+    final String? selected = _selectedBrandId;
+    return div(
+      attributes: const <String, String>{
+        'role': 'group',
+        'aria-label': 'Theme',
+      },
+      styles: Styles(raw: <String, String>{
+        'display': 'inline-flex',
+        'border': '1px solid var(--border-strong)',
+        'border-radius': '6px',
+        'overflow': 'hidden',
+      }),
+      [
+        for (final Brand b in kBrands)
+          button(
+            onClick: () => _pickBrand(b),
+            styles: Styles(raw: <String, String>{
+              'padding': '6px 12px',
+              'border': 'none',
+              'background': b.id == selected ? 'var(--accent)' : 'var(--card)',
+              'color': b.id == selected ? 'var(--accent-fg)' : 'var(--fg)',
+              'font': '13px system-ui, -apple-system, sans-serif',
+              'cursor': 'pointer',
+            }),
+            [Component.text(b.label)],
+          ),
+      ],
+    );
+  }
+
+  /// Applies [brand] to the sample: the theme block goes into the editable
+  /// **Theme** tab and the surface re-inks immediately. This is a *theme-only*
+  /// commit — the template/schema/messages drafts are left untouched (unlike
+  /// Preview, which commits everything).
+  void _pickBrand(Brand brand) {
+    final String themeJson = brand.themeJson;
+    setState(() {
+      _dTheme = themeJson;
+      // Reveal the freshly-dropped code when the editor is (or gets) opened.
+      _tab = 'Theme';
+      _applyThemeJson(themeJson);
+    });
+  }
+
+  /// Commits [themeJson] as the active project theme and re-inks both panes,
+  /// mirroring Preview's theme handling. Keeps `_jasprKey` so the Jaspr pane
+  /// re-themes in place (via SampleView's `theme` prop) without losing the
+  /// surface's interaction state — the same in-place path the mode picker uses.
+  void _applyThemeJson(String themeJson) {
+    final ProjectTheme? project = ProjectTheme.tryParse(themeJson);
+    _project = project;
+    if (project == null) {
+      _mode = null;
+    } else if (_mode == null || !project.availableModes.contains(_mode)) {
+      _mode = _modeTouched
+          ? project.defaultMode
+          : project.modeFor(dark: SiteTheme.effectiveDark);
+    }
+    _error = null;
+    _flutterWidget = null;
+    _renderKey++;
+  }
+
+  /// The brand whose theme block the current Theme draft matches verbatim, or
+  /// null when the draft is a hand-edited (custom) theme. An empty draft is the
+  /// **Default** (host-blended) brand. Compared structurally so reformatting the
+  /// JSON keeps the segment lit.
+  String? get _selectedBrandId {
+    final String draft = _dTheme.trim();
+    if (draft.isEmpty) return _defaultBrandId;
+    for (final Brand b in kBrands) {
+      if (b.themeJson.isEmpty) continue;
+      if (_jsonEquivalent(draft, b.themeJson)) return b.id;
+    }
+    return null;
+  }
+
+  /// The default (host-blended) brand's id — the segment lit for an empty theme.
+  String get _defaultBrandId =>
+      kBrands.firstWhere((Brand b) => b.themeJson.isEmpty).id;
+
+  /// Whether two JSON strings decode to the same structure (whitespace- and
+  /// formatting-independent). False for anything that doesn't parse.
+  bool _jsonEquivalent(String a, String b) {
+    try {
+      return jsonEncode(jsonDecode(a)) == jsonEncode(jsonDecode(b));
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// The editor tabs: one per project file. The Theme tab is always present —
+  /// an empty draft is an unthemed sample (the Default brand); the theme picker
+  /// fills it when a brand is chosen.
   List<(String, String, String, ValueChanged<String>)> get _editorTabs =>
       <(String, String, String, ValueChanged<String>)>[
         (
@@ -551,13 +652,12 @@ class _SampleScreenState extends State<SampleScreen> {
           _dMessages,
           (String v) => _dMessages = v
         ),
-        if (_raw.theme != null)
-          (
-            'Theme',
-            'Theme (manifest theme block)',
-            _dTheme,
-            (String v) => _dTheme = v
-          ),
+        (
+          'Theme',
+          'Theme (manifest theme block)',
+          _dTheme,
+          (String v) => _dTheme = v
+        ),
       ];
 
   Component _editor() {
@@ -614,7 +714,15 @@ class _SampleScreenState extends State<SampleScreen> {
           ],
         ),
         _tabBar(tabs, activeName),
-        _field(active.$2, active.$3, active.$4),
+        _field(
+          active.$2,
+          active.$3,
+          active.$4,
+          placeholder: activeName == 'Theme'
+              ? 'No theme — this sample blends into the host.\n'
+                  'Pick a theme above, or paste a manifest theme block here.'
+              : null,
+        ),
       ],
     );
   }
@@ -658,7 +766,8 @@ class _SampleScreenState extends State<SampleScreen> {
           ? _tab
           : tabs.first.$1;
 
-  Component _field(String label, String value, ValueChanged<String> onInput) {
+  Component _field(String label, String value, ValueChanged<String> onInput,
+      {String? placeholder}) {
     return div(
       styles: Styles(raw: <String, String>{
         'display': 'flex',
@@ -683,6 +792,7 @@ class _SampleScreenState extends State<SampleScreen> {
           key: ValueKey<String>('editor-$label'),
           [Component.text(value)],
           rows: 24,
+          placeholder: placeholder,
           onInput: onInput,
           styles: Styles(raw: <String, String>{
             'width': '100%',

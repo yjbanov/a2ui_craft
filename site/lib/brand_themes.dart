@@ -14,6 +14,8 @@
 /// (which ships only the reference [DefaultTheme]).
 library;
 
+import 'dart:convert';
+
 import 'package:a2ui_craft/a2ui_craft.dart'
     show
         CraftTheme,
@@ -157,6 +159,37 @@ class Brand {
         .putIfAbsent((this, mode), () => _buildCraftTheme(schemeFor(mode)));
   }
 
+  /// This brand as an inline **theme block** JSON string — the manifest theme
+  /// shape `ProjectTheme.tryParse` understands: the base Light layer under
+  /// `tokens`, plus a per-mode overlay for Dark and both high-contrast modes
+  /// under `modes`. Empty for the default brand, which unthemes the surface (it
+  /// blends into the host).
+  ///
+  /// The sample view drops this into the editable **Theme** tab when a brand is
+  /// picked. It goes through the same [_colorBlock] token layer [craftTheme]
+  /// resolves from, so parsing this JSON reproduces exactly [craftTheme] for
+  /// every mode — what the editor shows is what the surface renders.
+  String get themeJson {
+    if (isDefault) return '';
+    final Map<String, Object?> document = <String, Object?>{
+      'tokens': <String, Object?>{
+        'color': _colorBlock(schemeFor(CraftThemeMode.light),
+            description: '$label — base layer (Light).'),
+        'type': _typeScale,
+      },
+      'modes': <String, Object?>{
+        for (final CraftThemeMode mode in const <CraftThemeMode>[
+          CraftThemeMode.dark,
+          CraftThemeMode.lightHighContrast,
+          CraftThemeMode.darkHighContrast,
+        ])
+          mode.id: <String, Object?>{'color': _colorBlock(schemeFor(mode))},
+      },
+      'mode': CraftThemeMode.light.id,
+    };
+    return const JsonEncoder.withIndent('  ').convert(document);
+  }
+
   /// The page-chrome CSS variables for [mode] — empty for the default brand
   /// (the stock `index.html` variables show through).
   Map<String, String> chromeVars(CraftThemeMode mode) {
@@ -189,22 +222,31 @@ class Brand {
     // the scheme's hexes (no palette indirection needed for a flat, single-mode
     // build), plus the stock type scale so the specimens read themed sizes.
     final Map<String, Object?> document = <String, Object?>{
-      'color': <String, Object?>{
-        r'$type': 'color',
-        'surface': <String, Object?>{r'$value': s.surface},
-        'onSurface': <String, Object?>{r'$value': s.fg},
-        'onSurfaceVariant': <String, Object?>{r'$value': s.muted},
-        'primary': <String, Object?>{r'$value': s.primary},
-        'onPrimary': <String, Object?>{r'$value': s.onPrimary},
-        'outline': <String, Object?>{r'$value': s.border},
-        'link': <String, Object?>{r'$value': s.link},
-        'error': <String, Object?>{r'$value': s.error},
-        'onError': <String, Object?>{r'$value': s.onError},
-      },
+      'color': _colorBlock(s),
       'type': _typeScale,
     };
     return CraftTheme(
         resolveDesignTokens(<DesignTokenSet>[parseDesignTokens(document)]));
+  }
+
+  /// The DTCG `color` token block for a scheme — the semantic roles pointed at
+  /// the scheme's hexes. Shared by the resolved [craftTheme] (via
+  /// [_buildCraftTheme]) and the editable [themeJson] so the two never drift.
+  static Map<String, Object?> _colorBlock(BrandScheme s,
+      {String? description}) {
+    return <String, Object?>{
+      r'$type': 'color',
+      if (description != null) r'$description': description,
+      'surface': <String, Object?>{r'$value': s.surface},
+      'onSurface': <String, Object?>{r'$value': s.fg},
+      'onSurfaceVariant': <String, Object?>{r'$value': s.muted},
+      'primary': <String, Object?>{r'$value': s.primary},
+      'onPrimary': <String, Object?>{r'$value': s.onPrimary},
+      'outline': <String, Object?>{r'$value': s.border},
+      'link': <String, Object?>{r'$value': s.link},
+      'error': <String, Object?>{r'$value': s.error},
+      'onError': <String, Object?>{r'$value': s.onError},
+    };
   }
 
   static const Map<String, Object?> _typeScale = <String, Object?>{

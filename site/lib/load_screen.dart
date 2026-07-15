@@ -161,9 +161,12 @@ class _LoadScreenState extends State<LoadScreen> {
       }),
       <Component>[
         button(
+          classes: 'back-btn',
           onClick: () => context.push('/'),
-          styles: _btn(false),
-          <Component>[Component.text('← Gallery')],
+          <Component>[
+            span(classes: 'back-badge', <Component>[Component.text('←')]),
+            span(<Component>[Component.text('Gallery')]),
+          ],
         ),
         input(
           type: InputType.url,

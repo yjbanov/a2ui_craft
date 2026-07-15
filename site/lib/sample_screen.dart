@@ -453,9 +453,12 @@ class _SampleScreenState extends State<SampleScreen> {
       }),
       [
         button(
+          classes: 'back-btn',
           onClick: () => context.push('/'),
-          styles: _btn(false),
-          [Component.text('← Gallery')],
+          [
+            span(classes: 'back-badge', [Component.text('←')]),
+            span([Component.text('Gallery')]),
+          ],
         ),
         h2(
           styles: Styles(raw: <String, String>{'margin': '0', 'flex': '1'}),

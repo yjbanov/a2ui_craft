@@ -51,6 +51,53 @@
         background: var(--bg);
         color: var(--fg);
       }
+
+      /* The back-to-gallery button: a borderless pill whose arrow rides in a
+         circular badge. On hover the pill fills faintly, the badge lights up in
+         the accent, and the arrow nudges left — a "go back" micro-interaction. */
+      .back-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        padding: 5px 15px 5px 5px;
+        border: none;
+        border-radius: 999px;
+        background: transparent;
+        color: var(--muted);
+        font: 500 14px system-ui, -apple-system, sans-serif;
+        cursor: pointer;
+        transition: background 0.15s ease, color 0.15s ease;
+      }
+      .back-btn:hover {
+        background: var(--panel);
+        color: var(--fg);
+      }
+      .back-btn:active {
+        transform: scale(0.98);
+      }
+      .back-btn:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+      .back-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        border: 1px solid var(--border-strong);
+        font-size: 15px;
+        line-height: 1;
+        transition: border-color 0.15s ease, color 0.15s ease,
+          background 0.15s ease, transform 0.2s ease;
+      }
+      .back-btn:hover .back-badge {
+        border-color: var(--accent);
+        color: var(--accent);
+        background: color-mix(in srgb, var(--accent) 12%, transparent);
+        transform: translateX(-3px);
+      }
     </style>
 
     <!-- The Flutter manifest + bootstrap (embedded Flutter). -->

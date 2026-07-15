@@ -204,6 +204,33 @@ void runFlexGeometryConformance(CraftGeometryDriver driver) {
       expect((await tester.rectOf('c')).top - box.top, closeTo(60, _tol));
     },
   );
+
+  driver.defineTest(
+    'adjacent Text children are independent flex items, separated by the gap',
+    (CraftGeometryTester tester) async {
+      // Each `Text` must be its own flex item. On the web a bare text node is
+      // not an element, so the flexbox spec merges a run of adjacent text
+      // nodes into ONE anonymous flex item — collapsing sibling Texts so the
+      // Column's gap never lands between them. The Jaspr adapter therefore
+      // wraps every Text in a span; this pins that (and matches Flutter, where
+      // a Text widget is always its own child).
+      await tester.mountTemplate('''
+        import core;
+        widget root = Column(key: "box", gap: 16.0, crossAxisAlignment: "start",
+          children: [
+            Text(key: "a", text: "Alpha"),
+            Text(key: "b", text: "Beta"),
+          ]);
+      ''');
+      final CraftRect a = await tester.rectOf('a');
+      final CraftRect b = await tester.rectOf('b');
+      // Beta sits strictly below Alpha (two items, not one merged text run)…
+      expect(b.top, greaterThan(a.top + 1));
+      // …separated by exactly the gap. Font-independent: the gap is inserted
+      // between the flex items, whatever the line height.
+      expect(b.top - a.bottom, closeTo(16, _tol));
+    },
+  );
 }
 
 /// The shared **geometric** specification for **cross-axis hug sizing** — how a

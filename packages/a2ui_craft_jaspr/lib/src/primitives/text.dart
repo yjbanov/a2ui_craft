@@ -30,12 +30,15 @@ Component buildText(BuildContext context, DataSource source) {
       <Component>[Component.text(text)],
     );
   }
-  // Unthemed body text stays a bare text node — exactly the pre-theming
-  // DOM; only a themed role introduces a styled wrapper.
+  // Always wrap in a <span>, even unthemed (no styles). A bare text node is
+  // not an element, so the CSS flexbox spec merges a run of adjacent text
+  // nodes into a *single* anonymous flex item — collapsing sibling `Text`s
+  // into one child, so the parent `Row`/`Column`'s gap and alignment never
+  // separate them. A span is its own in-flow flex item (blockified by the
+  // container) yet still flows inline when the parent isn't a flex, matching a
+  // Flutter `Text`, which is always its own layout child.
   final Styles? style = _bodyStyle(context);
-  return style == null
-      ? Component.text(text)
-      : span(styles: style, <Component>[Component.text(text)]);
+  return span(styles: style, <Component>[Component.text(text)]);
 }
 
 /// Builds `Heading`: a single heading line carrying a real heading role +

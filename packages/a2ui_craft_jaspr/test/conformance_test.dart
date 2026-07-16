@@ -146,6 +146,51 @@ class _JasprCraftTester implements CraftTester {
     return _canonicalCssColor(border.substring(i + 'solid'.length).trim());
   }
 
+  @override
+  String? checkboxFillColorOf() =>
+      _canonicalCssColor(_checkboxStyle('background-color', checked: true));
+
+  @override
+  String? checkboxBorderColorOf() {
+    // The glyph writes the `border` shorthand ("<w>px solid <color>"); the
+    // color is the token after `solid` (same form as the Card border).
+    final String? border = _checkboxStyle('border', checked: false);
+    if (border == null) return null;
+    final int i = border.indexOf('solid');
+    if (i < 0) return null;
+    return _canonicalCssColor(border.substring(i + 'solid'.length).trim());
+  }
+
+  @override
+  String? checkboxMarkColorOf() {
+    // The mark is an inline SVG `background-image` whose `stroke='<color>'` is
+    // URL-encoded (data URIs cannot reference CSS values); read it back.
+    final String? image = _checkboxStyle('background-image', checked: true);
+    if (image == null) return null;
+    final Match? m = RegExp("stroke='([^']*)'").firstMatch(image);
+    if (m == null) return null;
+    return _canonicalCssColor(Uri.decodeComponent(m.group(1)!));
+  }
+
+  /// The inline [property] of the painted `craft-checkbox` glyph in the given
+  /// [checked] state, or null when absent. A box is checked iff its `checked`
+  /// attribute is present and not `'false'` (the VM tester emits `''` when on;
+  /// a browser emits `'true'`/`'false'`).
+  String? _checkboxStyle(String property, {required bool checked}) {
+    for (final Element e in find
+        .byComponentPredicate((Component c) =>
+            c is DomComponent &&
+            (c.classes?.split(' ').contains('craft-checkbox') ?? false))
+        .evaluate()) {
+      final DomComponent c = e.component as DomComponent;
+      final String? ch = c.attributes?['checked'];
+      if ((ch != null && ch != 'false') == checked) {
+        return c.styles?.properties[property];
+      }
+    }
+    return null;
+  }
+
   /// Canonicalizes the CSS color forms the primitives emit — hex defaults,
   /// `rgba(...)` themed values, and `light-dark(...)` host fallbacks — to
   /// `#AARRGGBB`. This tester is a light host, so `light-dark()` resolves to

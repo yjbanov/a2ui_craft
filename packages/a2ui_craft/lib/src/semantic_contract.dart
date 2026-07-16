@@ -40,8 +40,9 @@ library;
 /// | [surface] | `Card` fill |
 /// | [onSurface] | `Text` (body), `Heading`, `Markdown` body, `Icon` |
 /// | [onSurfaceVariant] | `Text` (caption) |
-/// | [primary] | `Checkbox`, `Slider`, `Radio` accents |
-/// | [outline] | `Divider`, `TextField` border, `Card` border, `Box` border |
+/// | [primary] | `Checkbox` fill, `Radio` selected, `Slider` active, `Switch` active track |
+/// | [onPrimary] | `Checkbox` mark, `Switch` on-thumb |
+/// | [outline] | `Divider`, `TextField` border, `Card` border, `Box` border, `Checkbox` box, `Radio` ring, `Switch` inactive track |
 /// | [link] | `Markdown` links |
 ///
 /// The `type.*` roles (sizes only in v1; families/weights are later phases):
@@ -52,9 +53,9 @@ library;
 /// | [captionSize] | `Text` (caption) |
 /// | [headingSize] (1–6) | `Heading`, `Markdown` headings |
 ///
-/// [onPrimary], [error], and [onError] are **named now, consumed later**: no
-/// primitive reads them yet, but themes and branded catalog templates can
-/// already target them without fearing a rename.
+/// [error] and [onError] are **named now, consumed later**: no primitive reads
+/// them yet, but themes and branded catalog templates can already target them
+/// without fearing a rename.
 abstract final class ThemeRoles {
   /// Fill of surface-like containers (`Card`).
   static const String surface = 'color.surface';
@@ -65,15 +66,18 @@ abstract final class ThemeRoles {
   /// De-emphasized foreground (captions, secondary text).
   static const String onSurfaceVariant = 'color.onSurfaceVariant';
 
-  /// The accent: selection and control-active color (and what branded
-  /// action templates reference).
+  /// The accent: selection and control-active color — the `Checkbox` fill,
+  /// `Radio` selected glyph, `Slider` active track/thumb, `Switch` active track
+  /// (and what branded action templates reference).
   static const String primary = 'color.primary';
 
-  /// Foreground on [primary]. Reserved for branded templates; no primitive
-  /// consumer yet.
+  /// Foreground on [primary]: the `Checkbox` mark and the `Switch` on-thumb
+  /// (also what branded templates ink over a [primary] surface).
   static const String onPrimary = 'color.onPrimary';
 
-  /// Borders and separators (`Divider`, `TextField`, `Card`, `Box` border).
+  /// Borders and separators: `Divider`, `TextField` / `Card` / `Box` border,
+  /// and the unchecked control chrome — the `Checkbox` box, `Radio` ring, and
+  /// `Switch` inactive track.
   static const String outline = 'color.outline';
 
   /// Hyperlinks (`Markdown`). Typically aliased to `{color.primary}` by

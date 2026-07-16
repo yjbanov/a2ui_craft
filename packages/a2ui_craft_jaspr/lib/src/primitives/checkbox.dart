@@ -49,14 +49,20 @@ Styles? _checkboxStyles(BuildContext context, {required bool checked}) {
   if (primary == null) return null;
   final String border = roleColor(context, ThemeRoles.outline) ?? primary;
   final String mark = roleColor(context, ThemeRoles.onPrimary) ?? '#ffffff';
+  // The box geometry (size, corner, border width) is a framework-neutral
+  // specified default (CheckboxDefaults) — read here, not hardcoded, so the web
+  // glyph and any other painted glyph agree (DESIGN.md §8).
+  final String size = '${px(CheckboxDefaults.size)}px';
+  final String radius = '${px(CheckboxDefaults.cornerRadius.pixels)}px';
+  final String width = '${px(CheckboxDefaults.borderWidth)}px';
   return Styles(raw: <String, String>{
     'appearance': 'none',
-    'width': '18px',
-    'height': '18px',
+    'width': size,
+    'height': size,
     'margin': '0',
     'vertical-align': 'middle',
-    'border': '2px solid ${checked ? primary : border}',
-    'border-radius': '4px',
+    'border': '$width solid ${checked ? primary : border}',
+    'border-radius': radius,
     'background-color': checked ? primary : 'transparent',
     if (checked) 'background-image': _checkmarkImage(mark),
     if (checked) 'background-size': '100% 100%',

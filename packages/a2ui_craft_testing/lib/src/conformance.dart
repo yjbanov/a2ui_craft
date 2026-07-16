@@ -168,6 +168,26 @@ abstract interface class CraftTester {
   /// for `color.outline` on a container.
   String? borderColorOf(String text);
 
+  /// The **fill** of the rendered *checked* `Checkbox`'s box (layer 1 of the
+  /// paint model, DESIGN.md §8), canonicalized to `#AARRGGBB`, or null when the
+  /// glyph paints no fill (unthemed → blends into the host). Expect
+  /// `color.primary`. Painted-decision probe (§9.6), never pixels.
+  ///
+  /// The three checkbox probes read the state where their layer is meaningful:
+  /// fill and [checkboxMarkColorOf] the *checked* box, [checkboxBorderColorOf]
+  /// the *unchecked* one — so a theming case renders one of each.
+  String? checkboxFillColorOf();
+
+  /// The **box border** of the rendered *unchecked* `Checkbox`, canonicalized to
+  /// `#AARRGGBB`, or null when none is drawn. Expect `color.outline` (on a
+  /// checked box the fill subsumes the border — not probed).
+  String? checkboxBorderColorOf();
+
+  /// The checkmark **mark** ink of the rendered *checked* `Checkbox` (layer 3),
+  /// canonicalized to `#AARRGGBB`, or null when unthemed. Expect
+  /// `color.onPrimary`. The mark shows only while checked.
+  String? checkboxMarkColorOf();
+
   /// Activates (taps/clicks) the interactive element carrying the given
   /// component `key`.
   Future<void> activate(String key);
@@ -1321,6 +1341,48 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
       // Re-theming re-inks the role-driven border in place.
       await tester.retheme(outlineTheme('#E0D6C4'));
       expect(tester.borderColorOf('outlined'), '#FFE0D6C4');
+    },
+  );
+
+  driver.defineTest(
+    'Checkbox inks its box, mark, and border per theme, on both adapters',
+    (CraftTester tester) async {
+      // The Checkbox paint model (DESIGN.md §8): `primary` fully fills the
+      // checked box, `onPrimary` inks the mark, `outline` inks the unchecked
+      // box. Same role → same part, same degree, every adapter; a re-theme
+      // re-inks each in place. One checked + one unchecked box so each layer is
+      // read where it is meaningful (a single mount — a re-mount would reset
+      // element state, and the Jaspr component tester renders empty on a second
+      // mount in one test).
+      CraftTheme theme(String primary, String onPrimary, String outline) =>
+          CraftTheme(resolveDesignTokens(<DesignTokenSet>[
+            parseDesignTokens(<String, Object?>{
+              'color': <String, Object?>{
+                r'$type': 'color',
+                'primary': <String, Object?>{r'$value': primary},
+                'onPrimary': <String, Object?>{r'$value': onPrimary},
+                'outline': <String, Object?>{r'$value': outline},
+              },
+            }),
+          ]));
+
+      await tester.mount('''
+        import core;
+        widget root = Column(children: [
+          Checkbox(value: true, onChanged: event "a" {}),
+          Checkbox(value: false, onChanged: event "b" {}),
+        ]);
+      ''', theme: theme('#6200EE', '#FFFFFF', '#33475B'));
+
+      expect(tester.checkboxFillColorOf(), '#FF6200EE');
+      expect(tester.checkboxMarkColorOf(), '#FFFFFFFF');
+      expect(tester.checkboxBorderColorOf(), '#FF33475B');
+
+      // Re-theming re-inks every mapped part in place.
+      await tester.retheme(theme('#00695C', '#F1F2F3', '#E0D6C4'));
+      expect(tester.checkboxFillColorOf(), '#FF00695C');
+      expect(tester.checkboxMarkColorOf(), '#FFF1F2F3');
+      expect(tester.checkboxBorderColorOf(), '#FFE0D6C4');
     },
   );
 }

@@ -937,6 +937,21 @@ effects. Unstyled, it is the idiom's stock button inked by
 case — so there is **no separate look-free pressable primitive**, and a fully
 bespoke button is the replacement escape hatch (above).
 
+`Checkbox` is the same four layers in miniature, and shows where the checkbox
+*differs* from the button. Layer 1 is the **box**: `outline` inks the border
+while unchecked, `primary` **fully fills** it while checked (the fill subsumes
+the border — there is no separate outline over a checked box), with a size and
+corner from the specified default (`CheckboxDefaults`, not a per-instance prop).
+Layer 3 is the **mark**, inked `onPrimary`, drawn only while checked (an
+indeterminate dash is a reserved third state). Unlike the button, a checkbox has
+a perfectly good host rendering, so **unthemed it blends in** (§9.1) — the web
+idiom returns the native UA control, Flutter the native `Checkbox.adaptive` —
+and only once a theme supplies `primary` does the web idiom paint the spec glyph.
+Enabling a theme therefore changes the web checkbox's *geometry* (native → spec
+glyph), not only its color; that is accepted idiom latitude, not framework
+variance. The Flutter idiom keeps the native box's own size/corner and honors
+only the shared border width — the one geometry knob a native control exposes.
+
 #### Corner radius is an amount; corner style is idiom
 
 `CornerRadius` is a **scalar** in the shared value vocabulary (Pillar B): `0`

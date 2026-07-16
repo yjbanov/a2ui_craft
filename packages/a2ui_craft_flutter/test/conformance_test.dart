@@ -158,6 +158,37 @@ class _FlutterCraftTester implements CraftTester {
       '#${color.toARGB32().toRadixString(16).padLeft(8, '0').toUpperCase()}';
 
   @override
+  String? checkboxFillColorOf() {
+    // The checked box fills with the Checkbox's activeColor (`color.primary`).
+    final Color? c = _checkbox(checked: true)?.activeColor;
+    return c == null ? null : _argbHex(c);
+  }
+
+  @override
+  String? checkboxBorderColorOf() {
+    // The unchecked box's border is the Checkbox's `side` (`color.outline`).
+    final BorderSide? side = _checkbox(checked: false)?.side;
+    return side == null ? null : _argbHex(side.color);
+  }
+
+  @override
+  String? checkboxMarkColorOf() {
+    // The mark is the Checkbox's checkColor (`color.onPrimary`).
+    final Color? c = _checkbox(checked: true)?.checkColor;
+    return c == null ? null : _argbHex(c);
+  }
+
+  /// The rendered [Checkbox] whose value is [checked] (a theming case shows one
+  /// of each), or null when absent.
+  Checkbox? _checkbox({required bool checked}) {
+    for (final Element e in find.byType(Checkbox).evaluate()) {
+      final Checkbox c = e.widget as Checkbox;
+      if (c.value == checked) return c;
+    }
+    return null;
+  }
+
+  @override
   Future<void> activate(String key) async {
     await _tester.tap(find.byKey(ValueKey<String>(key)));
     await _tester.pump();

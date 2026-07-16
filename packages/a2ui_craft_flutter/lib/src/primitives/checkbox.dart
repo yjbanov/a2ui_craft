@@ -27,12 +27,16 @@ Widget buildCheckbox(BuildContext context, DataSource source) {
   final Color? outline = roleColor(context, ThemeRoles.outline);
   // `.adaptive`: the host-selected idiom (ThemeData.platform, DESIGN.md
   // §8) picks the Material or Cupertino rendering; CupertinoCheckbox
-  // honors the same three role knobs.
+  // honors the same three role knobs. The native box keeps its idiom's own
+  // size/corner (idiom latitude, §8); the one shared geometry knob it can honor
+  // is the border width — the specified default in CheckboxDefaults.
   return Checkbox.adaptive(
     value: value,
     activeColor: roleColor(context, ThemeRoles.primary),
     checkColor: roleColor(context, ThemeRoles.onPrimary),
-    side: outline == null ? null : BorderSide(color: outline, width: 2),
+    side: outline == null
+        ? null
+        : BorderSide(color: outline, width: CheckboxDefaults.borderWidth),
     onChanged: onChanged == null ? null : (bool? v) => onChanged(v ?? !value),
   );
 }

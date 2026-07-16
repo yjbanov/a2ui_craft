@@ -81,7 +81,10 @@ class ProjectTheme {
     required this.defaultMode,
     Map<CraftThemeMode, ResolvedTokens> inline =
         const <CraftThemeMode, ResolvedTokens>{},
-  }) : _inline = inline;
+    Map<(CraftThemeMode, WindowSizeClass), ResolvedTokens> responsive =
+        const <(CraftThemeMode, WindowSizeClass), ResolvedTokens>{},
+  })  : _inline = inline,
+        _responsive = responsive;
 
   /// Parses a `theme.json` string; null/blank/unrecognized/malformed → null.
   static ProjectTheme? tryParse(String? themeJson) {
@@ -97,22 +100,54 @@ class ProjectTheme {
     final Object? tokens = decoded['tokens'];
     if (tokens != null) {
       final DesignTokenSet base = parseDesignTokens(tokens);
-      // Each recognized per-mode overlay resolves as [base, overlay] — the
-      // layer-merge-then-dereference order that makes overlays re-point roles.
-      // Unknown mode names and non-map overlays are ignored (totality).
-      final Map<CraftThemeMode, ResolvedTokens> inline =
-          <CraftThemeMode, ResolvedTokens>{
-        CraftThemeMode.light: resolveDesignTokens(<DesignTokenSet>[base]),
-      };
+      // The per-mode overlay sets (light has none — it is the base), kept raw so
+      // the size-class overlay can compose over them. Unknown mode names and
+      // non-map overlays are ignored (totality).
+      final Map<CraftThemeMode, DesignTokenSet> modeSets =
+          <CraftThemeMode, DesignTokenSet>{};
       final Object? modes = decoded['modes'];
       if (modes is Map<String, Object?>) {
         for (final MapEntry<String, Object?> entry in modes.entries) {
           final CraftThemeMode? mode = _modeByName(entry.key);
           if (mode == null || entry.value is! Map<String, Object?>) continue;
-          inline[mode] = resolveDesignTokens(
-              <DesignTokenSet>[base, parseDesignTokens(entry.value)]);
+          modeSets[mode] = parseDesignTokens(entry.value);
         }
       }
+      // The per-size-class overlay sets, likewise raw. Unknown class ids and
+      // non-map overlays are ignored (totality). RESPONSIVE_DESIGN.md §4.4.
+      final Map<WindowSizeClass, DesignTokenSet> classSets =
+          <WindowSizeClass, DesignTokenSet>{};
+      final Object? sizeClasses = decoded['sizeClasses'];
+      if (sizeClasses is Map<String, Object?>) {
+        for (final MapEntry<String, Object?> entry in sizeClasses.entries) {
+          final WindowSizeClass? cls = _sizeClassByName(entry.key);
+          if (cls == null || entry.value is! Map<String, Object?>) continue;
+          classSets[cls] = parseDesignTokens(entry.value);
+        }
+      }
+
+      // Resolve each layer stack once, merge-then-dereference so an overlay
+      // re-points the roles it names: base (Light) alone, then each mode over
+      // the base, then each (mode, size class) with the size-class overlay on
+      // top of the mode.
+      final Map<CraftThemeMode, ResolvedTokens> inline =
+          <CraftThemeMode, ResolvedTokens>{
+        CraftThemeMode.light: resolveDesignTokens(<DesignTokenSet>[base]),
+        for (final MapEntry<CraftThemeMode, DesignTokenSet> e
+            in modeSets.entries)
+          e.key: resolveDesignTokens(<DesignTokenSet>[base, e.value]),
+      };
+      final Map<(CraftThemeMode, WindowSizeClass), ResolvedTokens> responsive =
+          <(CraftThemeMode, WindowSizeClass), ResolvedTokens>{
+        for (final CraftThemeMode mode in inline.keys)
+          for (final MapEntry<WindowSizeClass, DesignTokenSet> ce
+              in classSets.entries)
+            (mode, ce.key): resolveDesignTokens(<DesignTokenSet>[
+              base,
+              if (modeSets[mode] != null) modeSets[mode]!,
+              ce.value,
+            ]),
+      };
       final CraftThemeMode? declared = _modeByName(decoded['mode']);
       return ProjectTheme._(
         usesDefaultTheme: false,
@@ -120,6 +155,7 @@ class ProjectTheme {
             ? declared
             : CraftThemeMode.light,
         inline: inline,
+        responsive: responsive,
       );
     }
     if (decoded['theme'] == 'default') {
@@ -138,8 +174,16 @@ class ProjectTheme {
   /// The project's default mode.
   final CraftThemeMode defaultMode;
 
-  /// For an inline theme: the resolved token snapshot per available mode.
+  /// For an inline theme: the resolved token snapshot per available mode (at the
+  /// base — compact/medium — size class).
   final Map<CraftThemeMode, ResolvedTokens> _inline;
+
+  /// For an inline theme with a `sizeClasses` block: the resolved snapshot per
+  /// (mode, size class) where a size-class overlay applies — the second cascade
+  /// axis (RESPONSIVE_DESIGN.md §4.4). A pair with no entry falls back to the
+  /// base-scale [_inline] for that mode, so a theme without the block is
+  /// unaffected.
+  final Map<(CraftThemeMode, WindowSizeClass), ResolvedTokens> _responsive;
 
   /// The modes a host may offer for this project: every [CraftThemeMode] for
   /// the default theme; for an inline theme, the base (Light) plus each mode
@@ -162,18 +206,35 @@ class ProjectTheme {
   }
 
   /// Resolves an immutable [CraftTheme] snapshot for [mode] (defaulting to
-  /// [defaultMode]). An inline theme falls back to its base layer for a mode
-  /// it has no overlay for.
-  CraftTheme resolve([CraftThemeMode? mode]) {
+  /// [defaultMode]) and [sizeClass] — the second cascade axis
+  /// (RESPONSIVE_DESIGN.md §4.4). [sizeClass] defaults to
+  /// [WindowSizeClass.compact] (the base scale), so a host that ignores
+  /// responsiveness resolves exactly as before.
+  ///
+  /// An inline theme falls back to its base-scale snapshot for a (mode, class)
+  /// with no size-class overlay, then to its Light base for a mode with no
+  /// overlay.
+  CraftTheme resolve(
+      [CraftThemeMode? mode,
+      WindowSizeClass sizeClass = WindowSizeClass.compact]) {
     final CraftThemeMode m = mode ?? defaultMode;
-    if (usesDefaultTheme) return DefaultTheme.of(m);
-    return CraftTheme(
-        _inline[m] ?? _inline[CraftThemeMode.light] ?? ResolvedTokens.empty);
+    if (usesDefaultTheme) return DefaultTheme.of(m, sizeClass: sizeClass);
+    return CraftTheme(_responsive[(m, sizeClass)] ??
+        _inline[m] ??
+        _inline[CraftThemeMode.light] ??
+        ResolvedTokens.empty);
   }
 
   static CraftThemeMode? _modeByName(Object? name) {
     for (final CraftThemeMode mode in CraftThemeMode.values) {
       if (mode.id == name) return mode;
+    }
+    return null;
+  }
+
+  static WindowSizeClass? _sizeClassByName(Object? name) {
+    for (final WindowSizeClass cls in WindowSizeClass.values) {
+      if (cls.id == name) return cls;
     }
     return null;
   }

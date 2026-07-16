@@ -185,6 +185,19 @@ class Brand {
         ])
           mode.id: <String, Object?>{'color': _colorBlock(schemeFor(mode))},
       },
+      // The second cascade axis (RESPONSIVE_DESIGN.md §4.4): at the expanded
+      // window size class and up, bump the type scale for a roomier, more
+      // legible layout — a token concern, so the template restructures via
+      // `Responsive`/`media.` while its rhythm scales here. Colour is untouched,
+      // so it composes over any mode overlay.
+      'sizeClasses': <String, Object?>{
+        for (final String cls in const <String>[
+          'expanded',
+          'large',
+          'extraLarge'
+        ])
+          cls: <String, Object?>{'type': _typeScaleRoomy},
+      },
       'mode': CraftThemeMode.light.id,
     };
     return const JsonEncoder.withIndent('  ').convert(document);
@@ -275,6 +288,40 @@ class Brand {
       },
       '6': <String, Object?>{
         'size': <String, Object?>{r'$value': '14px'}
+      },
+    },
+  };
+
+  /// The **roomy** type scale — the [_typeScale] bumped for the expanded size
+  /// class and up (matches the default theme's `roomy.tokens.json`). Emitted as
+  /// the `sizeClasses` overlay in [themeJson], so flipping the size class on a
+  /// responsive sample visibly enlarges the text on both adapters.
+  static const Map<String, Object?> _typeScaleRoomy = <String, Object?>{
+    r'$type': 'dimension',
+    'body': <String, Object?>{
+      'size': <String, Object?>{r'$value': '16px'}
+    },
+    'caption': <String, Object?>{
+      'size': <String, Object?>{r'$value': '14px'}
+    },
+    'heading': <String, Object?>{
+      '1': <String, Object?>{
+        'size': <String, Object?>{r'$value': '28px'}
+      },
+      '2': <String, Object?>{
+        'size': <String, Object?>{r'$value': '25px'}
+      },
+      '3': <String, Object?>{
+        'size': <String, Object?>{r'$value': '23px'}
+      },
+      '4': <String, Object?>{
+        'size': <String, Object?>{r'$value': '20px'}
+      },
+      '5': <String, Object?>{
+        'size': <String, Object?>{r'$value': '18px'}
+      },
+      '6': <String, Object?>{
+        'size': <String, Object?>{r'$value': '16px'}
       },
     },
   };

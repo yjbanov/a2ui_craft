@@ -214,8 +214,13 @@ number.
   `.orientation` to class ids for `switch media.width { … }`, plus the
   `atLeast(a, b)` threshold helper. Same subscription/re-theme reactivity, both
   adapters, conformance-pinned.
-- **Phase 4 — responsive tokens.** Extend the theme resolver with the size-class
-  overlay axis for dimension/type tokens (10-foot / glanceable).
+- **Phase 4 — responsive tokens. ✅ done.** The size class is a second overlay
+  axis in the (already n-ary) resolver: `DefaultTheme.of(mode, sizeClass:)` and
+  `ProjectTheme.resolve(mode, sizeClass)` append a size-class overlay (the
+  `roomy` type-scale bump at expanded+) over the mode layers — colour re-points
+  per mode, proportioning per size class, orthogonally. Host-resolved and
+  supplied as the usual immutable snapshot, so a class change re-themes in
+  place; no primitive or read-path change. Core + project tests pin it.
 - **Flagged / later.** Container queries (measured, two-pass, more correct for
   composed slots); the `formFactor`/`inputModality` axes (TV D-pad focus, car
   safety, watch glanceability); fluid `clamp()` tokens. Each is additive on the

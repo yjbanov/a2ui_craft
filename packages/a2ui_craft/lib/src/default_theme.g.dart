@@ -15,13 +15,21 @@ const String defaultThemeManifestJson = r'''
     "base": "base.tokens.json",
     "dark": "dark.tokens.json",
     "highContrast": "light-high-contrast.tokens.json",
-    "darkHighContrast": "dark-high-contrast.tokens.json"
+    "darkHighContrast": "dark-high-contrast.tokens.json",
+    "roomy": "roomy.tokens.json"
   },
   "modes": {
     "light": ["base"],
     "dark": ["base", "dark"],
     "lightHighContrast": ["base", "highContrast"],
     "darkHighContrast": ["base", "dark", "darkHighContrast"]
+  },
+  "sizeClasses": {
+    "compact": [],
+    "medium": [],
+    "expanded": ["roomy"],
+    "large": ["roomy"],
+    "extraLarge": ["roomy"]
   }
 }
 ''';
@@ -127,6 +135,24 @@ const Map<String, String> defaultThemeSetJson = <String, String>{
     "onSurface": { "$value": "{palette.white}" },
     "onSurfaceVariant": { "$value": "{palette.gray.100}" },
     "outline": { "$value": "{palette.gray.300}" }
+  }
+}
+''',
+  'roomy': r'''
+{
+  "$description": "A2UI Craft default theme — the roomy size-class overlay, applied at the expanded window size class and up (research/responsive/RESPONSIVE_DESIGN.md §4.4). Restructuring is layout; proportioning is theming: a larger screen (tablet, desktop, TV — 10-foot legibility) wants a bigger type ramp, a phone the denser base. This overlay overrides only the type scale — the size class is a second overlay axis in the cascade (mode × size class), so it composes over any mode overlay (which touches colour) without restating it.",
+  "type": {
+    "$type": "dimension",
+    "body": { "size": { "$value": "16px" } },
+    "caption": { "size": { "$value": "14px" } },
+    "heading": {
+      "1": { "size": { "$value": "28px" } },
+      "2": { "size": { "$value": "25px" } },
+      "3": { "size": { "$value": "23px" } },
+      "4": { "size": { "$value": "20px" } },
+      "5": { "size": { "$value": "18px" } },
+      "6": { "size": { "$value": "16px" } }
+    }
   }
 }
 ''',

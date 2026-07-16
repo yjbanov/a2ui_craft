@@ -145,10 +145,84 @@ void main() {
     });
   });
 
-  test('of() returns a cached, stable snapshot per mode', () {
+  group('size-class overlay (the mode × size-class cascade, §9.5)', () {
+    // Restructuring is layout; proportioning is theming (RESPONSIVE_DESIGN.md
+    // §4.4). The size class is a *second* overlay axis: colour re-points per
+    // mode, the type scale bumps per size class — orthogonally.
+
+    test('compact and medium keep the dense base type scale', () {
+      for (final WindowSizeClass cls in <WindowSizeClass>[
+        WindowSizeClass.compact,
+        WindowSizeClass.medium,
+      ]) {
+        final ResolvedTokens t =
+            DefaultTheme.of(CraftThemeMode.light, sizeClass: cls).tokens;
+        expect(t.dimension(ThemeRoles.bodySize), 14, reason: cls.id);
+        expect(t.dimension(ThemeRoles.headingSize(1)), 24, reason: cls.id);
+      }
+    });
+
+    test('expanded and up bump the type scale (10-foot legibility)', () {
+      for (final WindowSizeClass cls in <WindowSizeClass>[
+        WindowSizeClass.expanded,
+        WindowSizeClass.large,
+        WindowSizeClass.extraLarge,
+      ]) {
+        final ResolvedTokens t =
+            DefaultTheme.of(CraftThemeMode.light, sizeClass: cls).tokens;
+        expect(t.dimension(ThemeRoles.bodySize), 16, reason: cls.id);
+        expect(t.dimension(ThemeRoles.captionSize), 14, reason: cls.id);
+        expect(t.dimension(ThemeRoles.headingSize(1)), 28, reason: cls.id);
+      }
+    });
+
+    test('the size overlay composes over a mode: dark colour, roomy type', () {
+      final ResolvedTokens t = DefaultTheme.of(CraftThemeMode.dark,
+              sizeClass: WindowSizeClass.expanded)
+          .tokens;
+      // The size overlay touches only type — the Dark colour survives…
+      expect(t.color(ThemeRoles.surface), _hex('#202124'));
+      // …and the type is the roomy scale.
+      expect(t.dimension(ThemeRoles.bodySize), 16);
+    });
+
+    test('every colour role still resolves under a size-class overlay', () {
+      final ResolvedTokens t = DefaultTheme.of(CraftThemeMode.darkHighContrast,
+              sizeClass: WindowSizeClass.large)
+          .tokens;
+      for (final String role in _colorRoles) {
+        expect(t.color(role), isNotNull,
+            reason: '$role dropped under a size overlay');
+      }
+    });
+
+    test('manifest wires each size class; base classes and unknown → nothing',
+        () {
+      expect(DefaultTheme.manifest.sizeClassOrder('compact'), isEmpty);
+      expect(
+          DefaultTheme.manifest.sizeClassOrder('expanded'), <String>['roomy']);
+      expect(DefaultTheme.manifest.sizeClassOrder('watch'), isEmpty);
+    });
+  });
+
+  test('of() returns a cached, stable snapshot per (mode, size class)', () {
     expect(
         identical(DefaultTheme.of(CraftThemeMode.dark),
             DefaultTheme.of(CraftThemeMode.dark)),
         isTrue);
+    expect(
+        identical(
+            DefaultTheme.of(CraftThemeMode.dark,
+                sizeClass: WindowSizeClass.expanded),
+            DefaultTheme.of(CraftThemeMode.dark,
+                sizeClass: WindowSizeClass.expanded)),
+        isTrue);
+    // A different size class is a different snapshot.
+    expect(
+        identical(
+            DefaultTheme.of(CraftThemeMode.dark),
+            DefaultTheme.of(CraftThemeMode.dark,
+                sizeClass: WindowSizeClass.expanded)),
+        isFalse);
   });
 }

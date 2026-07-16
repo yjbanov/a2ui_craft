@@ -5,12 +5,20 @@
     "base": "base.tokens.json",
     "dark": "dark.tokens.json",
     "highContrast": "light-high-contrast.tokens.json",
-    "darkHighContrast": "dark-high-contrast.tokens.json"
+    "darkHighContrast": "dark-high-contrast.tokens.json",
+    "roomy": "roomy.tokens.json"
   },
   "modes": {
     "light": ["base"],
     "dark": ["base", "dark"],
     "lightHighContrast": ["base", "highContrast"],
     "darkHighContrast": ["base", "dark", "darkHighContrast"]
+  },
+  "sizeClasses": {
+    "compact": [],
+    "medium": [],
+    "expanded": ["roomy"],
+    "large": ["roomy"],
+    "extraLarge": ["roomy"]
   }
 }

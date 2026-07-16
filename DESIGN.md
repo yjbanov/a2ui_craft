@@ -1134,6 +1134,18 @@ subscription/`didChangeDependencies` path). The whole-subtree common case has it
 own primitive (`Responsive`); the scope is the finer, prop-level long tail
 (research/responsive/RESPONSIVE_DESIGN.md §4.3).
 
+**Responsive tokens (the size class × mode cascade).** Restructuring is layout;
+*proportioning* is theming. The size class is a **second overlay axis** in the
+(already n-ary) token resolver, orthogonal to mode: `DefaultTheme.of(mode,
+sizeClass: …)` / `ProjectTheme.resolve(mode, sizeClass)` append a size-class
+overlay (the `roomy` type-scale bump at the `expanded` class and up — 10-foot
+legibility) *over* the mode layers, so colour re-points per mode and the type
+scale bumps per size class without either restating the other. The host resolves
+the pair and supplies the usual immutable snapshot (it already owns the size
+measurement — the same one it quantizes into `MediaContext`), so a class change
+re-themes in place with no primitive or read-path change (RESPONSIVE_DESIGN.md
+§4.4).
+
 **The semantic contract (`ThemeRoles` in `a2ui_craft`).** DTCG
 standardizes token *structure*, never *meaning* — nothing in the format says a
 caption uses `color.onSurfaceVariant`. The fixed set of token paths each

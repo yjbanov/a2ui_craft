@@ -83,16 +83,22 @@ class _SampleScreenState extends State<SampleScreen> {
   late CraftThemeMode? _mode = _project?.modeFor(dark: SiteTheme.effectiveDark);
   bool _modeTouched = false;
 
-  CraftTheme? get _theme => _project?.resolve(_mode);
+  // The theme resolves for the active mode *and* size class — the second cascade
+  // axis (RESPONSIVE_DESIGN.md §4.4): a brand's type scale bumps at `expanded`+.
+  // Non-responsive samples resolve at the base (compact) scale.
+  CraftTheme? get _theme => _project?.resolve(
+      _mode, _usesResponsive ? _sizeClass : WindowSizeClass.compact);
 
   // The responsive window size class the host feeds the surface — the second
-  // render-time input axis (research/responsive/RESPONSIVE_DESIGN.md). Only
-  // supplied to samples that actually use the `Responsive` primitive (others
-  // stay size-agnostic); the picker appears only for them. Defaults to
-  // `expanded` so the demo opens on its side-by-side layout.
+  // render-time input axis (research/responsive/RESPONSIVE_DESIGN.md), driving
+  // both the `Responsive`/`media.` layout and the theme's size-class overlay.
+  // Only supplied to samples that use responsiveness (others stay size-agnostic);
+  // the picker appears only for them. Defaults to `expanded` so the demo opens
+  // on its side-by-side layout.
   WindowSizeClass _sizeClass = WindowSizeClass.expanded;
 
-  bool get _usesResponsive => _template.contains('Responsive(');
+  bool get _usesResponsive =>
+      _template.contains('Responsive(') || _template.contains('media.');
 
   MediaContext? get _media =>
       _usesResponsive ? MediaContext(width: _sizeClass) : null;

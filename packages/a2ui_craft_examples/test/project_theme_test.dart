@@ -163,6 +163,78 @@ void main() {
     expect(ProjectTheme.tryParse('{ "theme": "acme-brand" }'), isNull);
   });
 
+  test('a default-theme reference resolves per size class (forwards the axis)',
+      () {
+    final ProjectTheme theme = ProjectTheme.tryParse('{ "theme": "default" }')!;
+    // The size class is the second cascade axis (RESPONSIVE_DESIGN.md §4.4):
+    // compact keeps the base type scale, expanded bumps it — colour unchanged.
+    expect(
+        theme
+            .resolve(CraftThemeMode.light)
+            .tokens
+            .dimension(ThemeRoles.bodySize),
+        14);
+    expect(
+        theme
+            .resolve(CraftThemeMode.light, WindowSizeClass.expanded)
+            .tokens
+            .dimension(ThemeRoles.bodySize),
+        16);
+  });
+
+  test('an inline theme composes a sizeClasses overlay over its mode', () {
+    final ProjectTheme theme = ProjectTheme.tryParse('''
+      {
+        "tokens": {
+          "color": { "\$type": "color", "surface": { "\$value": "#111111" } },
+          "type": { "\$type": "dimension", "body": { "size": { "\$value": "13px" } } }
+        },
+        "modes": {
+          "dark": { "color": { "\$type": "color", "surface": { "\$value": "#222222" } } }
+        },
+        "sizeClasses": {
+          "expanded": { "type": { "\$type": "dimension", "body": { "size": { "\$value": "17px" } } } }
+        }
+      }
+    ''')!;
+
+    // Base scale (compact): the inline body size, per mode colour.
+    expect(
+        theme
+            .resolve(CraftThemeMode.light)
+            .tokens
+            .dimension(ThemeRoles.bodySize),
+        13);
+    expect(theme.resolve(CraftThemeMode.dark).tokens.color(ThemeRoles.surface),
+        Rgba.decode('#222222'));
+
+    // Expanded overlay bumps the type; the mode's colour still composes under it.
+    final ResolvedTokens darkExpanded =
+        theme.resolve(CraftThemeMode.dark, WindowSizeClass.expanded).tokens;
+    expect(darkExpanded.dimension(ThemeRoles.bodySize), 17);
+    expect(darkExpanded.color(ThemeRoles.surface), Rgba.decode('#222222'));
+
+    // A class with no overlay (medium) falls back to the base scale.
+    expect(
+        theme
+            .resolve(CraftThemeMode.light, WindowSizeClass.medium)
+            .tokens
+            .dimension(ThemeRoles.bodySize),
+        13);
+  });
+
+  test('an inline theme without sizeClasses ignores the axis (unchanged)', () {
+    final ProjectTheme theme = ProjectTheme.tryParse(
+        '{ "tokens": { "color": { "\$type": "color", "surface": { "\$value": "#123456" } } } }')!;
+    // No sizeClasses block ⇒ every size class resolves to the base snapshot.
+    expect(
+        theme
+            .resolve(CraftThemeMode.light, WindowSizeClass.large)
+            .tokens
+            .color(ThemeRoles.surface),
+        Rgba.decode('#123456'));
+  });
+
   test('the non-calculator samples carry no project theme', () {
     // They were unthemed as part of dropping per-sample brands in favor of the
     // live theme picker; only the calculator keeps a shipped (custom) theme.

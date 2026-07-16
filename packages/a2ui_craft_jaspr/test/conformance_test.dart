@@ -151,15 +151,8 @@ class _JasprCraftTester implements CraftTester {
       _canonicalCssColor(_checkboxStyle('background-color', checked: true));
 
   @override
-  String? checkboxBorderColorOf() {
-    // The glyph writes the `border` shorthand ("<w>px solid <color>"); the
-    // color is the token after `solid` (same form as the Card border).
-    final String? border = _checkboxStyle('border', checked: false);
-    if (border == null) return null;
-    final int i = border.indexOf('solid');
-    if (i < 0) return null;
-    return _canonicalCssColor(border.substring(i + 'solid'.length).trim());
-  }
+  String? checkboxBorderColorOf() =>
+      _borderColor('craft-checkbox', checked: false);
 
   @override
   String? checkboxMarkColorOf() {
@@ -176,11 +169,36 @@ class _JasprCraftTester implements CraftTester {
   /// [checked] state, or null when absent. A box is checked iff its `checked`
   /// attribute is present and not `'false'` (the VM tester emits `''` when on;
   /// a browser emits `'true'`/`'false'`).
-  String? _checkboxStyle(String property, {required bool checked}) {
+  String? _checkboxStyle(String property, {required bool checked}) =>
+      _controlStyle('craft-checkbox', property, checked: checked);
+
+  @override
+  String? radioSelectedColorOf() => _borderColor('craft-radio', checked: true);
+
+  @override
+  String? radioRingColorOf() => _borderColor('craft-radio', checked: false);
+
+  /// The `border` shorthand color of the painted control glyph of [cssClass] in
+  /// the given [checked] state — the ring color for a radio, the box border for
+  /// a checkbox ("<w>px solid <color>", the token after `solid`).
+  String? _borderColor(String cssClass, {required bool checked}) {
+    final String? border = _controlStyle(cssClass, 'border', checked: checked);
+    if (border == null) return null;
+    final int i = border.indexOf('solid');
+    if (i < 0) return null;
+    return _canonicalCssColor(border.substring(i + 'solid'.length).trim());
+  }
+
+  /// The inline [property] of the painted control glyph of [cssClass] in the
+  /// given [checked] state, or null when absent. Checked iff the `checked`
+  /// attribute is present and not `'false'` (VM: `''` when on; browser:
+  /// `'true'`/`'false'`).
+  String? _controlStyle(String cssClass, String property,
+      {required bool checked}) {
     for (final Element e in find
         .byComponentPredicate((Component c) =>
             c is DomComponent &&
-            (c.classes?.split(' ').contains('craft-checkbox') ?? false))
+            (c.classes?.split(' ').contains(cssClass) ?? false))
         .evaluate()) {
       final DomComponent c = e.component as DomComponent;
       final String? ch = c.attributes?['checked'];

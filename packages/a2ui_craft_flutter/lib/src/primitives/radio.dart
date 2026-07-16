@@ -83,6 +83,10 @@ class _CoreRadio extends StatelessWidget {
             onTap: onChanged,
             child: Icon(
               selected ? Icons.radio_button_checked : Icons.radio_button_off,
+              // The shared specified size (RadioDefaults) — 18, matching the web
+              // glyph and the checkbox, rather than the Icon's 24px default. The
+              // ring width stays the Material glyph's own (idiom latitude, §8).
+              size: RadioDefaults.size,
               color: selected ? accent : outline,
             ),
           ),

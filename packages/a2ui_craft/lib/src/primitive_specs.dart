@@ -75,3 +75,22 @@ abstract final class CheckboxDefaults {
   /// idiom can still honor (Flutter's `Checkbox.side`).
   static const double borderWidth = 2;
 }
+
+/// `Radio`'s specified default geometry. The radio is the same painted-glyph
+/// model as the checkbox with one fewer role: layer 1 is the **circle**
+/// (`color.outline` ring unselected, `color.primary` ring selected), layer 3 is
+/// the **dot** (`color.primary`, selected-only) — there is no `onPrimary` ink, a
+/// radio's indicator being the accent itself, not content on an accent fill.
+///
+/// Like [CheckboxDefaults], these govern the *painted* glyph (the web today, and
+/// the Flutter `Icon` glyph's size); a fully native control would keep its own
+/// geometry. Specified defaults, not roles or per-instance props (DESIGN.md §8).
+abstract final class RadioDefaults {
+  /// The glyph's diameter (logical px) — matches [CheckboxDefaults.size] so the
+  /// two selection controls read the same size on a form.
+  static const double size = 18;
+
+  /// The unselected ring width. Honored by the painted (web) glyph; the Flutter
+  /// `Icon` glyph bakes its own ring width (idiom latitude, §8).
+  static const double borderWidth = 2;
+}

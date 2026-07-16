@@ -952,6 +952,15 @@ glyph), not only its color; that is accepted idiom latitude, not framework
 variance. The Flutter idiom keeps the native box's own size/corner and honors
 only the shared border width — the one geometry knob a native control exposes.
 
+`Radio` is the same painted-glyph model with **one fewer role**: `primary` inks
+the selected glyph (ring + dot), `outline` the unselected ring, and there is no
+`onPrimary` — a radio's dot is the accent itself, not content on an accent fill.
+It blends into the host unthemed, like the checkbox. Its Flutter rendering is
+*custom* (a Material radio `Icon`, sized from the shared default) rather than the
+native `Radio<T>` — not by preference but because that API is mid-migration to
+`RadioGroup`; the move to native is the same deferred sibling pass as the
+checkbox's, and the radio is what blocks it.
+
 #### Corner radius is an amount; corner style is idiom
 
 `CornerRadius` is a **scalar** in the shared value vocabulary (Pillar B): `0`

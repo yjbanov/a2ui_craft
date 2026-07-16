@@ -189,6 +189,22 @@ class _FlutterCraftTester implements CraftTester {
   }
 
   @override
+  String? radioSelectedColorOf() => _radioColor(Icons.radio_button_checked);
+
+  @override
+  String? radioRingColorOf() => _radioColor(Icons.radio_button_off);
+
+  /// The color of the radio glyph [icon] (the custom `_CoreRadio` draws its
+  /// state as a Material radio `Icon` inked `primary` when selected, `outline`
+  /// when not), or null when unthemed.
+  String? _radioColor(IconData icon) {
+    final Iterable<Element> icons = find.byIcon(icon).evaluate();
+    if (icons.isEmpty) return null;
+    final Color? color = (icons.first.widget as Icon).color;
+    return color == null ? null : _argbHex(color);
+  }
+
+  @override
   Future<void> activate(String key) async {
     await _tester.tap(find.byKey(ValueKey<String>(key)));
     await _tester.pump();

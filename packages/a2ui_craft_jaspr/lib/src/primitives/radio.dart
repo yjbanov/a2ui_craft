@@ -41,13 +41,18 @@ Styles? _radioStyles(BuildContext context, {required bool selected}) {
   final String? primary = roleColor(context, ThemeRoles.primary);
   if (primary == null) return null;
   final String border = roleColor(context, ThemeRoles.outline) ?? primary;
+  // Geometry from the framework-neutral specified default (RadioDefaults), read
+  // here rather than hardcoded, so the web glyph and any other painted glyph
+  // agree (DESIGN.md §8).
+  final String size = '${px(RadioDefaults.size)}px';
+  final String width = '${px(RadioDefaults.borderWidth)}px';
   return Styles(raw: <String, String>{
     'appearance': 'none',
-    'width': '18px',
-    'height': '18px',
+    'width': size,
+    'height': size,
     'margin': '0',
     'vertical-align': 'middle',
-    'border': '2px solid ${selected ? primary : border}',
+    'border': '$width solid ${selected ? primary : border}',
     'border-radius': '50%',
     'background-color': 'transparent',
     if (selected)

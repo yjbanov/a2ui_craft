@@ -188,6 +188,16 @@ abstract interface class CraftTester {
   /// `color.onPrimary`. The mark shows only while checked.
   String? checkboxMarkColorOf();
 
+  /// The **selected glyph** color of the rendered *selected* `Radio` (its ring
+  /// and dot, both `color.primary`), canonicalized to `#AARRGGBB`, or null when
+  /// unthemed (blends into the host). Painted-decision probe (§9.6). A radio has
+  /// no `onPrimary` ink — the dot is the accent itself.
+  String? radioSelectedColorOf();
+
+  /// The **ring** color of the rendered *unselected* `Radio` (`color.outline`),
+  /// canonicalized to `#AARRGGBB`, or null when unthemed.
+  String? radioRingColorOf();
+
   /// Activates (taps/clicks) the interactive element carrying the given
   /// component `key`.
   Future<void> activate(String key);
@@ -1383,6 +1393,44 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
       expect(tester.checkboxFillColorOf(), '#FF00695C');
       expect(tester.checkboxMarkColorOf(), '#FFF1F2F3');
       expect(tester.checkboxBorderColorOf(), '#FFE0D6C4');
+    },
+  );
+
+  driver.defineTest(
+    'Radio inks its selected glyph and unselected ring per theme, on both '
+    'adapters',
+    (CraftTester tester) async {
+      // The Radio paint model (DESIGN.md §8): `primary` inks the selected glyph
+      // (ring + dot), `outline` rings the unselected circle. No `onPrimary` — a
+      // radio's dot is the accent itself. One selected + one unselected so each
+      // layer is read where it is meaningful (single mount, per the Checkbox
+      // case's note).
+      CraftTheme theme(String primary, String outline) =>
+          CraftTheme(resolveDesignTokens(<DesignTokenSet>[
+            parseDesignTokens(<String, Object?>{
+              'color': <String, Object?>{
+                r'$type': 'color',
+                'primary': <String, Object?>{r'$value': primary},
+                'outline': <String, Object?>{r'$value': outline},
+              },
+            }),
+          ]));
+
+      await tester.mount('''
+        import core;
+        widget root = Column(children: [
+          Radio(selected: true, onChanged: event "a" {}),
+          Radio(selected: false, onChanged: event "b" {}),
+        ]);
+      ''', theme: theme('#6200EE', '#33475B'));
+
+      expect(tester.radioSelectedColorOf(), '#FF6200EE');
+      expect(tester.radioRingColorOf(), '#FF33475B');
+
+      // Re-theming re-inks both in place.
+      await tester.retheme(theme('#00695C', '#E0D6C4'));
+      expect(tester.radioSelectedColorOf(), '#FF00695C');
+      expect(tester.radioRingColorOf(), '#FFE0D6C4');
     },
   );
 }

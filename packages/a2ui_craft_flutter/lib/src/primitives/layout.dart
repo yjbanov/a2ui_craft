@@ -7,6 +7,8 @@
 /// explicit-sizing model shared with the Jaspr adapter (DESIGN.md §8).
 library;
 
+import 'dart:math' as math;
+
 import 'package:a2ui_craft/a2ui_craft.dart';
 import 'package:flutter/material.dart';
 
@@ -89,6 +91,73 @@ Widget buildWrap(BuildContext context, DataSource source) {
   );
 }
 
+/// Builds `Grid`: an **auto-fit** grid of equal columns, each at least
+/// `minColumnWidth` wide, that reflows to the available width with **no
+/// breakpoints** — the highest-leverage intrinsic responsiveness (DESIGN.md §13;
+/// research/responsive/RESPONSIVE_DESIGN.md §4.1). `gap` spaces the columns,
+/// `runGap` the rows.
+///
+/// The column count is derived from the *same* formula CSS's
+/// `repeat(auto-fit, minmax(min(N, 100%), 1fr))` uses, so both adapters place the
+/// same number of columns at the same width for a given container: `n` columns
+/// need `n·min + (n−1)·gap ≤ W`, so `n = ⌊(W + gap) / (min + gap)⌋` (at least 1),
+/// then capped at the child count (CSS `auto-fit` collapses the empty trailing
+/// tracks, so few items stretch to fill). Columns share one track width across
+/// rows — a short final row keeps the track width and packs to the start, rather
+/// than re-dividing — so a `Row` per line with an `Expanded` per track and empty
+/// `Expanded` placeholders for the missing cells reproduces the grid exactly.
+/// Rows and cells are **top-aligned and content-height** (`align-items: start`),
+/// the same cross-axis default as the `Flex` primitives.
+Widget buildGrid(BuildContext context, DataSource source) {
+  final double minColumnWidth =
+      numArg(source, 'minColumnWidth') ?? GridDefaults.minColumnWidth;
+  final double gap = _gap(source);
+  final double runGap = numArg(source, 'runGap') ?? 0.0;
+  final List<Widget> children = source.childList(['children']);
+  if (children.isEmpty) return const SizedBox.shrink();
+
+  return LayoutBuilder(
+    builder: (BuildContext context, BoxConstraints constraints) {
+      final double maxWidth = constraints.maxWidth;
+      // Unbounded width has no "how many fit" answer; lay all in one row (each
+      // item then takes its share of the resolved width), matching an
+      // unconstrained CSS grid.
+      final int fit = maxWidth.isFinite && maxWidth > 0
+          ? math.max(1, ((maxWidth + gap) / (minColumnWidth + gap)).floor())
+          : children.length;
+      final int columns = math.min(fit, children.length);
+      return _grid(children, columns, gap, runGap);
+    },
+  );
+}
+
+/// Arranges [children] into rows of [columns] equal tracks, spaced by [gap]
+/// (columns) and [runGap] (rows). The final short row is padded with empty
+/// `Expanded` tracks so every row divides into the same track width.
+Widget _grid(List<Widget> children, int columns, double gap, double runGap) {
+  final List<Widget> rows = <Widget>[];
+  for (int i = 0; i < children.length; i += columns) {
+    final List<Widget> cells = <Widget>[];
+    for (int c = 0; c < columns; c++) {
+      if (c > 0 && gap > 0) cells.add(SizedBox(width: gap));
+      final int index = i + c;
+      cells.add(Expanded(
+        child:
+            index < children.length ? children[index] : const SizedBox.shrink(),
+      ));
+    }
+    if (rows.isNotEmpty && runGap > 0) rows.add(SizedBox(height: runGap));
+    rows.add(
+      Row(crossAxisAlignment: CrossAxisAlignment.start, children: cells),
+    );
+  }
+  return Column(
+    mainAxisSize: MainAxisSize.min,
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: rows,
+  );
+}
+
 /// Builds `Opacity`: makes its child partially (or fully) transparent without
 /// affecting layout.
 Widget buildOpacity(BuildContext context, DataSource source) {
@@ -132,6 +201,10 @@ Widget buildSizedBox(BuildContext context, DataSource source) {
 Widget buildBox(BuildContext context, DataSource source) {
   final Dimension width = Dimension.decode(_dimRaw(source, ['width']));
   final Dimension height = Dimension.decode(_dimRaw(source, ['height']));
+  final double? minWidth = numArg(source, 'minWidth');
+  final double? maxWidth = numArg(source, 'maxWidth');
+  final double? minHeight = numArg(source, 'minHeight');
+  final double? maxHeight = numArg(source, 'maxHeight');
   final Insets padding = Insets.decode(insetsRaw(source, 'padding'));
   final Insets margin = Insets.decode(insetsRaw(source, 'margin'));
   final Rgba? color = rgbaArg(source, 'color');
@@ -186,6 +259,26 @@ Widget buildBox(BuildContext context, DataSource source) {
               spreadRadius: s.spread,
             ),
         ],
+      ),
+      child: box,
+    );
+  }
+
+  // Min/max clamps (the `Dimension` algebra has no clamp, so these are the
+  // escape valve for "stop growing on a TV, stop shrinking on a watch" —
+  // research/responsive/RESPONSIVE_DESIGN.md §4.1). They wrap the decorated box
+  // (so a fill/painted box honors them) but sit inside the margin, matching CSS
+  // `min-/max-width/height` on the border-box element.
+  if (minWidth != null ||
+      maxWidth != null ||
+      minHeight != null ||
+      maxHeight != null) {
+    box = ConstrainedBox(
+      constraints: BoxConstraints(
+        minWidth: minWidth ?? 0.0,
+        maxWidth: maxWidth ?? double.infinity,
+        minHeight: minHeight ?? 0.0,
+        maxHeight: maxHeight ?? double.infinity,
       ),
       child: box,
     );

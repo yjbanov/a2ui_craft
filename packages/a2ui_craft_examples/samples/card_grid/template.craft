@@ -1,0 +1,25 @@
+import core;
+
+// Intrinsic responsiveness with **no breakpoints**: `Grid` lays out as many
+// equal columns as fit at ≥ `minColumnWidth`, then reflows as the width changes
+// — identically on Flutter and Jaspr (research/responsive/RESPONSIVE_DESIGN.md
+// §4.1). Unlike the `responsive` sample (which restructures at host-supplied
+// size classes), this needs no size input at all: narrow the pane and the same
+// cards repack from four columns to one on their own.
+
+widget Metric = Card(child: Column(crossAxisAlignment: "start", gap: 4.0, children: [
+  Text(text: args.label, variant: "caption"),
+  Heading(text: args.value, level: 2),
+]));
+
+widget Dashboard = Column(gap: 12.0, children: [
+  Heading(text: "Team dashboard", level: 3),
+  Grid(minColumnWidth: 160.0, gap: 12.0, runGap: 12.0, children: [
+    Metric(label: "Revenue", value: "$48.2k"),
+    Metric(label: "Orders", value: "1,284"),
+    Metric(label: "Refunds", value: "12"),
+    Metric(label: "Visitors", value: "92k"),
+    Metric(label: "Signups", value: "438"),
+    Metric(label: "Churn", value: "2.1%"),
+  ]),
+]);

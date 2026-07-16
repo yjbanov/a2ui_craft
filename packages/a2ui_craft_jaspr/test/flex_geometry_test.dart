@@ -76,6 +76,7 @@ void main() {
   runCrossAxisSizingGeometryConformance(_JasprGeometryDriver());
   runBoxGeometryConformance(_JasprGeometryDriver());
   runCardGeometryConformance(_JasprGeometryDriver());
+  runGridGeometryConformance(_JasprGeometryDriver());
   runAtomGeometryConformance(_JasprGeometryDriver());
   runLayoutGeometryConformance(_JasprGeometryDriver());
 }

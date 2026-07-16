@@ -49,6 +49,7 @@ LocalWidgetLibrary createCoreComponents() {
     'Align': buildAlign,
     'AspectRatio': buildAspectRatio,
     'Wrap': buildWrap,
+    'Grid': buildGrid,
     'Responsive': buildResponsive,
     'Opacity': buildOpacity,
     'SizedBox': buildSizedBox,

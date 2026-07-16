@@ -69,6 +69,7 @@ void main() {
   runCrossAxisSizingGeometryConformance(_FlutterGeometryDriver());
   runBoxGeometryConformance(_FlutterGeometryDriver());
   runCardGeometryConformance(_FlutterGeometryDriver());
+  runGridGeometryConformance(_FlutterGeometryDriver());
   runAtomGeometryConformance(_FlutterGeometryDriver());
   runLayoutGeometryConformance(_FlutterGeometryDriver());
 }

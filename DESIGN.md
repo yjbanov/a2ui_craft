@@ -1381,11 +1381,16 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
 
 - **Core primitive vocabulary (H2):** the constrained common model (§8) settles
   the *shape*; still open is the exact per-category widget set and how far the
-  layout algebra reaches (e.g. `Grid`, scrolling/overflow, `Stack` z-order)
-  before the "drop to raw framework" escape hatch (§2) takes over.
+  layout algebra reaches (scrolling/overflow, `Stack` z-order) before the "drop
+  to raw framework" escape hatch (§2) takes over. `Grid` (auto-fit) and `Box`
+  min/max sizing now exist as the intrinsic-responsiveness primitives
+  (research/responsive/RESPONSIVE_DESIGN.md §4.1) — geometry-conformance-pinned
+  so both adapters derive the same column count and clamp to the same bounds.
 - **Type model:** the precise canonical shapes of the §8 value types, and how
   `Dimension`'s `flex`/`fill`/`hug` interact with nested scroll/intrinsic-sizing
-  edge cases.
+  edge cases. `Box`'s `minWidth`/`maxWidth`/`minHeight`/`maxHeight` are the
+  clamp the `Dimension` algebra itself lacks — carried as sibling props rather
+  than folded into `Dimension`, an open modeling choice.
 - **Per-idiom gaps in the Cupertino preview (§8):** the v1 role-limit tables
   are authored, but two controls render their Material form under the
   Cupertino idiom — `TextField` (no `.adaptive` constructor; a

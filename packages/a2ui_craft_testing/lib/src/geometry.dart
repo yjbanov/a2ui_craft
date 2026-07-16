@@ -381,6 +381,33 @@ void runBoxGeometryConformance(CraftGeometryDriver driver) {
   );
 
   driver.defineTest(
+    'Box: maxWidth caps a fill width identically on both adapters',
+    (CraftGeometryTester tester) async {
+      await tester.mountTemplate('''
+        import core;
+        widget root = Box(key: "outer", width: 300.0, height: 40.0,
+          child: Box(key: "capped", width: "fill", maxWidth: 120.0, height: 20.0));
+      ''');
+      // The child would fill the 300-wide parent, but `maxWidth` caps it at 120
+      // (CSS `max-width` vs. Flutter's outer `ConstrainedBox`).
+      expect((await tester.rectOf('capped')).width, closeTo(120, _tol));
+    },
+  );
+
+  driver.defineTest(
+    'Box: minWidth floors a narrow width identically on both adapters',
+    (CraftGeometryTester tester) async {
+      await tester.mountTemplate('''
+        import core;
+        widget root = Box(key: "outer", width: 300.0, height: 40.0,
+          child: Box(key: "floored", width: 40.0, minWidth: 100.0, height: 20.0));
+      ''');
+      // The child asks for 40 but `minWidth` floors it at 100.
+      expect((await tester.rectOf('floored')).width, closeTo(100, _tol));
+    },
+  );
+
+  driver.defineTest(
     'a Heading adds no margin: it sits at the padding offset on both adapters',
     (CraftGeometryTester tester) async {
       // A Heading is a bare sized text line — no intrinsic margin (like the
@@ -559,6 +586,83 @@ void runCardGeometryConformance(CraftGeometryDriver driver) {
       // 16px padding + 1px default border, no framework margin.
       expect(inner.left - box.left, closeTo(17, _tol));
       expect(inner.top - box.top, closeTo(17, _tol));
+    },
+  );
+}
+
+/// The shared **geometric** specification for the `Grid` primitive — auto-fit
+/// track sizing (research/responsive/RESPONSIVE_DESIGN.md §4.1).
+///
+/// Pins the parity contract that matters: both adapters place the **same number
+/// of equal columns at the same width** for a given container, and wrap to the
+/// next row at the same point — the Flutter adapter deriving the column count
+/// from the same `⌊(W + gap) / (min + gap)⌋` formula CSS `auto-fit minmax()`
+/// uses, not merely rendering *a* grid. Fixtures use fixed-height, track-filling
+/// cells so the assertions are independent of text shaping.
+void runGridGeometryConformance(CraftGeometryDriver driver) {
+  driver.defineTest(
+    'Grid auto-fit: equal columns, shared track width, wraps to the next row',
+    (CraftGeometryTester tester) async {
+      // W=300, min=90, gap=10 ⇒ n = ⌊(300+10)/(90+10)⌋ = 3 columns.
+      // track = (300 − 2·10)/3 = 93.33; column pitch = track + gap = 103.33.
+      // Five cells ⇒ row 0 = a,b,c; row 1 = d,e at runGap (10) below the
+      // 20-tall first row (top 30), packed from the start in the same tracks.
+      // The Grid sits inside a hug `Column` (whose cross-axis default is
+      // `start`) under a fixed-width `Box` — the everyday placement. The Grid
+      // must *fill* that 300 width through the start-aligned column, not shrink
+      // to one min-width column; a bare block parent would hide that.
+      await tester.mountTemplate('''
+        import core;
+        widget root = Box(key: "box", width: 300.0, child: Column(children: [
+          Grid(minColumnWidth: 90.0, gap: 10.0, runGap: 10.0, children: [
+            SizedBox(key: "a", height: 20.0),
+            SizedBox(key: "b", height: 20.0),
+            SizedBox(key: "c", height: 20.0),
+            SizedBox(key: "d", height: 20.0),
+            SizedBox(key: "e", height: 20.0),
+          ]),
+        ]));
+      ''');
+      final CraftRect a = await tester.rectOf('a');
+      final CraftRect b = await tester.rectOf('b');
+      final CraftRect c = await tester.rectOf('c');
+      final CraftRect d = await tester.rectOf('d');
+      final CraftRect e = await tester.rectOf('e');
+      // Three equal tracks on the first row, each ~93.33 wide, pitched 103.33.
+      expect(a.width, closeTo(93.33, _tol));
+      expect((a.top - a.top), closeTo(0, _tol));
+      expect(b.left - a.left, closeTo(103.33, _tol));
+      expect((b.top - a.top).abs(), closeTo(0, _tol));
+      expect(c.left - a.left, closeTo(206.67, _tol));
+      // The fourth cell wraps to the next row (runGap below), back in track 0…
+      expect(d.top - a.top, closeTo(30, _tol));
+      expect((d.left - a.left).abs(), closeTo(0, _tol));
+      // …and the fifth sits in track 1 at the same pitch and width.
+      expect(e.left - a.left, closeTo(103.33, _tol));
+      expect(e.width, closeTo(93.33, _tol));
+    },
+  );
+
+  driver.defineTest(
+    'Grid auto-fit: few items collapse empty tracks and stretch to fill',
+    (CraftGeometryTester tester) async {
+      // W=300, min=90 ⇒ up to 3 tracks fit, but only two items: the empty
+      // trailing track collapses so the two share the full width (each
+      // (300−10)/2 = 145), rather than sitting in 93-wide tracks.
+      await tester.mountTemplate('''
+        import core;
+        widget root = Box(key: "box", width: 300.0, child: Column(children: [
+          Grid(minColumnWidth: 90.0, gap: 10.0, children: [
+            SizedBox(key: "a", height: 20.0),
+            SizedBox(key: "b", height: 20.0),
+          ]),
+        ]));
+      ''');
+      final CraftRect a = await tester.rectOf('a');
+      final CraftRect b = await tester.rectOf('b');
+      expect(a.width, closeTo(145, _tol));
+      expect(b.left - a.left, closeTo(155, _tol));
+      expect((b.top - a.top).abs(), closeTo(0, _tol));
     },
   );
 }

@@ -126,6 +126,44 @@ Component buildWrap(BuildContext context, DataSource source) {
   );
 }
 
+/// Builds `Grid`: an **auto-fit** grid of equal columns, each at least
+/// `minColumnWidth` wide, that reflows to the available width with **no
+/// breakpoints** — the highest-leverage intrinsic responsiveness (DESIGN.md §13;
+/// research/responsive/RESPONSIVE_DESIGN.md §4.1). `gap` spaces the columns,
+/// `runGap` the rows.
+///
+/// This is native CSS `repeat(auto-fit, minmax(min(N, 100%), 1fr))`: as many
+/// equal `1fr` columns as fit at ≥ `minColumnWidth`, the empty trailing tracks
+/// collapsing so few items stretch to fill. The `min(N, 100%)` guards a
+/// container narrower than one column from overflowing. `align-items: start`
+/// keeps rows content-height and cells top-aligned — the same cross-axis default
+/// as the `Flex` primitives — so the Flutter adapter (which derives the same
+/// column count from the same formula) matches.
+Component buildGrid(BuildContext context, DataSource source) {
+  final double minColumnWidth =
+      numArg(source, 'minColumnWidth') ?? GridDefaults.minColumnWidth;
+  final double gap = _gap(source);
+  final double runGap = numArg(source, 'runGap') ?? 0.0;
+  return div(
+    styles: Styles(raw: <String, String>{
+      'display': 'grid',
+      'grid-template-columns':
+          'repeat(auto-fit, minmax(min(${px(minColumnWidth)}px, 100%), 1fr))',
+      // CSS `gap` shorthand is `row-gap column-gap`: rows spaced by runGap,
+      // columns by gap.
+      'gap': '${px(runGap)}px ${px(gap)}px',
+      'align-items': 'start',
+      // Fill the available width so the auto-fit reflow has a width to work
+      // with. As a flex *item* under a start-aligned parent (the `Flex`
+      // cross-axis default) a bare grid shrinks to one min-width column; the
+      // Flutter adapter's `LayoutBuilder` fills the incoming constraint, so
+      // fill here to match (the same intent as a `fill` `Dimension`).
+      'width': '100%',
+    }),
+    source.childList(['children']),
+  );
+}
+
 /// Builds `Opacity`: makes its child partially (or fully) transparent without
 /// affecting layout.
 Component buildOpacity(BuildContext context, DataSource source) {
@@ -173,6 +211,10 @@ Component buildSizedBox(BuildContext context, DataSource source) {
 Component buildBox(BuildContext context, DataSource source) {
   final Dimension width = Dimension.decode(_dimRaw(source, ['width']));
   final Dimension height = Dimension.decode(_dimRaw(source, ['height']));
+  final double? minWidth = numArg(source, 'minWidth');
+  final double? maxWidth = numArg(source, 'maxWidth');
+  final double? minHeight = numArg(source, 'minHeight');
+  final double? maxHeight = numArg(source, 'maxHeight');
   final Insets padding = Insets.decode(insetsRaw(source, 'padding'));
   final Insets margin = Insets.decode(insetsRaw(source, 'margin'));
   final Rgba? color = _rgba(source, 'color');
@@ -187,6 +229,12 @@ Component buildBox(BuildContext context, DataSource source) {
     'width': _cssExtent(width),
     'height': _cssExtent(height),
   };
+  // Min/max clamps (the `Dimension` algebra has no clamp) — the border-box
+  // element, so they bound the same box the Flutter `ConstrainedBox` does.
+  if (minWidth != null) inner['min-width'] = '${px(minWidth)}px';
+  if (maxWidth != null) inner['max-width'] = '${px(maxWidth)}px';
+  if (minHeight != null) inner['min-height'] = '${px(minHeight)}px';
+  if (maxHeight != null) inner['max-height'] = '${px(maxHeight)}px';
   if (!padding.isZero) inner['padding'] = cssInsets(padding);
   if (color != null) inner['background-color'] = color.toCssString();
   if (!radius.isSharp) inner['border-radius'] = '${px(radius.pixels)}px';

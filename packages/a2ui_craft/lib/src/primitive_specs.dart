@@ -44,6 +44,22 @@ abstract final class CardDefaults {
   static const Elevation elevation = Elevation(2);
 }
 
+/// `Grid`'s specified default — the minimum column width for its **auto-fit**
+/// track sizing (DESIGN.md §13; research/responsive/RESPONSIVE_DESIGN.md §4.1).
+///
+/// `Grid` lays out as many equal columns as fit, each at least this wide, then
+/// distributes the leftover space evenly across them (CSS
+/// `repeat(auto-fit, minmax(min(N, 100%), 1fr))`; the Flutter adapter derives the
+/// same column count from the same formula). This is the highest-leverage
+/// *intrinsic* responsiveness — a card grid, a photo wall, a dashboard reflows
+/// across form factors with **no breakpoints and no size input** — so the width
+/// lives here, next to the value types, as the one number both adapters read.
+abstract final class GridDefaults {
+  /// The default minimum column width (logical px). A per-instance
+  /// `minColumnWidth` prop overrides it.
+  static const double minColumnWidth = 200;
+}
+
 /// `Checkbox`'s specified default geometry — the box's size, corner radius, and
 /// border width (DESIGN.md §8, "the paint model"). A checkbox is the four paint
 /// layers in miniature: layer 1 is the **box** (border when unchecked, fill when

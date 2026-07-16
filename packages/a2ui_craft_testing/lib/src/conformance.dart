@@ -198,6 +198,24 @@ abstract interface class CraftTester {
   /// canonicalized to `#AARRGGBB`, or null when unthemed.
   String? radioRingColorOf();
 
+  /// The **active track** fill of the rendered *on* `Switch` (layer 1,
+  /// `color.primary`), canonicalized to `#AARRGGBB`, or null when unthemed.
+  /// Painted-decision probe (§9.6).
+  ///
+  /// The three switch probes read the state where their layer is meaningful: the
+  /// active track and [switchThumbColorOf] the *on* switch, the inactive track
+  /// the *off* one — so a theming case renders one of each.
+  String? switchActiveTrackColorOf();
+
+  /// The **on-thumb** ink of the rendered *on* `Switch` (layer 3,
+  /// `color.onPrimary`), canonicalized to `#AARRGGBB`, or null when unthemed.
+  String? switchThumbColorOf();
+
+  /// The **inactive track** fill of the rendered *off* `Switch` (`color.outline`
+  /// — the same part on every adapter), canonicalized to `#AARRGGBB`, or null
+  /// when unthemed.
+  String? switchInactiveTrackColorOf();
+
   /// Activates (taps/clicks) the interactive element carrying the given
   /// component `key`.
   Future<void> activate(String key);
@@ -1431,6 +1449,47 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
       await tester.retheme(theme('#00695C', '#E0D6C4'));
       expect(tester.radioSelectedColorOf(), '#FF00695C');
       expect(tester.radioRingColorOf(), '#FFE0D6C4');
+    },
+  );
+
+  driver.defineTest(
+    'Switch inks its active track, thumb, and inactive track per theme, on both '
+    'adapters',
+    (CraftTester tester) async {
+      // The Switch paint model (DESIGN.md §8): `primary` fills the active track,
+      // `onPrimary` inks the on-thumb, `outline` fills the *inactive* track —
+      // the same part on every adapter (the fix for the prior divergence, where
+      // Flutter put outline on the thumb + border instead). One on + one off so
+      // each layer is read where it is meaningful (single mount).
+      CraftTheme theme(String primary, String onPrimary, String outline) =>
+          CraftTheme(resolveDesignTokens(<DesignTokenSet>[
+            parseDesignTokens(<String, Object?>{
+              'color': <String, Object?>{
+                r'$type': 'color',
+                'primary': <String, Object?>{r'$value': primary},
+                'onPrimary': <String, Object?>{r'$value': onPrimary},
+                'outline': <String, Object?>{r'$value': outline},
+              },
+            }),
+          ]));
+
+      await tester.mount('''
+        import core;
+        widget root = Column(children: [
+          Switch(value: true, onChanged: event "a" {}),
+          Switch(value: false, onChanged: event "b" {}),
+        ]);
+      ''', theme: theme('#6200EE', '#FFFFFF', '#33475B'));
+
+      expect(tester.switchActiveTrackColorOf(), '#FF6200EE');
+      expect(tester.switchThumbColorOf(), '#FFFFFFFF');
+      expect(tester.switchInactiveTrackColorOf(), '#FF33475B');
+
+      // Re-theming re-inks every mapped part in place.
+      await tester.retheme(theme('#00695C', '#F1F2F3', '#E0D6C4'));
+      expect(tester.switchActiveTrackColorOf(), '#FF00695C');
+      expect(tester.switchThumbColorOf(), '#FFF1F2F3');
+      expect(tester.switchInactiveTrackColorOf(), '#FFE0D6C4');
     },
   );
 }

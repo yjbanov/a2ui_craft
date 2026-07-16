@@ -139,21 +139,14 @@ void main() {
     ''',
         theme: _fullTheme);
 
-    // Switch: primary fills the active track; outline inks the inactive
-    // thumb and the off-state track outline (selected clears it — Material
-    // hides the outline when on). _fullTheme names no onPrimary → the active
-    // thumb keeps the host look.
+    // Switch: primary fills the active track; outline fills the *inactive*
+    // track — the same part the web glyph inks (a role inks one part on every
+    // adapter, §8). _fullTheme names no onPrimary → the active thumb keeps the
+    // host look; the inactive thumb is a neutral, not a role.
     final Switch sw = tester.widget<Switch>(find.byType(Switch));
     expect(sw.activeTrackColor, const Color(0xFFAA0000));
     expect(sw.activeThumbColor, isNull);
-    expect(sw.inactiveThumbColor, const Color(0xFF223344));
-    expect(sw.trackOutlineColor!.resolve(const <WidgetState>{}),
-        const Color(0xFF223344));
-    expect(
-        sw.trackOutlineColor!.resolve(const <WidgetState>{
-          WidgetState.selected,
-        }),
-        isNull);
+    expect(sw.inactiveTrackColor, const Color(0xFF223344));
     // Select: the closed control shows the bound option, chromed like the
     // TextField (the shared _fieldDecoration).
     expect(find.text('B'), findsOneWidget);

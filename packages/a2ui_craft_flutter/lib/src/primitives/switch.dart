@@ -15,9 +15,11 @@ import 'support.dart';
 
 /// Builds `Switch`: a bare on/off switch. Two-way bound like Checkbox; the
 /// role mapping (DESIGN.md §8): `primary` fully fills the active track
-/// (`onPrimary` inks the thumb riding it), `outline` inks the inactive
-/// track's border and thumb; null keeps the host Material look (blend in,
-/// §9.1).
+/// (`onPrimary` inks the thumb riding it), `outline` fills the **inactive
+/// track** — the same part the web glyph inks, so a role inks one part on every
+/// adapter. The inactive thumb is a contrasting neutral (surface), not a role,
+/// matching the web glyph's light thumb. Null roles keep the host Material look
+/// (blend in, §9.1).
 Widget buildSwitch(BuildContext context, DataSource source) {
   final bool value = source.v<bool>(['value']) ?? false;
   final ValueChanged<bool>? onChanged = source.handler<ValueChanged<bool>>(
@@ -33,11 +35,11 @@ Widget buildSwitch(BuildContext context, DataSource source) {
     value: value,
     activeTrackColor: roleColor(context, ThemeRoles.primary),
     activeThumbColor: roleColor(context, ThemeRoles.onPrimary),
-    inactiveThumbColor: outline,
-    trackOutlineColor: outline == null
-        ? null
-        : WidgetStateProperty.resolveWith((Set<WidgetState> states) =>
-            states.contains(WidgetState.selected) ? null : outline),
+    // `outline` inks the inactive track *fill* (§8: the same part as the web
+    // glyph). The off-thumb rides it as a contrasting neutral, not a role.
+    inactiveTrackColor: outline,
+    inactiveThumbColor:
+        outline == null ? null : Theme.of(context).colorScheme.surface,
     onChanged: onChanged,
   );
 }

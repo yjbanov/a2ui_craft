@@ -178,6 +178,53 @@ class _JasprCraftTester implements CraftTester {
   @override
   String? radioRingColorOf() => _borderColor('craft-radio', checked: false);
 
+  @override
+  String? switchActiveTrackColorOf() => _canonicalCssColor(
+      _controlStyle('craft-switch', 'background-color', checked: true));
+
+  @override
+  String? switchInactiveTrackColorOf() => _canonicalCssColor(
+      _controlStyle('craft-switch', 'background-color', checked: false));
+
+  @override
+  String? switchThumbColorOf() {
+    // The thumb is the first color stop of the track's radial-gradient
+    // `background-image` ("radial-gradient(circle at CX CY, THUMB 0 Rpx, …)").
+    final String? image =
+        _controlStyle('craft-switch', 'background-image', checked: true);
+    const String prefix = 'radial-gradient(';
+    if (image == null || !image.startsWith(prefix) || !image.endsWith(')')) {
+      return null;
+    }
+    final List<String> parts =
+        _splitTopLevel(image.substring(prefix.length, image.length - 1), ',');
+    if (parts.length < 2) return null;
+    // parts[1] is " THUMB 0 Rpx"; the color ends at the ` 0 ` stop marker.
+    final String stop = parts[1].trim();
+    final int i = stop.indexOf(' 0 ');
+    return i < 0 ? null : _canonicalCssColor(stop.substring(0, i).trim());
+  }
+
+  /// Splits [s] on [sep] at paren-depth 0 (so `rgba(…, …)` / `light-dark(…, …)`
+  /// stay intact).
+  List<String> _splitTopLevel(String s, String sep) {
+    final List<String> out = <String>[];
+    int depth = 0, start = 0;
+    for (int i = 0; i < s.length; i++) {
+      final String ch = s[i];
+      if (ch == '(') {
+        depth++;
+      } else if (ch == ')') {
+        depth--;
+      } else if (ch == sep && depth == 0) {
+        out.add(s.substring(start, i));
+        start = i + 1;
+      }
+    }
+    out.add(s.substring(start));
+    return out;
+  }
+
   /// The `border` shorthand color of the painted control glyph of [cssClass] in
   /// the given [checked] state — the ring color for a radio, the box border for
   /// a checkbox ("<w>px solid <color>", the token after `solid`).

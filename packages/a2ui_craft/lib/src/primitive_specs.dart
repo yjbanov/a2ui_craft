@@ -94,3 +94,29 @@ abstract final class RadioDefaults {
   /// `Icon` glyph bakes its own ring width (idiom latitude, §8).
   static const double borderWidth = 2;
 }
+
+/// `Switch`'s specified default geometry — the track and thumb of the painted
+/// glyph. The switch is layer 1 (the **track**: `color.primary` fill active,
+/// `color.outline` fill inactive) and layer 3 (the **thumb**: `color.onPrimary`
+/// on the active track, a neutral on the inactive one).
+///
+/// The switch is the one control the web has **no native element** for, so it is
+/// *always* adapter-painted (like `Button`, unlike `Checkbox`/`Radio`, which
+/// blend into a native control unthemed). The web glyph derives its whole
+/// geometry from these: the pill radius is [trackHeight] / 2, and the thumb
+/// centers sit [thumbInset] + radius in from each track edge. The native Flutter
+/// switch keeps its own geometry (idiom latitude, §8) and reads none of them.
+abstract final class SwitchDefaults {
+  /// The track's width (logical px).
+  static const double trackWidth = 36;
+
+  /// The track's height (logical px); the pill corner radius is half this.
+  static const double trackHeight = 20;
+
+  /// The thumb's diameter (logical px).
+  static const double thumbDiameter = 14;
+
+  /// The horizontal gap from a track edge to the near thumb edge — the thumb's
+  /// travel inset. The thumb centers are [thumbInset] + radius from each edge.
+  static const double thumbInset = 4;
+}

@@ -961,6 +961,17 @@ native `Radio<T>` — not by preference but because that API is mid-migration to
 `RadioGroup`; the move to native is the same deferred sibling pass as the
 checkbox's, and the radio is what blocks it.
 
+`Switch` is a **track + thumb**: `primary` fills the active track, `onPrimary`
+inks the on-thumb, `outline` fills the **inactive track** — the same part on
+every adapter (an earlier build had the web fill the track while Flutter put
+`outline` on the thumb and track *border*; a role must ink one part everywhere,
+so both now fill the inactive track). Its off-thumb is a contrasting neutral, not
+a role. The switch answers "unthemed?" the opposite way from the checkbox: the
+web has **no native switch element**, so it is *always* adapter-painted (like
+`Button`), never blending in on the web — the split is by whether an adequate
+native fallback exists (Checkbox/Radio have one, Button/Switch do not), not by
+control kind.
+
 #### Corner radius is an amount; corner style is idiom
 
 `CornerRadius` is a **scalar** in the shared value vocabulary (Pillar B): `0`

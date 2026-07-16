@@ -166,11 +166,19 @@ void main() {
     ''',
         theme: _fullTheme);
 
-    expect(_styleValues('background'), <String>[
+    // The track is its own `background-color` (primary on, outline off — like
+    // the Checkbox fill), the thumb a `background-image` gradient over it (like
+    // the Checkbox mark). Select's chrome adds a transparent fill.
+    expect(_styleValues('background-color'), <String>[
+      'rgba(170, 0, 0, 1.0)', // on-switch track ← primary
+      'rgba(34, 51, 68, 1.0)', // off-switch track ← outline
+      'transparent', // Select chrome
+    ]);
+    expect(_styleValues('background-image'), <String>[
       'radial-gradient(circle at 25px 10px, light-dark(#ffffff, #202124) '
-          '0 7px, transparent 8px), rgba(170, 0, 0, 1.0)',
+          '0 7px, transparent 8px)',
       'radial-gradient(circle at 11px 10px, light-dark(#ffffff, #202124) '
-          '0 7px, transparent 8px), rgba(34, 51, 68, 1.0)',
+          '0 7px, transparent 8px)',
     ]);
     expect(_styleValues('border'),
         <String>['none', 'none', '1px solid rgba(34, 51, 68, 1.0)']);
@@ -186,9 +194,12 @@ void main() {
         Select(value: "B", options: ["A", "B"], onChanged: event "c" {}),
       ]);
     ''');
-    expect(_styleValues('background'), <String>[
+    expect(_styleValues('background-color'), <String>[
+      'light-dark(#1a73e8, #8ab4f8)', // on-switch track ← primary fallback
+    ]);
+    expect(_styleValues('background-image'), <String>[
       'radial-gradient(circle at 25px 10px, light-dark(#ffffff, #202124) '
-          '0 7px, transparent 8px), light-dark(#1a73e8, #8ab4f8)',
+          '0 7px, transparent 8px)',
     ]);
     expect(_styleValues('border'), <String>['none']);
   });

@@ -36,7 +36,14 @@ Component buildSwitch(BuildContext context, DataSource source) {
   final String offTrack =
       roleColor(context, ThemeRoles.outline) ?? kSwitchOffTrackFallback;
   final String thumb = value ? onThumb : kSwitchOffThumbFallback;
-  final String at = value ? '25px 10px' : '11px 10px';
+  // Geometry from the framework-neutral specified default (SwitchDefaults): the
+  // pill radius is half the track height, and the thumb centers sit an inset +
+  // radius in from each edge — read here rather than hardcoded (DESIGN.md §8).
+  final double thumbRadius = SwitchDefaults.thumbDiameter / 2;
+  final double cy = SwitchDefaults.trackHeight / 2;
+  final double cx = value
+      ? SwitchDefaults.trackWidth - SwitchDefaults.thumbInset - thumbRadius
+      : SwitchDefaults.thumbInset + thumbRadius;
   return input(
     type: InputType.checkbox,
     checked: value,
@@ -44,14 +51,18 @@ Component buildSwitch(BuildContext context, DataSource source) {
     attributes: const <String, String>{'role': 'switch'},
     styles: Styles(raw: <String, String>{
       'appearance': 'none',
-      'width': '36px',
-      'height': '20px',
+      'width': '${px(SwitchDefaults.trackWidth)}px',
+      'height': '${px(SwitchDefaults.trackHeight)}px',
       'margin': '0',
       'border': 'none',
-      'border-radius': '10px',
+      'border-radius': '${px(cy)}px',
       'vertical-align': 'middle',
-      'background': 'radial-gradient(circle at $at, $thumb 0 7px, '
-          'transparent 8px), ${value ? onTrack : offTrack}',
+      // Layer 1, the track: `primary` fill when on, `outline` when off — its own
+      // `background-color`, mirroring the Checkbox's fill. Layer 3, the thumb: a
+      // radial gradient `background-image` over it, mirroring the Checkbox mark.
+      'background-color': value ? onTrack : offTrack,
+      'background-image': 'radial-gradient(circle at ${px(cx)}px ${px(cy)}px, '
+          '$thumb 0 ${px(thumbRadius)}px, transparent ${px(thumbRadius + 1)}px)',
     }),
     events: onChanged == null
         ? null

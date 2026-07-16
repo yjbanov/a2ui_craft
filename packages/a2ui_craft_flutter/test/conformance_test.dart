@@ -205,6 +205,34 @@ class _FlutterCraftTester implements CraftTester {
   }
 
   @override
+  String? switchActiveTrackColorOf() {
+    final Color? c = _switch(on: true)?.activeTrackColor;
+    return c == null ? null : _argbHex(c);
+  }
+
+  @override
+  String? switchThumbColorOf() {
+    final Color? c = _switch(on: true)?.activeThumbColor;
+    return c == null ? null : _argbHex(c);
+  }
+
+  @override
+  String? switchInactiveTrackColorOf() {
+    final Color? c = _switch(on: false)?.inactiveTrackColor;
+    return c == null ? null : _argbHex(c);
+  }
+
+  /// The rendered [Switch] whose value is [on] (a theming case shows one of
+  /// each), or null when absent.
+  Switch? _switch({required bool on}) {
+    for (final Element e in find.byType(Switch).evaluate()) {
+      final Switch s = e.widget as Switch;
+      if (s.value == on) return s;
+    }
+    return null;
+  }
+
+  @override
   Future<void> activate(String key) async {
     await _tester.tap(find.byKey(ValueKey<String>(key)));
     await _tester.pump();

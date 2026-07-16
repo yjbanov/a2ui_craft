@@ -338,6 +338,7 @@ class Runtime extends ChangeNotifier {
     DynamicContent data,
     RemoteEventHandler remoteEventTarget, {
     CraftTheme? theme,
+    MediaContext? media,
   }) {
     _CurriedWidget? boundWidget = _widgets[widget];
     if (boundWidget == null) {
@@ -354,9 +355,19 @@ class Runtime extends ChangeNotifier {
     }
     final Widget built = boundWidget
         .build(context, data, remoteEventTarget, const <_WidgetState>[]);
-    // The theme rides an inherited scope (the ambient cascade), not the
-    // curried-widget plumbing; omitting it leaves any enclosing scope visible.
-    return theme == null ? built : _ThemeScope(theme: theme, child: built);
+    return _wrapAmbientScopes(built, theme, media);
+  }
+
+  /// Wraps [built] in the render-time ambient scopes — the [CraftTheme] and the
+  /// [MediaContext] — that the host supplies. Each rides an inherited scope (the
+  /// ambient cascade), not the curried-widget plumbing; a null one is omitted so
+  /// any enclosing scope stays visible.
+  Widget _wrapAmbientScopes(
+      Widget built, CraftTheme? theme, MediaContext? media) {
+    Widget result = built;
+    if (theme != null) result = _ThemeScope(theme: theme, child: result);
+    if (media != null) result = _MediaScope(media: media, child: result);
+    return result;
   }
 
   /// Builds an ad-hoc [composition] against the registered libraries, without it
@@ -377,6 +388,7 @@ class Runtime extends ChangeNotifier {
     RemoteEventHandler remoteEventTarget, {
     required LibraryName scope,
     CraftTheme? theme,
+    MediaContext? media,
   }) {
     // TODO(yjbanov): isn't it expensive to check for loops for every node build? Maybe we should cache the result of this check for each library.
     _checkForImportLoops(scope);
@@ -390,7 +402,7 @@ class Runtime extends ChangeNotifier {
     ) as _CurriedWidget;
     final Widget built =
         curried.build(context, data, remoteEventTarget, const <_WidgetState>[]);
-    return theme == null ? built : _ThemeScope(theme: theme, child: built);
+    return _wrapAmbientScopes(built, theme, media);
   }
 
   /// Returns the [BlobNode] that most closely corresponds to a given [BuildContext].
@@ -1904,6 +1916,28 @@ class _ThemeScope extends InheritedWidget {
 /// the fallback. Registers a dependency, so a theme swap rebuilds the caller.
 CraftTheme? ambientCraftTheme(BuildContext context) =>
     context.dependOnInheritedWidgetOfExactType<_ThemeScope>()?.theme;
+
+/// Supplies the ambient [MediaContext] — the render-time responsive environment
+/// (research/responsive/RESPONSIVE_DESIGN.md) — to every remote widget below it.
+/// Installed by [Runtime.build] / [Runtime.buildNode] when a media context is
+/// provided. Like the theme, it is an immutable snapshot; a host supplies a new
+/// one when the size class changes, which notifies dependents (a re-render in
+/// place, no remount — the same reactivity contract as [_ThemeScope]).
+class _MediaScope extends InheritedWidget {
+  const _MediaScope({required this.media, required super.child});
+
+  final MediaContext media;
+
+  @override
+  bool updateShouldNotify(_MediaScope oldWidget) => media != oldWidget.media;
+}
+
+/// The ambient [MediaContext] installed by [Runtime.build] / [Runtime.buildNode],
+/// or null when the host supplies none (the surface is size-agnostic — the
+/// `Responsive` primitive then falls back to its smallest / mobile-first child).
+/// Registers a dependency, so a size-class change rebuilds the caller.
+MediaContext? ambientMediaContext(BuildContext context) =>
+    context.dependOnInheritedWidgetOfExactType<_MediaScope>()?.media;
 
 @immutable
 class _Key {

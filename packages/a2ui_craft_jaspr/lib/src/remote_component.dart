@@ -25,6 +25,7 @@ class RemoteWidget extends StatefulComponent {
       required this.widget,
       required this.data,
       this.theme,
+      this.media,
       this.onEvent});
 
   /// The [Runtime] to use to render the widget specified by [widget].
@@ -66,6 +67,14 @@ class RemoteWidget extends StatefulComponent {
   /// place. When null, `theme.` references resolve as missing and primitives
   /// fall back to host defaults.
   final CraftTheme? theme;
+
+  /// The ambient responsive environment — an immutable [MediaContext] snapshot
+  /// the host supplies at render time (the window size class;
+  /// research/responsive/RESPONSIVE_DESIGN.md). Read by the `Responsive`
+  /// primitive to restructure. To respond to a resize crossing a class
+  /// boundary, rebuild with a *new* [MediaContext]; the surface re-renders in
+  /// place. When null, the surface is size-agnostic (mobile-first fallback).
+  final MediaContext? media;
 
   /// Called when there's an event triggered by a remote component.
   ///
@@ -112,6 +121,6 @@ class _RemoteWidgetState extends State<RemoteWidget> {
   Component build(BuildContext context) {
     return component.runtime.build(
         context, component.widget, component.data, _eventHandler,
-        theme: component.theme);
+        theme: component.theme, media: component.media);
   }
 }

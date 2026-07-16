@@ -922,6 +922,82 @@ widget LayoutDemo = Column(gap: 12, children: [
     demonstrates: <String>['layout'],
   ),
   RawSample(
+    id: 'responsive',
+    label: 'Responsive',
+    template: r'''
+import core;
+
+// Responsive restructuring: three metric cards **stack** in a Column on a
+// compact width and sit **side by side** in a Row on an expanded one. The
+// `Responsive` primitive picks the subtree by the host's window size class
+// (research/responsive/RESPONSIVE_DESIGN.md) — identically on Flutter and Jaspr,
+// with no template branching. Flip the size class in the toolbar to see it
+// restructure in place.
+
+widget Metric = Card(child: Column(crossAxisAlignment: "start", gap: 4.0, children: [
+  Text(text: args.label, variant: "caption"),
+  Heading(text: args.value, level: 2),
+]));
+
+widget Dashboard = Column(gap: 12.0, children: [
+  Heading(text: "Store metrics", level: 3),
+  Responsive(
+    compact: Column(gap: 8.0, children: [
+      Text(text: "Compact — stacked", variant: "caption"),
+      Column(gap: 12.0, children: [
+        Metric(label: "Revenue", value: "$48.2k"),
+        Metric(label: "Orders", value: "1,284"),
+        Metric(label: "Refunds", value: "12"),
+      ]),
+    ]),
+    expanded: Column(gap: 8.0, children: [
+      Text(text: "Expanded — side by side", variant: "caption"),
+      Row(gap: 12.0, children: [
+        Expanded(child: Metric(label: "Revenue", value: "$48.2k")),
+        Expanded(child: Metric(label: "Orders", value: "1,284")),
+        Expanded(child: Metric(label: "Refunds", value: "12")),
+      ]),
+    ]),
+  ),
+]);
+''',
+    schema: r'''
+{
+  "catalogId": "demo",
+  "components": {
+    "Dashboard": {
+      "properties": {}
+    }
+  }
+}
+''',
+    messages: r'''
+[
+  {
+    "version": "v0.9",
+    "createSurface": {
+      "surfaceId": "demo",
+      "catalogId": "demo",
+      "sendDataModel": false
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateComponents": {
+      "surfaceId": "demo",
+      "components": [
+        {
+          "id": "root",
+          "component": "Dashboard"
+        }
+      ]
+    }
+  }
+]
+''',
+    demonstrates: <String>['layout'],
+  ),
+  RawSample(
     id: 'contact_card',
     label: 'Contact Card',
     template: r'''
@@ -4369,69 +4445,71 @@ SampleSpec calculatorSpec(String framework) => rawSamples[3].toSpec(framework);
 SampleSpec settingsSpec(String framework) => rawSamples[4].toSpec(framework);
 SampleSpec boxesSpec(String framework) => rawSamples[5].toSpec(framework);
 SampleSpec layoutSpec(String framework) => rawSamples[6].toSpec(framework);
-SampleSpec contactCardSpec(String framework) => rawSamples[7].toSpec(framework);
-SampleSpec statsCardSpec(String framework) => rawSamples[8].toSpec(framework);
-SampleSpec profileCardSpec(String framework) => rawSamples[9].toSpec(framework);
-SampleSpec gallerySpec(String framework) => rawSamples[10].toSpec(framework);
-SampleSpec formSpec(String framework) => rawSamples[11].toSpec(framework);
-SampleSpec simpleTextSpec(String framework) => rawSamples[12].toSpec(framework);
+SampleSpec responsiveSpec(String framework) => rawSamples[7].toSpec(framework);
+SampleSpec contactCardSpec(String framework) => rawSamples[8].toSpec(framework);
+SampleSpec statsCardSpec(String framework) => rawSamples[9].toSpec(framework);
+SampleSpec profileCardSpec(String framework) =>
+    rawSamples[10].toSpec(framework);
+SampleSpec gallerySpec(String framework) => rawSamples[11].toSpec(framework);
+SampleSpec formSpec(String framework) => rawSamples[12].toSpec(framework);
+SampleSpec simpleTextSpec(String framework) => rawSamples[13].toSpec(framework);
 SampleSpec interactiveButtonSpec(String framework) =>
-    rawSamples[13].toSpec(framework);
-SampleSpec loginFormSpec(String framework) => rawSamples[14].toSpec(framework);
-SampleSpec weatherSpec(String framework) => rawSamples[15].toSpec(framework);
+    rawSamples[14].toSpec(framework);
+SampleSpec loginFormSpec(String framework) => rawSamples[15].toSpec(framework);
+SampleSpec weatherSpec(String framework) => rawSamples[16].toSpec(framework);
 SampleSpec productCardSpec(String framework) =>
-    rawSamples[16].toSpec(framework);
-SampleSpec restaurantCardSpec(String framework) =>
     rawSamples[17].toSpec(framework);
-SampleSpec accountBalanceSpec(String framework) =>
+SampleSpec restaurantCardSpec(String framework) =>
     rawSamples[18].toSpec(framework);
-SampleSpec shippingStatusSpec(String framework) =>
+SampleSpec accountBalanceSpec(String framework) =>
     rawSamples[19].toSpec(framework);
-SampleSpec flightStatusSpec(String framework) =>
+SampleSpec shippingStatusSpec(String framework) =>
     rawSamples[20].toSpec(framework);
-SampleSpec purchaseCompleteSpec(String framework) =>
+SampleSpec flightStatusSpec(String framework) =>
     rawSamples[21].toSpec(framework);
-SampleSpec coffeeOrderSpec(String framework) =>
+SampleSpec purchaseCompleteSpec(String framework) =>
     rawSamples[22].toSpec(framework);
-SampleSpec creditCardSpec(String framework) => rawSamples[23].toSpec(framework);
+SampleSpec coffeeOrderSpec(String framework) =>
+    rawSamples[23].toSpec(framework);
+SampleSpec creditCardSpec(String framework) => rawSamples[24].toSpec(framework);
 SampleSpec childListTemplateSpec(String framework) =>
-    rawSamples[24].toSpec(framework);
-SampleSpec markdownTextSpec(String framework) =>
     rawSamples[25].toSpec(framework);
-SampleSpec musicPlayerSpec(String framework) =>
+SampleSpec markdownTextSpec(String framework) =>
     rawSamples[26].toSpec(framework);
-SampleSpec notificationPermissionSpec(String framework) =>
+SampleSpec musicPlayerSpec(String framework) =>
     rawSamples[27].toSpec(framework);
-SampleSpec sportsPlayerSpec(String framework) =>
+SampleSpec notificationPermissionSpec(String framework) =>
     rawSamples[28].toSpec(framework);
-SampleSpec eventDetailSpec(String framework) =>
+SampleSpec sportsPlayerSpec(String framework) =>
     rawSamples[29].toSpec(framework);
-SampleSpec stepCounterSpec(String framework) =>
+SampleSpec eventDetailSpec(String framework) =>
     rawSamples[30].toSpec(framework);
-SampleSpec countdownTimerSpec(String framework) =>
+SampleSpec stepCounterSpec(String framework) =>
     rawSamples[31].toSpec(framework);
-SampleSpec rowLayoutSpec(String framework) => rawSamples[32].toSpec(framework);
+SampleSpec countdownTimerSpec(String framework) =>
+    rawSamples[32].toSpec(framework);
+SampleSpec rowLayoutSpec(String framework) => rawSamples[33].toSpec(framework);
 SampleSpec userProfileSpec(String framework) =>
-    rawSamples[33].toSpec(framework);
-SampleSpec chatMessageSpec(String framework) =>
     rawSamples[34].toSpec(framework);
-SampleSpec workoutSummarySpec(String framework) =>
+SampleSpec chatMessageSpec(String framework) =>
     rawSamples[35].toSpec(framework);
-SampleSpec trackListSpec(String framework) => rawSamples[36].toSpec(framework);
+SampleSpec workoutSummarySpec(String framework) =>
+    rawSamples[36].toSpec(framework);
+SampleSpec trackListSpec(String framework) => rawSamples[37].toSpec(framework);
 SampleSpec financialDataGridSpec(String framework) =>
-    rawSamples[37].toSpec(framework);
-SampleSpec formattedTextSpec(String framework) =>
     rawSamples[38].toSpec(framework);
-SampleSpec incrementalSpec(String framework) =>
+SampleSpec formattedTextSpec(String framework) =>
     rawSamples[39].toSpec(framework);
-SampleSpec complexLayoutSpec(String framework) =>
+SampleSpec incrementalSpec(String framework) =>
     rawSamples[40].toSpec(framework);
-SampleSpec emailComposeSpec(String framework) =>
+SampleSpec complexLayoutSpec(String framework) =>
     rawSamples[41].toSpec(framework);
-SampleSpec calendarDaySpec(String framework) =>
+SampleSpec emailComposeSpec(String framework) =>
     rawSamples[42].toSpec(framework);
-SampleSpec signInSpec(String framework) => rawSamples[43].toSpec(framework);
+SampleSpec calendarDaySpec(String framework) =>
+    rawSamples[43].toSpec(framework);
+SampleSpec signInSpec(String framework) => rawSamples[44].toSpec(framework);
 SampleSpec incrementalDashboardSpec(String framework) =>
-    rawSamples[44].toSpec(framework);
-SampleSpec formValidatorSpec(String framework) =>
     rawSamples[45].toSpec(framework);
+SampleSpec formValidatorSpec(String framework) =>
+    rawSamples[46].toSpec(framework);

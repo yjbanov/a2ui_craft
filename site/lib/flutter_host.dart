@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 import 'package:a2ui_core/a2ui_core.dart';
-import 'package:a2ui_craft/a2ui_craft.dart' show CraftTheme, Rgba;
+import 'package:a2ui_craft/a2ui_craft.dart' show CraftTheme, MediaContext, Rgba;
 import 'package:a2ui_craft_flutter/a2ui_craft_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -46,6 +46,7 @@ Widget flutterSampleApp({
   void Function(A2uiClientAction action)? onAction,
   ValueChanged<double>? onContentHeight,
   CraftTheme? theme,
+  MediaContext? media,
 }) {
   final Rgba? surface = theme?.tokens.color('color.surface');
   // The Flutter pane previews a *mobile platform* (DESIGN.md §8): [cupertino]
@@ -59,6 +60,7 @@ Widget flutterSampleApp({
     messages: messages,
     onAction: onAction,
     theme: theme,
+    media: media,
   );
 
   if (autoSize) {

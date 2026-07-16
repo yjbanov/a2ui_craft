@@ -4,7 +4,12 @@
 
 import 'package:a2ui_core/a2ui_core.dart';
 import 'package:a2ui_craft/a2ui_craft.dart'
-    show CraftTheme, LibraryName, createCoreFunctions, parseLibraryFile;
+    show
+        CraftTheme,
+        LibraryName,
+        MediaContext,
+        createCoreFunctions,
+        parseLibraryFile;
 import 'package:a2ui_craft_bridge/a2ui_craft_bridge.dart';
 import 'package:jaspr/jaspr.dart';
 
@@ -32,6 +37,7 @@ class SampleView extends StatefulComponent {
     required this.messages,
     this.onAction,
     this.theme,
+    this.media,
     this.rootId = 'root',
   });
 
@@ -50,6 +56,10 @@ class SampleView extends StatefulComponent {
   /// The theme to render the surface under (§9), or null to blend into the
   /// host — a project supplies this from its `theme.json` via `ProjectTheme`.
   final CraftTheme? theme;
+
+  /// The responsive environment ([MediaContext]) the host supplies, or null to
+  /// stay size-agnostic. The host rebuilds with a new one as the window resizes.
+  final MediaContext? media;
 
   /// The component id to render as the surface root.
   final String rootId;
@@ -99,6 +109,7 @@ class _SampleViewState extends State<SampleView> {
       runtime: _runtime,
       scope: _catalogName,
       theme: component.theme,
+      media: component.media,
     );
   }
 }

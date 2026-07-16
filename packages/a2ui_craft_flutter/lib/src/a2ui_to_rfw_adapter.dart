@@ -33,6 +33,7 @@ class A2uiToRfwAdapter extends StatefulWidget {
     this.scope = const LibraryName(<String>['core']),
     this.mapComponent,
     this.theme,
+    this.media,
     String? reconcileKey,
   }) : super(key: ValueKey<String>(reconcileKey ?? id));
 
@@ -72,6 +73,11 @@ class A2uiToRfwAdapter extends StatefulWidget {
   /// theme scope, from which every descendant adapter's primitives read their
   /// role defaults — so nested adapters leave this null and inherit it.
   final CraftTheme? theme;
+
+  /// The ambient responsive environment (a [MediaContext] snapshot), or null to
+  /// stay size-agnostic. Set on the **root** adapter only, like [theme]: it
+  /// wraps the tree in the ambient media scope every descendant reads.
+  final MediaContext? media;
 
   @override
   State<A2uiToRfwAdapter> createState() => _A2uiToRfwAdapterState();
@@ -140,6 +146,7 @@ class _A2uiToRfwAdapterState extends State<A2uiToRfwAdapter> {
       _noEvent,
       scope: widget.scope,
       theme: widget.theme,
+      media: widget.media,
     );
   }
 

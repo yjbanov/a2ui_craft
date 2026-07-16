@@ -29,6 +29,7 @@ const Set<String> corePrimitives = <String>{
   'Align',
   'AspectRatio',
   'Wrap',
+  'Responsive',
   'Opacity',
   'SizedBox',
   'Box',

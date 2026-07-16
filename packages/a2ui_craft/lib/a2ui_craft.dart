@@ -16,6 +16,7 @@ export 'src/default_theme.dart';
 export 'src/design_tokens.dart';
 export 'src/functions.dart';
 export 'src/markdown.dart';
+export 'src/media_context.dart';
 export 'src/model.dart';
 export 'src/primitive_specs.dart';
 export 'src/semantic_contract.dart';

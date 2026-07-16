@@ -7,6 +7,7 @@ import 'primitives/checkbox.dart';
 import 'primitives/layout.dart';
 import 'primitives/media.dart';
 import 'primitives/radio.dart';
+import 'primitives/responsive.dart';
 import 'primitives/select.dart';
 import 'primitives/slider.dart';
 import 'primitives/switch.dart';
@@ -46,6 +47,7 @@ LocalWidgetLibrary createCoreComponents() {
     'Align': buildAlign,
     'AspectRatio': buildAspectRatio,
     'Wrap': buildWrap,
+    'Responsive': buildResponsive,
     'Opacity': buildOpacity,
     'SizedBox': buildSizedBox,
     'Box': buildBox,

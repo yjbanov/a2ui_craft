@@ -25,28 +25,42 @@ class _FlutterCraftTester implements CraftTester {
 
   DynamicContent? _mountedData;
   CraftEventHandler? _mountedOnEvent;
+  CraftTheme? _mountedTheme;
+  MediaContext? _mountedMedia;
 
   @override
   Future<void> mountLibrary(
     RemoteWidgetLibrary main, {
     DynamicContent? data,
     CraftTheme? theme,
+    MediaContext? media,
     CraftEventHandler? onEvent,
   }) async {
     _runtime.update(const LibraryName(<String>['main']), main);
     _mountedData = data ?? DynamicContent();
     _mountedOnEvent = onEvent;
-    await _pumpMounted(theme);
+    _mountedTheme = theme;
+    _mountedMedia = media;
+    await _pumpMounted();
   }
 
   @override
-  Future<void> retheme(CraftTheme? theme) => _pumpMounted(theme);
+  Future<void> retheme(CraftTheme? theme) {
+    _mountedTheme = theme;
+    return _pumpMounted();
+  }
 
-  /// Pumps the mounted surface with [theme]. The runtime, library, and data
-  /// are unchanged, so a re-pump updates the same element tree in place — a
-  /// theme swap must not remount (state survives), which the conformance
-  /// suite asserts.
-  Future<void> _pumpMounted(CraftTheme? theme) {
+  @override
+  Future<void> remedia(MediaContext? media) {
+    _mountedMedia = media;
+    return _pumpMounted();
+  }
+
+  /// Pumps the mounted surface with the current theme and media. The runtime,
+  /// library, and data are unchanged, so a re-pump updates the same element tree
+  /// in place — a theme / media swap must not remount (state survives), which
+  /// the conformance suite asserts.
+  Future<void> _pumpMounted() {
     return _tester.pumpWidget(
       _host(
         RemoteWidget(
@@ -56,7 +70,8 @@ class _FlutterCraftTester implements CraftTester {
             'root',
           ),
           data: _mountedData!,
-          theme: theme,
+          theme: _mountedTheme,
+          media: _mountedMedia,
           onEvent: _mountedOnEvent,
         ),
       ),

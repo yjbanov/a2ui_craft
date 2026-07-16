@@ -30,20 +30,22 @@ class _JasprCraftTester implements CraftTester {
     RemoteWidgetLibrary main, {
     DynamicContent? data,
     CraftTheme? theme,
+    MediaContext? media,
     CraftEventHandler? onEvent,
   }) async {
     _runtime.update(const LibraryName(<String>['main']), main);
     // ComponentTester.pumpComponent attaches a fresh root each call (no
-    // reconciliation with the previous tree), so the theme lives in a stateful
-    // shell: retheme() swaps it via setState and the surface updates in place
-    // — a theme swap must not remount (state survives), which the conformance
-    // suite asserts.
+    // reconciliation with the previous tree), so the theme and media live in a
+    // stateful shell: retheme()/remedia() swap them via setState and the surface
+    // updates in place — a swap must not remount (state survives), which the
+    // conformance suite asserts.
     _tester.pumpComponent(
       _RethemeShell(
         key: _shellKey,
         runtime: _runtime,
         data: data ?? DynamicContent(),
         initialTheme: theme,
+        initialMedia: media,
         onEvent: onEvent,
       ),
     );
@@ -53,6 +55,12 @@ class _JasprCraftTester implements CraftTester {
   @override
   Future<void> retheme(CraftTheme? theme) async {
     _shellKey.currentState!.retheme(theme);
+    await _tester.pump();
+  }
+
+  @override
+  Future<void> remedia(MediaContext? media) async {
+    _shellKey.currentState!.remedia(media);
     await _tester.pump();
   }
 
@@ -326,21 +334,24 @@ class _JasprCraftTester implements CraftTester {
   }
 }
 
-/// Owns the mounted surface's theme so [_JasprCraftTester.retheme] can swap it
-/// in place (setState) — pumping a fresh root would remount and reset template
-/// state, which is exactly what a re-theme must not do.
+/// Owns the mounted surface's theme and media so [_JasprCraftTester.retheme] /
+/// [_JasprCraftTester.remedia] can swap them in place (setState) — pumping a
+/// fresh root would remount and reset template state, which is exactly what a
+/// re-theme / re-media must not do.
 class _RethemeShell extends StatefulComponent {
   const _RethemeShell({
     super.key,
     required this.runtime,
     required this.data,
     required this.initialTheme,
+    required this.initialMedia,
     required this.onEvent,
   });
 
   final Runtime runtime;
   final DynamicContent data;
   final CraftTheme? initialTheme;
+  final MediaContext? initialMedia;
   final CraftEventHandler? onEvent;
 
   @override
@@ -349,8 +360,10 @@ class _RethemeShell extends StatefulComponent {
 
 class _RethemeShellState extends State<_RethemeShell> {
   late CraftTheme? _theme = component.initialTheme;
+  late MediaContext? _media = component.initialMedia;
 
   void retheme(CraftTheme? theme) => setState(() => _theme = theme);
+  void remedia(MediaContext? media) => setState(() => _media = media);
 
   @override
   Component build(BuildContext context) {
@@ -362,6 +375,7 @@ class _RethemeShellState extends State<_RethemeShell> {
       ),
       data: component.data,
       theme: _theme,
+      media: _media,
       onEvent: component.onEvent,
     );
   }

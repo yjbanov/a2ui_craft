@@ -6,7 +6,8 @@ import 'dart:convert';
 import 'dart:js_interop';
 
 import 'package:a2ui_core/a2ui_core.dart';
-import 'package:a2ui_craft/a2ui_craft.dart' show CraftTheme, CraftThemeMode;
+import 'package:a2ui_craft/a2ui_craft.dart'
+    show CraftTheme, CraftThemeMode, MediaContext, WindowSizeClass;
 import 'package:a2ui_craft_examples/a2ui_craft_examples.dart';
 import 'package:a2ui_craft_jaspr/a2ui_craft_jaspr.dart';
 import 'package:jaspr/dom.dart';
@@ -83,6 +84,18 @@ class _SampleScreenState extends State<SampleScreen> {
   bool _modeTouched = false;
 
   CraftTheme? get _theme => _project?.resolve(_mode);
+
+  // The responsive window size class the host feeds the surface — the second
+  // render-time input axis (research/responsive/RESPONSIVE_DESIGN.md). Only
+  // supplied to samples that actually use the `Responsive` primitive (others
+  // stay size-agnostic); the picker appears only for them. Defaults to
+  // `expanded` so the demo opens on its side-by-side layout.
+  WindowSizeClass _sizeClass = WindowSizeClass.expanded;
+
+  bool get _usesResponsive => _template.contains('Responsive(');
+
+  MediaContext? get _media =>
+      _usesResponsive ? MediaContext(width: _sizeClass) : null;
 
   // The rendered (active) sources; the editor edits drafts and commits them on
   // Preview. Drafts are what the editor fields display, so switching tabs
@@ -224,11 +237,16 @@ class _SampleScreenState extends State<SampleScreen> {
         // Reported from Flutter's frame callbacks — may land after this
         // screen unmounted (embed teardown is async).
         if (!mounted) return;
+        // Ignore a non-finite report (an intrinsic-height measurement can
+        // momentarily yield infinity for an unbounded layout); keep the last
+        // good height rather than poisoning the pane's CSS height.
+        if (!height.isFinite) return;
         final double px = height.ceilToDouble();
         if (_flutterHeight == px) return;
         setState(() => _flutterHeight = px);
       },
       theme: _theme,
+      media: _media,
     );
   }
 
@@ -391,6 +409,7 @@ class _SampleScreenState extends State<SampleScreen> {
       messages: spec.messages,
       onAction: _onAction,
       theme: _theme,
+      media: _media,
     );
   }
 
@@ -401,8 +420,10 @@ class _SampleScreenState extends State<SampleScreen> {
       styles: Styles(raw: <String, String>{
         'width': '100%',
         // Sized to the Flutter content's self-measured height; the fixed
-        // fallback only shows until the first report lands.
-        'height': '${(_flutterHeight ?? 640).ceil()}px',
+        // fallback shows until the first report lands (or if a report was
+        // non-finite and thus ignored).
+        'height':
+            '${(_flutterHeight != null && _flutterHeight!.isFinite ? _flutterHeight! : 640).ceil()}px',
         'border': '1px solid var(--border)',
         'border-radius': '10px',
         'overflow': 'hidden',
@@ -465,6 +486,7 @@ class _SampleScreenState extends State<SampleScreen> {
           styles: Styles(raw: <String, String>{'margin': '0', 'flex': '1'}),
           [Component.text(_raw.label)],
         ),
+        if (_usesResponsive) _sizeClassPicker(),
         _themePicker(),
         const ThemeToggle(),
         if (_project != null) _modePicker(),
@@ -531,6 +553,60 @@ class _SampleScreenState extends State<SampleScreen> {
             value: m.id,
             selected: m == (_mode ?? project.defaultMode),
             [Component.text(m.label)],
+          ),
+      ],
+    );
+  }
+
+  /// The window size-class picker (shown only for samples that use the
+  /// `Responsive` primitive): a segmented control feeding the surface a
+  /// [MediaContext] — the second render-time input axis. Flipping it re-renders
+  /// both panes in place (the Jaspr pane via the ambient media scope; the
+  /// Flutter embed rebuilds), so a `Responsive` restructures live.
+  Component _sizeClassPicker() {
+    // Short labels for the toolbar; the value is the M3 window size class.
+    const List<(WindowSizeClass, String)> classes = <(WindowSizeClass, String)>[
+      (WindowSizeClass.compact, 'Compact'),
+      (WindowSizeClass.medium, 'Medium'),
+      (WindowSizeClass.expanded, 'Expanded'),
+      (WindowSizeClass.large, 'Large'),
+      (WindowSizeClass.extraLarge, 'XL'),
+    ];
+    return div(
+      attributes: const <String, String>{
+        'role': 'group',
+        'aria-label': 'Window size class',
+      },
+      styles: Styles(raw: <String, String>{
+        'display': 'inline-flex',
+        'border': '1px solid var(--border-strong)',
+        'border-radius': '6px',
+        'overflow': 'hidden',
+      }),
+      [
+        for (final (WindowSizeClass, String) c in classes)
+          button(
+            onClick: () {
+              if (c.$1 == _sizeClass) return;
+              setState(() {
+                _sizeClass = c.$1;
+                // The Jaspr pane re-renders in place via the ambient media
+                // scope; the memoized Flutter embed must be rebuilt to see the
+                // new class (like a mode/theme change).
+                _flutterWidget = null;
+                _renderKey++;
+              });
+            },
+            styles: Styles(raw: <String, String>{
+              'padding': '6px 10px',
+              'border': 'none',
+              'background':
+                  c.$1 == _sizeClass ? 'var(--accent)' : 'var(--card)',
+              'color': c.$1 == _sizeClass ? 'var(--accent-fg)' : 'var(--fg)',
+              'font': '13px system-ui, -apple-system, sans-serif',
+              'cursor': 'pointer',
+            }),
+            [Component.text(c.$2)],
           ),
       ],
     );

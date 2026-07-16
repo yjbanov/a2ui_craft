@@ -109,6 +109,7 @@ abstract interface class CraftTester {
     RemoteWidgetLibrary main, {
     DynamicContent? data,
     CraftTheme? theme,
+    MediaContext? media,
     CraftEventHandler? onEvent,
   });
 
@@ -117,6 +118,12 @@ abstract interface class CraftTester {
   /// remounting**: element state must survive and live `theme.` references
   /// must re-resolve in place.
   Future<void> retheme(CraftTheme? theme);
+
+  /// Replaces the ambient [MediaContext] of the currently mounted surface with a
+  /// new snapshot, exactly as a host reacting to a resize would — **without
+  /// remounting**: a size-class change re-renders the `Responsive` primitive in
+  /// place, the same reactivity contract as [retheme].
+  Future<void> remedia(MediaContext? media);
 
   /// Processes pending frames after an out-of-band change (e.g. a [data] update).
   Future<void> pump();
@@ -252,10 +259,11 @@ extension CraftTesterQueries on CraftTester {
     String template, {
     DynamicContent? data,
     CraftTheme? theme,
+    MediaContext? media,
     CraftEventHandler? onEvent,
   }) {
     return mountLibrary(parseLibraryFile(template),
-        data: data, theme: theme, onEvent: onEvent);
+        data: data, theme: theme, media: media, onEvent: onEvent);
   }
 
   /// Builds a fresh `a2ui_core` processor over the demo catalog, applies
@@ -1490,6 +1498,42 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
       expect(tester.switchActiveTrackColorOf(), '#FF00695C');
       expect(tester.switchThumbColorOf(), '#FFF1F2F3');
       expect(tester.switchInactiveTrackColorOf(), '#FFE0D6C4');
+    },
+  );
+
+  driver.defineTest(
+    'Responsive selects a child by size class and re-renders on class change',
+    (CraftTester tester) async {
+      // The Responsive primitive restructures by the ambient MediaContext width
+      // class (research/responsive/RESPONSIVE_DESIGN.md), picking the same child
+      // on every adapter (the selection lives in the core). A class change is a
+      // second render-time input axis parallel to the theme mode: it re-renders
+      // in place (no remount), exactly like a re-theme.
+      await tester.mount('''
+        import core;
+        widget root = Responsive(
+          compact: Text(text: "stacked"),
+          expanded: Text(text: "side-by-side"),
+        );
+      ''', media: const MediaContext(width: WindowSizeClass.compact));
+
+      expect(tester.hasText('stacked'), isTrue);
+      expect(tester.hasText('side-by-side'), isFalse);
+
+      // A resize to a larger class re-renders in place.
+      await tester.remedia(const MediaContext(width: WindowSizeClass.expanded));
+      expect(tester.hasText('side-by-side'), isTrue);
+      expect(tester.hasText('stacked'), isFalse);
+
+      // Mobile-first fallback: `medium` has no slot, so the nearest *smaller*
+      // provided class (`compact`) wins — identically on both adapters.
+      await tester.remedia(const MediaContext(width: WindowSizeClass.medium));
+      expect(tester.hasText('stacked'), isTrue);
+
+      // `large` is larger than every provided class, so the largest provided
+      // (`expanded`) wins.
+      await tester.remedia(const MediaContext(width: WindowSizeClass.large));
+      expect(tester.hasText('side-by-side'), isTrue);
     },
   );
 }

@@ -1,0 +1,35 @@
+import core;
+
+// Responsive restructuring: three metric cards **stack** in a Column on a
+// compact width and sit **side by side** in a Row on an expanded one. The
+// `Responsive` primitive picks the subtree by the host's window size class
+// (research/responsive/RESPONSIVE_DESIGN.md) — identically on Flutter and Jaspr,
+// with no template branching. Flip the size class in the toolbar to see it
+// restructure in place.
+
+widget Metric = Card(child: Column(crossAxisAlignment: "start", gap: 4.0, children: [
+  Text(text: args.label, variant: "caption"),
+  Heading(text: args.value, level: 2),
+]));
+
+widget Dashboard = Column(gap: 12.0, children: [
+  Heading(text: "Store metrics", level: 3),
+  Responsive(
+    compact: Column(gap: 8.0, children: [
+      Text(text: "Compact — stacked", variant: "caption"),
+      Column(gap: 12.0, children: [
+        Metric(label: "Revenue", value: "$48.2k"),
+        Metric(label: "Orders", value: "1,284"),
+        Metric(label: "Refunds", value: "12"),
+      ]),
+    ]),
+    expanded: Column(gap: 8.0, children: [
+      Text(text: "Expanded — side by side", variant: "caption"),
+      Row(gap: 12.0, children: [
+        Expanded(child: Metric(label: "Revenue", value: "$48.2k")),
+        Expanded(child: Metric(label: "Orders", value: "1,284")),
+        Expanded(child: Metric(label: "Refunds", value: "12")),
+      ]),
+    ]),
+  ),
+]);

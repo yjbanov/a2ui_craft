@@ -76,4 +76,38 @@ void main() {
     final ThemeReference color = root.arguments['color']! as ThemeReference;
     expect(color.parts, <Object>['color', 'action']);
   });
+
+  test('media references parse in value positions, like theme references', () {
+    final RemoteWidgetLibrary library = parseLibraryFile('''
+      import core;
+      widget root = Text(text: media.width);
+    ''');
+
+    final ConstructorCall root = library.widgets.single.root as ConstructorCall;
+    final MediaReference width = root.arguments['text']! as MediaReference;
+    expect(width.parts, <Object>['width']);
+  });
+
+  test('media is a reserved word for user-chosen identifiers', () {
+    // Like `theme`, reserved-ness guards a user-named identifier position (a
+    // loop variable `media` would shadow the reference scope).
+    expect(
+      () => parseLibraryFile(
+          'widget root = Column(children: [...for media in args.list: '
+          'Text(text: media)]);'),
+      throwsA(isA<ParserException>()),
+    );
+  });
+
+  test('media references survive a binary round trip (tag 0x15)', () {
+    final RemoteWidgetLibrary library = parseLibraryFile('''
+      widget root = Box(color: media.width);
+    ''');
+    final RemoteWidgetLibrary decoded =
+        decodeLibraryBlob(encodeLibraryBlob(library));
+
+    final ConstructorCall root = decoded.widgets.single.root as ConstructorCall;
+    final MediaReference width = root.arguments['color']! as MediaReference;
+    expect(width.parts, <Object>['width']);
+  });
 }

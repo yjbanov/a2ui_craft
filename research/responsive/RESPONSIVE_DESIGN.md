@@ -206,10 +206,14 @@ number.
   Minimal, high-leverage: structural restructuring with a shared vocabulary and *no*
   language change. Conformance: inject a size class, assert both adapters pick the
   same child and re-render on class change (the retheme pattern).
-- **Phase 2 — intrinsic gaps.** `Grid` (auto-fit) and min/max sizing constraints —
-  the highest-ROI portable primitives, independent of Phase 1.
-- **Phase 3 — the `media.` scope.** The template-language axis for prop-level and
-  computed branching, once the primitive proves demand for finer control.
+- **Phase 2 — intrinsic gaps. ✅ done.** `Grid` (auto-fit) and `Box` min/max sizing
+  constraints — the highest-ROI portable primitives, independent of Phase 1.
+  Geometry-conformance-pinned so both adapters derive the same column count.
+- **Phase 3 — the `media.` scope. ✅ done.** `MediaReference` (binary tag 0x15),
+  a read-only scope parallel to `theme.`, resolving `media.width`/`.height`/
+  `.orientation` to class ids for `switch media.width { … }`, plus the
+  `atLeast(a, b)` threshold helper. Same subscription/re-theme reactivity, both
+  adapters, conformance-pinned.
 - **Phase 4 — responsive tokens.** Extend the theme resolver with the size-class
   overlay axis for dimension/type tokens (10-foot / glanceable).
 - **Flagged / later.** Container queries (measured, two-pass, more correct for

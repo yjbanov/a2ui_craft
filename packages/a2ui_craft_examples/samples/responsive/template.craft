@@ -1,19 +1,26 @@
 import core;
 
-// Responsive restructuring: three metric cards **stack** in a Column on a
-// compact width and sit **side by side** in a Row on an expanded one. The
-// `Responsive` primitive picks the subtree by the host's window size class
-// (research/responsive/RESPONSIVE_DESIGN.md) — identically on Flutter and Jaspr,
-// with no template branching. Flip the size class in the toolbar to see it
-// restructure in place.
+// Two complementary responsive tools, both driven by the host's window size
+// class (research/responsive/RESPONSIVE_DESIGN.md). Flip the size class in the
+// toolbar to see both react in place, identically on Flutter and Jaspr:
+//
+//  1. The `Responsive` **primitive** swaps a whole subtree — the metric cards
+//     **stack** in a Column when compact and sit **side by side** in a Row when
+//     expanded, with no template branching.
+//  2. The `media.` reference **scope** branches a single prop: the caption reads
+//     the live `media.width` id, and the outer gap widens once `atLeast` reports
+//     the width has reached `expanded`.
 
 widget Metric = Card(child: Column(crossAxisAlignment: "start", gap: 4.0, children: [
   Text(text: args.label, variant: "caption"),
   Heading(text: args.value, level: 2),
 ]));
 
-widget Dashboard = Column(gap: 12.0, children: [
+widget Dashboard = Column(
+  gap: switch atLeast(a: media.width, b: "expanded") { true: 20.0, default: 12.0 },
+  children: [
   Heading(text: "Store metrics", level: 3),
+  Text(text: concat(a: "Size class: ", b: media.width), variant: "caption"),
   Responsive(
     compact: Column(gap: 8.0, children: [
       Text(text: "Compact — stacked", variant: "caption"),

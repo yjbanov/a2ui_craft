@@ -637,6 +637,7 @@ const Set<String> _reservedWords = <String>{
   'data',
   'event',
   'false',
+  'media',
   'set',
   'state',
   'theme',
@@ -2601,6 +2602,11 @@ class _Parser {
         final SourceLocation? start = _getSourceLocation();
         _advance();
         return _withSourceRange(ThemeReference(_readParts()), start);
+      }
+      if (identifier == 'media') {
+        final SourceLocation? start = _getSourceLocation();
+        _advance();
+        return _withSourceRange(MediaReference(_readParts()), start);
       }
       if (identifier == 'switch') {
         final SourceLocation? start = _getSourceLocation();

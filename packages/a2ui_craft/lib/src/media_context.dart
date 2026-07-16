@@ -18,6 +18,8 @@ library;
 
 import 'package:meta/meta.dart';
 
+import 'content.dart';
+
 /// The window's **width** size class — the primary responsive axis — using the
 /// Material 3 window size-class breakpoints. Ordered small → large; the ordinal
 /// ([Enum.index]) is meaningful, so [atLeast] and the `Responsive` primitive's
@@ -166,6 +168,24 @@ class MediaContext {
 
   @override
   int get hashCode => Object.hash(width, height, orientation);
+
+  /// The template-facing view for the `media.` reference scope, parallel to
+  /// [CraftTheme]'s `content`: the quantized **class ids** — `media.width` →
+  /// `"compact"`/`"medium"`/…, `media.height`, `media.orientation` — as a
+  /// [DynamicContent] that `media.<axis>` references (and `switch media.width {…}`)
+  /// resolve against. Only the enum ids are exposed, never raw pixels
+  /// (research/responsive/RESPONSIVE_DESIGN.md §4.3): the scope is for
+  /// restructuring, not `@media (min-width: …)` magic numbers.
+  ///
+  /// Built fresh per call (unlike [CraftTheme]'s cached `late final`, since a
+  /// [MediaContext] stays `const`); the runtime reads it once per subscription,
+  /// re-subscribing when the ambient snapshot changes — the re-theme contract.
+  DynamicContent toContent() => DynamicContent()
+    ..updateAll(<String, Object?>{
+      'width': width.id,
+      'height': height.id,
+      'orientation': orientation.id,
+    });
 
   @override
   String toString() => 'MediaContext(width: ${width.id}, height: ${height.id}, '

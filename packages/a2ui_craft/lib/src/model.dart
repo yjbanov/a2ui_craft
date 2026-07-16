@@ -584,6 +584,32 @@ class ThemeReference extends Reference {
   String toString() => 'theme.${parts.join(".")}';
 }
 
+/// Reference to the ambient [MediaContext] (see [Runtime.build]'s `media`
+/// argument) — the render-time responsive scope, parallel to [ThemeReference].
+///
+/// The parts address a quantized environment axis: `media.width` resolves to the
+/// window size-class id (`"compact"` … `"extraLarge"`), `media.height` and
+/// `media.orientation` likewise. It exposes only the **class enum**, never raw
+/// pixels (research/responsive/RESPONSIVE_DESIGN.md §4.3) — a template branches
+/// with `switch media.width { … }`, not `@media (min-width: …)`. Like the theme,
+/// it is host-supplied render-time config, never transport data, so it is a
+/// distinct node type in its own trust domain.
+class MediaReference extends Reference {
+  /// Wraps the given [parts] as a [MediaReference].
+  ///
+  /// The [parts] must not be mutated after the object is created.
+  const MediaReference(super.parts);
+
+  /// Creates a new [MediaReference] that indexes even deeper than this one
+  /// (parallel to [ThemeReference.constructReference]).
+  MediaReference constructReference(List<Object> moreParts) {
+    return MediaReference(parts + moreParts);
+  }
+
+  @override
+  String toString() => 'media.${parts.join(".")}';
+}
+
 /// Reference to the single argument of type [DynamicMap] passed into the widget builder.
 ///
 /// This class is used to represent references to a function argument.

@@ -1536,6 +1536,63 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
       expect(tester.hasText('side-by-side'), isTrue);
     },
   );
+
+  driver.defineTest(
+    'the media. scope branches a prop by size class and re-renders on change',
+    (CraftTester tester) async {
+      // The `media.` reference scope exposes the quantized class ids to the
+      // template language (research/responsive/RESPONSIVE_DESIGN.md §4.3), so a
+      // `switch` branches a single *prop* — finer than the whole-subtree
+      // `Responsive`. Resolution lives in the core, so both adapters read the
+      // same id; a class change re-renders in place like a re-theme (the scope
+      // rides the same subscription machinery as `theme.`).
+      await tester.mount('''
+        import core;
+        widget root = Text(text: switch media.width {
+          "compact": "S",
+          "expanded": "L",
+          default: "M",
+        });
+      ''', media: const MediaContext(width: WindowSizeClass.compact));
+
+      expect(tester.hasText('S'), isTrue);
+
+      // A resize re-resolves the same switch against the new class in place.
+      await tester.remedia(const MediaContext(width: WindowSizeClass.expanded));
+      expect(tester.hasText('L'), isTrue);
+      expect(tester.hasText('S'), isFalse);
+
+      // An unlisted class (`medium`) falls to the switch default — the scope
+      // exposes the class enum, and the template owns the fallback.
+      await tester.remedia(const MediaContext(width: WindowSizeClass.medium));
+      expect(tester.hasText('M'), isTrue);
+    },
+  );
+
+  driver.defineTest(
+    'the atLeast helper thresholds the media width class into a boolean',
+    (CraftTester tester) async {
+      // The ergonomic companion to the scope: `atLeast(media.width, "medium")`
+      // is a size threshold as a boolean — usable anywhere (here, a switch),
+      // terser than enumerating classes. Resolved in the core function library,
+      // so both adapters agree, and it re-evaluates on a class change.
+      await tester.mount('''
+        import core;
+        widget root = Text(text: switch atLeast(a: media.width, b: "medium") {
+          true: "wide",
+          default: "narrow",
+        });
+      ''', media: const MediaContext(width: WindowSizeClass.compact));
+
+      // compact < medium ⇒ false ⇒ default.
+      expect(tester.hasText('narrow'), isTrue);
+
+      // expanded ≥ medium ⇒ true.
+      await tester.remedia(const MediaContext(width: WindowSizeClass.expanded));
+      expect(tester.hasText('wide'), isTrue);
+      expect(tester.hasText('narrow'), isFalse);
+    },
+  );
 }
 
 /// The shared behavioral specification for rendering an **A2UI surface**

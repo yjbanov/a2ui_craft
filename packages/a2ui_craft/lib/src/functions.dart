@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'media_context.dart' show WindowSizeClass;
 import 'model.dart' show DynamicMap;
 
 /// Signature of a pure value-function's implementation (see [LocalFunction]).
@@ -159,6 +160,12 @@ LocalFunctionLibrary createCoreFunctions() {
     'or': _binaryBoolean((bool a, bool b) => a || b),
     'not': _unaryBoolean((bool value) => !value),
 
+    // Responsive threshold (size-class id, size-class id → boolean). The
+    // ergonomic companion to the `media.` scope: `atLeast(media.width, "medium")`
+    // is a bound for any expression, terser than a full `switch` over classes
+    // (research/responsive/RESPONSIVE_DESIGN.md §4.3).
+    'atLeast': _sizeClassAtLeast(),
+
     // Strings. `concat` stringifies each operand (numbers via
     // [numberToDisplayString], booleans as "true"/"false", anything absent as
     // ""), so it accepts any value; the rest require a string.
@@ -192,6 +199,10 @@ const Map<String, FunctionArgType> _oneBoolean = <String, FunctionArgType>{
 };
 const Map<String, FunctionArgType> _oneString = <String, FunctionArgType>{
   'value': FunctionArgType.string,
+};
+const Map<String, FunctionArgType> _twoStrings = <String, FunctionArgType>{
+  'a': FunctionArgType.string,
+  'b': FunctionArgType.string,
 };
 
 // --- Number helpers ---------------------------------------------------------
@@ -279,6 +290,25 @@ LocalFunction _unaryBoolean(bool Function(bool value) compute) {
     implementation: (DynamicMap arguments) {
       final Object? value = arguments['value'];
       return value is bool ? compute(value) : null;
+    },
+  );
+}
+
+/// `atLeast(a, b)`: true when window size class [a] is at least as large as
+/// class [b] in the size-class ordering (compact < medium < expanded < large <
+/// extraLarge). Both operands are class ids — typically `media.width` against a
+/// literal like `"medium"`. An unrecognized id decodes to the smallest class, so
+/// the result is total; a non-string operand yields null (strict, no coercion).
+LocalFunction _sizeClassAtLeast() {
+  return LocalFunction(
+    arguments: _twoStrings,
+    implementation: (DynamicMap arguments) {
+      final Object? a = arguments['a'];
+      final Object? b = arguments['b'];
+      if (a is! String || b is! String) {
+        return null;
+      }
+      return WindowSizeClass.decode(a).atLeast(WindowSizeClass.decode(b));
     },
   );
 }

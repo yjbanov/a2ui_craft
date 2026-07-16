@@ -1122,6 +1122,18 @@ references and rebuilds role-reading primitives in one motion, without
 remounting (template state survives — conformance-pinned). The function-style
 alternative (`token(name: …)`) was rejected: it strains "functions are pure."
 
+**The `media.` scope (responsive, same mechanism).** Responsiveness reuses this
+machinery exactly: a **fifth ambient scope**, `media.<axis>` (`MediaReference`,
+binary tag 0x15), resolved against the ambient **`MediaContext`** the host
+supplies alongside the theme (`RemoteWidget.media` / `buildNode(media: …)`). It
+exposes only the quantized class ids — `media.width` → `"compact"` … — never raw
+pixels, so a template branches a prop with `switch media.width { … }` or the
+`atLeast(media.width, "medium")` helper, not `@media (min-width: …)`. A size-class
+change re-resolves in place like a re-theme (both scopes ride the same
+subscription/`didChangeDependencies` path). The whole-subtree common case has its
+own primitive (`Responsive`); the scope is the finer, prop-level long tail
+(research/responsive/RESPONSIVE_DESIGN.md §4.3).
+
 **The semantic contract (`ThemeRoles` in `a2ui_craft`).** DTCG
 standardizes token *structure*, never *meaning* — nothing in the format says a
 caption uses `color.onSurfaceVariant`. The fixed set of token paths each

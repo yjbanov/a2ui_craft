@@ -979,6 +979,9 @@ abstract class _CurriedWidget extends BlobNode {
           } else if (inputList is ThemeReference) {
             inputList =
                 dataResolver(<Object>[_themeMarker, ...inputList.parts]);
+          } else if (inputList is MediaReference) {
+            inputList =
+                dataResolver(<Object>[_mediaMarker, ...inputList.parts]);
           } else if (inputList is WidgetBuilderArgReference) {
             inputList = widgetBuilderArgResolver(
               <Object>[inputList.argumentName, ...inputList.parts],
@@ -1061,6 +1064,15 @@ abstract class _CurriedWidget extends BlobNode {
         // content. The marker type cannot appear in transport data (JSON keys
         // are strings), so the two trust domains cannot be confused.
         current = dataResolver(<Object>[_themeMarker, ...current.parts]);
+        continue;
+      } else if (current is MediaReference) {
+        if (index < parts.length) {
+          current = current.constructReference(parts.sublist(index));
+          index = parts.length;
+        }
+        // Media lookups ride the data-resolver callback with the _mediaMarker,
+        // exactly like the theme (see above).
+        current = dataResolver(<Object>[_mediaMarker, ...current.parts]);
         continue;
       } else if (current is WidgetBuilderArgReference) {
         current = widgetBuilderArgResolver(
@@ -1794,6 +1806,18 @@ class _WidgetState extends State<_Widget> implements DataSource {
       _dependencies.add(subscription);
       return subscription.value;
     }
+    // A media lookup, marked with _mediaMarker (see [MediaReference]): the same
+    // subscription machinery into the ambient [MediaContext]'s content — a third
+    // trust domain (host render-time config), like the theme.
+    if (rawDataKey.isNotEmpty && identical(rawDataKey.first, _mediaMarker)) {
+      final List<Object> mediaKey = rawDataKey.sublist(1);
+      final mediaSubscriptionKey = _Key(_kMediaSection, mediaKey);
+      final _Subscription subscription =
+          _subscriptions[mediaSubscriptionKey] ??=
+              _Subscription(_media, this, mediaKey);
+      _dependencies.add(subscription);
+      return subscription.value;
+    }
     final dataKey = _Key(_kDataSection, rawDataKey);
     final _Subscription subscription;
     if (!_subscriptions.containsKey(dataKey)) {
@@ -1813,6 +1837,15 @@ class _WidgetState extends State<_Widget> implements DataSource {
   DynamicContent get _theme =>
       ambientCraftTheme(context)?.content ?? _emptyTheme;
   static final DynamicContent _emptyTheme = DynamicContent();
+
+  /// The ambient [MediaContext]'s template-facing content, from the nearest
+  /// [_MediaScope]; a shared empty content when the surface has no media (every
+  /// `media.` lookup then resolves as missing, so a `switch` falls to its
+  /// default). Read once per subscription; a new snapshot triggers
+  /// [didChangeDependencies] → [_unsubscribe], re-subscribing into the new one.
+  DynamicContent get _media =>
+      ambientMediaContext(context)?.toContent() ?? _emptyMedia;
+  static final DynamicContent _emptyMedia = DynamicContent();
 
   Object _widgetBuilderArgResolver(List<Object> rawDataKey) {
     final widgetBuilderArgKey = _Key(_kWidgetBuilderArgSection, rawDataKey);
@@ -1881,6 +1914,7 @@ const int _kDataSection = -1;
 const int _kArgsSection = -2;
 const int _kWidgetBuilderArgSection = -3;
 const int _kThemeSection = -4;
+const int _kMediaSection = -5;
 
 /// The marker prepended to a key routed through the data-resolver callback to
 /// address the ambient theme rather than [DynamicContent] data (see
@@ -1891,6 +1925,15 @@ class _ThemeMarker {
 }
 
 const Object _themeMarker = _ThemeMarker();
+
+/// The marker prepended to a key routed through the data-resolver callback to
+/// address the ambient [MediaContext] rather than [DynamicContent] data, mirroring
+/// [_themeMarker]. A private non-string type, so no JSON transport key can forge it.
+class _MediaMarker {
+  const _MediaMarker();
+}
+
+const Object _mediaMarker = _MediaMarker();
 
 /// Supplies the ambient [CraftTheme] to every remote widget below it — both
 /// the `theme.` reference scope (via [CraftTheme.content]) and the primitives'

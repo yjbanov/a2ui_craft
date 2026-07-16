@@ -213,10 +213,10 @@ Uint8List encodeLibraryBlob(RemoteWidgetLibrary value) {
 ///   as a string for the [ConstructorCall.name] followed by an untagged map
 ///   describing the [ConstructorCall.arguments].
 ///
-/// * Argument, data, state, and theme references ([ArgsReference],
-///   [DataReference], [StateReference], and [ThemeReference] respectively)
-///   have tags 0x0A, 0x0B, 0x0D, and 0x14 respectively, and are encoded as
-///   tagged lists of strings or integers giving the [Reference.parts] of the
+/// * Argument, data, state, theme, and media references ([ArgsReference],
+///   [DataReference], [StateReference], [ThemeReference], and [MediaReference]
+///   respectively) have tags 0x0A, 0x0B, 0x0D, 0x14, and 0x15 respectively, and
+///   are encoded as tagged lists of strings or integers giving the [Reference.parts] of the
 ///   reference. (The theme-reference tag is an A2UI Craft addition to the RFW
 ///   format.)
 ///
@@ -318,6 +318,7 @@ const int _msSetState = 0x11;
 const int _msWidgetBuilder = 0x12;
 const int _msWidgetBuilderArgReference = 0x13;
 const int _msThemeReference = 0x14;
+const int _msMediaReference = 0x15;
 
 /// API for decoding Remote Flutter Widgets binary blobs.
 ///
@@ -473,6 +474,8 @@ class _BlobDecoder {
         return DataReference(_readPartList());
       case _msThemeReference:
         return ThemeReference(_readPartList());
+      case _msMediaReference:
+        return MediaReference(_readPartList());
       case _msLoopReference:
         return LoopReference(_readInt64(), _readPartList());
       case _msStateReference:
@@ -681,6 +684,10 @@ class _BlobEncoder {
       value.parts.forEach(_writePart);
     } else if (value is ThemeReference) {
       bytes.addByte(_msThemeReference);
+      _writeInt64(value.parts.length);
+      value.parts.forEach(_writePart);
+    } else if (value is MediaReference) {
+      bytes.addByte(_msMediaReference);
       _writeInt64(value.parts.length);
       value.parts.forEach(_writePart);
     } else if (value is WidgetBuilderArgReference) {

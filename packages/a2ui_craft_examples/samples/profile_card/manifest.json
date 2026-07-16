@@ -1,11 +1,6 @@
 {
   "name": "Profile Card",
   "demonstrates": [
-    "theming",
     "a2ui"
-  ],
-  "theme": {
-    "theme": "default",
-    "mode": "dark"
-  }
+  ]
 }

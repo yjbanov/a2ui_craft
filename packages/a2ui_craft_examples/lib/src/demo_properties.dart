@@ -45,8 +45,10 @@ const List<DemoProperty> demoProperties = <DemoProperty>[
   DemoProperty(
     id: 'theming',
     label: 'Theming',
-    description: 'Projects themed via design tokens (default or custom '
-        'brands), applied consistently across Jaspr and Flutter.',
+    description: 'A project shipping its own design tokens — including custom '
+        'tokens its template references by name — applied consistently across '
+        'Jaspr and Flutter. (Any sample can also be recolored live from the '
+        'theme picker.)',
   ),
   DemoProperty(
     id: 'functions',

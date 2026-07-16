@@ -145,58 +145,6 @@ void main() {
     });
   });
 
-  testWidgets(
-      'Profile Card is a themed project — its mode follows platform darkness',
-      (WidgetTester tester) async {
-    // profile_card ships a manifest theme ({theme:default, mode:dark}). Its
-    // SampleSpec carries a ProjectTheme (§10); the gallery Sample maps the
-    // platform's dark-light setting onto the theme's modes (host render-time
-    // config, §9.5), so the same project paints light or dark with the system.
-    final SampleSpec spec = profileCardSpec('Flutter');
-    expect(spec.theme, isNotNull);
-    expect(spec.theme!.usesDefaultTheme, isTrue);
-    expect(spec.theme!.defaultMode.id, 'dark');
-
-    Color cardColor() => _cardDecorations(tester).first.color!;
-
-    await mockNetworkImagesFor(() async {
-      // Test platform brightness defaults to light → the Light surface.
-      await _pump(tester, spec);
-      expect(cardColor(), const Color(0xFFFFFFFF)); // color.surface, Light
-
-      // Flip the platform to dark → the same project re-themes dark.
-      tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
-      addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
-      await _pump(tester, spec);
-      await tester.pump();
-      expect(cardColor(), const Color(0xFF202124)); // color.surface, Dark
-    });
-  });
-
-  testWidgets(
-      'Product Card ships a custom inline theme with light + dark layers',
-      (WidgetTester tester) async {
-    // product_card's manifest inlines a bespoke brand: a base DTCG layer
-    // (Light) plus a "modes.dark" overlay (§9.5). The gallery Sample picks the
-    // layer matching the platform's dark-light setting.
-    final SampleSpec spec = productCardSpec('Flutter');
-    expect(spec.theme, isNotNull);
-    expect(spec.theme!.usesDefaultTheme, isFalse);
-
-    Color cardColor() => _cardDecorations(tester).first.color!;
-
-    await mockNetworkImagesFor(() async {
-      await _pump(tester, spec);
-      expect(cardColor(), const Color(0xFFFFF8F0)); // brand surface, Light
-
-      tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
-      addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
-      await _pump(tester, spec);
-      await tester.pump();
-      expect(cardColor(), const Color(0xFF2A1E17)); // brand surface, Dark
-    });
-  });
-
   testWidgets('Image Gallery renders three images',
       (WidgetTester tester) async {
     await mockNetworkImagesFor(() async {

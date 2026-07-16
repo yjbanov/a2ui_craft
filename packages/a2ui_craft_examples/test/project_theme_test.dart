@@ -138,30 +138,20 @@ void main() {
     expect(oneMode.modeFor(dark: true), CraftThemeMode.light);
   });
 
-  test('the custom-themed samples ship light + dark brand layers', () {
-    for (final (SampleSpec spec, String light, String dark)
-        in <(SampleSpec, String, String)>[
-      (productCardSpec('Jaspr'), '#FFF8F0', '#2A1E17'),
-      (chatMessageSpec('Jaspr'), '#F5F7FF', '#171A2C'),
-      (weatherSpec('Jaspr'), '#E8F4FD', '#0B1F33'),
-      (calculatorSpec('Jaspr'), '#F8FAFC', '#1E2126'),
-      (settingsSpec('Jaspr'), '#F4FBFA', '#101E1B'),
-    ]) {
-      final ProjectTheme? theme = spec.theme;
-      expect(theme, isNotNull, reason: spec.label);
-      expect(theme!.usesDefaultTheme, isFalse, reason: spec.label);
-      expect(theme.availableModes,
-          <CraftThemeMode>[CraftThemeMode.light, CraftThemeMode.dark],
-          reason: spec.label);
-      expect(
-          theme.resolve(CraftThemeMode.light).tokens.color(ThemeRoles.surface),
-          Rgba.decode(light),
-          reason: spec.label);
-      expect(
-          theme.resolve(CraftThemeMode.dark).tokens.color(ThemeRoles.surface),
-          Rgba.decode(dark),
-          reason: spec.label);
-    }
+  test('the calculator sample ships a custom-token theme (light + dark)', () {
+    // The calculator is the one built-in that ships its own theme: it defines
+    // custom tokens (theme.keypad.*) its template references by name — a demo
+    // the brand picker can't replace (brands only cover the semantic contract).
+    // Every other sample is now unthemed and recolored live from the picker.
+    final ProjectTheme? theme = calculatorSpec('Jaspr').theme;
+    expect(theme, isNotNull);
+    expect(theme!.usesDefaultTheme, isFalse);
+    expect(theme.availableModes,
+        <CraftThemeMode>[CraftThemeMode.light, CraftThemeMode.dark]);
+    expect(theme.resolve(CraftThemeMode.light).tokens.color(ThemeRoles.surface),
+        Rgba.decode('#F8FAFC'));
+    expect(theme.resolve(CraftThemeMode.dark).tokens.color(ThemeRoles.surface),
+        Rgba.decode('#1E2126'));
   });
 
   test('null, blank, malformed, and unrecognized input parse to null (total)',
@@ -173,15 +163,13 @@ void main() {
     expect(ProjectTheme.tryParse('{ "theme": "acme-brand" }'), isNull);
   });
 
-  test('the profile_card sample is a themed project (default / dark)', () {
-    final ProjectTheme? theme = profileCardSpec('Jaspr').theme;
-    expect(theme, isNotNull);
-    expect(theme!.usesDefaultTheme, isTrue);
-    expect(theme.defaultMode, CraftThemeMode.dark);
-  });
-
-  test('an unthemed sample carries no project theme', () {
+  test('the non-calculator samples carry no project theme', () {
+    // They were unthemed as part of dropping per-sample brands in favor of the
+    // live theme picker; only the calculator keeps a shipped (custom) theme.
     expect(counterSpec('Jaspr').theme, isNull);
+    expect(profileCardSpec('Jaspr').theme, isNull);
+    expect(weatherSpec('Jaspr').theme, isNull);
+    expect(settingsSpec('Jaspr').theme, isNull);
   });
 
   group('ProjectManifest (the consolidated per-project manifest)', () {

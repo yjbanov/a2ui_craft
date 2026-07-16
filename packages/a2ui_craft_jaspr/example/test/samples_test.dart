@@ -138,67 +138,6 @@ void main() {
     expect(find.text('Dart'), findsOneComponent);
   });
 
-  testComponents(
-      'Profile Card is a themed project — its mode follows the host darkness',
-      (ComponentTester tester) async {
-    // profile_card ships a manifest theme ({theme:default, mode:dark}). Its
-    // SampleSpec carries a ProjectTheme (§10); the gallery Sample maps the
-    // host's dark-light preference onto the theme's modes (host render-time
-    // config, §9.5), so the same project paints light or dark with the system.
-    final SampleSpec spec = profileCardSpec('Jaspr');
-    expect(spec.theme, isNotNull);
-    expect(spec.theme!.usesDefaultTheme, isTrue);
-    expect(spec.theme!.defaultMode.id, 'dark');
-
-    // A dark host: each of the two cards paints its surface (color.surface =
-    // #202124) and, via its Divider, the outline role (#5F6368 in Dark).
-    await _pump(tester, spec, dark: true);
-    expect(_styleValues('background-color'), <String>[
-      'rgba(32, 33, 36, 1.0)', // card 1 ← surface
-      'rgba(95, 99, 104, 1.0)', // card 1 divider ← outline
-      'rgba(32, 33, 36, 1.0)', // card 2 ← surface
-      'rgba(95, 99, 104, 1.0)', // card 2 divider ← outline
-    ]);
-
-    // A light host: the same project re-themes to the Light layer.
-    await _pump(tester, spec);
-    expect(_styleValues('background-color'), <String>[
-      'rgba(255, 255, 255, 1.0)', // card 1 ← surface
-      'rgba(218, 220, 224, 1.0)', // card 1 divider ← outline
-      'rgba(255, 255, 255, 1.0)', // card 2 ← surface
-      'rgba(218, 220, 224, 1.0)', // card 2 divider ← outline
-    ]);
-  });
-
-  testComponents(
-      'Product Card ships a custom inline theme with light + dark layers',
-      (ComponentTester tester) async {
-    // product_card's manifest inlines a bespoke brand: a base DTCG layer
-    // (Light) plus a "modes.dark" overlay (§9.5). The gallery Sample picks the
-    // layer matching the host's dark-light preference.
-    final SampleSpec spec = productCardSpec('Jaspr');
-    expect(spec.theme, isNotNull);
-    expect(spec.theme!.usesDefaultTheme, isFalse);
-
-    await _pump(tester, spec);
-    expect(_styleValues('background-color'), <String>[
-      'rgba(255, 248, 240, 1.0)', // card ← brand surface, Light
-      'rgba(224, 207, 194, 1.0)', // divider ← brand outline, Light
-      'rgba(230, 81, 0, 1.0)', // − stepper ← brand primary, Light
-      'rgba(230, 81, 0, 1.0)', // + stepper ← brand primary, Light
-      'rgba(230, 81, 0, 1.0)', // CTA button ← brand primary, Light
-    ]);
-
-    await _pump(tester, spec, dark: true);
-    expect(_styleValues('background-color'), <String>[
-      'rgba(42, 30, 23, 1.0)', // card ← brand surface, Dark
-      'rgba(93, 64, 55, 1.0)', // divider ← brand outline, Dark
-      'rgba(255, 183, 77, 1.0)', // − stepper ← brand primary, Dark
-      'rgba(255, 183, 77, 1.0)', // + stepper ← brand primary, Dark
-      'rgba(255, 183, 77, 1.0)', // CTA button ← brand primary, Dark
-    ]);
-  });
-
   testComponents('Image Gallery renders three images',
       (ComponentTester tester) async {
     await _pump(tester, gallerySpec('Jaspr'));
@@ -213,7 +152,7 @@ void main() {
     expect(find.tag('input'), findsNComponents(2));
   });
 
-  testComponents('Settings renders every control, themed per its layers',
+  testComponents('Settings renders every control',
       (ComponentTester tester) async {
     await _pump(tester, settingsSpec('Jaspr'));
     expect(find.text('Settings'), findsOneComponent);
@@ -222,15 +161,6 @@ void main() {
     expect(find.tag('input'), findsNComponents(5));
     expect(find.tag('select'), findsOneComponent);
     expect(find.tag('option'), findsNComponents(3));
-    // Themed project: the light layer's primary fills the Save button and
-    // the switch's active track (the teal role mapping, DESIGN.md §8).
-    final Iterable<String> backgrounds = _styleValues('background-color');
-    expect(backgrounds, contains('rgba(0, 121, 107, 1.0)'));
-
-    // Dark host: the dark layer re-inks.
-    await _pump(tester, settingsSpec('Jaspr'), dark: true);
-    expect(
-        _styleValues('background-color'), contains('rgba(77, 182, 172, 1.0)'));
   });
 
   // --- Templatized A2UI Basic Catalog gallery examples. ---

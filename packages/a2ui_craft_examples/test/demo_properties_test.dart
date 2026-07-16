@@ -46,17 +46,10 @@ void main() {
   test('the flagship demos carry their expected labels', () {
     RawSample byId(String id) =>
         rawSamples.firstWhere((RawSample s) => s.id == id);
-    // The themed projects are the theming demos.
-    for (final String id in <String>[
-      'profile_card',
-      'product_card',
-      'chat_message',
-      'weather',
-      'calculator',
-      'settings',
-    ]) {
-      expect(byId(id).demonstrates, contains('theming'), reason: id);
-    }
+    // The calculator is the theming demo: it ships custom design tokens
+    // (theme.keypad.*) its template references by name. Other samples no longer
+    // ship a theme — they are recolored live from the theme picker instead.
+    expect(byId('calculator').demonstrates, contains('theming'));
     // The function-driven interactive samples.
     expect(byId('calculator').demonstrates,
         containsAll(<String>['functions', 'controls']));

@@ -1,10 +1,13 @@
 # A2UI Craft
 
-**A2UI Craft** is a framework-agnostic, **client-side templating engine**. It
-renders declarative UI templates — written in the [Remote Flutter Widgets
-(RFW)](https://pub.dev/packages/rfw) text format — using whatever UI framework
-the client is built on (currently **Flutter** and **Jaspr**), binding them to a
-reactive data model.
+**A2UI Craft** is a framework-agnostic, **client-side templating engine**
+optimized for generative UI use-cases. It renders declarative UI templates
+using whatever UI framework the client is built on (currently **Flutter**
+and **Jaspr**), binding them to a reactive data model.
+
+## Try it
+
+A live demo is available at https://a2ui-craft.web.app.
 
 ## Architecture at a glance
 

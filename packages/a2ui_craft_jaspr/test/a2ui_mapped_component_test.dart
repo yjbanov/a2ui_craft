@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 import 'package:a2ui_core/a2ui_core.dart';
-import 'package:a2ui_craft/a2ui_craft.dart';
 import 'package:a2ui_craft_jaspr/a2ui_craft_jaspr.dart';
 import 'package:jaspr/jaspr.dart';
 import 'package:jaspr_test/jaspr_test.dart';

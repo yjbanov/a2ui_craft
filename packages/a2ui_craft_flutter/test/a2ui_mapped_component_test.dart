@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 import 'package:a2ui_core/a2ui_core.dart';
-import 'package:a2ui_craft/a2ui_craft.dart';
 import 'package:a2ui_craft_flutter/a2ui_craft_flutter.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';

@@ -16,7 +16,6 @@
 //     → Jaspr DOM
 
 import 'package:a2ui_core/a2ui_core.dart';
-import 'package:a2ui_craft/a2ui_craft.dart' show LibraryName, parseLibraryFile;
 import 'package:a2ui_craft_jaspr/a2ui_craft_jaspr.dart';
 import 'package:jaspr_test/jaspr_test.dart';
 import 'package:json_schema_builder/json_schema_builder.dart';

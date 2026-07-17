@@ -10,7 +10,6 @@
 @TestOn('browser')
 library;
 
-import 'package:a2ui_craft/a2ui_craft.dart';
 import 'package:a2ui_craft_jaspr/a2ui_craft_jaspr.dart';
 import 'package:jaspr_test/client_test.dart';
 import 'package:universal_web/web.dart' as web;

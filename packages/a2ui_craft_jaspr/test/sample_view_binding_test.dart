@@ -8,7 +8,6 @@
 // component does (the settings sample's shape), and beside sibling
 // SampleViews sharing a surfaceId.
 import 'package:a2ui_core/a2ui_core.dart' show A2uiMessage;
-import 'package:a2ui_craft/a2ui_craft.dart' show CraftThemeMode, DefaultTheme;
 import 'package:a2ui_craft_jaspr/a2ui_craft_jaspr.dart';
 import 'package:jaspr/dom.dart';
 import 'package:jaspr/jaspr.dart';

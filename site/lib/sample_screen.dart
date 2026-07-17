@@ -6,8 +6,6 @@ import 'dart:convert';
 import 'dart:js_interop';
 
 import 'package:a2ui_core/a2ui_core.dart';
-import 'package:a2ui_craft/a2ui_craft.dart'
-    show CraftTheme, CraftThemeMode, MediaContext, WindowSizeClass;
 import 'package:a2ui_craft_examples/a2ui_craft_examples.dart';
 import 'package:a2ui_craft_jaspr/a2ui_craft_jaspr.dart';
 import 'package:jaspr/dom.dart';

@@ -11,7 +11,9 @@ compile step, because it is data, not code.
 dart pub global activate --source path packages/craft
 ```
 
-(From a published release, this becomes `dart pub global activate craft`.)
+(Not yet published: the `craft` name is taken on pub.dev by an unrelated
+package, so a published release will require renaming — e.g.
+`dart pub global activate a2ui_craft_cli`.)
 
 ## Usage
 

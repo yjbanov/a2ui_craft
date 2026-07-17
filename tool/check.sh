@@ -34,6 +34,16 @@ dart format packages/a2ui_craft/lib/src/default_theme.g.dart
 git diff --exit-code packages/a2ui_craft/lib/src/default_theme.g.dart \
   || { echo "default_theme.g.dart is stale — run tool/gen_default_theme.dart and commit."; exit 1; }
 
+step "Check per-package LICENSE files match the root LICENSE"
+# pub.dev requires a LICENSE file inside each published package; the workspace
+# root's LICENSE does not propagate. Keep them byte-identical so a stray edit to
+# one can't ship a divergent license. Covers only the published packages (those
+# without `publish_to: none`).
+for pkg in a2ui_craft a2ui_craft_bridge a2ui_craft_flutter a2ui_craft_jaspr; do
+  cmp -s LICENSE "packages/$pkg/LICENSE" \
+    || { echo "packages/$pkg/LICENSE differs from root LICENSE — run 'cp LICENSE packages/$pkg/LICENSE'."; exit 1; }
+done
+
 step "Analyze: a2ui_craft (core)"
 (cd packages/a2ui_craft && dart analyze)
 

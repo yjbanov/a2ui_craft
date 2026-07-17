@@ -3,7 +3,14 @@ description: >-
   Renders A2UI Transport surfaces with the A2UI Craft engine. Translates an A2UI
   catalog component tree and data model into the RFW model that the framework
   adapters render. Framework-neutral (no UI-framework dependency).
-version: 0.0.1
+version: 0.1.0-dev.1
+repository: https://github.com/yjbanov/a2ui_craft
+issue_tracker: https://github.com/yjbanov/a2ui_craft/issues
+topics:
+  - generative-ui
+  - rfw
+  - a2ui
+  - ui
 
 environment:
   sdk: ^3.6.0
@@ -11,11 +18,13 @@ environment:
 resolution: workspace
 
 dependencies:
-  a2ui_craft: ^0.0.1
+  a2ui_craft: ^0.1.0-dev.1
   # The A2UI protocol, data model, and binding/function/checks resolution.
-  a2ui_core: any
+  # Only a prerelease is published today, so the constraint targets it
+  # explicitly (a bare caret would not match a prerelease).
+  a2ui_core: ^0.0.1-wip002
   # The catalog loader parses component schemas (JSON Schema) at runtime.
-  json_schema_builder: any
+  json_schema_builder: ^0.1.5
 
 dev_dependencies:
   lints: ^4.0.0

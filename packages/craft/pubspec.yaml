@@ -3,6 +3,9 @@ description: >-
   The A2UI Craft CLI — scaffold and manage ephemeral, data-only UI projects that
   deploy to a CDN and load into a host app at runtime.
 version: 0.0.1
+# Not published. The `craft` name is taken on pub.dev (unrelated package) and the
+# CLI is still early — publishing needs a rename first. Before removing this,
+# read skills/a2ui-craft-publishing/SKILL.md.
 publish_to: none
 
 environment:

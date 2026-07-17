@@ -28,15 +28,40 @@ workspace:
 # Dev dependencies declared here are shared by all workspace members.
 dev_dependencies:
   lints: ^4.0.0
+  # Multi-package release orchestration (coordinated version bumps, changelog
+  # entries, and dependency-ordered publishing) — see the `melos:` block below.
+  # Melos 8 is built on native pub workspaces; run it with `dart run melos ...`.
+  melos: ^8.2.2
   test: ^1.25.0
 
-# Workspace-wide override: A2UI Craft layers the A2UI protocol/data model on
-# `a2ui_core`. It is pulled from git so the workspace tracks the latest and so
-# others can run the repo without a local checkout. Switch to a hosted version
-# once the a2ui_core team cuts a release. (`resolution: workspace` in a2ui_core
-# does not block a git dependency.)
+# Workspace-wide override: the published `a2ui_core` only exists as a prerelease
+# (`0.0.1-wip002`), and a bare `any` (as the unpublished workspace members —
+# examples/testing — still declare) will not match a prerelease. This override
+# pins the whole workspace to that prerelease so it resolves locally. It affects
+# only local resolution, never the published packages' declared constraints
+# (those name `^0.0.1-wip002` directly). Drop this once `a2ui_core` cuts a
+# stable release and the members widen their constraints accordingly.
 dependency_overrides:
-  a2ui_core:
-    git:
-      url: https://github.com/flutter/genui.git
-      path: packages/a2ui_core
+  a2ui_core: ^0.0.1-wip002
+
+# Melos configuration (melos 8 reads this from the workspace-root pubspec and
+# derives the package set from the `workspace:` list above). Used only for
+# release orchestration; day-to-day verification stays in `tool/check.sh`.
+melos:
+  command:
+    version:
+      # A2UI Craft's commit-msg hook is not conventional-commits, so changelog
+      # bodies are hand-curated; melos still bumps versions and stamps entries.
+      message: |
+        chore(release): publish packages
+
+        {new_package_versions}
+  # Only the four packages without `publish_to: none` are public; melos computes
+  # the dependency order automatically for `dart run melos publish`.
+  scripts:
+    analyze:
+      description: Analyze every package in the workspace.
+      run: dart analyze .
+    test:
+      description: Run the full verification suite (delegates to check.sh).
+      run: ./tool/check.sh

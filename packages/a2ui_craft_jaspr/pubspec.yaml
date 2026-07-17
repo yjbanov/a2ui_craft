@@ -1,6 +1,15 @@
 name: a2ui_craft_jaspr
-description: Jaspr bindings for A2UI Craft (Remote Flutter Widgets format)
-version: 0.0.1
+description: >-
+  Jaspr bindings for A2UI Craft: render framework-agnostic RFW templates as HTML
+  DOM, with behavior identical to the Flutter adapter.
+version: 0.1.0-dev.1
+repository: https://github.com/yjbanov/a2ui_craft
+issue_tracker: https://github.com/yjbanov/a2ui_craft/issues
+topics:
+  - generative-ui
+  - rfw
+  - jaspr
+  - ui
 
 environment:
   sdk: ^3.6.0
@@ -8,9 +17,9 @@ environment:
 resolution: workspace
 
 dependencies:
-  a2ui_craft: ^0.0.1
-  a2ui_craft_bridge: ^0.0.1
-  a2ui_core: any
+  a2ui_craft: ^0.1.0-dev.1
+  a2ui_craft_bridge: ^0.1.0-dev.1
+  a2ui_core: ^0.0.1-wip002
   jaspr: ^0.23.1
   web: ^1.0.0
 

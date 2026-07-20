@@ -99,8 +99,9 @@ List<MarkdownBlock> parseMarkdown(String source) {
 void _appendBlock(md.Node node, List<MarkdownBlock> out) {
   if (node is md.Text) {
     final String t = node.text.trim();
-    if (t.isNotEmpty)
+    if (t.isNotEmpty) {
       out.add(MarkdownParagraph(<MarkdownSpan>[MarkdownSpan(t)]));
+    }
     return;
   }
   if (node is! md.Element) return;

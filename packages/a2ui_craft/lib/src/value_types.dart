@@ -577,8 +577,9 @@ final class Elevation {
   ///
   /// Accepts a non-negative finite number; anything else yields [fallback].
   static Elevation decode(Object? raw, {Elevation fallback = none}) {
-    if (raw is num && raw.isFinite && raw >= 0)
+    if (raw is num && raw.isFinite && raw >= 0) {
       return Elevation(raw.toDouble());
+    }
     return fallback;
   }
 

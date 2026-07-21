@@ -100,6 +100,32 @@
       }
     </style>
 
+    <!-- TEMPORARY SHIM — remove once the upstream Flutter bug is fixed.
+         (flutter/flutter: in a multi-view embedding, the semantics placeholder
+         swallows pointer events meant for the host page. Reported upstream.)
+
+         On mobile browsers the Flutter web engine stretches
+         <flt-semantics-placeholder> — its "Enable accessibility" affordance —
+         across the whole viewport so a screen-reader tap anywhere activates it.
+         The engine appends it to <body>, NOT inside the flutter-view, so on
+         mobile it blankets the entire Jaspr-rendered page and no tap ever
+         reaches our DOM. (On desktop it is 1x1 at -1,-1 and harmless, which is
+         why this only shows up on mobile.)
+
+         Disabling hit-testing is deliberately the narrowest fix: the element
+         stays in the DOM, keeps role=button / aria-label / tabindex=0, and
+         remains focusable — so assistive tech can still reach and activate it
+         (AT activation dispatches a click on the focused element directly,
+         which does not go through hit-testing). Removing the element instead
+         would drop the accessibility affordance altogether. CSS also beats a
+         MutationObserver here: no lifecycle or timing race, and it keeps
+         applying if the engine re-inserts or re-styles the element. -->
+    <style>
+      flt-semantics-placeholder {
+        pointer-events: none !important;
+      }
+    </style>
+
     <!-- The Flutter manifest + bootstrap (embedded Flutter). -->
     <link rel="manifest" href="manifest.json" />
     <script src="flutter_bootstrap.js" async></script>

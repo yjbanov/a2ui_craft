@@ -148,6 +148,7 @@ class MediaContext {
     required this.width,
     this.height = WindowHeightClass.medium,
     this.orientation = ScreenOrientation.portrait,
+    this.reducedMotion = false,
   });
 
   /// The width size class — the primary responsive axis.
@@ -159,21 +160,35 @@ class MediaContext {
   /// Portrait or landscape (secondary, reserved).
   final ScreenOrientation orientation;
 
+  /// Whether the user has asked the platform to **minimize non-essential
+  /// motion** (`prefers-reduced-motion` on the web, `disableAnimations` on
+  /// Flutter) — an accessibility preference primitives read to collapse
+  /// transitions to instant.
+  ///
+  /// Defaults to `false` (motion on) when the host is silent, matching both
+  /// platforms' "no stated preference" default. A host **should** plumb the real
+  /// OS signal; the neutral default only applies until it does. Like the size
+  /// class, this is a host-supplied render-time input, so a change to it supplies
+  /// a *new* [MediaContext] and re-renders the dependents in place.
+  final bool reducedMotion;
+
   @override
   bool operator ==(Object other) =>
       other is MediaContext &&
       other.width == width &&
       other.height == height &&
-      other.orientation == orientation;
+      other.orientation == orientation &&
+      other.reducedMotion == reducedMotion;
 
   @override
-  int get hashCode => Object.hash(width, height, orientation);
+  int get hashCode => Object.hash(width, height, orientation, reducedMotion);
 
   /// The template-facing view for the `media.` reference scope, parallel to
   /// [CraftTheme]'s `content`: the quantized **class ids** — `media.width` →
-  /// `"compact"`/`"medium"`/…, `media.height`, `media.orientation` — as a
-  /// [DynamicContent] that `media.<axis>` references (and `switch media.width {…}`)
-  /// resolve against. Only the enum ids are exposed, never raw pixels
+  /// `"compact"`/`"medium"`/…, `media.height`, `media.orientation`, and the
+  /// boolean `media.reducedMotion` — as a [DynamicContent] that `media.<axis>`
+  /// references (and `switch media.width {…}`) resolve against. Only the enum ids
+  /// and the flag are exposed, never raw pixels
   /// (research/responsive/RESPONSIVE_DESIGN.md §4.3): the scope is for
   /// restructuring, not `@media (min-width: …)` magic numbers.
   ///
@@ -185,9 +200,10 @@ class MediaContext {
       'width': width.id,
       'height': height.id,
       'orientation': orientation.id,
+      'reducedMotion': reducedMotion,
     });
 
   @override
   String toString() => 'MediaContext(width: ${width.id}, height: ${height.id}, '
-      'orientation: ${orientation.id})';
+      'orientation: ${orientation.id}, reducedMotion: $reducedMotion)';
 }

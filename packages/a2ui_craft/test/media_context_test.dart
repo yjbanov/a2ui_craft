@@ -102,5 +102,35 @@ void main() {
       expect(a.hashCode, b.hashCode);
       expect(a, isNot(c));
     });
+
+    test('reducedMotion participates in equality and hashCode', () {
+      const MediaContext motionOn =
+          MediaContext(width: WindowSizeClass.compact);
+      const MediaContext motionOff = MediaContext(
+        width: WindowSizeClass.compact,
+        reducedMotion: true,
+      );
+      expect(motionOn.reducedMotion, isFalse); // default when host is silent
+      expect(motionOn, isNot(motionOff));
+      expect(motionOn.hashCode, isNot(motionOff.hashCode));
+    });
+  });
+
+  group('MediaContext.toContent (the media. scope)', () {
+    test('exposes the class ids and the reducedMotion flag', () {
+      const MediaContext media = MediaContext(
+        width: WindowSizeClass.expanded,
+        reducedMotion: true,
+      );
+      final DynamicContent content = media.toContent();
+      expect(content.subscribe(<Object>['width'], (_) {}), 'expanded');
+      expect(content.subscribe(<Object>['reducedMotion'], (_) {}), true);
+    });
+
+    test('reducedMotion defaults to false in the scope', () {
+      final DynamicContent content =
+          const MediaContext(width: WindowSizeClass.compact).toContent();
+      expect(content.subscribe(<Object>['reducedMotion'], (_) {}), false);
+    });
   });
 }

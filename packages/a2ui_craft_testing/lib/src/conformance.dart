@@ -1593,6 +1593,35 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
       expect(tester.hasText('narrow'), isFalse);
     },
   );
+
+  driver.defineTest(
+    'media.reducedMotion exposes the accessibility flag and re-renders on change',
+    (CraftTester tester) async {
+      // The reduced-motion preference rides the same `media.` scope as the size
+      // class — a host-supplied render-time input (default false). It is a
+      // boolean (not an enum id), so a `switch` branches on `true` / default; a
+      // change to it supplies a new MediaContext and re-renders in place. This is
+      // the flag `Box(animate:)` reads to collapse a transition to instant.
+      await tester.mount('''
+        import core;
+        widget root = Text(text: switch media.reducedMotion {
+          true: "reduced",
+          default: "full",
+        });
+      ''', media: const MediaContext(width: WindowSizeClass.compact));
+
+      // Default (host silent) is motion on.
+      expect(tester.hasText('full'), isTrue);
+
+      // Turning the preference on flips the branch in place.
+      await tester.remedia(const MediaContext(
+        width: WindowSizeClass.compact,
+        reducedMotion: true,
+      ));
+      expect(tester.hasText('reduced'), isTrue);
+      expect(tester.hasText('full'), isFalse);
+    },
+  );
 }
 
 /// The shared behavioral specification for rendering an **A2UI surface**

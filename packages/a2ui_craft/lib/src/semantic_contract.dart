@@ -53,6 +53,18 @@ library;
 /// | [captionSize] | `Text` (caption) |
 /// | [headingSize] (1–6) | `Heading`, `Markdown` headings |
 ///
+/// The `motion.*` roles (the motion token system — durations + named easings):
+///
+/// | Path | Read by |
+/// |---|---|
+/// | [motionDurationShort] / [motionDurationMedium] / [motionDurationLong] | `Box` (via `animate`) |
+/// | [motionEasingStandard] / [motionEasingEmphasized] / [motionEasingDecelerate] / [motionEasingAccelerate] | `Box` (via `animate`) |
+///
+/// Durations are `duration` tokens (ms); easings are **named-string** tokens
+/// (an id read by `MotionEasing.decode`, not a raw `cubicBezier` — the quantized
+/// vocabulary is the guard rail). `animate: true` resolves to
+/// [motionDurationMedium] + [motionEasingStandard].
+///
 /// [error] and [onError] are **named now, consumed later**: no primitive reads
 /// them yet, but themes and branded catalog templates can already target them
 /// without fearing a rename.
@@ -98,4 +110,26 @@ abstract final class ThemeRoles {
 
   /// Heading text size for [level] 1–6, e.g. `type.heading.2.size`.
   static String headingSize(int level) => 'type.heading.$level.size';
+
+  /// Short transition duration (`duration` token, ms) — small state changes.
+  static const String motionDurationShort = 'motion.duration.short';
+
+  /// Medium transition duration — the default; what `animate: true` uses.
+  static const String motionDurationMedium = 'motion.duration.medium';
+
+  /// Long transition duration — larger or more prominent changes.
+  static const String motionDurationLong = 'motion.duration.long';
+
+  /// Standard easing (a named-string token read by `MotionEasing.decode`) — the
+  /// default curve; what `animate: true` uses.
+  static const String motionEasingStandard = 'motion.easing.standard';
+
+  /// Expressive easing for motion that should draw the eye.
+  static const String motionEasingEmphasized = 'motion.easing.emphasized';
+
+  /// Easing for elements entering the screen (ease-out).
+  static const String motionEasingDecelerate = 'motion.easing.decelerate';
+
+  /// Easing for elements leaving the screen (ease-in).
+  static const String motionEasingAccelerate = 'motion.easing.accelerate';
 }

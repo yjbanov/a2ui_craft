@@ -53,5 +53,21 @@
       "5": { "size": { "$value": "16px" } },
       "6": { "size": { "$value": "14px" } }
     }
+  },
+  "motion": {
+    "$description": "The motion token system (ThemeRoles.motion*). Durations in ms; easings are named ids into the MotionEasing vocabulary (not raw cubic-bezier). Mode-invariant — motion does not change across light/dark.",
+    "duration": {
+      "$type": "duration",
+      "short": { "$value": { "value": 150, "unit": "ms" } },
+      "medium": { "$value": { "value": 250, "unit": "ms" } },
+      "long": { "$value": { "value": 400, "unit": "ms" } }
+    },
+    "easing": {
+      "$type": "string",
+      "standard": { "$value": "standard" },
+      "emphasized": { "$value": "emphasized" },
+      "decelerate": { "$value": "decelerate" },
+      "accelerate": { "$value": "accelerate" }
+    }
   }
 }

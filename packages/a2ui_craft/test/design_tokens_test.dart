@@ -316,6 +316,63 @@ void main() {
     });
   });
 
+  group('ResolvedTokens.duration', () {
+    test('object and string forms, ms and s', () {
+      final ResolvedTokens tokens = _resolve(<String, Object?>{
+        'a': <String, Object?>{
+          r'$type': 'duration',
+          r'$value': <String, Object?>{'value': 150, 'unit': 'ms'},
+        },
+        'b': <String, Object?>{
+          r'$type': 'duration',
+          r'$value': <String, Object?>{'value': 0.2, 'unit': 's'},
+        },
+        'c': <String, Object?>{r'$type': 'duration', r'$value': '250ms'},
+        'd': <String, Object?>{r'$type': 'duration', r'$value': '0.4s'},
+      });
+      expect(tokens.duration('a'), 150.0);
+      expect(tokens.duration('b'), 200.0);
+      expect(tokens.duration('c'), 250.0);
+      expect(tokens.duration('d'), 400.0);
+    });
+
+    test('total: wrong type, unknown unit, or garbage yields null', () {
+      final ResolvedTokens tokens = _resolve(<String, Object?>{
+        'min': <String, Object?>{
+          r'$type': 'duration',
+          r'$value': <String, Object?>{'value': 2, 'unit': 'min'},
+        },
+        'bare': <String, Object?>{r'$type': 'duration', r'$value': 200},
+        'junk': <String, Object?>{r'$type': 'duration', r'$value': 'soon'},
+        'wrong': <String, Object?>{r'$type': 'number', r'$value': 200},
+      });
+      expect(tokens.duration('min'), isNull);
+      expect(tokens.duration('bare'), isNull);
+      expect(tokens.duration('junk'), isNull);
+      expect(
+          tokens.duration('wrong'), isNull); // a number token is not a duration
+    });
+
+    test('toTemplateValues canonicalizes a duration to a plain ms number', () {
+      final ResolvedTokens tokens = _resolve(<String, Object?>{
+        'motion': <String, Object?>{
+          'duration': <String, Object?>{
+            r'$type': 'duration',
+            'medium': <String, Object?>{
+              r'$value': <String, Object?>{'value': 0.25, 'unit': 's'},
+            },
+          },
+        },
+      });
+      final Map<String, Object?> values = tokens.toTemplateValues();
+      final Map<String, Object?> motion =
+          values['motion']! as Map<String, Object?>;
+      final Map<String, Object?> duration =
+          motion['duration']! as Map<String, Object?>;
+      expect(duration['medium'], 250.0);
+    });
+  });
+
   group('ResolvedTokens.raw', () {
     test('exposes resolved values of types without a typed getter', () {
       final ResolvedTokens tokens = _resolve(<String, Object?>{

@@ -276,6 +276,37 @@ final class ResolvedTokens {
     return value is num ? value.toDouble() : null;
   }
 
+  /// Reads a `duration` token as **milliseconds**.
+  ///
+  /// Accepts the DTCG object `{"value": n, "unit": "ms" | "s"}` and the string
+  /// shorthands `"200ms"` / `"0.2s"`. Mirrors [dimension]'s two-form tolerance.
+  double? duration(String path) {
+    final DesignToken? token = _typed(path, 'duration');
+    if (token == null) return null;
+    final Object? value = token.value;
+    if (value is Map<String, Object?>) {
+      final Object? magnitude = value['value'];
+      if (magnitude is num) {
+        return _toMillis(magnitude.toDouble(), value['unit']);
+      }
+      return null;
+    }
+    if (value is String) {
+      final String s = value.trim();
+      // 'ms' before 's': "150ms" also ends with 's'.
+      for (final String unit in const <String>['ms', 's']) {
+        if (s.endsWith(unit)) {
+          final double? magnitude = double.tryParse(
+            s.substring(0, s.length - unit.length).trim(),
+          );
+          if (magnitude == null) return null;
+          return _toMillis(magnitude, unit);
+        }
+      }
+    }
+    return null;
+  }
+
   /// The resolved raw `$value` at [path], whatever its type — the escape hatch
   /// for types without a typed getter yet.
   Object? raw(String path) => _tokens[path]?.value;
@@ -287,8 +318,10 @@ final class ResolvedTokens {
   ///
   /// * `color` → an `#AARRGGBB` hex string ([Rgba.toHexString]),
   /// * `dimension` → logical pixels as a double,
+  /// * `duration` → milliseconds as a double,
   /// * `number` → a double,
-  /// * anything else → the resolved raw `$value` unchanged.
+  /// * anything else → the resolved raw `$value` unchanged (so a named-string
+  ///   `motion.easing.*` passes through as its id, read by [MotionEasing.decode]).
   ///
   /// This is what makes `theme.color.action` interchangeable with a literal
   /// `"#0066CC"`: primitives keep their one decoding path, and the theme scope
@@ -301,6 +334,7 @@ final class ResolvedTokens {
       final Object? canonical = switch (token.type) {
         'color' => color(token.path)?.toHexString(),
         'dimension' => dimension(token.path),
+        'duration' => duration(token.path),
         'number' => number(token.path),
         _ => token.value,
       };
@@ -335,6 +369,12 @@ final class ResolvedTokens {
   static double? _toPixels(double magnitude, Object? unit) => switch (unit) {
         'px' => magnitude,
         'rem' => magnitude * 16.0,
+        _ => null,
+      };
+
+  static double? _toMillis(double magnitude, Object? unit) => switch (unit) {
+        'ms' => magnitude,
+        's' => magnitude * 1000.0,
         _ => null,
       };
 

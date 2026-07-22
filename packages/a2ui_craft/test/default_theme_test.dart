@@ -225,4 +225,43 @@ void main() {
                 sizeClass: WindowSizeClass.expanded)),
         isFalse);
   });
+
+  group('motion roles', () {
+    final ResolvedTokens t = DefaultTheme.of(CraftThemeMode.light).tokens;
+
+    test('durations resolve to their ms values', () {
+      expect(t.duration(ThemeRoles.motionDurationShort), 150);
+      expect(t.duration(ThemeRoles.motionDurationMedium), 250);
+      expect(t.duration(ThemeRoles.motionDurationLong), 400);
+    });
+
+    test('easings resolve to their named ids (decodable by MotionEasing)', () {
+      expect(t.raw(ThemeRoles.motionEasingStandard), 'standard');
+      expect(t.raw(ThemeRoles.motionEasingEmphasized), 'emphasized');
+      expect(t.raw(ThemeRoles.motionEasingDecelerate), 'decelerate');
+      expect(t.raw(ThemeRoles.motionEasingAccelerate), 'accelerate');
+      expect(
+        MotionEasing.decode(t.raw(ThemeRoles.motionEasingDecelerate)),
+        MotionEasing.decelerate,
+      );
+    });
+
+    test('the default pairing (animate: true) is medium + standard', () {
+      expect(t.duration(ThemeRoles.motionDurationMedium), 250);
+      expect(
+        MotionEasing.decode(t.raw(ThemeRoles.motionEasingStandard)),
+        MotionEasing.standard,
+      );
+    });
+
+    test('motion is mode-invariant (same across every mode)', () {
+      for (final CraftThemeMode mode in CraftThemeMode.values) {
+        final ResolvedTokens m = DefaultTheme.of(mode).tokens;
+        expect(m.duration(ThemeRoles.motionDurationMedium), 250,
+            reason: 'duration in $mode');
+        expect(m.raw(ThemeRoles.motionEasingStandard), 'standard',
+            reason: 'easing in $mode');
+      }
+    });
+  });
 }

@@ -556,6 +556,65 @@
           what CSS can't reach (a themed project's mode, the embedded Flutter
           shell's explicit ThemeMode). Pinned by per-adapter fallback tests
           (light-dark pairs on Jaspr; light/dark brightness on Flutter).
+  - [~] **Animation across adapters (§8 motion / §9 render-time input).**
+        Design settled in `research/animation/ANIMATION_DESIGN.md`: animation
+        fights the prior-state-ignoring render model, but the reconciler
+        (retained host components keyed by A2UI id, §6) supplies the "from" — so
+        **implicit animation = interpolate when a retained component's animatable
+        property differs between two rebuilds**. Conformance is
+        **endpoint-and-envelope, never frame identity** (an explicit §7 widening
+        of the tolerance band along the time axis). Motion is a **token system**
+        parallel to color/type. **Phase 1**
+        (`research/animation/PHASE_1_PLAN.md`) ships the motion vocabulary plus
+        the first implicit-animation primitive — thin slices, each green on
+        `check.sh`, the render slices live-verified in the browser:
+        - [x] **1. Motion value types** in `a2ui_craft`: `MotionEasing`
+          (linear / standard / emphasized / decelerate / accelerate, each
+          carrying its four **cubic-bézier control points** — the single source
+          both adapters read, so the interpolation curve is *identical* and only
+          frame cadence differs, the §7 platform latitude) + `Motion`
+          (`durationMs` + easing, total `decode`). Named `MotionEasing` (not
+          `Easing`) to avoid colliding with Flutter Material's `Easing` once the
+          adapters re-export the engine; no bare `Duration` type (dart:core
+          collision). `emphasized` is a documented single-cubic approximation of
+          M3's two-segment curve.
+        - [x] **2. Motion tokens** — `motion.duration.{short,medium,long}` +
+          `motion.easing.{standard,emphasized,decelerate,accelerate}` roles in
+          `ThemeRoles`; `ResolvedTokens.duration()` reads a DTCG `duration` token
+          as ms (object + `"200ms"`/`"0.2s"` forms), canonicalized into the
+          `theme.` scope; easings stay **named-string ids** (not raw
+          `cubicBezier` — the quantized-vocabulary guard rail). The default theme
+          ships 150 / 250 / 400 ms, mode-invariant; drift-guarded
+          `default_theme.g.dart`.
+        - [x] **3. `prefers-reduced-motion`** — a `MediaContext.reducedMotion`
+          bool (default `false`, matching both platforms' "no stated preference";
+          hosts should plumb the OS signal), exposed as `media.reducedMotion` and
+          pinned by a conformance case that flips it in place. The accessibility
+          MUST, shipped with the spine.
+        - [x] **4. `Box(animate:)`** — the faithful implicit-animation primitive:
+          a **per-property modifier** (mirroring Flutter's per-property
+          `AnimatedContainer` and CSS `transition`), not a generic wrapper (which
+          needs enter/exit and moves to Phase 2). Shared `resolveMotion`
+          (`true` → the theme's medium + standard) in the core so both adapters
+          resolve the identical `Motion`; Flutter renders the decoration layer as
+          `AnimatedContainer(curve: Cubic(points))`, Jaspr adds a CSS
+          `transition` over the same four decoration properties; both collapse to
+          instant on reduced-motion / `none`. **Only the decoration animates in
+          Phase 1** (size / padding are a later phase). Live-verified: the Jaspr
+          adapter emits the exact `background-color 250ms cubic-bezier(0.2,0,0,1)`
+          (+ 3 props) through the real adapter, and an `animate: true` box renders
+          identically on the Jaspr and Flutter panes.
+        - [ ] **5. Conformance** — endpoint-after-`retheme` + declares-motion
+          (same duration + easing on both adapters) + reduced-motion-collapses,
+          driven through the adapters' real `retheme()` path — which must confirm
+          the **in-place keyed-element retention** that turns the tween into a
+          visible cross-fade (the site's editor-preview rebuilds the subtree, so
+          it can't show it) — plus an optional coarse t≈50% "strictly between"
+          case to catch declares-but-snaps.
+        - [ ] **6. Demo + docs** — a motion sample exercising `Box(animate:)`
+          with the theme flip as the proving cross-fade on both panes; DESIGN.md
+          §8/§9 motion note; mark Phase 1 done. (Phase 2+ — enter/exit transition
+          wrapper, keyframes, gesture-driven motion — stays in the research note.)
 - [~] **Demonstrated-property labels + gallery filter.** Every sample manifest
       carries a `demonstrates` list from a fixed vocabulary
       (`demo_properties.dart`: layout / controls & state / theming / functions

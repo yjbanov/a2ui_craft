@@ -6,8 +6,9 @@
 ///
 /// A small set of types — sizing ([Dimension]), the flex [FlexAxis] and
 /// alignments ([MainAxisAlign]/[CrossAxisAlign]), edge [Insets], [Rgba]
-/// color, corner rounding ([CornerRadius]), and container decoration
-/// ([BorderSpec], [Elevation]) — each with a single canonical representation.
+/// color, corner rounding ([CornerRadius]), container decoration
+/// ([BorderSpec], [Elevation]), and motion ([Motion], [MotionEasing]) — each
+/// with a single canonical representation.
 /// Every renderer maps these onto its own native layout, so a template that uses
 /// them means the same thing regardless of the framework drawing it.
 ///
@@ -774,4 +775,141 @@ enum ImageVariant {
 
   /// Whether the image is clipped to a circle (the [avatar] variant).
   bool get circular => this == ImageVariant.avatar;
+}
+
+/// The quantized **easing vocabulary** for motion — the interpolation curve a
+/// transition follows over its duration.
+///
+/// Each value carries its canonical **cubic-bézier control points**
+/// `(x1, y1, x2, y2)`. Those points are the single source both adapters read
+/// (Flutter `Cubic(x1, y1, x2, y2)` ↔ CSS `cubic-bezier(x1, y1, x2, y2)`), so
+/// the curve is *genuinely identical* across frameworks — only the frame cadence
+/// differs, which is the platform latitude DESIGN.md §7 already permits. Motion
+/// is a token system parallel to color/type: authors name an intent, not raw
+/// beziers (a bespoke curve is the future escape hatch).
+///
+/// Named `MotionEasing` (not `Easing`) because Flutter's Material library exports
+/// an `Easing` class — the same non-collision rule as `BorderSpec`/`Rgba`, and
+/// kept out of downstream template-author code either way (motion is set in the
+/// template, not by naming this type in Dart).
+// The point sets follow Material 3's standard easing set. `emphasized` is a
+// single-cubic *approximation* — M3's true emphasized curve is a two-segment
+// path no single cubic-bézier expresses; exact parity is a later refinement, and
+// it does not affect cross-adapter identity (both adapters read these same
+// points).
+enum MotionEasing {
+  /// Constant velocity — no acceleration. For continuous, mechanical motion.
+  linear('linear', 0, 0, 1, 1),
+
+  /// The default: a gentle accelerate-in, decelerate-out for elements that both
+  /// begin and end at rest (M3 standard).
+  standard('standard', 0.2, 0, 0, 1),
+
+  /// A more expressive standard, for motion that should draw the eye
+  /// (approximation of M3 emphasized).
+  emphasized('emphasized', 0.05, 0.7, 0.1, 1),
+
+  /// Enters quickly then eases to rest — for elements appearing on screen
+  /// (M3 standard decelerate).
+  decelerate('decelerate', 0, 0, 0, 1),
+
+  /// Starts at rest then speeds up — for elements leaving the screen
+  /// (M3 standard accelerate).
+  accelerate('accelerate', 0.3, 0, 1, 1);
+
+  const MotionEasing(this.id, this.x1, this.y1, this.x2, this.y2);
+
+  /// The token string a theme/template uses to name this easing.
+  final String id;
+
+  /// The cubic-bézier control points — the first control point (`x1`, `y1`) and
+  /// the second (`x2`, `y2`); the curve runs from `(0, 0)` to `(1, 1)`.
+  final double x1;
+  final double y1;
+  final double x2;
+  final double y2;
+
+  /// Decodes a raw argument value into a [MotionEasing].
+  ///
+  /// Accepts the canonical [id] string (whitespace-trimmed); anything else
+  /// (absent, unknown, non-string) yields [fallback] (default [standard]).
+  /// Total, like every value-type decoder.
+  static MotionEasing decode(Object? raw,
+      {MotionEasing fallback = MotionEasing.standard}) {
+    if (raw is String) {
+      final String id = raw.trim();
+      for (final MotionEasing e in values) {
+        if (e.id == id) return e;
+      }
+    }
+    return fallback;
+  }
+}
+
+/// A **motion**: how a property change animates — a non-negative [durationMs]
+/// and an interpolation [easing]. `0` (or [none]) is instant (no animation).
+///
+/// This is the carrier the `Box(animate:)` modifier consumes. There is
+/// deliberately no standalone `Duration` value type: Dart core's `Duration`
+/// would collide the way `Border`/`BorderSpec` did, and a duration is never used
+/// here without an easing — so the two travel together.
+final class Motion {
+  const Motion({required this.durationMs, this.easing = MotionEasing.standard});
+
+  /// Instant — no animation (the property snaps to its new value).
+  static const Motion none = Motion(durationMs: 0);
+
+  /// The transition length in milliseconds (treated as `0` — instant — when not
+  /// positive).
+  final int durationMs;
+
+  /// The interpolation curve followed over [durationMs].
+  final MotionEasing easing;
+
+  /// Whether this describes no animation (a non-positive duration).
+  bool get isInstant => durationMs <= 0;
+
+  /// Decodes a raw argument value into a [Motion].
+  ///
+  /// Accepts:
+  /// - `true`: [fallback] (animate with the caller's default — e.g. `Box`
+  ///   passes the theme's default motion); `false`: [none] (explicitly off).
+  /// - `num` (finite, `>= 0`): that many milliseconds with the [standard]
+  ///   easing.
+  /// - `{ "duration": ms, "easing": "standard"? }`: an explicit duration and
+  ///   easing (a `theme.motion.*` reference resolves to one of these forms
+  ///   before decode).
+  ///
+  /// Anything else (absent, malformed, negative, non-finite) yields [fallback].
+  /// Total: a bad value never becomes a silent non-zero animation.
+  static Motion decode(Object? raw, {Motion fallback = none}) {
+    if (raw is bool) return raw ? fallback : none;
+    if (raw is num) {
+      return raw.isFinite && raw >= 0
+          ? Motion(durationMs: raw.round(), easing: MotionEasing.standard)
+          : fallback;
+    }
+    if (raw is Map) {
+      final Object? d = raw['duration'];
+      if (d is num && d.isFinite && d >= 0) {
+        return Motion(
+          durationMs: d.round(),
+          easing: MotionEasing.decode(raw['easing']),
+        );
+      }
+    }
+    return fallback;
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is Motion &&
+      other.durationMs == durationMs &&
+      other.easing == easing;
+
+  @override
+  int get hashCode => Object.hash(Motion, durationMs, easing);
+
+  @override
+  String toString() => 'Motion(durationMs: $durationMs, easing: ${easing.id})';
 }

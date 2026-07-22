@@ -250,17 +250,17 @@ Component buildBox(BuildContext context, DataSource source) {
       .join(', ');
   if (shadow.isNotEmpty) inner['box-shadow'] = shadow;
 
-  // Implicit animation: a CSS `transition` on the *decoration* properties (the
-  // mirror of the Flutter adapter's AnimatedContainer) tweens the box when its
-  // theme-driven look changes between rebuilds — so a re-theme cross-fades. The
-  // runtime retains this element by its A2UI id, so the browser sees a value
-  // change on the same node and animates it. Same gate (`hasDecoration`) and
-  // same property set as Flutter; reduced motion / instant → no `transition`.
-  final bool hasDecoration =
-      color != null || !border.isNone || !elevation.isFlat;
+  // Implicit animation: a CSS `transition` (the mirror of the Flutter adapter's
+  // AnimatedContainer) tweens the box when its properties change between
+  // rebuilds — a state change grows or moves it, a re-theme cross-fades its
+  // decoration. The runtime retains this element by its A2UI id, so the browser
+  // sees a value change on the same node and animates it. Same property set as
+  // Flutter: the decoration (color, border, corner, shadow) and a definite
+  // width/height (`fit-content`/`100%` are not interpolable, so a hug/fill box
+  // simply doesn't move). Reduced motion / instant → no `transition`.
   final Motion motion =
       resolveMotion(_animateRaw(source), ambientCraftTheme(context)?.tokens);
-  if (hasDecoration && !motion.isInstant && !ambientReducedMotion(context)) {
+  if (!motion.isInstant && !ambientReducedMotion(context)) {
     final MotionEasing e = motion.easing;
     final String curve = 'cubic-bezier(${e.x1}, ${e.y1}, ${e.x2}, ${e.y2})';
     inner['transition'] = const <String>[
@@ -268,6 +268,8 @@ Component buildBox(BuildContext context, DataSource source) {
       'border-color',
       'border-radius',
       'box-shadow',
+      'width',
+      'height',
     ].map((String p) => '$p ${motion.durationMs}ms $curve').join(', ');
   }
 

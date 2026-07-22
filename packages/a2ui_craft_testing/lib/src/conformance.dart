@@ -1737,6 +1737,25 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
       expect(tester.surfaceColorOf('M'), '#FFFFFDF7');
     },
   );
+
+  driver.defineTest(
+    'a Box that animates only its size still declares motion on every adapter',
+    (CraftTester tester) async {
+      // No decoration — the animatable property is the definite width. Flutter
+      // wraps the size layer in an AnimatedContainer; Jaspr lists `width` in the
+      // transition. Same declaration (duration + easing) on both, proving motion
+      // is not gated on having a background.
+      await tester.mount('''
+        import core;
+        widget root = Box(width: 120.0, animate: true, child: Text(text: "S"));
+      ''');
+      final MotionProbe? probe = tester.boxMotionOf('S');
+      expect(probe, isNotNull,
+          reason: 'a size-animated box must declare motion');
+      expect(probe!.durationMs, 250);
+      expect(probe.easing, MotionEasing.standard);
+    },
+  );
 }
 
 /// A minimal theme whose only role is `color.surface` (the motion roles are

@@ -220,19 +220,23 @@ Widget buildBox(BuildContext context, DataSource source) {
           : roleColor(context, ThemeRoles.outline) ??
               Theme.of(context).colorScheme.outlineVariant;
 
-  // Implicit animation: when `animate` resolves to a real motion and the user
-  // has not asked for reduced motion, the *decoration* (color, border, corner,
-  // shadow) tweens between rebuilds — so a re-theme cross-fades. The reconciler
-  // retains this box by its A2UI id, which supplies the "from"; the same
-  // property set the Jaspr adapter lists in its CSS `transition`. Only the
-  // decoration animates in Phase 1 (size/padding are a later phase); a box with
-  // no decoration has nothing to animate, so the gate includes [hasDecoration].
+  // Implicit animation: when `animate` resolves to a real motion and reduced
+  // motion is not requested, the box's animatable properties tween between
+  // rebuilds — a state change grows or moves it, a re-theme cross-fades its
+  // decoration. The reconciler retains this box by its A2UI id, which supplies
+  // the "from"; the same property set the Jaspr adapter lists in its CSS
+  // `transition`. Animated: the definite width/height (a `hug`/`fill`/`flex`
+  // extent is not a finite pixel value, so it has nothing to interpolate — the
+  // intrinsic-sizing edge case) and the decoration (color, border, corner,
+  // shadow). Padding/margin are a later phase.
   final Motion motion =
       resolveMotion(_animateRaw(source), ambientCraftTheme(context)?.tokens);
+  final bool wantsMotion = !motion.isInstant && !ambientReducedMotion(context);
+  final Duration animDuration = Duration(milliseconds: motion.durationMs);
+  final Cubic animCurve = Cubic(
+      motion.easing.x1, motion.easing.y1, motion.easing.x2, motion.easing.y2);
   final bool hasDecoration =
       color != null || borderColor != null || !elevation.isFlat;
-  final bool animate =
-      hasDecoration && !motion.isInstant && !ambientReducedMotion(context);
 
   Widget box = source.optionalChild(['child']) ?? const SizedBox.shrink();
 
@@ -247,12 +251,24 @@ Widget buildBox(BuildContext context, DataSource source) {
   final double? h = _extent(height);
   if (w != null || h != null) {
     // A definite/fill box places its (smaller) child at the top-left, as a CSS
-    // block does — not stretched to fill, which is Flutter's default.
-    box = SizedBox(
-      width: w,
-      height: h,
-      child: Align(alignment: Alignment.topLeft, child: box),
-    );
+    // block does — not stretched to fill, which is Flutter's default. When
+    // animating, the same box is an `AnimatedContainer`, so a change to a
+    // definite width/height tweens (an infinite `fill` extent has nothing to
+    // interpolate, so it stays put).
+    box = wantsMotion
+        ? AnimatedContainer(
+            duration: animDuration,
+            curve: animCurve,
+            width: w,
+            height: h,
+            alignment: Alignment.topLeft,
+            child: box,
+          )
+        : SizedBox(
+            width: w,
+            height: h,
+            child: Align(alignment: Alignment.topLeft, child: box),
+          );
   }
 
   if (hasDecoration) {
@@ -276,11 +292,10 @@ Widget buildBox(BuildContext context, DataSource source) {
     // `AnimatedContainer` with only a decoration + child hugs the child exactly
     // as `DecoratedBox` does (no alignment/constraints → no fill), so animating
     // does not disturb the layout — it only tweens the decoration.
-    box = animate
+    box = wantsMotion
         ? AnimatedContainer(
-            duration: Duration(milliseconds: motion.durationMs),
-            curve: Cubic(motion.easing.x1, motion.easing.y1, motion.easing.x2,
-                motion.easing.y2),
+            duration: animDuration,
+            curve: animCurve,
             decoration: decoration,
             child: box,
           )

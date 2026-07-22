@@ -1,30 +1,71 @@
 import core;
 
-widget Motion = Column(gap: 16, children: [
-  Text(text: "Flip the light/dark mode: the left card cross-fades its surface and border; the right one snaps."),
-  Row(gap: 16, children: [
+// A motion demo. Two ways `Box(animate:)` reads as motion:
+//   1. Movement — press "Animate" and each bar races the *same* width change
+//      (12 → 320) through a different easing curve, so you can compare them.
+//   2. Cross-fade — flip the light/dark mode and the themed card eases its
+//      surface + border over 1.5s instead of snapping.
+// `{ go: false }` is local state; the button flips it with `set state.go`. Each
+// bar sits in its own Column (a vertical flex) so its explicit width is a
+// cross-axis size that holds and animates, rather than a shrinkable Row item.
+widget Motion { go: false } =
+  Column(gap: 24.0, crossAxisAlignment: "start", children: [
+    Text(text: "Easing curves — press Animate to race the same width change through each curve:"),
+    Button(
+      onPressed: set state.go = switch state.go { true: false, default: true },
+      child: Text(text: switch state.go { true: "Reset", default: "Animate" }),
+    ),
+    Column(gap: 14.0, crossAxisAlignment: "start", children: [
+      Column(crossAxisAlignment: "start", gap: 4.0, children: [
+        Text(text: "linear"),
+        Box(
+          width: switch state.go { true: 320.0, default: 12.0 },
+          height: 22.0, cornerRadius: 6.0, color: "#EF4444",
+          animate: { duration: 1200, easing: "linear" },
+        ),
+      ]),
+      Column(crossAxisAlignment: "start", gap: 4.0, children: [
+        Text(text: "standard"),
+        Box(
+          width: switch state.go { true: 320.0, default: 12.0 },
+          height: 22.0, cornerRadius: 6.0, color: "#3B82F6",
+          animate: { duration: 1200, easing: "standard" },
+        ),
+      ]),
+      Column(crossAxisAlignment: "start", gap: 4.0, children: [
+        Text(text: "emphasized"),
+        Box(
+          width: switch state.go { true: 320.0, default: 12.0 },
+          height: 22.0, cornerRadius: 6.0, color: "#8B5CF6",
+          animate: { duration: 1200, easing: "emphasized" },
+        ),
+      ]),
+      Column(crossAxisAlignment: "start", gap: 4.0, children: [
+        Text(text: "decelerate"),
+        Box(
+          width: switch state.go { true: 320.0, default: 12.0 },
+          height: 22.0, cornerRadius: 6.0, color: "#10B981",
+          animate: { duration: 1200, easing: "decelerate" },
+        ),
+      ]),
+      Column(crossAxisAlignment: "start", gap: 4.0, children: [
+        Text(text: "accelerate"),
+        Box(
+          width: switch state.go { true: 320.0, default: 12.0 },
+          height: 22.0, cornerRadius: 6.0, color: "#F59E0B",
+          animate: { duration: 1200, easing: "accelerate" },
+        ),
+      ]),
+    ]),
+    Divider(),
+    Text(text: "Theme cross-fade — flip the light/dark mode; this card eases its surface and border over 1.5s:"),
     Box(
-      width: 200.0,
+      width: 260.0,
       padding: [20.0, 20.0, 20.0, 20.0],
       cornerRadius: 16.0,
       color: theme.color.surface,
       border: 2,
-      animate: true,
-      child: Column(gap: 6, children: [
-        Text(text: "Animated"),
-        Text(text: "animate: true"),
-      ])
+      animate: { duration: 1500, easing: "standard" },
+      child: Text(text: "themed surface"),
     ),
-    Box(
-      width: 200.0,
-      padding: [20.0, 20.0, 20.0, 20.0],
-      cornerRadius: 16.0,
-      color: theme.color.surface,
-      border: 2,
-      child: Column(gap: 6, children: [
-        Text(text: "Static"),
-        Text(text: "no animate — snaps"),
-      ])
-    ),
-  ]),
-]);
+  ]);

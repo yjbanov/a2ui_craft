@@ -249,8 +249,10 @@ assert **endpoint + declaration + reduced-motion**, never intermediate frames:
   animations are per-property (`AnimatedContainer` tweens *its own* decoration; nothing
   animates an opaque child) and CSS `transition` mirrors that — so the wrapper (for
   enter/exit) moves to Phase 2, and Phase 1 ships the modifier where the leverage is.
-  Only the decoration animates in Phase 1 (size/padding are a later phase). **Proving
-  demo: the theme light↔dark flip cross-fades** the `motion` sample's card instead of
+  The decoration (color/border/corner/shadow) and the definite width/height animate
+  in Phase 1 (padding/margin are a later phase). **Proving demo: the `motion` sample
+  races a width change through every easing curve, and the theme light↔dark flip
+  cross-fades** the sample's card instead of
   snapping (verified live: dark→light interpolation over 250 ms on the Jaspr pane, both
   panes identical). Conformance: endpoint identity + "declares motion" +
   reduced-motion-collapses-to-instant, on both adapters (the coarse midpoint case

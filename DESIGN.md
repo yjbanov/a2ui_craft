@@ -1269,9 +1269,12 @@ accessibility input — so it lives here, in §9. The full design is in
   identity.
 - **Phase 1 delivered `Box(animate:)`** — a per-property modifier (faithful to
   Flutter's per-property `AnimatedContainer` and CSS `transition`, where nothing
-  animates an opaque child), tweening the box's decoration so a re-theme
-  cross-fades. Enter/exit transitions, keyframes, and gesture-driven motion are
-  later phases; each is additive on this spine.
+  animates an opaque child), tweening the box's **decoration** (color, border,
+  corner, shadow) so a re-theme cross-fades, and its **definite width/height** so
+  a state change moves/resizes it (a `hug`/`fill`/`flex` extent is not a finite
+  value, so it has nothing to interpolate — the intrinsic-sizing edge case;
+  padding/margin remain a later phase). Enter/exit transitions, keyframes, and
+  gesture-driven motion are later phases; each is additive on this spine.
 
 ## 10. The A2UI Craft project (the ephemeral bundle)
 

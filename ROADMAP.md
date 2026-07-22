@@ -596,14 +596,16 @@
           `AnimatedContainer` and CSS `transition`), not a generic wrapper (which
           needs enter/exit and moves to Phase 2). Shared `resolveMotion`
           (`true` → the theme's medium + standard) in the core so both adapters
-          resolve the identical `Motion`; Flutter renders the decoration layer as
-          `AnimatedContainer(curve: Cubic(points))`, Jaspr adds a CSS
-          `transition` over the same four decoration properties; both collapse to
-          instant on reduced-motion / `none`. **Only the decoration animates in
-          Phase 1** (size / padding are a later phase). Live-verified: the Jaspr
+          resolve the identical `Motion`; Flutter wraps the decoration and the
+          definite-size layers in `AnimatedContainer(curve: Cubic(points))`, Jaspr
+          adds a CSS `transition` over the same property set; both collapse to
+          instant on reduced-motion / `none`. **The decoration (color, border,
+          corner, shadow) and the definite width/height animate** (`hug`/`fill`/
+          `flex` extents aren't finite, so they don't tween — the intrinsic-sizing
+          edge case; padding/margin are a later phase). Live-verified: the Jaspr
           adapter emits the exact `background-color 250ms cubic-bezier(0.2,0,0,1)`
-          (+ 3 props) through the real adapter, and an `animate: true` box renders
-          identically on the Jaspr and Flutter panes.
+          (+ props incl. `width`) through the real adapter, and an `animate: true`
+          box renders identically on the Jaspr and Flutter panes.
         - [x] **5. Conformance** — `MotionProbe boxMotionOf` + `settle` on the
           tester; three cases in the shared suite: `animate: true` declares the
           same duration + easing on both adapters, an endpoint-after-`retheme`
@@ -615,16 +617,18 @@
           under the fake clock, but the Jaspr VM tester renders no CSS motion to
           sample, so a shared midpoint case would be asymmetric — declaration +
           endpoint + reduced-motion-collapse is the contract.
-        - [x] **6. Demo + docs** — a `motion` sample (an `animate: true` card
-          beside a static one, both theme-driven) whose light/dark flip is the
-          proving cross-fade. Live-verified: the sample renders identically on
-          both panes, and on the Jaspr pane the animated card's surface + border
-          interpolate from dark to light over the 250 ms on a mode flip (the
-          static card snaps) — confirming the in-place retention the site's
-          *non-editor* theme path preserves (only the editor-preview rebuilds).
-          Phase 1 marked done in `research/animation/`. (Phase 2+ — enter/exit
-          transition wrapper, keyframes, gesture-driven motion — stays in the
-          research note.)
+        - [x] **6. Demo + docs** — a `motion` sample with two demos: a
+          **button-triggered easing race** (five bars run the same 12→320 width
+          change through linear / standard / emphasized / decelerate / accelerate,
+          1.2 s, so the curves are legible side by side) and a **theme cross-fade**
+          card that eases its surface + border over 1.5 s on a light/dark flip.
+          Live-verified on the Jaspr pane: the bars grow to full width on click,
+          and the card interpolates dark→light on a mode flip. Phase 1 marked done
+          in `research/animation/`. (Phase 2+ — enter/exit transition wrapper,
+          keyframes, gesture-driven motion — stays in the research note.) *Also
+          extended `Box(animate:)` to definite width/height here (the deferred size
+          piece), so movement — not just cross-fade — is expressible; pinned by a
+          size-animation conformance case.*
 - [~] **Demonstrated-property labels + gallery filter.** Every sample manifest
       carries a `demonstrates` list from a fixed vocabulary
       (`demo_properties.dart`: layout / controls & state / theming / functions

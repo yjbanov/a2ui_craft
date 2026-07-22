@@ -1982,6 +1982,12 @@ class _MediaScope extends InheritedWidget {
 MediaContext? ambientMediaContext(BuildContext context) =>
     context.dependOnInheritedWidgetOfExactType<_MediaScope>()?.media;
 
+/// Whether the ambient media asks for **reduced motion** (false when the host
+/// supplies no media). Primitives read this to collapse an animated transition
+/// to an instant change.
+bool ambientReducedMotion(BuildContext context) =>
+    ambientMediaContext(context)?.reducedMotion ?? false;
+
 @immutable
 class _Key {
   _Key(this.section, this.parts)

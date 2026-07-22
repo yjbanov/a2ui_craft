@@ -250,6 +250,27 @@ Component buildBox(BuildContext context, DataSource source) {
       .join(', ');
   if (shadow.isNotEmpty) inner['box-shadow'] = shadow;
 
+  // Implicit animation: a CSS `transition` on the *decoration* properties (the
+  // mirror of the Flutter adapter's AnimatedContainer) tweens the box when its
+  // theme-driven look changes between rebuilds — so a re-theme cross-fades. The
+  // runtime retains this element by its A2UI id, so the browser sees a value
+  // change on the same node and animates it. Same gate (`hasDecoration`) and
+  // same property set as Flutter; reduced motion / instant → no `transition`.
+  final bool hasDecoration =
+      color != null || !border.isNone || !elevation.isFlat;
+  final Motion motion =
+      resolveMotion(_animateRaw(source), ambientCraftTheme(context)?.tokens);
+  if (hasDecoration && !motion.isInstant && !ambientReducedMotion(context)) {
+    final MotionEasing e = motion.easing;
+    final String curve = 'cubic-bezier(${e.x1}, ${e.y1}, ${e.x2}, ${e.y2})';
+    inner['transition'] = const <String>[
+      'background-color',
+      'border-color',
+      'border-radius',
+      'box-shadow',
+    ].map((String p) => '$p ${motion.durationMs}ms $curve').join(', ');
+  }
+
   Component box = div(styles: Styles(raw: inner), _childList(child));
 
   if (!margin.isZero) {
@@ -322,6 +343,24 @@ Component _flex(DataSource source, FlexAxis axis) {
 /// Reads a raw scalar for a `Dimension`-valued argument.
 Object? _dimRaw(DataSource source, List<Object> key) =>
     source.v<double>(key) ?? source.v<int>(key) ?? source.v<String>(key);
+
+/// Reads the raw `animate` argument (a bool, a number of ms, or a
+/// `{duration, easing}` map) for the framework-neutral [resolveMotion] /
+/// [Motion.decode] to interpret. Mirrors the Flutter adapter's extraction so
+/// both resolve the identical [Motion].
+Object? _animateRaw(DataSource source) {
+  if (source.isMap(['animate'])) {
+    return <String, Object?>{
+      'duration': source.v<double>(['animate', 'duration']) ??
+          source.v<int>(['animate', 'duration'])?.toDouble(),
+      'easing': source.v<String>(['animate', 'easing']),
+    };
+  }
+  final bool? flag = source.v<bool>(['animate']);
+  if (flag != null) return flag;
+  return source.v<double>(['animate']) ??
+      source.v<int>(['animate'])?.toDouble();
+}
 
 /// Reads the `gap` argument, accepting either an int or double literal.
 double _gap(DataSource source) =>

@@ -162,4 +162,62 @@ void main() {
       expect(const Motion(durationMs: 1).easing, MotionEasing.standard);
     });
   });
+
+  group('resolveMotion', () {
+    ResolvedTokens motionTokens() => resolveDesignTokens(<DesignTokenSet>[
+          parseDesignTokens(<String, Object?>{
+            'motion': <String, Object?>{
+              'duration': <String, Object?>{
+                r'$type': 'duration',
+                'medium': <String, Object?>{
+                  r'$value': <String, Object?>{'value': 300, 'unit': 'ms'},
+                },
+              },
+              'easing': <String, Object?>{
+                r'$type': 'string',
+                'standard': <String, Object?>{r'$value': 'emphasized'},
+              },
+            },
+          })
+        ]);
+
+    test('absent (null) never animates — a Box without animate is static', () {
+      expect(resolveMotion(null, null), Motion.none);
+      expect(resolveMotion(null, motionTokens()), Motion.none);
+    });
+
+    test('false is off', () {
+      expect(resolveMotion(false, motionTokens()), Motion.none);
+    });
+
+    test('true with no theme uses the built-in default (250 + standard)', () {
+      expect(resolveMotion(true, null),
+          const Motion(durationMs: 250, easing: MotionEasing.standard));
+    });
+
+    test('true reads the theme motion roles', () {
+      // The stub theme maps medium→300ms and standard-easing→"emphasized".
+      expect(resolveMotion(true, motionTokens()),
+          const Motion(durationMs: 300, easing: MotionEasing.emphasized));
+    });
+
+    test('true with a theme missing the roles falls back to the built-in', () {
+      final ResolvedTokens empty =
+          resolveDesignTokens(<DesignTokenSet>[parseDesignTokens(null)]);
+      expect(resolveMotion(true, empty),
+          const Motion(durationMs: 250, easing: MotionEasing.standard));
+    });
+
+    test('an explicit number or map decodes directly (theme irrelevant)', () {
+      expect(resolveMotion(200, motionTokens()),
+          const Motion(durationMs: 200, easing: MotionEasing.standard));
+      expect(
+        resolveMotion(
+          <String, Object?>{'duration': 400, 'easing': 'decelerate'},
+          null,
+        ),
+        const Motion(durationMs: 400, easing: MotionEasing.decelerate),
+      );
+    });
+  });
 }

@@ -20,6 +20,9 @@
 /// other theme read.
 library;
 
+import 'design_tokens.dart';
+import 'value_types.dart';
+
 // Design notes (not part of the public contract):
 // - Consumers are listed per role below and pinned by the theming conformance
 //   dimension; a primitive must not read a role this file does not name (add
@@ -132,4 +135,40 @@ abstract final class ThemeRoles {
 
   /// Easing for elements leaving the screen (ease-in).
   static const String motionEasingAccelerate = 'motion.easing.accelerate';
+}
+
+/// The built-in default [Motion] used when a theme omits the motion roles (or
+/// there is no theme at all): a medium duration and the standard easing.
+const Motion _defaultMotion =
+    Motion(durationMs: 250, easing: MotionEasing.standard);
+
+/// Resolves a `Box(animate:)` argument [raw] into a [Motion], reading the
+/// theme's motion roles for the `true` / default case.
+///
+/// - **absent** (`null`) / `false` → [Motion.none] (no animation): a box without
+///   an `animate` prop never animates;
+/// - `true` becomes [ThemeRoles.motionDurationMedium] +
+///   [ThemeRoles.motionEasingStandard] from [tokens], each falling back to the
+///   built-in default when the theme omits it (or when [tokens] is null);
+/// - an explicit number (ms) or `{duration, easing}` map decodes directly.
+///
+/// Lives in the core so both adapters resolve the *identical* [Motion] for a
+/// given prop + theme (Pillar A). The reduced-motion collapse is intentionally
+/// left to the adapter, which reads the ambient [MediaContext].
+Motion resolveMotion(Object? raw, ResolvedTokens? tokens) {
+  // Absent means "no `animate` prop" → no animation. (Motion.decode would send a
+  // null to its fallback, which here is the theme default — not what we want.)
+  if (raw == null) return Motion.none;
+  final Motion themeDefault = tokens == null
+      ? _defaultMotion
+      : Motion(
+          durationMs:
+              tokens.duration(ThemeRoles.motionDurationMedium)?.round() ??
+                  _defaultMotion.durationMs,
+          easing: MotionEasing.decode(
+            tokens.raw(ThemeRoles.motionEasingStandard),
+            fallback: _defaultMotion.easing,
+          ),
+        );
+  return Motion.decode(raw, fallback: themeDefault);
 }

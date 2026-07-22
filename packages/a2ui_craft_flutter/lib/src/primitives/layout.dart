@@ -220,6 +220,20 @@ Widget buildBox(BuildContext context, DataSource source) {
           : roleColor(context, ThemeRoles.outline) ??
               Theme.of(context).colorScheme.outlineVariant;
 
+  // Implicit animation: when `animate` resolves to a real motion and the user
+  // has not asked for reduced motion, the *decoration* (color, border, corner,
+  // shadow) tweens between rebuilds — so a re-theme cross-fades. The reconciler
+  // retains this box by its A2UI id, which supplies the "from"; the same
+  // property set the Jaspr adapter lists in its CSS `transition`. Only the
+  // decoration animates in Phase 1 (size/padding are a later phase); a box with
+  // no decoration has nothing to animate, so the gate includes [hasDecoration].
+  final Motion motion =
+      resolveMotion(_animateRaw(source), ambientCraftTheme(context)?.tokens);
+  final bool hasDecoration =
+      color != null || borderColor != null || !elevation.isFlat;
+  final bool animate =
+      hasDecoration && !motion.isInstant && !ambientReducedMotion(context);
+
   Widget box = source.optionalChild(['child']) ?? const SizedBox.shrink();
 
   // Border-box content inset: the padding plus the border width (see above).
@@ -241,27 +255,36 @@ Widget buildBox(BuildContext context, DataSource source) {
     );
   }
 
-  if (color != null || borderColor != null || !elevation.isFlat) {
-    box = DecoratedBox(
-      decoration: BoxDecoration(
-        color: color == null ? null : Color(color.value),
-        borderRadius:
-            radius.isSharp ? null : BorderRadius.circular(radius.pixels),
-        border: borderColor == null
-            ? null
-            : Border.all(color: borderColor, width: border.width),
-        boxShadow: <BoxShadow>[
-          for (final ShadowSpec s in elevation.shadows)
-            BoxShadow(
-              color: Color(s.color.value),
-              offset: Offset(0, s.offsetY),
-              blurRadius: s.blur,
-              spreadRadius: s.spread,
-            ),
-        ],
-      ),
-      child: box,
+  if (hasDecoration) {
+    final BoxDecoration decoration = BoxDecoration(
+      color: color == null ? null : Color(color.value),
+      borderRadius:
+          radius.isSharp ? null : BorderRadius.circular(radius.pixels),
+      border: borderColor == null
+          ? null
+          : Border.all(color: borderColor, width: border.width),
+      boxShadow: <BoxShadow>[
+        for (final ShadowSpec s in elevation.shadows)
+          BoxShadow(
+            color: Color(s.color.value),
+            offset: Offset(0, s.offsetY),
+            blurRadius: s.blur,
+            spreadRadius: s.spread,
+          ),
+      ],
     );
+    // `AnimatedContainer` with only a decoration + child hugs the child exactly
+    // as `DecoratedBox` does (no alignment/constraints → no fill), so animating
+    // does not disturb the layout — it only tweens the decoration.
+    box = animate
+        ? AnimatedContainer(
+            duration: Duration(milliseconds: motion.durationMs),
+            curve: Cubic(motion.easing.x1, motion.easing.y1, motion.easing.x2,
+                motion.easing.y2),
+            decoration: decoration,
+            child: box,
+          )
+        : DecoratedBox(decoration: decoration, child: box);
   }
 
   // Min/max clamps (the `Dimension` algebra has no clamp, so these are the
@@ -332,6 +355,23 @@ Widget _flex(DataSource source, FlexAxis axis) {
 /// so we probe the few a `Dimension` can take.
 Object? _dimRaw(DataSource source, List<Object> key) =>
     source.v<double>(key) ?? source.v<int>(key) ?? source.v<String>(key);
+
+/// Reads the raw `animate` argument (a bool, a number of ms, or a
+/// `{duration, easing}` map) for the framework-neutral [resolveMotion] /
+/// [Motion.decode] to interpret. Mirrors [borderRaw]'s multi-form extraction.
+Object? _animateRaw(DataSource source) {
+  if (source.isMap(['animate'])) {
+    return <String, Object?>{
+      'duration': source.v<double>(['animate', 'duration']) ??
+          source.v<int>(['animate', 'duration'])?.toDouble(),
+      'easing': source.v<String>(['animate', 'easing']),
+    };
+  }
+  final bool? flag = source.v<bool>(['animate']);
+  if (flag != null) return flag;
+  return source.v<double>(['animate']) ??
+      source.v<int>(['animate'])?.toDouble();
+}
 
 /// Reads the `gap` argument, accepting either an int or double literal.
 double _gap(DataSource source) =>

@@ -88,6 +88,26 @@ Catalog<ComponentApi> a2uiDemoCatalog() => Catalog<ComponentApi>(
 /// directly, since that type lives in the per-framework adapters).
 typedef CraftEventHandler = void Function(String name, DynamicMap arguments);
 
+/// A box's **declared motion** — the duration and easing an animated `Box`
+/// announced — read from the rendered surface by [CraftTester.boxMotionOf].
+///
+/// This is the *declaration*, not a sampled frame: motion conformance asserts
+/// both adapters announce the same duration + easing (and the same endpoint),
+/// never that they render identical intermediate frames (§7, widened along the
+/// time axis).
+class MotionProbe {
+  const MotionProbe({required this.durationMs, required this.easing});
+
+  /// The transition length in milliseconds.
+  final int durationMs;
+
+  /// The interpolation curve, mapped back to the shared vocabulary.
+  final MotionEasing easing;
+
+  @override
+  String toString() => 'MotionProbe(${durationMs}ms, ${easing.id})';
+}
+
 /// A framework-neutral handle to a *mounted* A2UI Craft surface.
 ///
 /// Each adapter implements this by wrapping its own test driver (e.g. Flutter's
@@ -127,6 +147,13 @@ abstract interface class CraftTester {
 
   /// Processes pending frames after an out-of-band change (e.g. a [data] update).
   Future<void> pump();
+
+  /// Advances past any **in-flight implicit animation** so a settled endpoint
+  /// can be read. Flutter pumps the animation to completion; Jaspr's transitions
+  /// target the inline style immediately, so this just flushes a frame. Reading
+  /// an endpoint after [settle] asserts *where* the motion lands, never the
+  /// frames along the way.
+  Future<void> settle();
 
   /// The number of currently displayed text nodes whose content equals [text].
   int textCount(String text);
@@ -174,6 +201,14 @@ abstract interface class CraftTester {
   /// `#AARRGGBB`, or null when none draws a border. The painted-decision probe
   /// for `color.outline` on a container.
   String? borderColorOf(String text);
+
+  /// The **declared motion** of the nearest animated `Box` painted above the
+  /// text node equal to [text] — a [MotionProbe] (duration + easing) — or null
+  /// when that box declares no transition (a static box, or one collapsed by
+  /// reduced motion). Flutter reads the `AnimatedContainer`; Jaspr parses the
+  /// element's CSS `transition`. The declaration probe of the motion-conformance
+  /// dimension: it asserts both adapters announce the same motion, never frames.
+  MotionProbe? boxMotionOf(String text);
 
   /// The **fill** of the rendered *checked* `Checkbox`'s box (layer 1 of the
   /// paint model, DESIGN.md §8), canonicalized to `#AARRGGBB`, or null when the
@@ -1622,7 +1657,100 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
       expect(tester.hasText('full'), isFalse);
     },
   );
+
+  // ---- Motion (Box(animate:)) — endpoint-and-envelope, never frame identity.
+  // The band §7 already allows around a painted value is widened here along the
+  // *time* axis: both adapters must declare the same motion (duration + the same
+  // cubic-bézier easing) and land the same endpoint; the frames in between, and
+  // the exact cadence, are platform latitude and are deliberately NOT asserted.
+
+  driver.defineTest(
+    'Box(animate: true) declares the same duration and easing on every adapter',
+    (CraftTester tester) async {
+      // `animate: true` resolves to the theme's default motion — here the
+      // built-in 250 ms + standard, since this minimal theme omits the motion
+      // roles. The easing carries identical control points on both adapters, so
+      // the *declaration* is genuinely the same; only frame cadence differs.
+      await tester.mount('''
+        import core;
+        widget root = Box(
+          color: theme.color.surface,
+          animate: true,
+          child: Text(text: "M"),
+        );
+      ''', theme: _surfaceTheme('#102030'));
+
+      final MotionProbe? probe = tester.boxMotionOf('M');
+      expect(probe, isNotNull,
+          reason: 'an animate: true box must declare motion');
+      expect(probe!.durationMs, 250);
+      expect(probe.easing, MotionEasing.standard);
+    },
+  );
+
+  driver.defineTest(
+    'an animated Box lands the new surface color after a retheme (endpoint identity)',
+    (CraftTester tester) async {
+      await tester.mount('''
+        import core;
+        widget root = Box(
+          color: theme.color.surface,
+          animate: true,
+          child: Text(text: "M"),
+        );
+      ''', theme: _surfaceTheme('#101820'));
+      expect(tester.surfaceColorOf('M'), '#FF101820');
+
+      // Re-theme to a new surface. The box is *retained* (retheme never remounts
+      // — the contract the theming cases pin), so it animates toward the new
+      // color rather than jumping; motion does not change the destination. After
+      // settling, both adapters have arrived at the new surface color.
+      await tester.retheme(_surfaceTheme('#FFFDF7'));
+      await tester.settle();
+      expect(tester.surfaceColorOf('M'), '#FFFFFDF7');
+    },
+  );
+
+  driver.defineTest(
+    'reduced motion collapses the Box transition to instant on every adapter',
+    (CraftTester tester) async {
+      // With prefers-reduced-motion, the box declares NO transition at all...
+      await tester.mount('''
+        import core;
+        widget root = Box(
+          color: theme.color.surface,
+          animate: true,
+          child: Text(text: "M"),
+        );
+      ''',
+          theme: _surfaceTheme('#101820'),
+          media: const MediaContext(
+            width: WindowSizeClass.compact,
+            reducedMotion: true,
+          ));
+      expect(tester.boxMotionOf('M'), isNull,
+          reason: 'reduced motion must declare no transition');
+
+      // ...and a re-theme lands the endpoint immediately, without settling.
+      await tester.retheme(_surfaceTheme('#FFFDF7'));
+      await tester.pump();
+      expect(tester.surfaceColorOf('M'), '#FFFFFDF7');
+    },
+  );
 }
+
+/// A minimal theme whose only role is `color.surface` (the motion roles are
+/// omitted, so `animate: true` resolves to the built-in default motion). Used by
+/// the motion conformance cases.
+CraftTheme _surfaceTheme(String surface) =>
+    CraftTheme(resolveDesignTokens(<DesignTokenSet>[
+      parseDesignTokens(<String, Object?>{
+        'color': <String, Object?>{
+          r'$type': 'color',
+          'surface': <String, Object?>{r'$value': surface},
+        },
+      }),
+    ]));
 
 /// The shared behavioral specification for rendering an **A2UI surface**
 /// end-to-end: A2UI messages → `a2ui_core` (`MessageProcessor` + `GenericBinder`)

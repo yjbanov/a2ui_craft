@@ -83,6 +83,11 @@ class _JasprCraftTester implements CraftTester {
   Future<void> pump() => _tester.pump();
 
   @override
+  // A CSS transition targets the inline style immediately, so the endpoint is
+  // already set; just flush a frame.
+  Future<void> settle() => _tester.pump();
+
+  @override
   int textCount(String text) => find.text(text).evaluate().length;
 
   @override
@@ -141,6 +146,31 @@ class _JasprCraftTester implements CraftTester {
   @override
   String? surfaceColorOf(String text) =>
       _canonicalCssColor(_textStyleProperty(text, 'background-color'));
+
+  @override
+  MotionProbe? boxMotionOf(String text) {
+    // An animated Box lists its decoration properties in a CSS `transition`,
+    // e.g. "background-color 250ms cubic-bezier(0.2, 0, 0, 1), border-color …".
+    final String? transition = _textStyleProperty(text, 'transition');
+    if (transition == null) return null;
+    final Match? m =
+        RegExp(r'(\d+)ms\s+cubic-bezier\(([^)]*)\)').firstMatch(transition);
+    if (m == null) return null;
+    final List<double> pts = m
+        .group(2)!
+        .split(',')
+        .map((String s) => double.parse(s.trim()))
+        .toList();
+    if (pts.length != 4) return null;
+    final MotionEasing easing = MotionEasing.values.firstWhere(
+        (MotionEasing e) =>
+            e.x1 == pts[0] &&
+            e.y1 == pts[1] &&
+            e.x2 == pts[2] &&
+            e.y2 == pts[3],
+        orElse: () => MotionEasing.standard);
+    return MotionProbe(durationMs: int.parse(m.group(1)!), easing: easing);
+  }
 
   @override
   String? borderColorOf(String text) {

@@ -102,6 +102,9 @@ class _FlutterCraftTester implements CraftTester {
   Future<void> pump() => _tester.pump();
 
   @override
+  Future<void> settle() => _tester.pumpAndSettle();
+
+  @override
   int textCount(String text) => find.text(text).evaluate().length;
 
   @override
@@ -170,6 +173,28 @@ class _FlutterCraftTester implements CraftTester {
 
   String _argbHex(Color color) =>
       '#${color.toARGB32().toRadixString(16).padLeft(8, '0').toUpperCase()}';
+
+  @override
+  MotionProbe? boxMotionOf(String text) {
+    // An animated Box renders its decoration as an `AnimatedContainer`; a static
+    // one uses a plain `DecoratedBox` (no motion → null).
+    final Iterable<Element> found = find
+        .ancestor(of: find.text(text), matching: find.byType(AnimatedContainer))
+        .evaluate();
+    if (found.isEmpty) return null;
+    final AnimatedContainer c = found.first.widget as AnimatedContainer;
+    final Curve curve = c.curve;
+    final MotionEasing easing = curve is Cubic
+        ? MotionEasing.values.firstWhere(
+            (MotionEasing e) =>
+                e.x1 == curve.a &&
+                e.y1 == curve.b &&
+                e.x2 == curve.c &&
+                e.y2 == curve.d,
+            orElse: () => MotionEasing.standard)
+        : MotionEasing.standard;
+    return MotionProbe(durationMs: c.duration.inMilliseconds, easing: easing);
+  }
 
   @override
   String? checkboxFillColorOf() {

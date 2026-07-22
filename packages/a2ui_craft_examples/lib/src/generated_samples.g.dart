@@ -852,6 +852,118 @@ widget Boxes = Column(gap: 20, children: [
     demonstrates: <String>['layout'],
   ),
   RawSample(
+    id: 'motion',
+    label: 'Motion',
+    template: r'''
+import core;
+
+widget Motion = Column(gap: 16, children: [
+  Text(text: "Flip the light/dark mode: the left card cross-fades its surface and border; the right one snaps."),
+  Row(gap: 16, children: [
+    Box(
+      width: 200.0,
+      padding: [20.0, 20.0, 20.0, 20.0],
+      cornerRadius: 16.0,
+      color: theme.color.surface,
+      border: 2,
+      animate: true,
+      child: Column(gap: 6, children: [
+        Text(text: "Animated"),
+        Text(text: "animate: true"),
+      ])
+    ),
+    Box(
+      width: 200.0,
+      padding: [20.0, 20.0, 20.0, 20.0],
+      cornerRadius: 16.0,
+      color: theme.color.surface,
+      border: 2,
+      child: Column(gap: 6, children: [
+        Text(text: "Static"),
+        Text(text: "no animate — snaps"),
+      ])
+    ),
+  ]),
+]);
+''',
+    schema: r'''
+{
+  "catalogId": "demo",
+  "components": {
+    "Motion": {
+      "properties": {}
+    }
+  }
+}
+''',
+    messages: r'''
+[
+  {
+    "version": "v0.9",
+    "createSurface": {
+      "surfaceId": "demo",
+      "catalogId": "demo",
+      "sendDataModel": false
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateComponents": {
+      "surfaceId": "demo",
+      "components": [
+        {
+          "id": "root",
+          "component": "Motion"
+        }
+      ]
+    }
+  }
+]
+''',
+    theme: r'''
+{
+  "tokens": {
+    "color": {
+      "$type": "color",
+      "$description": "Motion demo — base layer (Light): a blue-bordered pale surface.",
+      "surface": {
+        "$value": "#EAF2FF"
+      },
+      "onSurface": {
+        "$value": "#0F172A"
+      },
+      "onSurfaceVariant": {
+        "$value": "#475569"
+      },
+      "outline": {
+        "$value": "#2563EB"
+      }
+    }
+  },
+  "modes": {
+    "dark": {
+      "color": {
+        "$type": "color",
+        "surface": {
+          "$value": "#1E1B2E"
+        },
+        "onSurface": {
+          "$value": "#EDE9FE"
+        },
+        "onSurfaceVariant": {
+          "$value": "#A5A0C0"
+        },
+        "outline": {
+          "$value": "#F472B6"
+        }
+      }
+    }
+  }
+}
+''',
+    demonstrates: <String>['layout', 'theming'],
+  ),
+  RawSample(
     id: 'layout',
     label: 'Layout',
     template: r'''
@@ -4517,73 +4629,75 @@ SampleSpec toggleSpec(String framework) => rawSamples[2].toSpec(framework);
 SampleSpec calculatorSpec(String framework) => rawSamples[3].toSpec(framework);
 SampleSpec settingsSpec(String framework) => rawSamples[4].toSpec(framework);
 SampleSpec boxesSpec(String framework) => rawSamples[5].toSpec(framework);
-SampleSpec layoutSpec(String framework) => rawSamples[6].toSpec(framework);
-SampleSpec responsiveSpec(String framework) => rawSamples[7].toSpec(framework);
-SampleSpec cardGridSpec(String framework) => rawSamples[8].toSpec(framework);
-SampleSpec contactCardSpec(String framework) => rawSamples[9].toSpec(framework);
-SampleSpec statsCardSpec(String framework) => rawSamples[10].toSpec(framework);
+SampleSpec motionSpec(String framework) => rawSamples[6].toSpec(framework);
+SampleSpec layoutSpec(String framework) => rawSamples[7].toSpec(framework);
+SampleSpec responsiveSpec(String framework) => rawSamples[8].toSpec(framework);
+SampleSpec cardGridSpec(String framework) => rawSamples[9].toSpec(framework);
+SampleSpec contactCardSpec(String framework) =>
+    rawSamples[10].toSpec(framework);
+SampleSpec statsCardSpec(String framework) => rawSamples[11].toSpec(framework);
 SampleSpec profileCardSpec(String framework) =>
-    rawSamples[11].toSpec(framework);
-SampleSpec gallerySpec(String framework) => rawSamples[12].toSpec(framework);
-SampleSpec formSpec(String framework) => rawSamples[13].toSpec(framework);
-SampleSpec simpleTextSpec(String framework) => rawSamples[14].toSpec(framework);
+    rawSamples[12].toSpec(framework);
+SampleSpec gallerySpec(String framework) => rawSamples[13].toSpec(framework);
+SampleSpec formSpec(String framework) => rawSamples[14].toSpec(framework);
+SampleSpec simpleTextSpec(String framework) => rawSamples[15].toSpec(framework);
 SampleSpec interactiveButtonSpec(String framework) =>
-    rawSamples[15].toSpec(framework);
-SampleSpec loginFormSpec(String framework) => rawSamples[16].toSpec(framework);
-SampleSpec weatherSpec(String framework) => rawSamples[17].toSpec(framework);
+    rawSamples[16].toSpec(framework);
+SampleSpec loginFormSpec(String framework) => rawSamples[17].toSpec(framework);
+SampleSpec weatherSpec(String framework) => rawSamples[18].toSpec(framework);
 SampleSpec productCardSpec(String framework) =>
-    rawSamples[18].toSpec(framework);
-SampleSpec restaurantCardSpec(String framework) =>
     rawSamples[19].toSpec(framework);
-SampleSpec accountBalanceSpec(String framework) =>
+SampleSpec restaurantCardSpec(String framework) =>
     rawSamples[20].toSpec(framework);
-SampleSpec shippingStatusSpec(String framework) =>
+SampleSpec accountBalanceSpec(String framework) =>
     rawSamples[21].toSpec(framework);
-SampleSpec flightStatusSpec(String framework) =>
+SampleSpec shippingStatusSpec(String framework) =>
     rawSamples[22].toSpec(framework);
-SampleSpec purchaseCompleteSpec(String framework) =>
+SampleSpec flightStatusSpec(String framework) =>
     rawSamples[23].toSpec(framework);
-SampleSpec coffeeOrderSpec(String framework) =>
+SampleSpec purchaseCompleteSpec(String framework) =>
     rawSamples[24].toSpec(framework);
-SampleSpec creditCardSpec(String framework) => rawSamples[25].toSpec(framework);
+SampleSpec coffeeOrderSpec(String framework) =>
+    rawSamples[25].toSpec(framework);
+SampleSpec creditCardSpec(String framework) => rawSamples[26].toSpec(framework);
 SampleSpec childListTemplateSpec(String framework) =>
-    rawSamples[26].toSpec(framework);
-SampleSpec markdownTextSpec(String framework) =>
     rawSamples[27].toSpec(framework);
-SampleSpec musicPlayerSpec(String framework) =>
+SampleSpec markdownTextSpec(String framework) =>
     rawSamples[28].toSpec(framework);
-SampleSpec notificationPermissionSpec(String framework) =>
+SampleSpec musicPlayerSpec(String framework) =>
     rawSamples[29].toSpec(framework);
-SampleSpec sportsPlayerSpec(String framework) =>
+SampleSpec notificationPermissionSpec(String framework) =>
     rawSamples[30].toSpec(framework);
-SampleSpec eventDetailSpec(String framework) =>
+SampleSpec sportsPlayerSpec(String framework) =>
     rawSamples[31].toSpec(framework);
-SampleSpec stepCounterSpec(String framework) =>
+SampleSpec eventDetailSpec(String framework) =>
     rawSamples[32].toSpec(framework);
-SampleSpec countdownTimerSpec(String framework) =>
+SampleSpec stepCounterSpec(String framework) =>
     rawSamples[33].toSpec(framework);
-SampleSpec rowLayoutSpec(String framework) => rawSamples[34].toSpec(framework);
+SampleSpec countdownTimerSpec(String framework) =>
+    rawSamples[34].toSpec(framework);
+SampleSpec rowLayoutSpec(String framework) => rawSamples[35].toSpec(framework);
 SampleSpec userProfileSpec(String framework) =>
-    rawSamples[35].toSpec(framework);
-SampleSpec chatMessageSpec(String framework) =>
     rawSamples[36].toSpec(framework);
-SampleSpec workoutSummarySpec(String framework) =>
+SampleSpec chatMessageSpec(String framework) =>
     rawSamples[37].toSpec(framework);
-SampleSpec trackListSpec(String framework) => rawSamples[38].toSpec(framework);
+SampleSpec workoutSummarySpec(String framework) =>
+    rawSamples[38].toSpec(framework);
+SampleSpec trackListSpec(String framework) => rawSamples[39].toSpec(framework);
 SampleSpec financialDataGridSpec(String framework) =>
-    rawSamples[39].toSpec(framework);
-SampleSpec formattedTextSpec(String framework) =>
     rawSamples[40].toSpec(framework);
-SampleSpec incrementalSpec(String framework) =>
+SampleSpec formattedTextSpec(String framework) =>
     rawSamples[41].toSpec(framework);
-SampleSpec complexLayoutSpec(String framework) =>
+SampleSpec incrementalSpec(String framework) =>
     rawSamples[42].toSpec(framework);
-SampleSpec emailComposeSpec(String framework) =>
+SampleSpec complexLayoutSpec(String framework) =>
     rawSamples[43].toSpec(framework);
-SampleSpec calendarDaySpec(String framework) =>
+SampleSpec emailComposeSpec(String framework) =>
     rawSamples[44].toSpec(framework);
-SampleSpec signInSpec(String framework) => rawSamples[45].toSpec(framework);
+SampleSpec calendarDaySpec(String framework) =>
+    rawSamples[45].toSpec(framework);
+SampleSpec signInSpec(String framework) => rawSamples[46].toSpec(framework);
 SampleSpec incrementalDashboardSpec(String framework) =>
-    rawSamples[46].toSpec(framework);
-SampleSpec formValidatorSpec(String framework) =>
     rawSamples[47].toSpec(framework);
+SampleSpec formValidatorSpec(String framework) =>
+    rawSamples[48].toSpec(framework);

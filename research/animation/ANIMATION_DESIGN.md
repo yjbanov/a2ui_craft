@@ -239,14 +239,22 @@ assert **endpoint + declaration + reduced-motion**, never intermediate frames:
 
 - **Phase 0 — already have.** Control micro-interactions (§8). Document them as the
   first, adapter-owned tier; make them honor reduced-motion when it lands.
-- **Phase 1 — the motion vocabulary + implicit transitions + reduced-motion.**
-  `Duration`/`Easing` value types (Pillar B, total), `motion.*` tokens in the semantic
-  contract + default theme, the `prefers-reduced-motion` render-time input, and a
-  `Transition`/`Animated` wrapper primitive that tweens its child's property changes
-  on both adapters. **Proving demo: the theme light↔dark flip cross-fades** instead of
-  snapping (it already re-renders in place — this only wraps it). Conformance:
-  endpoint identity + "declares motion" + reduced-motion-collapses-to-instant. *No
-  language change.*
+- **Phase 1 — the motion vocabulary + implicit transitions + reduced-motion. ✅
+  SHIPPED** (see `PHASE_1_PLAN.md` for the as-built slices). `Motion` + `MotionEasing`
+  value types (Pillar B, total; renamed from `Duration`/`Easing` to avoid colliding
+  with dart:core `Duration` and Flutter Material's `Easing`), `motion.*` tokens in the
+  semantic contract + default theme, and the `prefers-reduced-motion` render-time
+  input on `MediaContext`. The implicit-animation deliverable turned out to be a
+  **`Box(animate:)` per-property modifier**, not a generic wrapper: Flutter's implicit
+  animations are per-property (`AnimatedContainer` tweens *its own* decoration; nothing
+  animates an opaque child) and CSS `transition` mirrors that — so the wrapper (for
+  enter/exit) moves to Phase 2, and Phase 1 ships the modifier where the leverage is.
+  Only the decoration animates in Phase 1 (size/padding are a later phase). **Proving
+  demo: the theme light↔dark flip cross-fades** the `motion` sample's card instead of
+  snapping (verified live: dark→light interpolation over 250 ms on the Jaspr pane, both
+  panes identical). Conformance: endpoint identity + "declares motion" +
+  reduced-motion-collapses-to-instant, on both adapters (the coarse midpoint case
+  skipped — the Jaspr VM tester renders no CSS motion to sample). *No language change.*
 - **Phase 2 — enter / exit transitions.** Animate reconciliation add/remove of keyed
   components (fade/scale/slide), riding keyed reconciliation (§6). Solve the web
   exit-animation asymmetry once (keep-in-DOM-until-done, or `@starting-style` /

@@ -1,0 +1,30 @@
+import core;
+
+widget Motion = Column(gap: 16, children: [
+  Text(text: "Flip the light/dark mode: the left card cross-fades its surface and border; the right one snaps."),
+  Row(gap: 16, children: [
+    Box(
+      width: 200.0,
+      padding: [20.0, 20.0, 20.0, 20.0],
+      cornerRadius: 16.0,
+      color: theme.color.surface,
+      border: 2,
+      animate: true,
+      child: Column(gap: 6, children: [
+        Text(text: "Animated"),
+        Text(text: "animate: true"),
+      ])
+    ),
+    Box(
+      width: 200.0,
+      padding: [20.0, 20.0, 20.0, 20.0],
+      cornerRadius: 16.0,
+      color: theme.color.surface,
+      border: 2,
+      child: Column(gap: 6, children: [
+        Text(text: "Static"),
+        Text(text: "no animate — snaps"),
+      ])
+    ),
+  ]),
+]);

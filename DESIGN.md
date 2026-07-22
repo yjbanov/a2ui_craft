@@ -1239,6 +1239,40 @@ default), never throws — the same discipline as the function library.
   the pressure-release valve — keep the token set small and push bespoke styling
   into templates.
 
+### 9.8 Motion (design settled; Phase 1 shipped)
+
+Motion is a **token system parallel to color and type**, plus a render-time
+accessibility input — so it lives here, in §9. The full design is in
+`research/animation/`; the load-bearing decisions:
+
+- **The reconciler supplies the "from."** A2UI ignores prior UI state (§4/§5),
+  which seems to preclude animation — but the reconciler retains host components
+  keyed by A2UI id (§6). So **implicit animation = interpolate when a retained
+  component's animatable property differs between two rebuilds.** A re-theme
+  already re-renders in place (§9.4); motion just tweens the change instead of
+  snapping it.
+- **A motion token vocabulary**, quantized like the rest: `motion.duration.*`
+  (ms) and `motion.easing.*` — the latter **named ids** (`standard`,
+  `emphasized`, …), never raw `cubicBezier` arrays, the same "small vocabulary,
+  not arbitrary CSS" guard rail the color/type tokens follow. Each named easing
+  carries the **same four cubic-bézier control points on both adapters** (Flutter
+  `Cubic` ↔ CSS `cubic-bezier`), so the interpolation curve is genuinely
+  identical — only frame cadence differs, which is the §7 platform latitude.
+- **`prefers-reduced-motion` is a render-time input** shaped exactly like the
+  mode and size class (§9.5): a `MediaContext.reducedMotion` flag the host
+  supplies; primitives collapse motion to instant when it is set. The
+  accessibility MUST, carried on the same reactivity spine.
+- **Conformance widens the §7 tolerance band along the *time* axis**: both
+  adapters must **declare the same motion** (duration + easing) and **land the
+  same endpoint**; the frames in between and the exact cadence are platform
+  latitude and are deliberately not asserted. Endpoint-and-envelope, never frame
+  identity.
+- **Phase 1 delivered `Box(animate:)`** — a per-property modifier (faithful to
+  Flutter's per-property `AnimatedContainer` and CSS `transition`, where nothing
+  animates an opaque child), tweening the box's decoration so a re-theme
+  cross-fades. Enter/exit transitions, keyframes, and gesture-driven motion are
+  later phases; each is additive on this spine.
+
 ## 10. The A2UI Craft project (the ephemeral bundle)
 
 The unit that travels the author's channel deserves a name: an **A2UI Craft

@@ -604,17 +604,27 @@
           adapter emits the exact `background-color 250ms cubic-bezier(0.2,0,0,1)`
           (+ 3 props) through the real adapter, and an `animate: true` box renders
           identically on the Jaspr and Flutter panes.
-        - [ ] **5. Conformance** — endpoint-after-`retheme` + declares-motion
-          (same duration + easing on both adapters) + reduced-motion-collapses,
-          driven through the adapters' real `retheme()` path — which must confirm
-          the **in-place keyed-element retention** that turns the tween into a
-          visible cross-fade (the site's editor-preview rebuilds the subtree, so
-          it can't show it) — plus an optional coarse t≈50% "strictly between"
-          case to catch declares-but-snaps.
-        - [ ] **6. Demo + docs** — a motion sample exercising `Box(animate:)`
-          with the theme flip as the proving cross-fade on both panes; DESIGN.md
-          §8/§9 motion note; mark Phase 1 done. (Phase 2+ — enter/exit transition
-          wrapper, keyframes, gesture-driven motion — stays in the research note.)
+        - [x] **5. Conformance** — `MotionProbe boxMotionOf` + `settle` on the
+          tester; three cases in the shared suite: `animate: true` declares the
+          same duration + easing on both adapters, an endpoint-after-`retheme`
+          lands the new surface color on both (motion never changes the
+          destination — it rides `retheme`'s established no-remount contract, so
+          the box animates rather than jumps), and reduced motion declares no
+          transition and reaches the endpoint immediately. The coarse t≈50%
+          "strictly between" case is deliberately skipped: Flutter could sample it
+          under the fake clock, but the Jaspr VM tester renders no CSS motion to
+          sample, so a shared midpoint case would be asymmetric — declaration +
+          endpoint + reduced-motion-collapse is the contract.
+        - [x] **6. Demo + docs** — a `motion` sample (an `animate: true` card
+          beside a static one, both theme-driven) whose light/dark flip is the
+          proving cross-fade. Live-verified: the sample renders identically on
+          both panes, and on the Jaspr pane the animated card's surface + border
+          interpolate from dark to light over the 250 ms on a mode flip (the
+          static card snaps) — confirming the in-place retention the site's
+          *non-editor* theme path preserves (only the editor-preview rebuilds).
+          Phase 1 marked done in `research/animation/`. (Phase 2+ — enter/exit
+          transition wrapper, keyframes, gesture-driven motion — stays in the
+          research note.)
 - [~] **Demonstrated-property labels + gallery filter.** Every sample manifest
       carries a `demonstrates` list from a fixed vocabulary
       (`demo_properties.dart`: layout / controls & state / theming / functions

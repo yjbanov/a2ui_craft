@@ -1,0 +1,30 @@
+{
+  "name": "Motion",
+  "demonstrates": [
+    "layout",
+    "theming"
+  ],
+  "theme": {
+    "tokens": {
+      "color": {
+        "$type": "color",
+        "$description": "Motion demo — base layer (Light): a blue-bordered pale surface.",
+        "surface": { "$value": "#EAF2FF" },
+        "onSurface": { "$value": "#0F172A" },
+        "onSurfaceVariant": { "$value": "#475569" },
+        "outline": { "$value": "#2563EB" }
+      }
+    },
+    "modes": {
+      "dark": {
+        "color": {
+          "$type": "color",
+          "surface": { "$value": "#1E1B2E" },
+          "onSurface": { "$value": "#EDE9FE" },
+          "onSurfaceVariant": { "$value": "#A5A0C0" },
+          "outline": { "$value": "#F472B6" }
+        }
+      }
+    }
+  }
+}

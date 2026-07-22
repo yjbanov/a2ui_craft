@@ -22,6 +22,7 @@ const List<IconData> _icons = <IconData>[
   Icons.calculate,
   Icons.settings,
   Icons.crop_square,
+  Icons.animation,
   Icons.dashboard,
   Icons.devices,
   Icons.grid_view,

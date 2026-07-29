@@ -13,6 +13,7 @@ import 'package:web/web.dart' as web;
 import 'brand_themes.dart';
 import 'flutter_specimen.dart';
 import 'menu.dart';
+import 'segmented.dart';
 import 'theme_mode.dart';
 
 /// The kitchen sink: every core primitive, rendered live under the **default
@@ -174,26 +175,35 @@ class _KitchenSinkScreenState extends State<KitchenSinkScreen> {
             active: _highContrast,
             items: <MenuItem>[_highContrastItem()],
           ),
-          // Below the breakpoint the brand and contrast axes fold in here; the
-          // adapter toggle stays out, since swapping the renderer is the whole
-          // reason to be on this page.
+          _frameworkToggle(className: 'wide-only'),
+          const ThemeToggle(className: 'wide-only'),
+          // Below the breakpoint the bar is back + title + this, and every
+          // axis above folds in here — including the adapter switch. Keeping
+          // that one out was tempting (swapping the renderer is the reason to
+          // be on this page), but a phone bar that holds even one extra
+          // control wraps to a second row, and a permanently taller header
+          // costs more than the tap it saves.
           CraftMenu(
             className: 'narrow-only',
-            ariaLabel: 'More options',
+            ariaLabel: 'Options',
             icon: '☰',
             iconOnly: true,
-            // Anchored left: the hamburger leads the action row, so a
-            // right-anchored panel would hang off the left edge of a phone.
-            alignEnd: false,
             items: <MenuItem>[
+              const MenuItem.heading('Renderer'),
+              for (final String fw in _frameworks)
+                MenuItem(
+                  label: fw,
+                  selected: _framework == fw,
+                  onSelect: () => setState(() => _framework = fw),
+                ),
               const MenuItem.heading('Brand'),
               ..._brandItems(),
               const MenuItem.heading('Contrast'),
               _highContrastItem(),
+              const MenuItem.heading('Color scheme'),
+              ...siteThemeItems(),
             ],
           ),
-          _frameworkToggle(),
-          const ThemeToggle(),
         ]),
       ],
     );
@@ -228,38 +238,17 @@ class _KitchenSinkScreenState extends State<KitchenSinkScreen> {
         },
       );
 
+  static const List<String> _frameworks = <String>['Jaspr', 'Flutter'];
+
   /// The adapter toggle: a segmented Jaspr / Flutter control that swaps which
   /// adapter renders every specimen on the page.
-  Component _frameworkToggle() {
-    return div(
-      attributes: const <String, String>{
-        'role': 'group',
-        'aria-label': 'Rendering adapter',
-      },
-      styles: Styles(raw: <String, String>{
-        'display': 'inline-flex',
-        'border': '1px solid var(--border-strong)',
-        'border-radius': 'var(--control-radius, 6px)',
-        'overflow': 'hidden',
-      }),
-      [
-        for (final String fw in const <String>['Jaspr', 'Flutter'])
-          button(
-            onClick: () {
-              if (fw == _framework) return;
-              setState(() => _framework = fw);
-            },
-            styles: Styles(raw: <String, String>{
-              'padding': '6px 14px',
-              'border': 'none',
-              'background': _framework == fw ? 'var(--accent)' : 'var(--card)',
-              'color': _framework == fw ? 'var(--accent-fg)' : 'var(--fg)',
-              'font': '13px inherit',
-              'cursor': 'pointer',
-            }),
-            [Component.text(fw)],
-          ),
-      ],
+  Component _frameworkToggle({String? className}) {
+    return CraftSegmented(
+      className: className,
+      ariaLabel: 'Rendering adapter',
+      options: _frameworks,
+      selected: _framework,
+      onSelect: (String fw) => setState(() => _framework = fw),
     );
   }
 

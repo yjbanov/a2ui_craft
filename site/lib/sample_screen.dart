@@ -17,6 +17,7 @@ import 'package:web/web.dart' as web;
 import 'brand_themes.dart';
 import 'flutter_host.dart';
 import 'menu.dart';
+import 'segmented.dart';
 import 'theme_mode.dart';
 
 /// Width of the editor sidebar when open, in CSS px. Subtracted from the
@@ -27,6 +28,16 @@ const int _editorWidth = 420;
 /// Flutter renders side by side. Below it, the two collapse into a Jaspr/Flutter
 /// tab toggle.
 const int _sideBySideMin = 800;
+
+/// Viewport width (CSS px) at or below which this screen is in its phone
+/// layout. Mirrors the `wide-only` / `narrow-only` breakpoint in
+/// `web/index.html`, which is where the *chrome's* visibility is decided — a
+/// media query keeps that correct through a resize with no rebuild. The panes
+/// cannot be done in CSS, though: side by side with a 420px editor there is no
+/// room left for a preview, so below this width the editor takes the screen
+/// and the preview steps aside. That swap is a build-time decision, hence the
+/// duplicated number.
+const int _phoneMax = 720;
 
 /// One sample on its own screen: a toolbar (back, title, edit, Jaspr/Flutter
 /// toggle) over the rendered surface and an action log, with an optional editor
@@ -58,6 +69,7 @@ class _SampleScreenState extends State<SampleScreen> {
   String _framework = 'Jaspr';
   bool _editorOpen = false;
   bool _wide = false;
+  bool _phone = false;
   // The Flutter pane previews a *mobile platform* (DESIGN.md §8); this picks
   // which idiom the embedded app renders its controls in.
   bool _cupertino = false;
@@ -132,6 +144,7 @@ class _SampleScreenState extends State<SampleScreen> {
   void initState() {
     super.initState();
     _wide = _computeWide();
+    _phone = _computePhone();
     _resizeListener = ((web.Event _) => _updateLayout()).toJS;
     web.window.addEventListener('resize', _resizeListener);
     // Re-theme when the effective scheme changes (the global toggle, or the
@@ -161,13 +174,23 @@ class _SampleScreenState extends State<SampleScreen> {
   }
 
   bool _computeWide() {
-    final int avail = web.window.innerWidth - (_editorOpen ? _editorWidth : 0);
+    // On a phone the editor is an overlay rather than a sidebar, so it takes
+    // nothing away from the preview's width.
+    final int avail = web.window.innerWidth -
+        (_editorOpen && !_computePhone() ? _editorWidth : 0);
     return avail >= _sideBySideMin;
   }
 
+  bool _computePhone() => web.window.innerWidth <= _phoneMax;
+
   void _updateLayout() {
     final bool wide = _computeWide();
-    if (wide != _wide) setState(() => _wide = wide);
+    final bool phone = _computePhone();
+    if (wide == _wide && phone == _phone) return;
+    setState(() {
+      _wide = wide;
+      _phone = phone;
+    });
   }
 
   void _onAction(A2uiClientAction a) {
@@ -214,6 +237,9 @@ class _SampleScreenState extends State<SampleScreen> {
         _flutterWidget = null;
         _log.clear();
         _renderKey++;
+        // On a phone the editor covers the preview, so committing hands the
+        // screen back — otherwise "Preview ▸" would look like it did nothing.
+        if (_phone) _editorOpen = false;
         // A new spec must re-process from scratch: swap the Jaspr pane's
         // identity so a fresh SampleView (and data model) mounts.
         _jasprKey = GlobalKey();
@@ -273,7 +299,11 @@ class _SampleScreenState extends State<SampleScreen> {
             'min-height': '0',
           }),
           [
-            _renderColumn(),
+            // On a phone the editor takes the whole screen instead of sharing
+            // it: 420px of sidebar beside a ~390px viewport leaves the preview
+            // nothing, and a preview squeezed to a sliver is worse than one
+            // that's a tap away.
+            if (!(_phone && _editorOpen)) _renderColumn(),
             if (_editorOpen) _editor(),
           ],
         ),
@@ -471,13 +501,17 @@ class _SampleScreenState extends State<SampleScreen> {
 
   /// The sample toolbar.
   ///
-  /// Four axes compete for this row — window size class, brand, project mode,
-  /// and adapter — plus the title and the editor. Spelled out inline they
-  /// overflow a phone before the sample is even on screen, so each axis is a
-  /// menu, and below the breakpoint the three *occasional* ones fold into a
-  /// single overflow menu. What stays visible at every width is what you touch
-  /// constantly: back, the title, the color scheme, the editor, and the adapter
-  /// toggle — the site's whole point.
+  /// Six controls compete for this row — window size class, brand, project
+  /// mode, color scheme, the editor, and the adapter — next to the back button
+  /// and the title. On a desk that fits; on a phone it does not, and the
+  /// earlier attempt to keep a chosen few visible still wrapped the bar onto a
+  /// second line, which is worse than a menu: it costs vertical space on the
+  /// axis a phone has least of, on every screen, whether or not you touch a
+  /// control.
+  ///
+  /// So the narrow bar is exactly three things — back, title, overflow — and
+  /// *every* option lives in the menu. Above the breakpoint the axes spread
+  /// back out and the overflow disappears.
   Component _toolbar(BuildContext context) {
     return div(
       classes: 'toolbar',
@@ -521,34 +555,10 @@ class _SampleScreenState extends State<SampleScreen> {
               label: (_mode ?? _project!.defaultMode).label,
               items: _modeItems(),
             ),
-          // Below the breakpoint the same three axes arrive here instead.
-          CraftMenu(
-            className: 'narrow-only',
-            ariaLabel: 'More options',
-            icon: '☰',
-            iconOnly: true,
-            // Anchored left: the hamburger leads the action row, so a
-            // right-anchored panel would hang off the left edge of a phone.
-            alignEnd: false,
-            items: <MenuItem>[
-              if (_usesResponsive) ...<MenuItem>[
-                const MenuItem.heading('Window size'),
-                ..._sizeClassItems(),
-              ],
-              const MenuItem.heading('Theme'),
-              ..._brandItems(),
-              if (_project != null) ...<MenuItem>[
-                const MenuItem.heading('Mode'),
-                ..._modeItems(),
-              ],
-            ],
-          ),
-          const ThemeToggle(),
+          const ThemeToggle(className: 'wide-only'),
           button(
-            onClick: () => setState(() {
-              _editorOpen = !_editorOpen;
-              _wide = _computeWide();
-            }),
+            classes: 'wide-only',
+            onClick: _toggleEditor,
             styles: _btn(_editorOpen),
             attributes: const <String, String>{
               'aria-label': 'Code editor',
@@ -556,21 +566,73 @@ class _SampleScreenState extends State<SampleScreen> {
             },
             [Component.text('✎')],
           ),
-          // When wide, both renders show at once, so the tab toggle is hidden.
-          if (!_wide) ...<Component>[
-            _toggle('Jaspr'),
-            _toggle('Flutter'),
-          ],
+          // When wide, both renders show at once, so the adapter switch is
+          // hidden — there is nothing to switch between.
+          if (!_wide)
+            CraftSegmented(
+              className: 'wide-only',
+              ariaLabel: 'Rendering adapter',
+              options: const <String>['Jaspr', 'Flutter'],
+              selected: _framework,
+              onSelect: (String fw) => setState(() => _framework = fw),
+            ),
+          // Below the breakpoint every one of the above arrives here instead.
+          CraftMenu(
+            className: 'narrow-only',
+            ariaLabel: 'Options',
+            icon: '☰',
+            iconOnly: true,
+            // Right-anchored (the default): the title's flex-grow pushes this
+            // to the bar's right edge, so the panel has to open leftward or it
+            // runs off the screen.
+            items: _overflowItems(),
+          ),
         ]),
       ],
     );
   }
 
-  Component _toggle(String fw) => button(
-        onClick: () => setState(() => _framework = fw),
-        styles: _btn(_framework == fw),
-        [Component.text(fw)],
-      );
+  /// Every toolbar option, flattened into one menu for the narrow layout.
+  ///
+  /// The adapter switch reads as a two-value axis here rather than a segmented
+  /// control: inside a menu panel a segment would be the odd shape out, and
+  /// the panel already spells every other axis the same way.
+  List<MenuItem> _overflowItems() => <MenuItem>[
+        if (!_wide) ...<MenuItem>[
+          const MenuItem.heading('Renderer'),
+          for (final String fw in const <String>['Jaspr', 'Flutter'])
+            MenuItem(
+              label: fw,
+              selected: _framework == fw,
+              onSelect: () => setState(() => _framework = fw),
+            ),
+        ],
+        if (_usesResponsive) ...<MenuItem>[
+          const MenuItem.heading('Window size'),
+          ..._sizeClassItems(),
+        ],
+        const MenuItem.heading('Theme'),
+        ..._brandItems(),
+        if (_project != null) ...<MenuItem>[
+          const MenuItem.heading('Mode'),
+          ..._modeItems(),
+        ],
+        const MenuItem.heading('Color scheme'),
+        ...siteThemeItems(),
+        const MenuItem.heading('Code'),
+        MenuItem(
+          label: 'Code editor',
+          icon: '✎',
+          toggle: true,
+          selected: _editorOpen,
+          onSelect: _toggleEditor,
+        ),
+      ];
+
+  void _toggleEditor() => setState(() {
+        _editorOpen = !_editorOpen;
+        _wide = _computeWide();
+      });
 
   /// The render-time n-ary **mode** input for a themed project (§9.5): pick
   /// among the project theme's available modes; both renders re-theme to it.
@@ -752,8 +814,8 @@ class _SampleScreenState extends State<SampleScreen> {
     );
     return div(
       styles: Styles(raw: <String, String>{
-        'width': '${_editorWidth}px',
-        'border-left': '1px solid var(--border)',
+        'width': _phone ? '100%' : '${_editorWidth}px',
+        if (!_phone) 'border-left': '1px solid var(--border)',
         'display': 'flex',
         'flex-direction': 'column',
         'background': 'var(--panel)',

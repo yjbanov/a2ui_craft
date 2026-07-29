@@ -88,16 +88,46 @@ abstract final class SiteTheme {
   }
 }
 
-/// The global theme toggle, shown in every screen's toolbar: System / Light /
-/// Dark. "System" follows the browser preference; the other two override it.
+/// The three color-scheme choices as menu rows.
 ///
-/// The trigger is the **current scheme's glyph alone**, at every width — the
-/// three choices are universally understood from their icons, and a toolbar that
-/// also carries an adapter toggle, a brand, and a size class cannot afford to
-/// spell this one out. The full labels live in the menu, which is where someone
-/// unsure of a glyph would look anyway.
+/// Shared, rather than private to [ThemeToggle], because on a narrow screen
+/// this axis has no toolbar button of its own — it folds into the screen's
+/// overflow menu along with every other option. Both hosts stay live the same
+/// way: picking a row sets [SiteTheme.mode], which notifies the screen's own
+/// [SiteTheme.onChange] subscription.
+const Map<SiteThemeMode, (String, String)> _schemeChoices =
+    <SiteThemeMode, (String, String)>{
+  SiteThemeMode.system: ('🌓', 'System'),
+  SiteThemeMode.light: ('☀️', 'Light'),
+  SiteThemeMode.dark: ('🌙', 'Dark'),
+};
+
+List<MenuItem> siteThemeItems() => <MenuItem>[
+      for (final MapEntry<SiteThemeMode, (String, String)> entry
+          in _schemeChoices.entries)
+        MenuItem(
+          label: entry.value.$2,
+          icon: entry.value.$1,
+          selected: SiteTheme.mode == entry.key,
+          onSelect: () => SiteTheme.mode = entry.key,
+        ),
+    ];
+
+/// The global theme toggle, shown in every screen's toolbar above the narrow
+/// breakpoint: System / Light / Dark. "System" follows the browser preference;
+/// the other two override it.
+///
+/// The trigger is the **current scheme's glyph alone** — the three choices are
+/// universally understood from their icons, and a toolbar that also carries an
+/// adapter toggle, a brand, and a size class cannot afford to spell this one
+/// out. The full labels live in the menu, which is where someone unsure of a
+/// glyph would look anyway. On a phone even the glyph is gone: see
+/// [siteThemeItems].
 class ThemeToggle extends StatefulComponent {
-  const ThemeToggle({super.key});
+  const ThemeToggle({super.key, this.className});
+
+  /// An extra class on the trigger — how a toolbar marks this `wide-only`.
+  final String? className;
 
   @override
   State<ThemeToggle> createState() => _ThemeToggleState();
@@ -118,29 +148,14 @@ class _ThemeToggleState extends State<ThemeToggle> {
     super.dispose();
   }
 
-  static const Map<SiteThemeMode, (String, String)> _choices =
-      <SiteThemeMode, (String, String)>{
-    SiteThemeMode.system: ('🌓', 'System'),
-    SiteThemeMode.light: ('☀️', 'Light'),
-    SiteThemeMode.dark: ('🌙', 'Dark'),
-  };
-
   @override
   Component build(BuildContext context) {
     return CraftMenu(
-      ariaLabel: 'Color scheme: ${_choices[SiteTheme.mode]!.$2}',
-      icon: _choices[SiteTheme.mode]!.$1,
+      className: component.className,
+      ariaLabel: 'Color scheme: ${_schemeChoices[SiteTheme.mode]!.$2}',
+      icon: _schemeChoices[SiteTheme.mode]!.$1,
       iconOnly: true,
-      items: <MenuItem>[
-        for (final MapEntry<SiteThemeMode, (String, String)> entry
-            in _choices.entries)
-          MenuItem(
-            label: entry.value.$2,
-            icon: entry.value.$1,
-            selected: SiteTheme.mode == entry.key,
-            onSelect: () => SiteTheme.mode = entry.key,
-          ),
-      ],
+      items: siteThemeItems(),
     );
   }
 }

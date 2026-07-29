@@ -31,13 +31,15 @@ class MenuItem {
     required this.onSelect,
     this.icon,
     this.selected = false,
+    this.toggle = false,
   });
 
   /// A non-interactive group heading.
   const MenuItem.heading(this.label)
       : onSelect = null,
         icon = null,
-        selected = false;
+        selected = false,
+        toggle = false;
 
   /// The row's text. Always present, even when the trigger shows only an icon —
   /// the menu is where the vocabulary is discoverable.
@@ -48,6 +50,12 @@ class MenuItem {
 
   /// Whether this row is the current value (shown checked).
   final bool selected;
+
+  /// Whether this row is an independent on/off switch rather than one of
+  /// several mutually exclusive values. Only the ARIA role differs — a
+  /// screen reader announcing "radio, 1 of 3" for a lone standalone toggle
+  /// (high contrast, the code editor) would be a lie about the group.
+  final bool toggle;
 
   final void Function()? onSelect;
 }
@@ -194,7 +202,8 @@ class _CraftMenuState extends State<CraftMenu> {
                       item.onSelect!();
                     },
                     attributes: <String, String>{
-                      'role': 'menuitemradio',
+                      'role':
+                          item.toggle ? 'menuitemcheckbox' : 'menuitemradio',
                       'aria-checked': '${item.selected}',
                     },
                     <Component>[

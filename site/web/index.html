@@ -128,7 +128,11 @@
         gap: 8px;
         flex-wrap: wrap;
       }
-      /* Controls that collapse into the hamburger below the breakpoint. */
+      /* Below the breakpoint a toolbar is exactly back + title + hamburger:
+         every option-bearing control is `wide-only` and folds into the menu.
+         Keeping a favoured few visible was tried and does not work — the bar
+         wraps to a second row, which costs vertical space on every screen, on
+         the axis a phone has least of, whether or not you touch a control. */
       @media (max-width: 720px) {
         .wide-only {
           display: none !important;
@@ -139,13 +143,38 @@
           display: none !important;
         }
       }
-      /* On a phone the controls cannot share a row with the title without
-         squeezing it to a single letter, so the whole group drops to its own
-         line — one full-width title row, one control row. */
-      @media (max-width: 560px) {
-        .toolbar-actions {
-          flex-basis: 100%;
-        }
+
+      /* ---- Segmented control (CraftSegmented) -----------------------------
+         One bordered group, the active segment filled. The shared outline is
+         the point: it reads as a single control with two positions, where two
+         loose buttons read as two independent actions. */
+      .segmented {
+        display: inline-flex;
+        flex: none;
+        border: 1px solid var(--border-strong);
+        /* Brands may restyle corners; 6px matches the menu triggers. */
+        border-radius: var(--control-radius, 6px);
+        overflow: hidden;
+      }
+      .segmented-item {
+        padding: 6px 14px;
+        border: none;
+        background: var(--card);
+        color: var(--fg);
+        /* Inherited family, so a brand's font reaches this control. */
+        font-family: inherit;
+        font-size: 13px;
+        line-height: 1.4;
+        white-space: nowrap;
+        cursor: pointer;
+      }
+      .segmented-item[aria-checked='true'] {
+        background: var(--accent);
+        color: var(--accent-fg);
+      }
+      .segmented-item:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: -2px;
       }
 
       /* ---- Dropdown menu (CraftMenu) -------------------------------------- */
@@ -197,6 +226,11 @@
         min-width: 168px;
         /* Never wider than the viewport, whichever edge it is anchored to. */
         max-width: calc(100vw - 24px);
+        /* Nor taller than it: the phone overflow menu stacks every axis the
+           bar gave up, which on a responsive, themed sample is five sections
+           deep. Past that it scrolls rather than running off the bottom. */
+        max-height: calc(100vh - 72px);
+        overflow-y: auto;
         padding: 4px;
         border: 1px solid var(--border-strong);
         border-radius: 8px;

@@ -39,6 +39,12 @@ const int _sideBySideMin = 800;
 /// duplicated number.
 const int _phoneMax = 720;
 
+/// One render pane: its label strip's text, the render itself, and an optional
+/// control that rides in the strip (only the Flutter pane has one — the idiom
+/// picker). Header and body are placed into the grid separately, so they
+/// travel together as data rather than as one nested component.
+typedef _Pane = ({String label, Component child, Component? trailing});
+
 /// One sample on its own screen: a toolbar (back, title, edit, Jaspr/Flutter
 /// toggle) over the rendered surface and an action log, with an optional editor
 /// sidebar — one tab per project file (template / schema / app bootstrap, plus
@@ -335,26 +341,46 @@ class _SampleScreenState extends State<SampleScreen> {
 
   /// Side-by-side Jaspr + Flutter panes when wide; otherwise the single active
   /// (tab-selected) render.
+  ///
+  /// One **grid**, not a row of self-contained columns. As columns each pane
+  /// sized its own header, so the Flutter header — which carries the idiom
+  /// picker, and a native `select` is taller than an 11px label — sat a few
+  /// pixels lower than Jaspr's, and the divider between them stepped. A
+  /// two-row grid (`auto` for the headers, the remainder for the renders)
+  /// makes every header share one row and every render start at the same y,
+  /// which is the entire point of showing the two adapters side by side.
   Component _previewPanes() {
-    if (_wide) {
-      return div(
-        styles: Styles(raw: <String, String>{
-          'flex': '1',
-          'display': 'flex',
-          'min-width': '0',
-        }),
-        [
-          _pane('Jaspr', _jasprView(), borderRight: true),
-          _pane('Flutter', _flutterView(),
-              borderRight: false, trailing: _idiomToggle()),
-        ],
-      );
-    }
-    return _pane(
-      _framework,
-      _framework == 'Jaspr' ? _jasprView() : _flutterView(),
-      borderRight: false,
-      trailing: _framework == 'Flutter' ? _idiomToggle() : null,
+    final List<_Pane> panes = _wide
+        ? <_Pane>[
+            (label: 'Jaspr', child: _jasprView(), trailing: null),
+            (label: 'Flutter', child: _flutterView(), trailing: _idiomToggle()),
+          ]
+        : <_Pane>[
+            (
+              label: _framework,
+              child: _framework == 'Jaspr' ? _jasprView() : _flutterView(),
+              trailing: _framework == 'Flutter' ? _idiomToggle() : null,
+            ),
+          ];
+    return div(
+      styles: Styles(raw: <String, String>{
+        'flex': '1',
+        'min-width': '0',
+        'display': 'grid',
+        // minmax(0, 1fr), not 1fr: a bare 1fr floors at the content's minimum
+        // size, which a wide render (a long Text, a horizontal List) would
+        // push past its share and out of the pane.
+        'grid-template-columns': 'repeat(${panes.length}, minmax(0, 1fr))',
+        'grid-template-rows': 'auto minmax(0, 1fr)',
+      }),
+      <Component>[
+        // Row-major auto-placement: the headers fill row one, the renders
+        // row two.
+        for (int i = 0; i < panes.length; i++)
+          _paneHeader(panes[i], borderRight: i < panes.length - 1),
+        for (int i = 0; i < panes.length; i++)
+          _paneBody(panes[i], borderRight: i < panes.length - 1),
+      ],
     );
   }
 
@@ -386,46 +412,46 @@ class _SampleScreenState extends State<SampleScreen> {
     );
   }
 
-  /// A labeled, independently scrolling render column.
-  Component _pane(String label, Component child,
-      {required bool borderRight, Component? trailing}) {
+  /// A pane's label strip, with its optional trailing control.
+  ///
+  /// Grid stretches every cell in a row to the row's height, so this sizes
+  /// itself from its own content *and* from its neighbour's — which is what
+  /// keeps the two labels on one baseline. The vertical padding is a minimum
+  /// rather than the whole story: `align-items: center` re-centres the label
+  /// when the other pane's header is the taller one.
+  Component _paneHeader(_Pane pane, {required bool borderRight}) {
     return div(
       styles: Styles(raw: <String, String>{
-        'flex': '1',
-        'min-width': '0',
+        'font': '600 11px system-ui',
+        'letter-spacing': '.05em',
+        'text-transform': 'uppercase',
+        'color': 'var(--subtle)',
+        'padding': '8px 24px',
+        'border-bottom': '1px solid var(--border)',
+        if (borderRight) 'border-right': '1px solid var(--border)',
         'display': 'flex',
-        'flex-direction': 'column',
+        'align-items': 'center',
+        'justify-content': 'space-between',
+        'gap': '12px',
+      }),
+      <Component>[
+        Component.text(pane.label),
+        if (pane.trailing != null) pane.trailing!,
+      ],
+    );
+  }
+
+  /// A pane's render, scrolling independently of its neighbour.
+  Component _paneBody(_Pane pane, {required bool borderRight}) {
+    return div(
+      styles: Styles(raw: <String, String>{
+        'min-width': '0',
+        'min-height': '0',
+        'overflow': 'auto',
+        'padding': '24px',
         if (borderRight) 'border-right': '1px solid var(--border)',
       }),
-      [
-        div(
-          styles: Styles(raw: <String, String>{
-            'font': '600 11px system-ui',
-            'letter-spacing': '.05em',
-            'text-transform': 'uppercase',
-            'color': 'var(--subtle)',
-            'padding': '8px 24px',
-            'border-bottom': '1px solid var(--border)',
-            'display': 'flex',
-            'align-items': 'center',
-            'justify-content': 'space-between',
-            'gap': '12px',
-          }),
-          [
-            Component.text(label),
-            if (trailing != null) trailing,
-          ],
-        ),
-        div(
-          styles: Styles(raw: <String, String>{
-            'flex': '1',
-            'min-height': '0',
-            'overflow': 'auto',
-            'padding': '24px',
-          }),
-          [child],
-        ),
-      ],
+      <Component>[pane.child],
     );
   }
 
@@ -454,6 +480,10 @@ class _SampleScreenState extends State<SampleScreen> {
       key: ValueKey<String>('flutter-$_renderKey'),
       styles: Styles(raw: <String, String>{
         'width': '100%',
+        // Or `width: 100%` plus the border overhangs the pane by the border's
+        // two pixels, which was enough to give the Flutter pane a phantom
+        // horizontal scrollbar.
+        'box-sizing': 'border-box',
         // Sized to the Flutter content's self-measured height; the fixed
         // fallback shows until the first report lands (or if a report was
         // non-finite and thus ignored).

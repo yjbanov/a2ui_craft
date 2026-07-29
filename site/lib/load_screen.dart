@@ -151,10 +151,8 @@ class _LoadScreenState extends State<LoadScreen> {
 
   Component _bar(BuildContext context) {
     return div(
+      classes: 'toolbar',
       styles: Styles(raw: <String, String>{
-        'display': 'flex',
-        'align-items': 'center',
-        'gap': '8px',
         'padding': '12px 20px',
         'border-bottom': '1px solid var(--border)',
       }),
@@ -162,9 +160,12 @@ class _LoadScreenState extends State<LoadScreen> {
         button(
           classes: 'back-btn',
           onClick: () => context.push('/'),
+          attributes: const <String, String>{
+            'aria-label': 'Back to gallery',
+            'title': 'Back to gallery',
+          },
           <Component>[
             span(classes: 'back-badge', <Component>[Component.text('←')]),
-            span(<Component>[Component.text('Gallery')]),
           ],
         ),
         input(
@@ -176,7 +177,10 @@ class _LoadScreenState extends State<LoadScreen> {
           },
           onInput: (dynamic v) => _url = '$v',
           styles: Styles(raw: <String, String>{
+            // min-width:0 so the URL field can shrink below its intrinsic
+            // size instead of pushing Load and the scheme toggle off a phone.
             'flex': '1',
+            'min-width': '0',
             'padding': '8px 12px',
             'border': '1px solid var(--border-strong)',
             'border-radius': '8px',

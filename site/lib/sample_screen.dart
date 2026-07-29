@@ -16,6 +16,7 @@ import 'package:web/web.dart' as web;
 
 import 'brand_themes.dart';
 import 'flutter_host.dart';
+import 'menu.dart';
 import 'theme_mode.dart';
 
 /// Width of the editor sidebar when open, in CSS px. Subtracted from the
@@ -468,45 +469,99 @@ class _SampleScreenState extends State<SampleScreen> {
     );
   }
 
+  /// The sample toolbar.
+  ///
+  /// Four axes compete for this row — window size class, brand, project mode,
+  /// and adapter — plus the title and the editor. Spelled out inline they
+  /// overflow a phone before the sample is even on screen, so each axis is a
+  /// menu, and below the breakpoint the three *occasional* ones fold into a
+  /// single overflow menu. What stays visible at every width is what you touch
+  /// constantly: back, the title, the color scheme, the editor, and the adapter
+  /// toggle — the site's whole point.
   Component _toolbar(BuildContext context) {
     return div(
+      classes: 'toolbar',
       styles: Styles(raw: <String, String>{
-        'display': 'flex',
-        'align-items': 'center',
-        'gap': '10px',
         'padding': '12px 20px',
         'border-bottom': '1px solid var(--border)',
       }),
       [
+        // The circled arrow alone: "back" needs no gloss, and the title beside
+        // it already says where you are.
         button(
           classes: 'back-btn',
           onClick: () => context.push('/'),
+          attributes: const <String, String>{
+            'aria-label': 'Back to gallery',
+            'title': 'Back to gallery',
+          },
           [
             span(classes: 'back-badge', [Component.text('←')]),
-            span([Component.text('Gallery')]),
           ],
         ),
-        h2(
-          styles: Styles(raw: <String, String>{'margin': '0', 'flex': '1'}),
-          [Component.text(_raw.label)],
-        ),
-        if (_usesResponsive) _sizeClassPicker(),
-        _themePicker(),
-        const ThemeToggle(),
-        if (_project != null) _modePicker(),
-        button(
-          onClick: () => setState(() {
-            _editorOpen = !_editorOpen;
-            _wide = _computeWide();
-          }),
-          styles: _btn(_editorOpen),
-          [Component.text('✎ Code')],
-        ),
-        // When wide, both renders show at once, so the tab toggle is hidden.
-        if (!_wide) ...<Component>[
-          _toggle('Jaspr'),
-          _toggle('Flutter'),
-        ],
+        h2(classes: 'toolbar-title', [Component.text(_raw.label)]),
+        div(classes: 'toolbar-actions', <Component>[
+          if (_usesResponsive)
+            CraftMenu(
+              className: 'wide-only',
+              ariaLabel: 'Window size class',
+              label: _sizeClassLabel(_sizeClass),
+              items: _sizeClassItems(),
+            ),
+          CraftMenu(
+            className: 'wide-only',
+            ariaLabel: 'Theme',
+            label: _brandLabel(),
+            items: _brandItems(),
+          ),
+          if (_project != null)
+            CraftMenu(
+              className: 'wide-only',
+              ariaLabel: 'Theme mode',
+              label: (_mode ?? _project!.defaultMode).label,
+              items: _modeItems(),
+            ),
+          // Below the breakpoint the same three axes arrive here instead.
+          CraftMenu(
+            className: 'narrow-only',
+            ariaLabel: 'More options',
+            icon: '☰',
+            iconOnly: true,
+            // Anchored left: the hamburger leads the action row, so a
+            // right-anchored panel would hang off the left edge of a phone.
+            alignEnd: false,
+            items: <MenuItem>[
+              if (_usesResponsive) ...<MenuItem>[
+                const MenuItem.heading('Window size'),
+                ..._sizeClassItems(),
+              ],
+              const MenuItem.heading('Theme'),
+              ..._brandItems(),
+              if (_project != null) ...<MenuItem>[
+                const MenuItem.heading('Mode'),
+                ..._modeItems(),
+              ],
+            ],
+          ),
+          const ThemeToggle(),
+          button(
+            onClick: () => setState(() {
+              _editorOpen = !_editorOpen;
+              _wide = _computeWide();
+            }),
+            styles: _btn(_editorOpen),
+            attributes: const <String, String>{
+              'aria-label': 'Code editor',
+              'title': 'Code editor',
+            },
+            [Component.text('✎')],
+          ),
+          // When wide, both renders show at once, so the tab toggle is hidden.
+          if (!_wide) ...<Component>[
+            _toggle('Jaspr'),
+            _toggle('Flutter'),
+          ],
+        ]),
       ],
     );
   }
@@ -520,77 +575,49 @@ class _SampleScreenState extends State<SampleScreen> {
   /// The render-time n-ary **mode** input for a themed project (§9.5): pick
   /// among the project theme's available modes; both renders re-theme to it.
   /// An explicit pick stops the mode from auto-following the system setting.
-  Component _modePicker() {
+  List<MenuItem> _modeItems() {
     final ProjectTheme project = _project!;
-    return select(
-      value: (_mode ?? project.defaultMode).id,
-      onChange: (List<String> values) {
-        final String id =
-            values.isEmpty ? project.defaultMode.id : values.first;
-        final CraftThemeMode next = project.availableModes.firstWhere(
-          (CraftThemeMode m) => m.id == id,
-          orElse: () => project.defaultMode,
-        );
-        setState(() {
-          _modeTouched = true;
-          _mode = next;
-          // Recreate the embedded Flutter app so it re-themes; the Jaspr
-          // pane re-themes in place via its `theme` prop, keeping its state.
-          _flutterWidget = null;
-          _renderKey++;
-        });
-      },
-      styles: Styles(raw: <String, String>{
-        'padding': '6px 10px',
-        'border': '1px solid var(--border-strong)',
-        'border-radius': '6px',
-        'background': 'var(--card)',
-        'color': 'var(--fg)',
-        'cursor': 'pointer',
-      }),
-      <Component>[
-        // `selected` marks the active option explicitly: the select's `value`
-        // is applied before the options mount, so on first render the browser
-        // would otherwise display the first option regardless of the mode.
-        for (final CraftThemeMode m in project.availableModes)
-          option(
-            value: m.id,
-            selected: m == (_mode ?? project.defaultMode),
-            [Component.text(m.label)],
-          ),
-      ],
-    );
+    final CraftThemeMode active = _mode ?? project.defaultMode;
+    return <MenuItem>[
+      for (final CraftThemeMode m in project.availableModes)
+        MenuItem(
+          label: m.label,
+          selected: m == active,
+          onSelect: () => setState(() {
+            _modeTouched = true;
+            _mode = m;
+            // Recreate the embedded Flutter app so it re-themes; the Jaspr
+            // pane re-themes in place via its `theme` prop, keeping its state.
+            _flutterWidget = null;
+            _renderKey++;
+          }),
+        ),
+    ];
   }
 
   /// The window size-class picker (shown only for samples that use the
-  /// `Responsive` primitive): a segmented control feeding the surface a
+  /// `Responsive` primitive): a menu feeding the surface a
   /// [MediaContext] — the second render-time input axis. Flipping it re-renders
   /// both panes in place (the Jaspr pane via the ambient media scope; the
   /// Flutter embed rebuilds), so a `Responsive` restructures live.
-  Component _sizeClassPicker() {
-    // Short labels for the toolbar; the value is the M3 window size class.
-    const List<(WindowSizeClass, String)> classes = <(WindowSizeClass, String)>[
-      (WindowSizeClass.compact, 'Compact'),
-      (WindowSizeClass.medium, 'Medium'),
-      (WindowSizeClass.expanded, 'Expanded'),
-      (WindowSizeClass.large, 'Large'),
-      (WindowSizeClass.extraLarge, 'XL'),
-    ];
-    return div(
-      attributes: const <String, String>{
-        'role': 'group',
-        'aria-label': 'Window size class',
-      },
-      styles: Styles(raw: <String, String>{
-        'display': 'inline-flex',
-        'border': '1px solid var(--border-strong)',
-        'border-radius': '6px',
-        'overflow': 'hidden',
-      }),
-      [
-        for (final (WindowSizeClass, String) c in classes)
-          button(
-            onClick: () {
+  static const List<(WindowSizeClass, String)> _sizeClasses =
+      <(WindowSizeClass, String)>[
+    (WindowSizeClass.compact, 'Compact'),
+    (WindowSizeClass.medium, 'Medium'),
+    (WindowSizeClass.expanded, 'Expanded'),
+    (WindowSizeClass.large, 'Large'),
+    (WindowSizeClass.extraLarge, 'XL'),
+  ];
+
+  String _sizeClassLabel(WindowSizeClass c) =>
+      _sizeClasses.firstWhere((rec) => rec.$1 == c).$2;
+
+  List<MenuItem> _sizeClassItems() => <MenuItem>[
+        for (final (WindowSizeClass, String) c in _sizeClasses)
+          MenuItem(
+            label: c.$2,
+            selected: c.$1 == _sizeClass,
+            onSelect: () {
               if (c.$1 == _sizeClass) return;
               setState(() {
                 _sizeClass = c.$1;
@@ -601,56 +628,31 @@ class _SampleScreenState extends State<SampleScreen> {
                 _renderKey++;
               });
             },
-            styles: Styles(raw: <String, String>{
-              'padding': '6px 10px',
-              'border': 'none',
-              'background':
-                  c.$1 == _sizeClass ? 'var(--accent)' : 'var(--card)',
-              'color': c.$1 == _sizeClass ? 'var(--accent-fg)' : 'var(--fg)',
-              'font': '13px system-ui, -apple-system, sans-serif',
-              'cursor': 'pointer',
-            }),
-            [Component.text(c.$2)],
           ),
-      ],
-    );
-  }
+      ];
 
-  /// The brand-theme picker: a segmented control (like the `/primitives` page's)
+  /// The brand-theme picker: a menu (like the `/primitives` page's)
   /// that restyles this sample. Picking a brand drops its theme block into the
   /// editable **Theme** tab and applies it live; **Default** clears the theme,
-  /// so the sample blends into the host again. A brand is highlighted only while
-  /// the Theme draft still matches it verbatim — hand-edit the JSON and the
-  /// selection reads as custom (no segment lit).
-  Component _themePicker() {
-    final String? selected = _selectedBrandId;
-    return div(
-      attributes: const <String, String>{
-        'role': 'group',
-        'aria-label': 'Theme',
-      },
-      styles: Styles(raw: <String, String>{
-        'display': 'inline-flex',
-        'border': '1px solid var(--border-strong)',
-        'border-radius': '6px',
-        'overflow': 'hidden',
-      }),
-      [
+  /// so the sample blends into the host again. A brand is checked only while the
+  /// Theme draft still matches it verbatim — hand-edit the JSON and the trigger
+  /// reads `Custom`.
+  List<MenuItem> _brandItems() => <MenuItem>[
         for (final Brand b in kBrands)
-          button(
-            onClick: () => _pickBrand(b),
-            styles: Styles(raw: <String, String>{
-              'padding': '6px 12px',
-              'border': 'none',
-              'background': b.id == selected ? 'var(--accent)' : 'var(--card)',
-              'color': b.id == selected ? 'var(--accent-fg)' : 'var(--fg)',
-              'font': '13px system-ui, -apple-system, sans-serif',
-              'cursor': 'pointer',
-            }),
-            [Component.text(b.label)],
+          MenuItem(
+            label: b.label,
+            selected: b.id == _selectedBrandId,
+            onSelect: () => _pickBrand(b),
           ),
-      ],
-    );
+      ];
+
+  /// The brand shown on the closed trigger — or `Custom` once the Theme draft
+  /// no longer matches any brand verbatim, which is the menu's way of saying
+  /// what the old segmented control said by lighting no segment.
+  String _brandLabel() {
+    final String? id = _selectedBrandId;
+    if (id == null) return 'Custom';
+    return kBrands.firstWhere((Brand b) => b.id == id).label;
   }
 
   /// Applies [brand] to the sample: the theme block goes into the editable
@@ -689,7 +691,7 @@ class _SampleScreenState extends State<SampleScreen> {
   /// The brand whose theme block the current Theme draft matches verbatim, or
   /// null when the draft is a hand-edited (custom) theme. An empty draft is the
   /// **Default** (host-blended) brand. Compared structurally so reformatting the
-  /// JSON keeps the segment lit.
+  /// JSON keeps the brand checked.
   String? get _selectedBrandId {
     final String draft = _dTheme.trim();
     if (draft.isEmpty) return _defaultBrandId;
@@ -700,7 +702,7 @@ class _SampleScreenState extends State<SampleScreen> {
     return null;
   }
 
-  /// The default (host-blended) brand's id — the segment lit for an empty theme.
+  /// The default (host-blended) brand's id — what an empty theme reads as.
   String get _defaultBrandId =>
       kBrands.firstWhere((Brand b) => b.themeJson.isEmpty).id;
 

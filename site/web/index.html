@@ -52,19 +52,22 @@
         color: var(--fg);
       }
 
-      /* The back-to-gallery button: a borderless pill whose arrow rides in a
-         circular badge. On hover the pill fills faintly, the badge lights up in
-         the accent, and the arrow nudges left — a "go back" micro-interaction. */
+      /* The back-to-gallery button: an arrow in a circular badge. On hover the
+         badge lights up in the accent and the arrow nudges left — a "go back"
+         micro-interaction. The word "Gallery" used to sit beside it; the badge
+         alone says the same thing in a third of the width, and the screen title
+         next to it already names where you are. */
       .back-btn {
         display: inline-flex;
         align-items: center;
-        gap: 9px;
-        padding: 5px 15px 5px 5px;
+        flex: none;
+        padding: 5px;
         border: none;
         border-radius: 999px;
         background: transparent;
         color: var(--muted);
         font: 500 14px system-ui, -apple-system, sans-serif;
+        text-decoration: none;
         cursor: pointer;
         transition: background 0.15s ease, color 0.15s ease;
       }
@@ -97,6 +100,153 @@
         color: var(--accent);
         background: color-mix(in srgb, var(--accent) 12%, transparent);
         transform: translateX(-3px);
+      }
+
+      /* ---- Toolbars -------------------------------------------------------
+         Every screen's bar is a single flex row that may wrap. The title takes
+         the slack (min-width:0 so it can actually shrink — a flex item's
+         default min-width:auto refuses to go below its content, which is what
+         used to push the controls off a phone screen) and ellipsizes. */
+      .toolbar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .toolbar-title {
+        flex: 1;
+        min-width: 0;
+        margin: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      /* The trailing controls, kept together so they wrap as one group. */
+      .toolbar-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      /* Controls that collapse into the hamburger below the breakpoint. */
+      @media (max-width: 720px) {
+        .wide-only {
+          display: none !important;
+        }
+      }
+      @media (min-width: 721px) {
+        .narrow-only {
+          display: none !important;
+        }
+      }
+      /* On a phone the controls cannot share a row with the title without
+         squeezing it to a single letter, so the whole group drops to its own
+         line — one full-width title row, one control row. */
+      @media (max-width: 560px) {
+        .toolbar-actions {
+          flex-basis: 100%;
+        }
+      }
+
+      /* ---- Dropdown menu (CraftMenu) -------------------------------------- */
+      .menu {
+        position: relative;
+        display: inline-flex;
+        flex: none;
+      }
+      .menu-trigger {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        border: 1px solid var(--border-strong);
+        border-radius: 6px;
+        background: var(--card);
+        color: var(--fg);
+        font: 13px system-ui, -apple-system, sans-serif;
+        line-height: 1.4;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      .menu-trigger:hover {
+        border-color: var(--accent);
+      }
+      .menu-trigger[data-active='true'] {
+        background: var(--accent);
+        color: var(--accent-fg);
+        border-color: var(--accent);
+      }
+      /* A square target for the glyph-only triggers. 36px keeps it at the
+         ~44px-with-gap touch size phones want without towering over the
+         text controls beside it. */
+      .menu-trigger-icon {
+        justify-content: center;
+        width: 36px;
+        padding: 6px 0;
+        font-size: 15px;
+      }
+      .menu-caret {
+        font-size: 10px;
+        opacity: 0.7;
+      }
+      .menu-panel {
+        position: absolute;
+        top: calc(100% + 6px);
+        left: 0;
+        z-index: 60;
+        min-width: 168px;
+        /* Never wider than the viewport, whichever edge it is anchored to. */
+        max-width: calc(100vw - 24px);
+        padding: 4px;
+        border: 1px solid var(--border-strong);
+        border-radius: 8px;
+        background: var(--card);
+        box-shadow: 0 8px 24px light-dark(rgba(0, 0, 0, 0.16), rgba(0, 0, 0, 0.5));
+      }
+      .menu-panel-end {
+        left: auto;
+        right: 0;
+      }
+      .menu-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        padding: 8px 10px;
+        border: none;
+        border-radius: 6px;
+        background: transparent;
+        color: var(--fg);
+        font: 13px system-ui, -apple-system, sans-serif;
+        text-align: left;
+        white-space: nowrap;
+        cursor: pointer;
+      }
+      .menu-item:hover {
+        background: var(--panel);
+      }
+      .menu-item[aria-checked='true'] {
+        color: var(--accent);
+        font-weight: 600;
+      }
+      /* Reserve the check column so labels line up whether or not a row is
+         selected. */
+      .menu-check {
+        display: inline-block;
+        width: 12px;
+        flex: none;
+      }
+      /* A menu section heading, for the hamburger's grouped axes. */
+      .menu-label {
+        padding: 8px 10px 4px;
+        color: var(--subtle);
+        font: 600 11px system-ui, -apple-system, sans-serif;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .menu-label:not(:first-child) {
+        border-top: 1px solid var(--border);
+        margin-top: 4px;
       }
     </style>
 

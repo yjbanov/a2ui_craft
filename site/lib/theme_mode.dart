@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:jaspr/dom.dart';
 import 'package:jaspr/jaspr.dart';
 import 'package:web/web.dart' as web;
 
+import 'menu.dart';
 import 'system_dark.dart';
 
 /// The site-wide dark-light choice: follow the browser/system preference, or
@@ -90,6 +90,12 @@ abstract final class SiteTheme {
 
 /// The global theme toggle, shown in every screen's toolbar: System / Light /
 /// Dark. "System" follows the browser preference; the other two override it.
+///
+/// The trigger is the **current scheme's glyph alone**, at every width — the
+/// three choices are universally understood from their icons, and a toolbar that
+/// also carries an adapter toggle, a brand, and a size class cannot afford to
+/// spell this one out. The full labels live in the menu, which is where someone
+/// unsure of a glyph would look anyway.
 class ThemeToggle extends StatefulComponent {
   const ThemeToggle({super.key});
 
@@ -112,40 +118,27 @@ class _ThemeToggleState extends State<ThemeToggle> {
     super.dispose();
   }
 
+  static const Map<SiteThemeMode, (String, String)> _choices =
+      <SiteThemeMode, (String, String)>{
+    SiteThemeMode.system: ('🌓', 'System'),
+    SiteThemeMode.light: ('☀️', 'Light'),
+    SiteThemeMode.dark: ('🌙', 'Dark'),
+  };
+
   @override
   Component build(BuildContext context) {
-    return select(
-      value: SiteTheme.mode.name,
-      onChange: (List<String> values) {
-        if (values.isEmpty) return;
-        SiteTheme.mode = SiteThemeMode.values.firstWhere(
-          (SiteThemeMode m) => m.name == values.first,
-          orElse: () => SiteThemeMode.system,
-        );
-      },
-      attributes: const <String, String>{
-        'aria-label': 'Color scheme',
-        'title': 'Color scheme',
-      },
-      styles: Styles(raw: <String, String>{
-        'padding': '6px 10px',
-        'border': '1px solid var(--border-strong)',
-        'border-radius': '6px',
-        'background': 'var(--card)',
-        'color': 'var(--fg)',
-        'cursor': 'pointer',
-      }),
-      <Component>[
-        for (final (SiteThemeMode, String) entry
-            in const <(SiteThemeMode, String)>[
-          (SiteThemeMode.system, '🌓 System'),
-          (SiteThemeMode.light, '☀️ Light'),
-          (SiteThemeMode.dark, '🌙 Dark'),
-        ])
-          option(
-            value: entry.$1.name,
-            selected: SiteTheme.mode == entry.$1,
-            [Component.text(entry.$2)],
+    return CraftMenu(
+      ariaLabel: 'Color scheme: ${_choices[SiteTheme.mode]!.$2}',
+      icon: _choices[SiteTheme.mode]!.$1,
+      iconOnly: true,
+      items: <MenuItem>[
+        for (final MapEntry<SiteThemeMode, (String, String)> entry
+            in _choices.entries)
+          MenuItem(
+            label: entry.value.$2,
+            icon: entry.value.$1,
+            selected: SiteTheme.mode == entry.key,
+            onSelect: () => SiteTheme.mode = entry.key,
           ),
       ],
     );

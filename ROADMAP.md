@@ -675,6 +675,20 @@
         visible in Flutter web needs the host to ship real font assets, which is
         exactly the `CraftFonts` seam and is left to the host. Font **weights**
         remain deferred.
+  - [x] **Demo site on a phone.** The toolbars spelled every axis out inline —
+        a segment per brand, per size class, per adapter, beside a `select` per
+        axis — which reads at desk width and wraps into three rows on a phone
+        before the sample is visible. Now: one reusable `CraftMenu` dropdown
+        (`site/lib/menu.dart`) backs the color scheme, the brand, the mode, the
+        size class, and a `☰` overflow; the trigger is glyph-only for the scheme
+        and the hamburger, the editor button is a bare `✎`, and the back control
+        is the circled arrow with no "Gallery" beside it. Below 720px the
+        occasional axes fold into the overflow menu; below 560px the whole action
+        group drops to its own row so the title stays readable (it was
+        ellipsizing to a single letter). Native `<select>` could not do this —
+        it renders the selected option's text in the closed state, so an
+        icon-only trigger would have meant icon-only options. Verified at
+        375×812 and desktop on both the sample screen and `/primitives`.
 - [~] **Demonstrated-property labels + gallery filter.** Every sample manifest
       carries a `demonstrates` list from a fixed vocabulary
       (`demo_properties.dart`: layout / controls & state / theming / functions

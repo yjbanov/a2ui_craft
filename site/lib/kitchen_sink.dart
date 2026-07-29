@@ -12,6 +12,7 @@ import 'package:web/web.dart' as web;
 
 import 'brand_themes.dart';
 import 'flutter_specimen.dart';
+import 'menu.dart';
 import 'theme_mode.dart';
 
 /// The kitchen sink: every core primitive, rendered live under the **default
@@ -126,11 +127,9 @@ class _KitchenSinkScreenState extends State<KitchenSinkScreen> {
 
   Component _header() {
     return div(
+      classes: 'toolbar',
       styles: Styles(raw: <String, String>{
-        'display': 'flex',
-        'align-items': 'center',
-        'flex-wrap': 'wrap',
-        'gap': '10px 16px',
+        'gap': '8px',
         // Keep the adapter + mode controls reachable after scrolling. Stuck to
         // the viewport top with the page background behind it; the negative
         // side margin + matching padding stretch it to the column's edges (the
@@ -145,94 +144,89 @@ class _KitchenSinkScreenState extends State<KitchenSinkScreen> {
         'border-bottom': '1px solid var(--border)',
       }),
       [
+        // The circled arrow alone — the same back affordance the sample screen
+        // uses, and the title beside it already says where you are.
         Link(
           to: '/',
-          styles: Styles(raw: <String, String>{
-            'color': 'var(--accent)',
-            'text-decoration': 'none',
-            'font-weight': '600',
-          }),
-          child: Component.text('← Gallery'),
+          classes: 'back-btn',
+          attributes: const <String, String>{
+            'aria-label': 'Back to gallery',
+            'title': 'Back to gallery',
+          },
+          child: span(classes: 'back-badge', [Component.text('←')]),
         ),
         h1(
-          styles: Styles(raw: <String, String>{
-            'margin': '0',
-            'font-size': '20px',
-            'flex': '1',
-          }),
+          classes: 'toolbar-title',
+          styles: Styles(raw: <String, String>{'font-size': '20px'}),
           [Component.text('A2UI Craft')],
         ),
-        _brandPicker(),
-        _frameworkToggle(),
-        label(
-          styles: Styles(raw: <String, String>{
-            'display': 'inline-flex',
-            'align-items': 'center',
-            'gap': '6px',
-            'cursor': 'pointer',
-            'font': '14px system-ui',
-            'color': 'var(--muted)',
-            'user-select': 'none',
-          }),
-          [
-            input(
-              type: InputType.checkbox,
-              checked: _highContrast,
-              onChange: (dynamic _) {
-                setState(() => _highContrast = !_highContrast);
-                // High contrast is a chrome axis too — re-derive the CSS vars.
-                _applyChrome();
-              },
-              styles: Styles(raw: <String, String>{
-                'accent-color': 'var(--accent)',
-                'cursor': 'pointer',
-              }),
-            ),
-            Component.text('High contrast'),
-          ],
-        ),
-        const ThemeToggle(),
+        div(classes: 'toolbar-actions', <Component>[
+          CraftMenu(
+            className: 'wide-only',
+            ariaLabel: 'Brand theme',
+            label: _brand.label,
+            items: _brandItems(),
+          ),
+          CraftMenu(
+            className: 'wide-only',
+            ariaLabel: 'Contrast',
+            label: _highContrast ? 'High contrast' : 'Contrast',
+            active: _highContrast,
+            items: <MenuItem>[_highContrastItem()],
+          ),
+          // Below the breakpoint the brand and contrast axes fold in here; the
+          // adapter toggle stays out, since swapping the renderer is the whole
+          // reason to be on this page.
+          CraftMenu(
+            className: 'narrow-only',
+            ariaLabel: 'More options',
+            icon: '☰',
+            iconOnly: true,
+            // Anchored left: the hamburger leads the action row, so a
+            // right-anchored panel would hang off the left edge of a phone.
+            alignEnd: false,
+            items: <MenuItem>[
+              const MenuItem.heading('Brand'),
+              ..._brandItems(),
+              const MenuItem.heading('Contrast'),
+              _highContrastItem(),
+            ],
+          ),
+          _frameworkToggle(),
+          const ThemeToggle(),
+        ]),
       ],
     );
   }
 
-  /// The brand picker: a segmented control (like the adapter toggle) that swaps
-  /// the whole page's brand — the specimen colors and the chrome's corners,
-  /// borders, and font — while light/dark and high-contrast stay independent.
-  Component _brandPicker() {
-    return div(
-      attributes: const <String, String>{
-        'role': 'group',
-        'aria-label': 'Brand theme',
-      },
-      styles: Styles(raw: <String, String>{
-        'display': 'inline-flex',
-        'border': '1px solid var(--border-strong)',
-        'border-radius': 'var(--control-radius, 6px)',
-        'overflow': 'hidden',
-      }),
-      [
+  /// The brand picker: a menu that swaps the whole page's brand — the specimen
+  /// colors and the chrome's corners, borders, and font — while light/dark and
+  /// high-contrast stay independent.
+  List<MenuItem> _brandItems() => <MenuItem>[
         for (final Brand b in kBrands)
-          button(
-            onClick: () {
+          MenuItem(
+            label: b.label,
+            selected: identical(b, _brand),
+            onSelect: () {
               if (identical(b, _brand)) return;
               setState(() => _brand = b);
               _applyChrome();
             },
-            styles: Styles(raw: <String, String>{
-              'padding': '6px 12px',
-              'border': 'none',
-              'background':
-                  identical(b, _brand) ? 'var(--accent)' : 'var(--card)',
-              'color': identical(b, _brand) ? 'var(--accent-fg)' : 'var(--fg)',
-              'font': '13px inherit',
-              'cursor': 'pointer',
-            }),
-            [Component.text(b.label)],
           ),
-      ],
-    );
-  }
+      ];
+
+  /// High contrast is the page's fourth axis; on a phone it rides in the
+  /// overflow menu with the brand rather than taking a labelled checkbox in
+  /// the bar.
+  MenuItem _highContrastItem() => MenuItem(
+        label: 'High contrast',
+        selected: _highContrast,
+        onSelect: () {
+          setState(() => _highContrast = !_highContrast);
+          // High contrast is a chrome axis too — re-derive the CSS vars.
+          _applyChrome();
+        },
+      );
 
   /// The adapter toggle: a segmented Jaspr / Flutter control that swaps which
   /// adapter renders every specimen on the page.

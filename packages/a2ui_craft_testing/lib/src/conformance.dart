@@ -177,6 +177,18 @@ abstract interface class CraftTester {
   /// text node equal to [text], or null when the host default shows through.
   double? textFontSizeOf(String text);
 
+  /// The **font family stack** the primitive explicitly set on the text node
+  /// equal to [text], most-specific first — or null when it set none and the
+  /// host's own font shows through.
+  ///
+  /// The stack, not the glyphs: what conformance can assert is that both
+  /// adapters resolved the same [FontRole] and pushed the host's binding for it
+  /// through to the text. Which typeface the host binds, and whether the
+  /// platform can actually load it, is deliberately outside the contract —
+  /// Flutter spells the stack as `fontFamily` + `fontFamilyFallback`, CSS as one
+  /// `font-family` list, and this probe normalizes both to the same list.
+  List<String>? textFontFamilyOf(String text);
+
   /// The surface color (layer 1 of the control paint model, DESIGN.md §8)
   /// the `Button` whose accessible name is [label] painted, canonicalized to
   /// `#AARRGGBB` — or null when the button paints no surface (the transparent
@@ -1756,6 +1768,106 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
       expect(probe.easing, MotionEasing.standard);
     },
   );
+
+  // ---- Typography families — the closed `FontRole` vocabulary.
+  // A family is a *request to the host*: the template names a role, the host's
+  // `CraftFonts` binding says which typefaces answer it. What conformance pins
+  // is that both adapters resolve the same role and push the same binding
+  // through to the text — never that the glyphs match, which depends on fonts
+  // the platform may or may not have.
+
+  driver.defineTest(
+    'a themed body family resolves to the same stack on every adapter',
+    (CraftTester tester) async {
+      await tester.mount(
+        'import core; widget root = Text(text: "F");',
+        theme: _familyTheme(ThemeRoles.bodyFamily, 'serif'),
+      );
+      expect(
+        tester.textFontFamilyOf('F'),
+        CraftFonts.systemUi.forRole(FontRole.serif),
+      );
+    },
+  );
+
+  driver.defineTest(
+    'an unthemed surface sets no family, leaving the host font alone',
+    (CraftTester tester) async {
+      // The §9.4 host-blend invariant, and the reason a family role resolves to
+      // *null* rather than to a default: an embedded surface with nothing to say
+      // about type must render in the surrounding app's own font.
+      await tester.mount('import core; widget root = Text(text: "F");');
+      expect(tester.textFontFamilyOf('F'), isNull);
+    },
+  );
+
+  driver.defineTest(
+    'a raw typeface name in a theme never reaches the host',
+    (CraftTester tester) async {
+      // The guard rail: `family` is a named-string token read by
+      // `FontRole.decode`, not a passthrough. A theme naming a font file the
+      // host never agreed to ship decodes to nothing on every adapter, rather
+      // than to a family one adapter happens to resolve and the other doesn't.
+      await tester.mount(
+        'import core; widget root = Text(text: "F");',
+        theme: _familyTheme(ThemeRoles.bodyFamily, 'Comic Sans MS'),
+      );
+      expect(tester.textFontFamilyOf('F'), isNull);
+    },
+  );
+
+  driver.defineTest(
+    'a Markdown code span is monospace on every adapter, even unthemed',
+    (CraftTester tester) async {
+      // Regression guard. Jaspr renders `<code>`, which the UA stylesheet makes
+      // monospace for free; Flutter used to ask for the family `'monospace'`,
+      // which is a CSS generic Flutter has no concept of — on the CanvasKit web
+      // renderer it silently resolved to the fallback face. Both adapters now go
+      // through the host binding for `FontRole.mono`, so both state the same
+      // stack instead of one of them getting lucky.
+      await tester.mount(
+        // A paragraph that *is* the code span: Flutter merges a multi-span
+        // paragraph into one Text.rich, which the text probe cannot see into.
+        r'import core; widget root = Markdown(text: "`snippet`");',
+      );
+      expect(
+        tester.textFontFamilyOf('snippet'),
+        CraftFonts.systemUi.forRole(FontRole.mono),
+      );
+    },
+  );
+
+  driver.defineTest(
+    'a theme may re-face code spans away from the built-in mono default',
+    (CraftTester tester) async {
+      await tester.mount(
+        // A paragraph that *is* the code span: Flutter merges a multi-span
+        // paragraph into one Text.rich, which the text probe cannot see into.
+        r'import core; widget root = Markdown(text: "`snippet`");',
+        theme: _familyTheme(ThemeRoles.codeFamily, 'serif'),
+      );
+      expect(
+        tester.textFontFamilyOf('snippet'),
+        CraftFonts.systemUi.forRole(FontRole.serif),
+      );
+    },
+  );
+}
+
+/// A minimal theme naming [family] (a [FontRole] id) at the token path
+/// [rolePath]. Used by the typography-family conformance cases.
+CraftTheme _familyTheme(String rolePath, String family) {
+  // Rebuild the dotted role path as the nested DTCG group it addresses.
+  final List<String> segments = rolePath.split('.');
+  Map<String, Object?> node = <String, Object?>{
+    r'$type': 'string',
+    r'$value': family,
+  };
+  for (final String segment in segments.reversed) {
+    node = <String, Object?>{segment: node};
+  }
+  return CraftTheme(
+      resolveDesignTokens(<DesignTokenSet>[parseDesignTokens(node)]));
 }
 
 /// A minimal theme whose only role is `color.surface` (the motion roles are

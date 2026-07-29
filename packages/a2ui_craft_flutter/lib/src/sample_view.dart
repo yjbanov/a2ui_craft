@@ -5,6 +5,7 @@
 import 'package:a2ui_core/a2ui_core.dart';
 import 'package:a2ui_craft/a2ui_craft.dart'
     show
+        CraftFonts,
         CraftTheme,
         LibraryName,
         MediaContext,
@@ -38,6 +39,7 @@ class SampleView extends StatefulWidget {
     this.onAction,
     this.theme,
     this.media,
+    this.fonts,
     this.rootId = 'root',
   });
 
@@ -60,6 +62,10 @@ class SampleView extends StatefulWidget {
   /// The responsive environment ([MediaContext]) the host supplies, or null to
   /// stay size-agnostic. The host rebuilds with a new one as the window resizes.
   final MediaContext? media;
+
+  /// The host's font binding — which typefaces answer each [FontRole] — or null
+  /// to inherit the enclosing binding (else [CraftFonts.systemUi]).
+  final CraftFonts? fonts;
 
   /// The component id to render as the surface root.
   final String rootId;
@@ -110,6 +116,7 @@ class _SampleViewState extends State<SampleView> {
       scope: _catalogName,
       theme: widget.theme,
       media: widget.media,
+      fonts: widget.fonts,
     );
   }
 }

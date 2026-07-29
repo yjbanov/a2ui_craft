@@ -1156,11 +1156,36 @@ small, versioned contract living in `a2ui_craft` next to the primitive spec
 surface/foreground pairing, using **Material 3's names** where M3 has one — the
 M3 ∩ shadcn intersection — so existing exports map on without translation:
 `color.surface`/`onSurface`/`onSurfaceVariant`, `color.primary` (the accent),
-`color.outline`, `color.link`, plus a sizes-only type scale
-(`type.body.size`, `type.caption.size`, `type.heading.<n>.size`);
-`onPrimary` is consumed by the control paint model (§8);
+`color.outline`, `color.link`, plus a type scale
+(`type.body.size`, `type.caption.size`, `type.heading.<n>.size`, and the
+families below); `onPrimary` is consumed by the control paint model (§8);
 `error`/`onError` are named-now-consumed-later. Radius/spacing
-scales, font families/weights, and `color.background` are deliberately deferred.
+scales, font *weights*, and `color.background` are deliberately deferred.
+
+**Fonts are a host primitive, not a token value (`FontRole` / `CraftFonts`).**
+`type.body.family`, `type.caption.family`, `type.heading.family`, and
+`type.code.family` are **named-string** tokens over a *closed* vocabulary —
+`sans`, `serif`, `mono` — never a typeface name. A family is a **request the
+host must be able to answer**, exactly like a primitive or a function: the
+surface names a role, and the host's `CraftFonts` binding (an ambient scope
+beside the theme, defaulting to the platform's own UI faces) decides which
+typefaces answer it and where their bytes come from. Two reasons the set is
+quantized rather than open:
+
+- *It is the only thing that can work everywhere.* Flutter's CanvasKit web
+  renderer resolves families solely from fonts registered with its font
+  collection — it has no notion of the CSS generic families, so an unregistered
+  name silently renders as the fallback instead of as a system serif. Three
+  roles a host can always answer beats an open namespace that degrades
+  invisibly on one adapter.
+- *An arbitrary family is a download the host never agreed to*, and a look its
+  design system never sanctioned.
+
+A theme that omits a family role resolves to **null, not to a default**, and the
+adapters then emit no family at all — the §9.4 host-blend invariant applied to
+type, and what keeps an embedded surface in the surrounding app's own font.
+`Markdown` code spans are the one primitive carrying a built-in fallback
+(`mono`), because fixed-pitch is what a code span *means*.
 
 **No selectors — a deliberate divergence from CSS.** A CSS stylesheet can
 *target* arbitrary elements from the outside; our theme cannot. Tokens select

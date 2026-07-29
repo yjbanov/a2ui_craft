@@ -35,6 +35,7 @@ class A2uiToRfwAdapter extends StatefulComponent {
     this.mapComponent,
     this.theme,
     this.media,
+    this.fonts,
     String? reconcileKey,
   }) : super(key: ValueKey<String>(reconcileKey ?? id));
 
@@ -79,6 +80,10 @@ class A2uiToRfwAdapter extends StatefulComponent {
   /// stay size-agnostic. Set on the **root** adapter only, like [theme]: it
   /// wraps the tree in the ambient media scope every descendant reads.
   final MediaContext? media;
+
+  /// The host's font binding — which typefaces answer each [FontRole] — or null
+  /// to inherit the enclosing binding (else [CraftFonts.systemUi]).
+  final CraftFonts? fonts;
 
   @override
   State<A2uiToRfwAdapter> createState() => _A2uiToRfwAdapterState();
@@ -148,6 +153,7 @@ class _A2uiToRfwAdapterState extends State<A2uiToRfwAdapter> {
       scope: component.scope,
       theme: component.theme,
       media: component.media,
+      fonts: component.fonts,
     );
   }
 

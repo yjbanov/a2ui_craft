@@ -18,10 +18,12 @@ import 'dart:convert';
 
 import 'package:a2ui_craft/a2ui_craft.dart'
     show
+        CraftFonts,
         CraftTheme,
         CraftThemeMode,
         DefaultTheme,
         DesignTokenSet,
+        FontRole,
         parseDesignTokens,
         resolveDesignTokens;
 
@@ -106,8 +108,14 @@ class BrandShape {
   /// Base chrome border weight in px (HC adds one).
   final double borderWidth;
 
-  /// The chrome font stack.
-  final String font;
+  /// The typeface this brand asks for, from the closed [FontRole] vocabulary.
+  ///
+  /// One value drives both sides: the specimens get it as a `type.*.family`
+  /// token (so *both* adapters re-face), and the page chrome gets the host
+  /// binding's stack as a CSS variable. Before this was a role it was a raw CSS
+  /// stack, which only the DOM could honor — the embedded Flutter specimens had
+  /// no way to see it, so the brand font silently applied to half the page.
+  final FontRole font;
 }
 
 /// A selectable brand: a name, its light + dark [BrandScheme]s, and its
@@ -155,8 +163,8 @@ class Brand {
   /// brand, else a DTCG-token theme built from this brand's scheme.
   CraftTheme craftTheme(CraftThemeMode mode) {
     if (isDefault) return DefaultTheme.of(mode);
-    return _brandThemeCache
-        .putIfAbsent((this, mode), () => _buildCraftTheme(schemeFor(mode)));
+    return _brandThemeCache.putIfAbsent(
+        (this, mode), () => _buildCraftTheme(schemeFor(mode), shape.font));
   }
 
   /// This brand as an inline **theme block** JSON string — the manifest theme
@@ -175,7 +183,7 @@ class Brand {
       'tokens': <String, Object?>{
         'color': _colorBlock(schemeFor(CraftThemeMode.light),
             description: '$label — base layer (Light).'),
-        'type': _typeScale,
+        'type': _typeScaleFor(shape.font),
       },
       'modes': <String, Object?>{
         for (final CraftThemeMode mode in const <CraftThemeMode>[
@@ -226,17 +234,17 @@ class Brand {
       '--control-radius': shape.controlRadius,
       '--card-border-width': '${borderWidth}px',
       '--card-border-color': s.border,
-      '--brand-font': shape.font,
+      '--brand-font': _cssStack(CraftFonts.systemUi.forRole(shape.font)),
     };
   }
 
-  static CraftTheme _buildCraftTheme(BrandScheme s) {
+  static CraftTheme _buildCraftTheme(BrandScheme s, FontRole font) {
     // A one-layer DTCG document: the semantic color roles pointed straight at
     // the scheme's hexes (no palette indirection needed for a flat, single-mode
     // build), plus the stock type scale so the specimens read themed sizes.
     final Map<String, Object?> document = <String, Object?>{
       'color': _colorBlock(s),
-      'type': _typeScale,
+      'type': _typeScaleFor(font),
     };
     return CraftTheme(
         resolveDesignTokens(<DesignTokenSet>[parseDesignTokens(document)]));
@@ -262,35 +270,38 @@ class Brand {
     };
   }
 
-  static const Map<String, Object?> _typeScale = <String, Object?>{
-    r'$type': 'dimension',
-    'body': <String, Object?>{
-      'size': <String, Object?>{r'$value': '14px'}
-    },
-    'caption': <String, Object?>{
-      'size': <String, Object?>{r'$value': '12px'}
-    },
-    'heading': <String, Object?>{
-      '1': <String, Object?>{
-        'size': <String, Object?>{r'$value': '24px'}
-      },
-      '2': <String, Object?>{
-        'size': <String, Object?>{r'$value': '22px'}
-      },
-      '3': <String, Object?>{
-        'size': <String, Object?>{r'$value': '20px'}
-      },
-      '4': <String, Object?>{
-        'size': <String, Object?>{r'$value': '18px'}
-      },
-      '5': <String, Object?>{
-        'size': <String, Object?>{r'$value': '16px'}
-      },
-      '6': <String, Object?>{
-        'size': <String, Object?>{r'$value': '14px'}
-      },
-    },
-  };
+  static Map<String, Object?> _typeScaleFor(FontRole font) => <String, Object?>{
+        r'$type': 'dimension',
+        'body': <String, Object?>{
+          'size': <String, Object?>{r'$value': '14px'},
+          'family': <String, Object?>{r'$type': 'string', r'$value': font.id},
+        },
+        'caption': <String, Object?>{
+          'size': <String, Object?>{r'$value': '12px'},
+          'family': <String, Object?>{r'$type': 'string', r'$value': font.id},
+        },
+        'heading': <String, Object?>{
+          'family': <String, Object?>{r'$type': 'string', r'$value': font.id},
+          '1': <String, Object?>{
+            'size': <String, Object?>{r'$value': '24px'}
+          },
+          '2': <String, Object?>{
+            'size': <String, Object?>{r'$value': '22px'}
+          },
+          '3': <String, Object?>{
+            'size': <String, Object?>{r'$value': '20px'}
+          },
+          '4': <String, Object?>{
+            'size': <String, Object?>{r'$value': '18px'}
+          },
+          '5': <String, Object?>{
+            'size': <String, Object?>{r'$value': '16px'}
+          },
+          '6': <String, Object?>{
+            'size': <String, Object?>{r'$value': '14px'}
+          },
+        },
+      };
 
   /// The **roomy** type scale — the [_typeScale] bumped for the expanded size
   /// class and up (matches the default theme's `roomy.tokens.json`). Emitted as
@@ -397,7 +408,7 @@ const Brand _defaultBrand = Brand(
     cardRadius: '16px',
     controlRadius: '6px',
     borderWidth: 1,
-    font: 'system-ui, -apple-system, sans-serif',
+    font: FontRole.sans,
   ),
 );
 
@@ -442,7 +453,7 @@ const Brand _terminalBrand = Brand(
     cardRadius: '0',
     controlRadius: '0',
     borderWidth: 1,
-    font: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+    font: FontRole.mono,
   ),
 );
 
@@ -487,7 +498,7 @@ const Brand _editorialBrand = Brand(
     cardRadius: '4px',
     controlRadius: '4px',
     borderWidth: 1,
-    font: 'Georgia, "Times New Roman", serif',
+    font: FontRole.serif,
   ),
 );
 
@@ -532,9 +543,16 @@ const Brand _bubblegumBrand = Brand(
     cardRadius: '22px',
     controlRadius: '999px',
     borderWidth: 2,
-    font: '"Trebuchet MS", system-ui, sans-serif',
+    font: FontRole.sans,
   ),
 );
+
+/// Formats a host font stack as a CSS `font-family` value, quoting the family
+/// names that contain whitespace (the same spelling the Jaspr adapter emits for
+/// a family role, so page chrome and rendered specimens agree exactly).
+String _cssStack(List<String> families) => families
+    .map((String f) => f.contains(RegExp(r'\s')) ? '"$f"' : f)
+    .join(', ');
 
 /// The brands offered by the `/primitives` picker, in order.
 const List<Brand> kBrands = <Brand>[

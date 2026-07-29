@@ -76,6 +76,36 @@ String? roleSize(BuildContext context, String role) {
   return px == null ? null : '${numberToDisplayString(px)}px';
 }
 
+/// Reads a typography family role as a CSS `font-family` stack, or null when
+/// neither the theme nor [fallback] names a [FontRole].
+///
+/// Null is the common case and the important one: the DOM inherits
+/// `font-family`, so emitting nothing leaves the surface in the host page's own
+/// font — the §9.4 host-blend invariant. Emitting a stack is therefore a
+/// deliberate act, never a side effect of rendering text. (Before this role
+/// existed, inheritance was *all* there was, which quietly made the Jaspr
+/// adapter honor host CSS that the Flutter adapter could not see.)
+String? roleFontFamily(BuildContext context, String role,
+    {FontRole? fallback}) {
+  final FontRole? resolved = resolveFontFamily(
+    role,
+    ambientCraftTheme(context)?.tokens,
+    fallback: fallback,
+  );
+  if (resolved == null) return null;
+  return cssFontStack(ambientCraftFonts(context).forRole(resolved));
+}
+
+/// Formats a family stack as a CSS `font-family` value.
+///
+/// Families containing whitespace are quoted (`Segoe UI` → `"Segoe UI"`);
+/// generic families and single-word names are left bare, which is what the CSS
+/// grammar requires of keywords like `sans-serif` and `system-ui` — quoting
+/// those would turn a keyword into a family name that matches nothing.
+String cssFontStack(List<String> families) => families
+    .map((String f) => f.contains(RegExp(r'\s')) ? '"$f"' : f)
+    .join(', ');
+
 /// Renders a CSS length without a trailing `.0` for whole pixels.
 String px(double v) =>
     v == v.roundToDouble() ? v.toInt().toString() : v.toString();

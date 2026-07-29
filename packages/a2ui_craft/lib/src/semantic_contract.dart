@@ -31,8 +31,11 @@ import 'value_types.dart';
 //   accessible pressable; branding a button is a catalog *template* over
 //   Box/Text referencing these roles explicitly (the component tier of the
 //   three-tier token taxonomy).
-// - Radius/spacing scales, font families/weights, and `color.background` are
+// - Radius/spacing scales, font *weights*, and `color.background` are
 //   deliberately absent from v1 — see the proposal for the reasons each waits.
+//   Font *families* arrived after v1 as a closed role vocabulary (`FontRole`),
+//   not an open namespace: a family name is a request the host must be able to
+//   answer, so the set is quantized the way the easing set is.
 
 /// The token paths of the semantic contract, v1.
 ///
@@ -48,13 +51,23 @@ import 'value_types.dart';
 /// | [outline] | `Divider`, `TextField` border, `Card` border, `Box` border, `Checkbox` box, `Radio` ring, `Switch` inactive track |
 /// | [link] | `Markdown` links |
 ///
-/// The `type.*` roles (sizes only in v1; families/weights are later phases):
+/// The `type.*` roles (sizes and families; weights are a later phase):
 ///
 /// | Path | Read by |
 /// |---|---|
 /// | [bodySize] | `Text` (body), `Markdown` body |
 /// | [captionSize] | `Text` (caption) |
 /// | [headingSize] (1–6) | `Heading`, `Markdown` headings |
+/// | [bodyFamily] | `Text` (body), `Markdown` body |
+/// | [captionFamily] | `Text` (caption) |
+/// | [headingFamily] | `Heading`, `Markdown` headings |
+/// | [codeFamily] | `Markdown` code spans |
+///
+/// Families are **named-string** tokens (an id read by `FontRole.decode`, never
+/// a raw family name — see [FontRole] for why the vocabulary is closed), and
+/// they are resolved through [resolveFontFamily]. Unlike sizes, a family is one
+/// role per element kind rather than one per heading level: a type scale varies
+/// size down the levels, not typeface.
 ///
 /// The `motion.*` roles (the motion token system — durations + named easings):
 ///
@@ -114,6 +127,21 @@ abstract final class ThemeRoles {
   /// Heading text size for [level] 1–6, e.g. `type.heading.2.size`.
   static String headingSize(int level) => 'type.heading.$level.size';
 
+  /// Body text family (a named-string token read by `FontRole.decode`).
+  static const String bodyFamily = 'type.body.family';
+
+  /// Caption text family.
+  static const String captionFamily = 'type.caption.family';
+
+  /// Heading family — one role for all six levels (a type scale varies size
+  /// down the levels, not typeface).
+  static const String headingFamily = 'type.heading.family';
+
+  /// Code-span family (`Markdown`). The one role with a built-in default other
+  /// than "unset": code is fixed-pitch even on an unthemed surface, which is
+  /// what a monospace face *means*.
+  static const String codeFamily = 'type.code.family';
+
   /// Short transition duration (`duration` token, ms) — small state changes.
   static const String motionDurationShort = 'motion.duration.short';
 
@@ -172,3 +200,25 @@ Motion resolveMotion(Object? raw, ResolvedTokens? tokens) {
         );
   return Motion.decode(raw, fallback: themeDefault);
 }
+
+/// Resolves a typography family role — [ThemeRoles.bodyFamily] and friends —
+/// into the [FontRole] the primitive should render with, or **null** when
+/// neither the theme nor [fallback] names one.
+///
+/// Null is the load-bearing case. §9.4's rule is that an unthemed surface
+/// renders exactly as if this contract did not exist, and for typefaces that is
+/// stronger than a stylistic nicety: the host's own font is what makes an
+/// embedded surface look like part of the page around it. So a theme that omits
+/// a family role leaves the font untouched — the adapters emit *nothing*, not a
+/// default — and only an explicit token (or a primitive's own [fallback], as
+/// `Markdown` code spans pass [FontRole.mono]) selects a face.
+///
+/// Lives in the core so both adapters resolve the identical role for a given
+/// theme (Pillar A); mapping that role onto a concrete typeface is the host's
+/// job, via `CraftFonts`.
+FontRole? resolveFontFamily(
+  String rolePath,
+  ResolvedTokens? tokens, {
+  FontRole? fallback,
+}) =>
+    FontRole.tryDecode(tokens?.raw(rolePath)) ?? fallback;

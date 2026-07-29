@@ -107,6 +107,19 @@ class _JasprCraftTester implements CraftTester {
     return double.tryParse(value.substring(0, value.length - 2));
   }
 
+  @override
+  List<String>? textFontFamilyOf(String text) {
+    final String? value = _textStyleProperty(text, 'font-family');
+    if (value == null) return null;
+    // Undo the CSS spelling: split the list and strip the quotes multi-word
+    // family names need, so the probe reports the same plain names Flutter's
+    // fontFamily/fontFamilyFallback pair does.
+    return value
+        .split(',')
+        .map((String f) => f.trim().replaceAll('"', ''))
+        .toList();
+  }
+
   /// The [property] the primitive explicitly set for [text]: read off the
   /// nearest DOM ancestor carrying it (the ancestor finder yields
   /// nearest-first). An enclosing control may legitimately carry the same

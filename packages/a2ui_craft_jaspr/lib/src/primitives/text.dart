@@ -20,12 +20,14 @@ Component buildText(BuildContext context, DataSource source) {
   final String text = _readText(source, const <Object>['text']);
   final TextVariant variant = TextVariant.parse(source.v<String>(['variant']));
   if (variant == TextVariant.caption) {
+    final String? family = roleFontFamily(context, ThemeRoles.captionFamily);
     return span(
       styles: Styles(raw: <String, String>{
         'font-size': roleSize(context, ThemeRoles.captionSize) ?? '12px',
         'color': ContentInk.of(context) ??
             roleColor(context, ThemeRoles.onSurfaceVariant) ??
             kCaptionFallback,
+        if (family != null) 'font-family': family,
       }),
       <Component>[Component.text(text)],
     );
@@ -149,6 +151,7 @@ Component _mdHeading(int level, BuildContext context, List<Component> children,
     {String? blockPadding}) {
   final String? size = roleSize(context, ThemeRoles.headingSize(level));
   final String? color = roleColor(context, ThemeRoles.onSurface);
+  final String? family = roleFontFamily(context, ThemeRoles.headingFamily);
   // A Heading is a sized text line with **no intrinsic margin**, matching the
   // Flutter adapter (a bare `Text`). Reset the browser's default h1–h6 margin
   // (~0.83em top and bottom) — left on, it inflates any heading in a tight box
@@ -162,6 +165,7 @@ Component _mdHeading(int level, BuildContext context, List<Component> children,
     if (blockPadding != null) 'padding': blockPadding,
     if (size != null) 'font-size': size,
     if (color != null) 'color': color,
+    if (family != null) 'font-family': family,
   });
   return switch (level) {
     1 => h1(styles: styles, children),
@@ -178,7 +182,20 @@ List<Component> _mdInline(List<MarkdownSpan> spans, BuildContext context) =>
 
 Component _mdSpan(MarkdownSpan span, BuildContext context) {
   Component node = Component.text(span.text);
-  if (span.code) node = code(<Component>[node]);
+  if (span.code) {
+    // `<code>` already gets a monospace face from the UA stylesheet, but state
+    // it explicitly: the role is what the Flutter adapter reads too, and only a
+    // stated family goes through the host's binding. Relying on the UA default
+    // is precisely how the two adapters silently diverged here before.
+    final String? family =
+        roleFontFamily(context, ThemeRoles.codeFamily, fallback: FontRole.mono);
+    node = code(
+      styles: family == null
+          ? null
+          : Styles(raw: <String, String>{'font-family': family}),
+      <Component>[node],
+    );
+  }
   if (span.italic) node = em(<Component>[node]);
   if (span.bold) node = strong(<Component>[node]);
   final String? href = span.href;
@@ -204,10 +221,12 @@ Styles? _bodyStyle(BuildContext context) {
   final String? color =
       ContentInk.of(context) ?? roleColor(context, ThemeRoles.onSurface);
   final String? size = roleSize(context, ThemeRoles.bodySize);
-  if (color == null && size == null) return null;
+  final String? family = roleFontFamily(context, ThemeRoles.bodyFamily);
+  if (color == null && size == null && family == null) return null;
   return Styles(raw: <String, String>{
     if (size != null) 'font-size': size,
     if (color != null) 'color': color,
+    if (family != null) 'font-family': family,
   });
 }
 

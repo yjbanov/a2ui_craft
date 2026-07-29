@@ -20,11 +20,15 @@ Widget buildText(BuildContext context, DataSource source) {
   return Text(
     _readText(source, const <Object>['text']),
     style: variant == TextVariant.caption
-        ? TextStyle(
-            fontSize: roleSize(context, ThemeRoles.captionSize) ?? 12,
-            color: ContentInk.of(context) ??
-                roleColor(context, ThemeRoles.onSurfaceVariant) ??
-                _captionFallback(context),
+        ? roleFontFamily(
+            context,
+            TextStyle(
+              fontSize: roleSize(context, ThemeRoles.captionSize) ?? 12,
+              color: ContentInk.of(context) ??
+                  roleColor(context, ThemeRoles.onSurfaceVariant) ??
+                  _captionFallback(context),
+            ),
+            ThemeRoles.captionFamily,
           )
         : _bodyStyle(context),
   );
@@ -158,7 +162,15 @@ TextStyle _mdSpanStyle(
   TextStyle style = base ?? const TextStyle();
   if (span.bold) style = style.copyWith(fontWeight: FontWeight.bold);
   if (span.italic) style = style.copyWith(fontStyle: FontStyle.italic);
-  if (span.code) style = style.copyWith(fontFamily: 'monospace');
+  // Go through the host's font binding rather than naming a family directly.
+  // `'monospace'` is a CSS generic, and Flutter has no such concept: on the
+  // CanvasKit web renderer an unregistered name resolves to the fallback face,
+  // so code spans quietly rendered proportional here while the Jaspr adapter's
+  // `<code>` got a real monospace from the UA stylesheet.
+  if (span.code) {
+    style = roleFontFamily(context, style, ThemeRoles.codeFamily,
+        fallback: FontRole.mono);
+  }
   if (span.href != null) {
     style = style.copyWith(
       color: roleColor(context, ThemeRoles.link) ?? _linkFallback(context),
@@ -170,11 +182,15 @@ TextStyle _mdSpanStyle(
 
 TextStyle _mdHeadingStyle(int level, BuildContext context) {
   const List<double> sizes = <double>[24, 22, 20, 18, 16, 14];
-  return TextStyle(
-    fontSize: roleSize(context, ThemeRoles.headingSize(level)) ??
-        sizes[(level - 1).clamp(0, 5)],
-    fontWeight: FontWeight.bold,
-    color: roleColor(context, ThemeRoles.onSurface),
+  return roleFontFamily(
+    context,
+    TextStyle(
+      fontSize: roleSize(context, ThemeRoles.headingSize(level)) ??
+          sizes[(level - 1).clamp(0, 5)],
+      fontWeight: FontWeight.bold,
+      color: roleColor(context, ThemeRoles.onSurface),
+    ),
+    ThemeRoles.headingFamily,
   );
 }
 
@@ -188,8 +204,12 @@ TextStyle? _bodyStyle(BuildContext context) {
   final Color? color =
       ContentInk.of(context) ?? roleColor(context, ThemeRoles.onSurface);
   final double? size = roleSize(context, ThemeRoles.bodySize);
-  if (color == null && size == null) return null;
-  return TextStyle(color: color, fontSize: size);
+  final TextStyle style = roleFontFamily(
+      context, TextStyle(color: color, fontSize: size), ThemeRoles.bodyFamily);
+  // Still nothing to say? Return null so the host's own DefaultTextStyle shows
+  // through untouched.
+  if (color == null && size == null && style.fontFamily == null) return null;
+  return style;
 }
 
 // Host-default fallbacks for roles this adapter must ink even unthemed. Card

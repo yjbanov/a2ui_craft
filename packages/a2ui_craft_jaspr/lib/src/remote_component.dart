@@ -26,6 +26,7 @@ class RemoteWidget extends StatefulComponent {
       required this.data,
       this.theme,
       this.media,
+      this.fonts,
       this.onEvent});
 
   /// The [Runtime] to use to render the widget specified by [widget].
@@ -76,6 +77,10 @@ class RemoteWidget extends StatefulComponent {
   /// place. When null, the surface is size-agnostic (mobile-first fallback).
   final MediaContext? media;
 
+  /// The host's font binding — which typefaces answer each [FontRole] — or null
+  /// to inherit the enclosing binding (else [CraftFonts.systemUi]).
+  final CraftFonts? fonts;
+
   /// Called when there's an event triggered by a remote component.
   ///
   /// If this is null, events are discarded.
@@ -121,6 +126,6 @@ class _RemoteWidgetState extends State<RemoteWidget> {
   Component build(BuildContext context) {
     return component.runtime.build(
         context, component.widget, component.data, _eventHandler,
-        theme: component.theme, media: component.media);
+        theme: component.theme, media: component.media, fonts: component.fonts);
   }
 }

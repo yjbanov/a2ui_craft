@@ -7,8 +7,9 @@
 /// A small set of types — sizing ([Dimension]), the flex [FlexAxis] and
 /// alignments ([MainAxisAlign]/[CrossAxisAlign]), edge [Insets], [Rgba]
 /// color, corner rounding ([CornerRadius]), container decoration
-/// ([BorderSpec], [Elevation]), and motion ([Motion], [MotionEasing]) — each
-/// with a single canonical representation.
+/// ([BorderSpec], [Elevation]), motion ([Motion], [MotionEasing]), and
+/// typefaces ([FontRole], [CraftFonts]) — each with a single canonical
+/// representation.
 /// Every renderer maps these onto its own native layout, so a template that uses
 /// them means the same thing regardless of the framework drawing it.
 ///
@@ -912,4 +913,149 @@ final class Motion {
 
   @override
   String toString() => 'Motion(durationMs: $durationMs, easing: ${easing.id})';
+}
+
+/// A **font role**: the closed vocabulary of typefaces a template or theme may
+/// name — a *request to the host*, never a specific font file.
+///
+/// Fonts are host-provided, in the same sense primitives and functions are. A
+/// surface asks for "the monospace face"; the host decides which typeface that
+/// is and where its bytes come from ([CraftFonts]). The vocabulary is closed
+/// for the same reason the easing set is: a quantized, intent-named vocabulary
+/// is the guard rail. It also keeps surfaces honest about weight — an arbitrary
+/// family name is a download the host never agreed to, and a look the host's
+/// design system never sanctioned.
+///
+/// A closed set is additionally the only thing that *can* work everywhere.
+/// Flutter's CanvasKit web renderer resolves families solely from fonts
+/// registered with its font collection — it has no notion of the CSS generic
+/// families, so an unregistered name silently renders as the fallback rather
+/// than as a system serif. Three roles the host can always answer beats an open
+/// namespace that degrades invisibly on the platform that matters most.
+enum FontRole {
+  /// The UI face — the default for body, caption, and heading text. By host
+  /// convention this is the platform's own UI font, so surfaces feel native to
+  /// where they run.
+  sans('sans'),
+
+  /// A serif face, for editorial or long-form emphasis.
+  serif('serif'),
+
+  /// A fixed-pitch face: code spans, tabular figures, anything column-aligned.
+  mono('mono');
+
+  const FontRole(this.id);
+
+  /// The token string a theme/template uses to name this role.
+  final String id;
+
+  /// Decodes a raw argument value into a [FontRole].
+  ///
+  /// Accepts the canonical [id] string (whitespace-trimmed); anything else
+  /// (absent, unknown, non-string) yields [fallback]. Total, like every
+  /// value-type decoder.
+  static FontRole decode(Object? raw, {FontRole fallback = FontRole.sans}) =>
+      tryDecode(raw) ?? fallback;
+
+  /// The [FontRole] [raw] names, or null if it names none.
+  ///
+  /// The nullable sibling of [decode], for the one caller that must tell
+  /// "this theme asked for [sans]" apart from "this theme said nothing" —
+  /// `resolveFontFamily`, where silence means *leave the host's own font
+  /// alone* rather than *impose a default*.
+  static FontRole? tryDecode(Object? raw) {
+    if (raw is! String) return null;
+    final String id = raw.trim();
+    for (final FontRole role in values) {
+      if (role.id == id) return role;
+    }
+    return null;
+  }
+}
+
+/// The **host's font binding**: which concrete typefaces answer each
+/// [FontRole], as an ordered family stack per role (most specific first, a
+/// last-resort generic last).
+///
+/// This is the seam the user of an adapter owns. A host that ships its own
+/// typefaces — or that must, because its target cannot borrow the platform's —
+/// hands the adapter a different [CraftFonts] and every surface re-faces at
+/// once. The default ([systemUi]) borrows the platform UI font and asks for
+/// nothing, which is why it is safe as a default but *only* a default: on
+/// Flutter web today the generic entries resolve only to whatever the embedder
+/// registered, so a host targeting that platform is expected to supply real
+/// families here.
+///
+/// Deliberately not decodable from template data: the binding is a host
+/// decision, and a surface that could name its own font files would defeat the
+/// closed vocabulary [FontRole] exists to enforce.
+final class CraftFonts {
+  const CraftFonts({
+    required this.sans,
+    required this.serif,
+    required this.mono,
+  });
+
+  /// The stack answering [FontRole.sans].
+  final List<String> sans;
+
+  /// The stack answering [FontRole.serif].
+  final List<String> serif;
+
+  /// The stack answering [FontRole.mono].
+  final List<String> mono;
+
+  /// The default binding: the platform's own UI, serif, and monospace faces.
+  /// Costs no download and makes a surface look native to its host.
+  static const CraftFonts systemUi = CraftFonts(
+    sans: <String>[
+      'system-ui',
+      '-apple-system',
+      'Segoe UI',
+      'Roboto',
+      'sans-serif',
+    ],
+    serif: <String>['Georgia', 'Times New Roman', 'serif'],
+    mono: <String>[
+      'ui-monospace',
+      'SFMono-Regular',
+      'Menlo',
+      'Consolas',
+      'monospace',
+    ],
+  );
+
+  /// The family stack answering [role].
+  List<String> forRole(FontRole role) => switch (role) {
+        FontRole.sans => sans,
+        FontRole.serif => serif,
+        FontRole.mono => mono,
+      };
+
+  @override
+  bool operator ==(Object other) =>
+      other is CraftFonts &&
+      _sameStack(other.sans, sans) &&
+      _sameStack(other.serif, serif) &&
+      _sameStack(other.mono, mono);
+
+  @override
+  int get hashCode => Object.hash(
+        CraftFonts,
+        Object.hashAll(sans),
+        Object.hashAll(serif),
+        Object.hashAll(mono),
+      );
+
+  @override
+  String toString() => 'CraftFonts(sans: $sans, serif: $serif, mono: $mono)';
+
+  static bool _sameStack(List<String> a, List<String> b) {
+    if (identical(a, b)) return true;
+    if (a.length != b.length) return false;
+    for (int i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
 }

@@ -127,6 +127,16 @@ class _FlutterCraftTester implements CraftTester {
       _tester.widget<Text>(find.text(text)).style?.fontSize;
 
   @override
+  List<String>? textFontFamilyOf(String text) {
+    // Flutter splits one ordered stack across two fields; rejoin them so the
+    // probe reads the same list the CSS side reports.
+    final TextStyle? style = _tester.widget<Text>(find.text(text)).style;
+    final String? first = style?.fontFamily;
+    if (first == null) return null;
+    return <String>[first, ...?style?.fontFamilyFallback];
+  }
+
+  @override
   String? buttonSurfaceColorOf(String label) {
     // The nearest Material ancestor of the label is the Button's surface
     // (layer 1 of the paint model); the ancestor finder yields nearest-first.

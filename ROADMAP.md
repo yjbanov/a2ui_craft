@@ -629,6 +629,52 @@
           extended `Box(animate:)` to definite width/height here (the deferred size
           piece), so movement — not just cross-fade — is expressible; pinned by a
           size-animation conformance case.*
+  - [x] **Typography families as a host primitive (§9.4).** Found via a real
+        divergence: switching brands on `/primitives` re-fonted the Jaspr
+        specimens but not the Flutter ones. The cause was not a Flutter bug —
+        the brand font was a **CSS chrome variable**, which DOM text inherits and
+        a canvas cannot see, and the semantic contract carried no family at all.
+        The same hole was already shipping in a core primitive: `Markdown` code
+        spans asked Flutter for the family `'monospace'`, a CSS generic Flutter
+        has no concept of — on CanvasKit (which resolves families only from its
+        registered font collection, `canonicalizeFontFamily` being reachable only
+        from the `web_paragraph`/text-editing paths) that silently rendered
+        proportional, while Jaspr's `<code>` got real monospace from the UA
+        stylesheet. Nothing caught it because the conformance suite had zero font
+        coverage. The fix treats a family as a **request to the host**, like a
+        primitive or a function:
+        - **`FontRole`** — a closed `sans` / `serif` / `mono` vocabulary with a
+          total `decode` (plus a nullable `tryDecode`), mirroring `MotionEasing`.
+          A raw typeface name decodes to *nothing*, so a theme can never hand the
+          host a download it never agreed to — and three roles every platform can
+          answer beats an open namespace that degrades invisibly on the adapter
+          that matters most.
+        - **`CraftFonts`** — the host's binding from role → ordered family stack,
+          an ambient scope beside the theme (`fonts:` on `Runtime.build` /
+          `SampleView`), defaulting to the platform's own UI faces. Named
+          `CraftFonts`, not `FontFamilies`, because Jaspr's `dom.dart` already
+          exports that name — a collision that would have landed on every host
+          app author, not just on us.
+        - **Contract + resolver** — `type.{body,caption,heading,code}.family` as
+          named-string tokens, resolved by `resolveFontFamily`, which returns
+          **null when the theme is silent** so the adapters emit no family and the
+          §9.4 host-blend invariant holds for type. `Markdown` code spans pass the
+          one built-in fallback (`mono`).
+        - **Conformance** — `textFontFamilyOf` on the tester, normalizing
+          Flutter's `fontFamily` + `fontFamilyFallback` pair and CSS's single list
+          to the same stack. Five cases: a themed body family resolves identically,
+          an unthemed surface sets none, a raw typeface name never reaches the
+          host, a code span is mono on every adapter even unthemed (the regression
+          guard — verified to fail against the old `'monospace'` code), and a theme
+          can re-face code spans.
+        - **Site** — `BrandShape.font` is now a `FontRole` driving *both* the
+          specimen theme tokens and the chrome CSS variable from one source, so a
+          brand switch re-fonts both adapters instead of half the page.
+        *Deliberately not done:* the brands lost their exact faces (Trebuchet,
+        Georgia) since v1 has no way to name them; making a brand font genuinely
+        visible in Flutter web needs the host to ship real font assets, which is
+        exactly the `CraftFonts` seam and is left to the host. Font **weights**
+        remain deferred.
 - [~] **Demonstrated-property labels + gallery filter.** Every sample manifest
       carries a `demonstrates` list from a fixed vocabulary
       (`demo_properties.dart`: layout / controls & state / theming / functions

@@ -74,6 +74,32 @@ Color? roleColor(BuildContext context, String role) {
 double? roleSize(BuildContext context, String role) =>
     ambientCraftTheme(context)?.tokens.dimension(role);
 
+/// Applies the typeface a family role resolves to onto [style], or returns
+/// [style] untouched when neither the theme nor [fallback] names a [FontRole].
+///
+/// Leaving the style untouched is the §9.4 host-blend invariant: an unthemed
+/// surface keeps whatever font the surrounding `Theme`/`DefaultTextStyle`
+/// established, exactly as if this contract did not exist.
+///
+/// The host's stack becomes `fontFamily` (the first entry) plus
+/// `fontFamilyFallback` (the rest) — Flutter's own two-part spelling of the one
+/// ordered list CSS writes as a single `font-family`.
+TextStyle roleFontFamily(BuildContext context, TextStyle style, String role,
+    {FontRole? fallback}) {
+  final FontRole? resolved = resolveFontFamily(
+    role,
+    ambientCraftTheme(context)?.tokens,
+    fallback: fallback,
+  );
+  if (resolved == null) return style;
+  final List<String> stack = ambientCraftFonts(context).forRole(resolved);
+  if (stack.isEmpty) return style;
+  return style.copyWith(
+    fontFamily: stack.first,
+    fontFamilyFallback: stack.skip(1).toList(growable: false),
+  );
+}
+
 EdgeInsets toEdgeInsets(Insets i) =>
     EdgeInsets.fromLTRB(i.left, i.top, i.right, i.bottom);
 

@@ -339,6 +339,7 @@ class Runtime extends ChangeNotifier {
     RemoteEventHandler remoteEventTarget, {
     CraftTheme? theme,
     MediaContext? media,
+    CraftFonts? fonts,
   }) {
     _CurriedWidget? boundWidget = _widgets[widget];
     if (boundWidget == null) {
@@ -355,18 +356,19 @@ class Runtime extends ChangeNotifier {
     }
     final Widget built = boundWidget
         .build(context, data, remoteEventTarget, const <_WidgetState>[]);
-    return _wrapAmbientScopes(built, theme, media);
+    return _wrapAmbientScopes(built, theme, media, fonts);
   }
 
-  /// Wraps [built] in the render-time ambient scopes — the [CraftTheme] and the
-  /// [MediaContext] — that the host supplies. Each rides an inherited scope (the
-  /// ambient cascade), not the curried-widget plumbing; a null one is omitted so
-  /// any enclosing scope stays visible.
+  /// Wraps [built] in the render-time ambient scopes — the [CraftTheme], the
+  /// [MediaContext], and the host's [CraftFonts] binding. Each rides an
+  /// inherited scope (the ambient cascade), not the curried-widget plumbing; a
+  /// null one is omitted so any enclosing scope stays visible.
   Widget _wrapAmbientScopes(
-      Widget built, CraftTheme? theme, MediaContext? media) {
+      Widget built, CraftTheme? theme, MediaContext? media, CraftFonts? fonts) {
     Widget result = built;
     if (theme != null) result = _ThemeScope(theme: theme, child: result);
     if (media != null) result = _MediaScope(media: media, child: result);
+    if (fonts != null) result = _FontScope(fonts: fonts, child: result);
     return result;
   }
 
@@ -389,6 +391,7 @@ class Runtime extends ChangeNotifier {
     required LibraryName scope,
     CraftTheme? theme,
     MediaContext? media,
+    CraftFonts? fonts,
   }) {
     // TODO(yjbanov): isn't it expensive to check for loops for every node build? Maybe we should cache the result of this check for each library.
     _checkForImportLoops(scope);
@@ -402,7 +405,7 @@ class Runtime extends ChangeNotifier {
     ) as _CurriedWidget;
     final Widget built =
         curried.build(context, data, remoteEventTarget, const <_WidgetState>[]);
-    return _wrapAmbientScopes(built, theme, media);
+    return _wrapAmbientScopes(built, theme, media, fonts);
   }
 
   /// Returns the [BlobNode] that most closely corresponds to a given [BuildContext].
@@ -1987,6 +1990,38 @@ MediaContext? ambientMediaContext(BuildContext context) =>
 /// to an instant change.
 bool ambientReducedMotion(BuildContext context) =>
     ambientMediaContext(context)?.reducedMotion ?? false;
+
+/// Supplies the host's **font binding** — which concrete typefaces answer each
+/// [FontRole] — to every remote widget below it. Installed by [Runtime.build] /
+/// [Runtime.buildNode] when the host provides one.
+///
+/// Fonts are host-provided the way primitives and functions are: a surface names
+/// a role, the host decides what that role *is* and where its bytes come from.
+/// So this is a separate scope from the theme rather than part of it — a theme
+/// travels with a surface (and may even be authored by the agent that sent it),
+/// while the font binding belongs to the app doing the rendering.
+///
+/// On Flutter this seam is load-bearing rather than cosmetic: the CanvasKit web
+/// renderer resolves families only from fonts registered with its font
+/// collection, so a host targeting the web is expected to install a binding
+/// naming families it actually ships.
+class _FontScope extends InheritedWidget {
+  const _FontScope({required this.fonts, required super.child});
+
+  final CraftFonts fonts;
+
+  @override
+  bool updateShouldNotify(_FontScope oldWidget) => fonts != oldWidget.fonts;
+}
+
+/// The host's ambient [CraftFonts] binding, defaulting to
+/// [CraftFonts.systemUi] when the host installs none.
+///
+/// Registers a dependency, so swapping the binding re-faces every surface below
+/// it in place.
+CraftFonts ambientCraftFonts(BuildContext context) =>
+    context.dependOnInheritedWidgetOfExactType<_FontScope>()?.fonts ??
+    CraftFonts.systemUi;
 
 @immutable
 class _Key {

@@ -340,6 +340,7 @@ class Runtime extends ChangeNotifier {
     RemoteEventHandler remoteEventTarget, {
     CraftTheme? theme,
     MediaContext? media,
+    CraftFonts? fonts,
   }) {
     _CurriedWidget? boundWidget = _widgets[widget];
     if (boundWidget == null) {
@@ -356,18 +357,19 @@ class Runtime extends ChangeNotifier {
     }
     final Component built = boundWidget
         .build(context, data, remoteEventTarget, const <_WidgetState>[]);
-    return _wrapAmbientScopes(built, theme, media);
+    return _wrapAmbientScopes(built, theme, media, fonts);
   }
 
-  /// Wraps [built] in the render-time ambient scopes — the [CraftTheme] and the
-  /// [MediaContext] — that the host supplies. Each rides an inherited scope (the
-  /// ambient cascade), not the curried-widget plumbing; a null one is omitted so
-  /// any enclosing scope stays visible.
-  Component _wrapAmbientScopes(
-      Component built, CraftTheme? theme, MediaContext? media) {
+  /// Wraps [built] in the render-time ambient scopes — the [CraftTheme], the
+  /// [MediaContext], and the host's [CraftFonts] binding. Each rides an
+  /// inherited scope (the ambient cascade), not the curried-widget plumbing; a
+  /// null one is omitted so any enclosing scope stays visible.
+  Component _wrapAmbientScopes(Component built, CraftTheme? theme,
+      MediaContext? media, CraftFonts? fonts) {
     Component result = built;
     if (theme != null) result = _ThemeScope(theme: theme, child: result);
     if (media != null) result = _MediaScope(media: media, child: result);
+    if (fonts != null) result = _FontScope(fonts: fonts, child: result);
     return result;
   }
 
@@ -391,6 +393,7 @@ class Runtime extends ChangeNotifier {
     required LibraryName scope,
     CraftTheme? theme,
     MediaContext? media,
+    CraftFonts? fonts,
   }) {
     // TODO(yjbanov): isn't it expensive to check for loops for every node build? Maybe we should cache the result of this check for each library.
     _checkForImportLoops(scope);
@@ -404,7 +407,7 @@ class Runtime extends ChangeNotifier {
     ) as _CurriedWidget;
     final Component built =
         curried.build(context, data, remoteEventTarget, const <_WidgetState>[]);
-    return _wrapAmbientScopes(built, theme, media);
+    return _wrapAmbientScopes(built, theme, media, fonts);
   }
 
   /// Returns the [BlobNode] that most closely corresponds to a given [BuildContext].
@@ -2009,6 +2012,35 @@ MediaContext? ambientMediaContext(BuildContext context) =>
 /// to an instant change.
 bool ambientReducedMotion(BuildContext context) =>
     ambientMediaContext(context)?.reducedMotion ?? false;
+
+/// Supplies the host's **font binding** — which concrete typefaces answer each
+/// [FontRole] — to every remote component below it. Installed by
+/// [Runtime.build] / [Runtime.buildNode] when the host provides one.
+///
+/// Fonts are host-provided the way primitives and functions are: a surface names
+/// a role, the host decides what that role *is* and where its bytes come from.
+/// So this is a separate scope from the theme rather than part of it — a theme
+/// travels with a surface (and may even be authored by the agent that sent it),
+/// while the font binding belongs to the app doing the rendering.
+class _FontScope extends InheritedComponent {
+  const _FontScope({required this.fonts, required super.child});
+
+  final CraftFonts fonts;
+
+  @override
+  bool updateShouldNotify(_FontScope oldComponent) =>
+      fonts != oldComponent.fonts;
+}
+
+/// The host's ambient [CraftFonts] binding, defaulting to
+/// [CraftFonts.systemUi] when the host installs none — the platform's own
+/// faces, which cost no download and make a surface look native to its host.
+///
+/// Registers a dependency, so swapping the binding re-faces every surface below
+/// it in place.
+CraftFonts ambientCraftFonts(BuildContext context) =>
+    context.dependOnInheritedComponentOfExactType<_FontScope>()?.fonts ??
+    CraftFonts.systemUi;
 
 @immutable
 class _Key {

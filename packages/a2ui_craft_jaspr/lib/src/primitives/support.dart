@@ -69,6 +69,20 @@ List<String> stringList(DataSource source, String key) {
 String? roleColor(BuildContext context, String role) =>
     ambientCraftTheme(context)?.tokens.color(role)?.toCssString();
 
+/// [roleColor] at [alpha] opacity — for a control's state colors, which are a
+/// role dimmed rather than a role of their own.
+///
+/// Composited in Dart rather than deferred to CSS `color-mix(…, transparent)`
+/// so the emitted value is a plain `rgba(...)`: the same ARGB the Flutter
+/// adapter derives from the same role, and a value a conformance probe can
+/// compare across the two.
+String? roleColorAlpha(BuildContext context, String role, double alpha) =>
+    ambientCraftTheme(context)
+        ?.tokens
+        .color(role)
+        ?.withAlphaFraction(alpha)
+        .toCssString();
+
 /// Reads a role size (a `dimension` token) as a CSS px length, or null for
 /// the host default.
 String? roleSize(BuildContext context, String role) {
@@ -168,7 +182,7 @@ const String coreControlStyleSheet = '''
 .craft-textfield:focus, .craft-select:focus { border-color: var(--craft-focus); }
 .craft-textfield:focus-visible, .craft-select:focus-visible { outline: 2px solid var(--craft-focus); outline-offset: 1px; }
 .craft-slider:not(:disabled) { cursor: pointer; }
-.craft-slider:disabled { opacity: 0.5; cursor: not-allowed; }
+.craft-slider:disabled { cursor: not-allowed; }
 .craft-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 16px; height: 16px; border-radius: 50%; border: none; background: var(--craft-slider-thumb); }
 .craft-slider::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; border: none; background: var(--craft-slider-thumb); }
 ''';

@@ -302,6 +302,43 @@ class _FlutterCraftTester implements CraftTester {
   @override
   bool sliderEnabled() =>
       _tester.widget<Slider>(find.byType(Slider)).onChanged != null;
+
+  @override
+  String? sliderActiveTrackColorOf({required bool enabled}) =>
+      _argbHexOrNull(enabled
+          ? _slider(enabled: true).activeColor
+          : _sliderTheme(enabled: false).disabledActiveTrackColor);
+
+  @override
+  String? sliderInactiveTrackColorOf({required bool enabled}) =>
+      _argbHexOrNull(enabled
+          ? _slider(enabled: true).inactiveColor
+          : _sliderTheme(enabled: false).disabledInactiveTrackColor);
+
+  @override
+  String? sliderThumbColorOf({required bool enabled}) => _argbHexOrNull(enabled
+      // Material has no per-instance enabled thumb color: `activeColor` inks
+      // the thumb as well as the track (`_SliderDefaultsM3.thumbColor` follows
+      // it), which is the mapping the enabled case asserts.
+      ? _slider(enabled: true).activeColor
+      : _sliderTheme(enabled: false).disabledThumbColor);
+
+  /// The rendered [Slider] in the given [enabled] state (a theming case shows
+  /// one of each), identified by whether it took a value listener.
+  Slider _slider({required bool enabled}) =>
+      _sliderElement(enabled: enabled).widget as Slider;
+
+  /// The [SliderThemeData] in effect *at* that slider — resolved from its own
+  /// element, so it picks up the adapter's `SliderTheme` wrapper without the
+  /// probe having to know whether one was inserted.
+  SliderThemeData _sliderTheme({required bool enabled}) =>
+      SliderTheme.of(_sliderElement(enabled: enabled));
+
+  Element _sliderElement({required bool enabled}) =>
+      find.byType(Slider).evaluate().firstWhere(
+          (Element e) => ((e.widget as Slider).onChanged != null) == enabled);
+
+  String? _argbHexOrNull(Color? c) => c == null ? null : _argbHex(c);
 }
 
 class _FlutterConformanceDriver implements CraftConformanceDriver {

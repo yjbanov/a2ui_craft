@@ -69,6 +69,14 @@ Color? roleColor(BuildContext context, String role) {
   return rgba == null ? null : Color(rgba.value);
 }
 
+/// [roleColor] at [alpha] opacity — for a control's state colors, which are a
+/// role dimmed rather than a role of their own. Composited on the shared [Rgba]
+/// so the web adapter lands on the identical ARGB from the same role.
+Color? roleColorAlpha(BuildContext context, String role, double alpha) {
+  final Rgba? rgba = ambientCraftTheme(context)?.tokens.color(role);
+  return rgba == null ? null : Color(rgba.withAlphaFraction(alpha).value);
+}
+
 /// Reads a role size (a `dimension` token, logical pixels) from the ambient
 /// theme, or null for the host default.
 double? roleSize(BuildContext context, String role) =>

@@ -111,6 +111,36 @@ abstract final class RadioDefaults {
   static const double borderWidth = 2;
 }
 
+/// `Slider`'s specified defaults for the **disabled** state.
+///
+/// Enabled, the slider's layers come straight from roles (`color.primary` inks
+/// the active track and the thumb, `color.outline` the inactive track). Disabled
+/// it must read as unusable, and "the same roles at low opacity" is not enough:
+/// a 38%-opacity accent still reads as the accent, just faded, where what the
+/// state has to say is *this is not a control right now*. So a disabled slider
+/// abandons the accent entirely and inks from `color.onSurface` — the surface's
+/// own neutral — at these alphas.
+///
+/// The numbers are Material 3's (`_SliderDefaultsM3`), so the Flutter adapter's
+/// native disabled slider and the web's painted one agree rather than each
+/// inventing a dimming. The difference is *where* the neutral comes from:
+/// Material reads the host `ColorScheme`, while both adapters here read the
+/// project theme's `color.onSurface`, so a branded surface gets a disabled
+/// state in its own neutral. Unthemed, neither adapter paints at all and the
+/// host's stock disabled rendering stands (§9.4).
+///
+/// The same alphas are what `Checkbox`, `Radio`, and `Switch` should adopt when
+/// their disabled states are painted; today those three paint their enabled
+/// look regardless.
+abstract final class SliderDefaults {
+  /// Opacity of `color.onSurface` for the disabled active track and thumb.
+  static const double disabledActiveAlpha = 0.38;
+
+  /// Opacity of `color.onSurface` for the disabled inactive track — fainter
+  /// than the active portion, so the value is still legible at a glance.
+  static const double disabledInactiveAlpha = 0.12;
+}
+
 /// `Switch`'s specified default geometry — the track and thumb of the painted
 /// glyph. The switch is layer 1 (the **track**: `color.primary` fill active,
 /// `color.outline` fill inactive) and layer 3 (the **thumb**: `color.onPrimary`

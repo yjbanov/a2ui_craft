@@ -30,7 +30,7 @@ Widget buildSlider(BuildContext context, DataSource source) {
   // Cupertino idiom this renders a real CupertinoSlider, which has no
   // inactive-track knob — a per-idiom limit: `outline` is ignored there,
   // never repurposed.
-  return Slider.adaptive(
+  final Slider slider = Slider.adaptive(
     min: min,
     max: max,
     value: value,
@@ -38,5 +38,34 @@ Widget buildSlider(BuildContext context, DataSource source) {
     inactiveColor: roleColor(context, ThemeRoles.outline),
     divisions: (steps != null && steps > 0) ? steps : null,
     onChanged: onChanged,
+  );
+  return _themedDisabled(context, slider);
+}
+
+/// Re-points Material's disabled slider colors at the project theme.
+///
+/// Material already greys a handler-less slider — but from the *host*
+/// `ColorScheme.onSurface`, ignoring the project theme, because `activeColor`
+/// and `inactiveColor` only describe the enabled state. A branded surface
+/// therefore fell back to stock Material grey, and the web adapter (which
+/// derives the same state from the theme) could not agree with it. Reading
+/// `color.onSurface` here puts both adapters on one neutral.
+///
+/// Untouched when the theme omits `onSurface` — including every unthemed
+/// surface, where Material's own disabled rendering is exactly the host blend
+/// the contract promises (§9.4).
+Widget _themedDisabled(BuildContext context, Slider slider) {
+  final Color? active = roleColorAlpha(
+      context, ThemeRoles.onSurface, SliderDefaults.disabledActiveAlpha);
+  if (active == null) return slider;
+  final Color inactive = roleColorAlpha(
+      context, ThemeRoles.onSurface, SliderDefaults.disabledInactiveAlpha)!;
+  return SliderTheme(
+    data: SliderTheme.of(context).copyWith(
+      disabledActiveTrackColor: active,
+      disabledThumbColor: active,
+      disabledInactiveTrackColor: inactive,
+    ),
+    child: slider,
   );
 }

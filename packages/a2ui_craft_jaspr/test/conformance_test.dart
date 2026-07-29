@@ -374,6 +374,53 @@ class _JasprCraftTester implements CraftTester {
     }
     return false;
   }
+
+  @override
+  String? sliderActiveTrackColorOf({required bool enabled}) =>
+      _canonicalCssColor(_trackStop(0, enabled: enabled));
+
+  @override
+  String? sliderInactiveTrackColorOf({required bool enabled}) =>
+      _canonicalCssColor(_trackStop(2, enabled: enabled));
+
+  @override
+  String? sliderThumbColorOf({required bool enabled}) => _canonicalCssColor(
+      _sliderStyle('--craft-slider-thumb', enabled: enabled));
+
+  /// The color of the track gradient's stop at [index].
+  ///
+  /// The track is one `linear-gradient(to right, ACTIVE 0%, ACTIVE p, INACTIVE
+  /// p, INACTIVE 100%)`, so stop 0 is the active fill and stop 2 the inactive
+  /// one; each stop is "<color> <position>" and the color may itself contain
+  /// commas (`rgba(…)`), hence the top-level split.
+  String? _trackStop(int index, {required bool enabled}) {
+    final String? gradient = _sliderStyle('background', enabled: enabled);
+    const String prefix = 'linear-gradient(';
+    if (gradient == null ||
+        !gradient.startsWith(prefix) ||
+        !gradient.endsWith(')')) {
+      return null;
+    }
+    final List<String> parts = _splitTopLevel(
+        gradient.substring(prefix.length, gradient.length - 1), ',');
+    // parts[0] is the direction ("to right"), so the stops start at 1.
+    if (parts.length < index + 2) return null;
+    final String stop = parts[index + 1].trim();
+    final int i = stop.lastIndexOf(' ');
+    return i < 0 ? null : stop.substring(0, i).trim();
+  }
+
+  /// An inline style property of the rendered range input in the given
+  /// [enabled] state — the `disabled` attribute is present only when disabled.
+  String? _sliderStyle(String property, {required bool enabled}) {
+    for (final Element e in find.tag('input').evaluate()) {
+      final DomComponent c = e.component as DomComponent;
+      if (c.attributes?['type'] != 'range') continue;
+      final bool isEnabled = !(c.attributes?.containsKey('disabled') ?? false);
+      if (isEnabled == enabled) return c.styles?.properties[property];
+    }
+    return null;
+  }
 }
 
 /// Owns the mounted surface's theme and media so [_JasprCraftTester.retheme] /

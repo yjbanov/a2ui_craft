@@ -803,15 +803,24 @@ widget Root { check: true, sync: true, ship: "Standard" } =
   _Section(
     title: 'Slider',
     blurb: 'Two-way bound to the data model: drag it and the caption readout '
-        'follows the same binding.',
+        'follows the same binding. The second row has no handler, so it is '
+        'disabled — and a disabled slider drops the accent entirely for the '
+        'surface neutral, rather than showing a faded accent.',
     template: r'''
 import core;
 
-widget Root = Row(width: "fill", gap: 12.0, crossAxisAlignment: "center", children: [
-  Text(text: "Brightness"),
-  Expanded(child: Box(height: 44.0, child: Slider(min: 0.0, max: 100.0,
-    steps: 100, value: args.value, onChanged: args.setValue))),
-  Text(text: args.value, variant: "caption"),
+widget Root = Column(width: "fill", gap: 4.0, children: [
+  Row(width: "fill", gap: 12.0, crossAxisAlignment: "center", children: [
+    Text(text: "Brightness"),
+    Expanded(child: Box(height: 44.0, child: Slider(min: 0.0, max: 100.0,
+      steps: 100, value: args.value, onChanged: args.setValue))),
+    Text(text: args.value, variant: "caption"),
+  ]),
+  Row(width: "fill", gap: 12.0, crossAxisAlignment: "center", children: [
+    Text(text: "Disabled (no handler)", variant: "caption"),
+    Expanded(child: Box(height: 44.0, child: Slider(min: 0.0, max: 100.0,
+      steps: 100, value: args.value))),
+  ]),
 ]);
 ''',
     schema: <String, Object?>{
@@ -822,7 +831,8 @@ widget Root = Row(width: "fill", gap: 12.0, crossAxisAlignment: "center", childr
     },
     data: <String, Object?>{'brightness': 64},
     footnote: 'active track + thumb → color.primary · inactive track → '
-        'color.outline',
+        'color.outline · disabled → color.onSurface at 38% (track + thumb) '
+        'and 12% (inactive), the same on both adapters',
   ),
   _Section(
     title: 'Select',

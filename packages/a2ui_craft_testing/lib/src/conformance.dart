@@ -287,6 +287,29 @@ abstract interface class CraftTester {
   /// handler drives it, matching the handler-less `Button`).
   bool sliderEnabled();
 
+  /// The **active track** fill of the rendered slider in the given [enabled]
+  /// state, canonicalized to `#AARRGGBB`, or null when unthemed.
+  /// Painted-decision probe (§9.6).
+  ///
+  /// Which color that is *is* the state, which is why these three take a
+  /// selector rather than reading "the" slider: enabled the fill is
+  /// `color.primary`, disabled it is `color.onSurface` at
+  /// [SliderDefaults.disabledActiveAlpha]. Both adapters must agree, so neither
+  /// is free to invent its own dimming. A theming case mounts one of each (the
+  /// Jaspr tester allows a single mount per test).
+  String? sliderActiveTrackColorOf({required bool enabled});
+
+  /// The **inactive track** fill of the [enabled]-state slider —
+  /// `color.outline` enabled, `color.onSurface` at
+  /// [SliderDefaults.disabledInactiveAlpha] disabled — canonicalized to
+  /// `#AARRGGBB`, or null when unthemed.
+  String? sliderInactiveTrackColorOf({required bool enabled});
+
+  /// The **thumb** ink of the [enabled]-state slider, canonicalized to
+  /// `#AARRGGBB`, or null when unthemed. Follows the active track on both
+  /// adapters.
+  String? sliderThumbColorOf({required bool enabled});
+
   /// Creates a framework-specific adapter for the A2UI component [id] in
   /// [surface], rendering it against the demo catalog ([a2uiDemoCatalogName]).
   Object buildAdapter(SurfaceModel<ComponentApi> surface, String id);
@@ -1314,6 +1337,52 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
         widget root = Slider(value: 0.5, min: 0.0, max: 1.0);
       ''');
       expect(tester.sliderEnabled(), isFalse);
+    },
+  );
+
+  driver.defineTest(
+    'Slider inks its track and thumb from the accent, and a disabled one from '
+    'the neutral, on both adapters',
+    (CraftTester tester) async {
+      // Enabled, the Slider is the accent: `primary` fills the active track and
+      // the thumb, `outline` the inactive track (DESIGN.md §8). Disabled, it
+      // must stop *being* the accent — `color.onSurface` at SliderDefaults'
+      // alphas — rather than showing the accent faded, which is what the web
+      // adapter used to do (an `opacity: 0.5` over primary) while Flutter went
+      // neutral grey. Same control, two different claims about whether it can
+      // be touched; this pins them to one.
+      CraftTheme theme(String primary, String outline, String onSurface) =>
+          CraftTheme(resolveDesignTokens(<DesignTokenSet>[
+            parseDesignTokens(<String, Object?>{
+              'color': <String, Object?>{
+                r'$type': 'color',
+                'primary': <String, Object?>{r'$value': primary},
+                'outline': <String, Object?>{r'$value': outline},
+                'onSurface': <String, Object?>{r'$value': onSurface},
+              },
+            }),
+          ]));
+
+      // One of each state under one theme, in a single mount — the difference
+      // between the two rows is the whole assertion.
+      await tester.mount('''
+        import core;
+        widget root = Column(children: [
+          Slider(value: 0.5, min: 0.0, max: 1.0, onChanged: event "s" {}),
+          Slider(value: 0.5, min: 0.0, max: 1.0),
+        ]);
+      ''', theme: theme('#6200EE', '#33475B', '#1B1B1F'));
+
+      expect(tester.sliderActiveTrackColorOf(enabled: true), '#FF6200EE');
+      expect(tester.sliderThumbColorOf(enabled: true), '#FF6200EE');
+      expect(tester.sliderInactiveTrackColorOf(enabled: true), '#FF33475B');
+
+      // Disabled: neither role the enabled row used appears. Both parts come
+      // from `onSurface` — at 0.38 (0x61) for the active track and thumb, 0.12
+      // (0x1F) for the inactive track.
+      expect(tester.sliderActiveTrackColorOf(enabled: false), '#611B1B1F');
+      expect(tester.sliderThumbColorOf(enabled: false), '#611B1B1F');
+      expect(tester.sliderInactiveTrackColorOf(enabled: false), '#1F1B1B1F');
     },
   );
 

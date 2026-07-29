@@ -650,6 +650,20 @@ final class Rgba {
   /// The blue channel, 0–255.
   int get blue => value & 0xFF;
 
+  /// This color at [fraction] opacity — the same channels, a *replaced* alpha
+  /// (not multiplied, matching Flutter's `Color.withValues(alpha:)`).
+  ///
+  /// Exists so both adapters can derive a state color (a disabled control's
+  /// dimmed ink) from one role and land on the identical ARGB: the alternative
+  /// is each adapter reaching for its own idiom's compositing —
+  /// `color-mix(in srgb, … , transparent)` on the web against
+  /// `Color.withValues` on Flutter — which agree in the rendered pixel but not
+  /// in any value a conformance probe can compare.
+  Rgba withAlphaFraction(double fraction) {
+    final int a = (fraction.clamp(0, 1) * 255).round();
+    return Rgba((a << 24) | (value & 0x00FFFFFF));
+  }
+
   /// Returns a CSS-compatible `rgba(...)` string (alpha as a 0–1 fraction).
   String toCssString() => 'rgba($red, $green, $blue, ${alpha / 255.0})';
 

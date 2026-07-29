@@ -41,7 +41,8 @@ Component buildSlider(BuildContext context, DataSource source) {
     classes:
         roleColor(context, ThemeRoles.primary) == null ? null : 'craft-slider',
     styles: _sliderStyles(context,
-        fraction: max > min ? (value - min) / (max - min) : 0),
+        fraction: max > min ? (value - min) / (max - min) : 0,
+        disabled: onChanged == null),
     attributes: <String, String>{
       'min': '$min',
       'max': '$max',
@@ -60,18 +61,36 @@ Component buildSlider(BuildContext context, DataSource source) {
 /// fill tracks re-renders) and inks the thumb (via the `--craft-slider-thumb`
 /// custom property the control stylesheet's pseudo-element thumbs read);
 /// `outline` inks the inactive track, falling back to a translucent primary.
-Styles? _sliderStyles(BuildContext context, {required double fraction}) {
+///
+/// [disabled] swaps the whole palette for `color.onSurface` at
+/// [SliderDefaults]' alphas, rather than merely fading the accent: the
+/// stylesheet's `opacity: 0.5` alone left a disabled slider reading as *the
+/// accent, dimmed*, while the Flutter adapter's went neutral grey — the same
+/// control saying two different things about whether it can be touched.
+Styles? _sliderStyles(BuildContext context,
+    {required double fraction, required bool disabled}) {
   final String? primary = roleColor(context, ThemeRoles.primary);
   if (primary == null) return null;
-  final String track = roleColor(context, ThemeRoles.outline) ??
-      'color-mix(in srgb, $primary 30%, transparent)';
+  // A theme is free to omit `onSurface` while naming `primary`; there is no
+  // neutral to go to then, so fall back to the accent and let the
+  // stylesheet's dimming carry the state on its own.
+  final String? neutral = roleColorAlpha(
+      context, ThemeRoles.onSurface, SliderDefaults.disabledActiveAlpha);
+  final String active = disabled ? (neutral ?? primary) : primary;
+  final String thumb = active;
+  final String inactive = disabled
+      ? (roleColorAlpha(context, ThemeRoles.onSurface,
+              SliderDefaults.disabledInactiveAlpha) ??
+          active)
+      : roleColor(context, ThemeRoles.outline) ??
+          'color-mix(in srgb, $primary 30%, transparent)';
   final String pct = '${numberToDisplayString(fraction.clamp(0, 1) * 100)}%';
   return Styles(raw: <String, String>{
     'appearance': 'none',
     'height': '4px',
     'border-radius': '2px',
-    'background':
-        'linear-gradient(to right, $primary 0%, $primary $pct, $track $pct, $track 100%)',
-    '--craft-slider-thumb': primary,
+    'background': 'linear-gradient(to right, $active 0%, $active $pct, '
+        '$inactive $pct, $inactive 100%)',
+    '--craft-slider-thumb': thumb,
   });
 }

@@ -69,7 +69,11 @@ void main() {
         Card(child: Text(text: "in card")),
         Divider(),
         Checkbox(value: true),
-        Slider(),
+        // With a listener: this case asserts the *enabled* role mapping
+        // (primary → active track, outline → inactive). A handler-less slider
+        // is the disabled state, which abandons both roles for onSurface — see
+        // the cross-adapter Slider theming case in the conformance suite.
+        Slider(onChanged: event "s" {}),
         TextField(),
       ]);
     ''',

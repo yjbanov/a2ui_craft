@@ -144,6 +144,36 @@
         }
       }
 
+      /* ---- Icons (lib/icons.dart) -----------------------------------------
+         The chrome's arrows, caret, hamburger, pencil, and check are inline
+         SVG, not Unicode characters. Those codepoints live in blocks most UI
+         typefaces do not cover, so the browser picks a per-character fallback
+         font we do not control: fine on a desktop, hairline and vertically
+         off-centre on a physical phone. Geometry we ship renders the same
+         everywhere. One rule sets the weight for the whole set. */
+      .icon {
+        /* Sized and inked from the control it sits in, exactly as the
+           character it replaced was. */
+        width: 1em;
+        height: 1em;
+        flex: none;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        /* For the inline (non-flex) uses. A replaced element sits on the
+           baseline by default, which puts it a touch high against lowercase
+           text; this drops it onto the text's optical centre. Ignored where
+           the parent is a flex container — there `align-items: center` has
+           already done the job. */
+        vertical-align: -0.125em;
+      }
+      .icon-solid {
+        fill: currentColor;
+        stroke: none;
+      }
+
       /* ---- Segmented control (CraftSegmented) -----------------------------
          One bordered group, the active segment filled. The shared outline is
          the point: it reads as a single control with two positions, where two
@@ -264,10 +294,12 @@
         font-weight: 600;
       }
       /* Reserve the check column so labels line up whether or not a row is
-         selected. */
+         selected. Sized to hold the check icon (1em of the row's 13px) rather
+         than the narrower character it replaced. */
       .menu-check {
-        display: inline-block;
-        width: 12px;
+        display: inline-flex;
+        align-items: center;
+        width: 14px;
         flex: none;
       }
       /* A menu section heading, for the hamburger's grouped axes. */

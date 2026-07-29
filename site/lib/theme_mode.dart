@@ -106,8 +106,10 @@ List<MenuItem> siteThemeItems() => <MenuItem>[
       for (final MapEntry<SiteThemeMode, (String, String)> entry
           in _schemeChoices.entries)
         MenuItem(
+          // Text, not SVG like the rest of the chrome's glyphs: these are
+          // emoji, which the platform is meant to render in its own idiom.
+          icon: Component.text(entry.value.$1),
           label: entry.value.$2,
-          icon: entry.value.$1,
           selected: SiteTheme.mode == entry.key,
           onSelect: () => SiteTheme.mode = entry.key,
         ),
@@ -153,7 +155,7 @@ class _ThemeToggleState extends State<ThemeToggle> {
     return CraftMenu(
       className: component.className,
       ariaLabel: 'Color scheme: ${_schemeChoices[SiteTheme.mode]!.$2}',
-      icon: _schemeChoices[SiteTheme.mode]!.$1,
+      icon: Component.text(_schemeChoices[SiteTheme.mode]!.$1),
       iconOnly: true,
       items: siteThemeItems(),
     );

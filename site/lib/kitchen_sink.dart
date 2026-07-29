@@ -12,6 +12,7 @@ import 'package:web/web.dart' as web;
 
 import 'brand_themes.dart';
 import 'flutter_specimen.dart';
+import 'icons.dart';
 import 'menu.dart';
 import 'segmented.dart';
 import 'theme_mode.dart';
@@ -154,7 +155,7 @@ class _KitchenSinkScreenState extends State<KitchenSinkScreen> {
             'aria-label': 'Back to gallery',
             'title': 'Back to gallery',
           },
-          child: span(classes: 'back-badge', [Component.text('←')]),
+          child: span(classes: 'back-badge', <Component>[backIcon()]),
         ),
         h1(
           classes: 'toolbar-title',
@@ -186,7 +187,7 @@ class _KitchenSinkScreenState extends State<KitchenSinkScreen> {
           CraftMenu(
             className: 'narrow-only',
             ariaLabel: 'Options',
-            icon: '☰',
+            icon: menuIcon(),
             iconOnly: true,
             items: <MenuItem>[
               const MenuItem.heading('Renderer'),

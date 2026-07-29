@@ -16,6 +16,7 @@ import 'package:web/web.dart' as web;
 
 import 'brand_themes.dart';
 import 'flutter_host.dart';
+import 'icons.dart';
 import 'menu.dart';
 import 'segmented.dart';
 import 'theme_mode.dart';
@@ -560,7 +561,7 @@ class _SampleScreenState extends State<SampleScreen> {
             'title': 'Back to gallery',
           },
           [
-            span(classes: 'back-badge', [Component.text('←')]),
+            span(classes: 'back-badge', <Component>[backIcon()]),
           ],
         ),
         h2(classes: 'toolbar-title', [Component.text(_raw.label)]),
@@ -594,7 +595,7 @@ class _SampleScreenState extends State<SampleScreen> {
               'aria-label': 'Code editor',
               'title': 'Code editor',
             },
-            [Component.text('✎')],
+            <Component>[editIcon()],
           ),
           // When wide, both renders show at once, so the adapter switch is
           // hidden — there is nothing to switch between.
@@ -610,7 +611,7 @@ class _SampleScreenState extends State<SampleScreen> {
           CraftMenu(
             className: 'narrow-only',
             ariaLabel: 'Options',
-            icon: '☰',
+            icon: menuIcon(),
             iconOnly: true,
             // Right-anchored (the default): the title's flex-grow pushes this
             // to the bar's right edge, so the panel has to open leftward or it
@@ -652,7 +653,7 @@ class _SampleScreenState extends State<SampleScreen> {
         const MenuItem.heading('Code'),
         MenuItem(
           label: 'Code editor',
-          icon: '✎',
+          icon: editIcon(),
           toggle: true,
           selected: _editorOpen,
           onSelect: _toggleEditor,
@@ -875,6 +876,9 @@ class _SampleScreenState extends State<SampleScreen> {
             button(
               onClick: _preview,
               styles: Styles(raw: <String, String>{
+                'display': 'inline-flex',
+                'align-items': 'center',
+                'gap': '6px',
                 'padding': '8px 16px',
                 'border': 'none',
                 'border-radius': '6px',
@@ -883,7 +887,7 @@ class _SampleScreenState extends State<SampleScreen> {
                 'cursor': 'pointer',
                 'font-weight': '600',
               }),
-              [Component.text('Preview ▸')],
+              <Component>[Component.text('Preview'), playIcon()],
             ),
           ],
         ),

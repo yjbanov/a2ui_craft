@@ -22,6 +22,8 @@ import 'package:jaspr/dom.dart';
 import 'package:jaspr/jaspr.dart';
 import 'package:web/web.dart' as web;
 
+import 'icons.dart';
+
 /// One row of a [CraftMenu] — a selectable item, or a section heading when
 /// [onSelect] is null (the hamburger stacks several axes in one panel, and
 /// unlabelled groups would read as one long undifferentiated list).
@@ -45,8 +47,10 @@ class MenuItem {
   /// the menu is where the vocabulary is discoverable.
   final String label;
 
-  /// An optional leading glyph.
-  final String? icon;
+  /// An optional leading glyph. A [Component] rather than a string because
+  /// most of the site's glyphs are inline SVG (see `icons.dart`); the ones
+  /// that stay as text are the colour-scheme emoji.
+  final Component? icon;
 
   /// Whether this row is the current value (shown checked).
   final bool selected;
@@ -89,7 +93,7 @@ class CraftMenu extends StatefulComponent {
   final String? label;
 
   /// Trigger glyph.
-  final String? icon;
+  final Component? icon;
 
   /// Whether the trigger is a square icon button.
   final bool iconOnly;
@@ -178,11 +182,11 @@ class _CraftMenuState extends State<CraftMenu> {
             if (component.active) 'data-active': 'true',
           },
           <Component>[
-            if (component.icon != null) Component.text(component.icon!),
+            if (component.icon != null) component.icon!,
             if (!component.iconOnly && component.label != null)
               span([Component.text(component.label!)]),
             if (!component.iconOnly)
-              span(classes: 'menu-caret', [Component.text('▾')]),
+              span(classes: 'menu-caret', <Component>[caretDownIcon()]),
           ],
         ),
         if (_open)
@@ -209,10 +213,9 @@ class _CraftMenuState extends State<CraftMenu> {
                     <Component>[
                       span(
                           classes: 'menu-check',
-                          [Component.text(item.selected ? '✓' : '')]),
+                          <Component>[if (item.selected) checkIcon()]),
                       if (item.icon != null)
-                        span(
-                            classes: 'menu-icon', [Component.text(item.icon!)]),
+                        span(classes: 'menu-icon', <Component>[item.icon!]),
                       span([Component.text(item.label)]),
                     ],
                   ),

@@ -11,6 +11,7 @@ import 'package:jaspr_flutter_embed/jaspr_flutter_embed.dart';
 import 'package:jaspr_router/jaspr_router.dart';
 
 import 'flutter_host.dart';
+import 'icons.dart';
 import 'theme_mode.dart';
 
 /// The "URL bar" screen: type the base URL of a **deployed** A2UI Craft project
@@ -165,7 +166,7 @@ class _LoadScreenState extends State<LoadScreen> {
             'title': 'Back to gallery',
           },
           <Component>[
-            span(classes: 'back-badge', <Component>[Component.text('←')]),
+            span(classes: 'back-badge', <Component>[backIcon()]),
           ],
         ),
         input(
@@ -192,7 +193,10 @@ class _LoadScreenState extends State<LoadScreen> {
         button(
           onClick: _loading ? null : _doLoad,
           styles: _btn(true),
-          <Component>[Component.text(_loading ? 'Loading…' : 'Load ▸')],
+          <Component>[
+            Component.text(_loading ? 'Loading…' : 'Load'),
+            if (!_loading) playIcon(),
+          ],
         ),
         const ThemeToggle(),
       ],
@@ -412,6 +416,12 @@ class _LoadScreenState extends State<LoadScreen> {
       });
 
   Styles _btn(bool active) => Styles(raw: <String, String>{
+        // inline-flex so the trailing icon sits on the label's optical centre
+        // with a real gap, rather than butting against it as a glyph would.
+        'display': 'inline-flex',
+        'align-items': 'center',
+        'gap': '6px',
+        'flex': 'none',
         'padding': '8px 14px',
         'border':
             '1px solid ${active ? 'var(--accent)' : 'var(--border-strong)'}',

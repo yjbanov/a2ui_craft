@@ -7,6 +7,7 @@ import 'package:jaspr/dom.dart';
 import 'package:jaspr/jaspr.dart';
 import 'package:jaspr_router/jaspr_router.dart';
 
+import 'icons.dart';
 import 'theme_mode.dart';
 
 /// The landing screen: a filter bar over a grid of sample cards. Each checkbox
@@ -81,10 +82,10 @@ class _GalleryScreenState extends State<GalleryScreen> {
             // The production path: load a *deployed* project over HTTP, the
             // way a real host app would — proof it's a separate, ephemeral
             // artifact.
-            _actionLink('/load', 'Load a project from a URL →'),
+            _actionLink('/load', 'Load a project from a URL'),
             // The specimen page: every core primitive rendered live under the
             // default theme.
-            _actionLink('/primitives', 'Browse the core primitives →'),
+            _actionLink('/primitives', 'Browse the core primitives'),
           ],
         ),
         _filterBar(visible.length),
@@ -162,15 +163,6 @@ class _GalleryScreenState extends State<GalleryScreen> {
         'background': 'var(--panel)',
       }),
       [
-        span(
-          styles: Styles(raw: <String, String>{
-            'font': '600 12px system-ui',
-            'letter-spacing': '.05em',
-            'text-transform': 'uppercase',
-            'color': 'var(--subtle)',
-          }),
-          [Component.text('Demonstrates')],
-        ),
         for (final DemoProperty property in demoProperties)
           _filterCheckbox(property),
         span(
@@ -223,7 +215,12 @@ class _GalleryScreenState extends State<GalleryScreen> {
     return Link(
       to: to,
       styles: Styles(raw: <String, String>{
-        'display': 'inline-block',
+        // inline-flex rather than inline-block: the label and the arrow are
+        // laid out as a row (see the child span), and an inline SVG next to
+        // inline text would otherwise butt against it and sit on the baseline
+        // instead of the label's optical centre.
+        'display': 'inline-flex',
+        'align-items': 'center',
         'padding': '8px 14px',
         'border': '1px solid var(--accent)',
         'border-radius': '8px',
@@ -231,7 +228,14 @@ class _GalleryScreenState extends State<GalleryScreen> {
         'text-decoration': 'none',
         'font-weight': '600',
       }),
-      child: Component.text(text),
+      child: span(
+        styles: Styles(raw: <String, String>{
+          'display': 'inline-flex',
+          'align-items': 'center',
+          'gap': '8px',
+        }),
+        <Component>[Component.text(text), forwardIcon()],
+      ),
     );
   }
 

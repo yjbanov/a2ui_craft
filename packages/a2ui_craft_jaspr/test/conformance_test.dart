@@ -197,18 +197,19 @@ class _JasprCraftTester implements CraftTester {
   }
 
   @override
-  String? checkboxFillColorOf() =>
-      _canonicalCssColor(_checkboxStyle('background-color', checked: true));
+  String? checkboxFillColorOf({required bool enabled}) => _canonicalCssColor(
+      _checkboxStyle('background-color', checked: true, enabled: enabled));
 
   @override
-  String? checkboxBorderColorOf() =>
-      _borderColor('craft-checkbox', checked: false);
+  String? checkboxBorderColorOf({required bool enabled}) =>
+      _borderColor('craft-checkbox', checked: false, enabled: enabled);
 
   @override
-  String? checkboxMarkColorOf() {
+  String? checkboxMarkColorOf({required bool enabled}) {
     // The mark is an inline SVG `background-image` whose `stroke='<color>'` is
     // URL-encoded (data URIs cannot reference CSS values); read it back.
-    final String? image = _checkboxStyle('background-image', checked: true);
+    final String? image =
+        _checkboxStyle('background-image', checked: true, enabled: enabled);
     if (image == null) return null;
     final Match? m = RegExp("stroke='([^']*)'").firstMatch(image);
     if (m == null) return null;
@@ -216,32 +217,47 @@ class _JasprCraftTester implements CraftTester {
   }
 
   /// The inline [property] of the painted `craft-checkbox` glyph in the given
-  /// [checked] state, or null when absent. A box is checked iff its `checked`
-  /// attribute is present and not `'false'` (the VM tester emits `''` when on;
-  /// a browser emits `'true'`/`'false'`).
-  String? _checkboxStyle(String property, {required bool checked}) =>
-      _controlStyle('craft-checkbox', property, checked: checked);
+  /// [checked] / [enabled] state, or null when absent. A box is checked iff its
+  /// `checked` attribute is present and not `'false'` (the VM tester emits `''`
+  /// when on; a browser emits `'true'`/`'false'`).
+  String? _checkboxStyle(String property,
+          {required bool checked, required bool enabled}) =>
+      _controlStyle('craft-checkbox', property,
+          checked: checked, enabled: enabled);
 
   @override
-  String? radioSelectedColorOf() => _borderColor('craft-radio', checked: true);
+  bool checkboxEnabled() => _controlEnabled('craft-checkbox');
 
   @override
-  String? radioRingColorOf() => _borderColor('craft-radio', checked: false);
+  bool radioEnabled() => _controlEnabled('craft-radio');
 
   @override
-  String? switchActiveTrackColorOf() => _canonicalCssColor(
-      _controlStyle('craft-switch', 'background-color', checked: true));
+  bool switchEnabled() => _controlEnabled('craft-switch');
 
   @override
-  String? switchInactiveTrackColorOf() => _canonicalCssColor(
-      _controlStyle('craft-switch', 'background-color', checked: false));
+  String? radioSelectedColorOf({required bool enabled}) =>
+      _borderColor('craft-radio', checked: true, enabled: enabled);
 
   @override
-  String? switchThumbColorOf() {
+  String? radioRingColorOf({required bool enabled}) =>
+      _borderColor('craft-radio', checked: false, enabled: enabled);
+
+  @override
+  String? switchActiveTrackColorOf({required bool enabled}) =>
+      _canonicalCssColor(_controlStyle('craft-switch', 'background-color',
+          checked: true, enabled: enabled));
+
+  @override
+  String? switchInactiveTrackColorOf({required bool enabled}) =>
+      _canonicalCssColor(_controlStyle('craft-switch', 'background-color',
+          checked: false, enabled: enabled));
+
+  @override
+  String? switchThumbColorOf({required bool enabled}) {
     // The thumb is the first color stop of the track's radial-gradient
     // `background-image` ("radial-gradient(circle at CX CY, THUMB 0 Rpx, …)").
-    final String? image =
-        _controlStyle('craft-switch', 'background-image', checked: true);
+    final String? image = _controlStyle('craft-switch', 'background-image',
+        checked: true, enabled: enabled);
     const String prefix = 'radial-gradient(';
     if (image == null || !image.startsWith(prefix) || !image.endsWith(')')) {
       return null;
@@ -276,10 +292,12 @@ class _JasprCraftTester implements CraftTester {
   }
 
   /// The `border` shorthand color of the painted control glyph of [cssClass] in
-  /// the given [checked] state — the ring color for a radio, the box border for
-  /// a checkbox ("<w>px solid <color>", the token after `solid`).
-  String? _borderColor(String cssClass, {required bool checked}) {
-    final String? border = _controlStyle(cssClass, 'border', checked: checked);
+  /// the given [checked] / [enabled] state — the ring color for a radio, the box
+  /// border for a checkbox ("<w>px solid <color>", the token after `solid`).
+  String? _borderColor(String cssClass,
+      {required bool checked, required bool enabled}) {
+    final String? border =
+        _controlStyle(cssClass, 'border', checked: checked, enabled: enabled);
     if (border == null) return null;
     final int i = border.indexOf('solid');
     if (i < 0) return null;
@@ -287,11 +305,35 @@ class _JasprCraftTester implements CraftTester {
   }
 
   /// The inline [property] of the painted control glyph of [cssClass] in the
-  /// given [checked] state, or null when absent. Checked iff the `checked`
-  /// attribute is present and not `'false'` (VM: `''` when on; browser:
-  /// `'true'`/`'false'`).
+  /// given [checked] / [enabled] state, or null when absent.
   String? _controlStyle(String cssClass, String property,
-      {required bool checked}) {
+      {required bool checked, required bool enabled}) {
+    final DomComponent? c =
+        _control(cssClass, checked: checked, enabled: enabled);
+    return c?.styles?.properties[property];
+  }
+
+  /// Whether the (single) control glyph of [cssClass] is interactive — the
+  /// `disabled` attribute is present only when it is not.
+  bool _controlEnabled(String cssClass) {
+    for (final Element e in find
+        .byComponentPredicate((Component c) =>
+            c is DomComponent &&
+            (c.classes?.split(' ').contains(cssClass) ?? false))
+        .evaluate()) {
+      final DomComponent c = e.component as DomComponent;
+      return !(c.attributes?.containsKey('disabled') ?? false);
+    }
+    return false;
+  }
+
+  /// The painted control glyph of [cssClass] in the given [checked] / [enabled]
+  /// state, or null when the tree holds none.
+  ///
+  /// Checked iff the `checked` attribute is present and not `'false'` (VM: `''`
+  /// when on; browser: `'true'`/`'false'`); enabled iff `disabled` is absent.
+  DomComponent? _control(String cssClass,
+      {required bool checked, required bool enabled}) {
     for (final Element e in find
         .byComponentPredicate((Component c) =>
             c is DomComponent &&
@@ -299,9 +341,9 @@ class _JasprCraftTester implements CraftTester {
         .evaluate()) {
       final DomComponent c = e.component as DomComponent;
       final String? ch = c.attributes?['checked'];
-      if ((ch != null && ch != 'false') == checked) {
-        return c.styles?.properties[property];
-      }
+      final bool isChecked = ch != null && ch != 'false';
+      final bool isEnabled = !(c.attributes?.containsKey('disabled') ?? false);
+      if (isChecked == checked && isEnabled == enabled) return c;
     }
     return null;
   }

@@ -25,8 +25,13 @@ Component buildRadio(BuildContext context, DataSource source) {
   return input(
     type: InputType.radio,
     checked: selected,
+    // No handler → the control cannot report a selection, so it is disabled
+    // (see `Checkbox`; the Flutter glyph's FocusableActionDetector already
+    // takes itself out of the tab order the same way).
+    disabled: onChanged == null,
     classes: 'craft-radio',
-    styles: _radioStyles(context, selected: selected),
+    styles:
+        _radioStyles(context, selected: selected, disabled: onChanged == null),
     events: onChanged == null
         ? null
         : <String, EventCallback>{'click': (_) => onChanged()},
@@ -37,10 +42,33 @@ Component buildRadio(BuildContext context, DataSource source) {
 /// `outline` rings the unselected circle, `primary` inks the selected ring
 /// and dot. Unthemed (no `primary`) returns null: the native UA radio is the
 /// stock look (blend in, §9.1).
-Styles? _radioStyles(BuildContext context, {required bool selected}) {
+///
+/// [disabled] replaces both roles with `color.onSurface` at
+/// [DisabledDefaults.foregroundAlpha] — the ring and the dot together — so the
+/// glyph reads as inert rather than as a faded accent.
+Styles? _radioStyles(BuildContext context,
+    {required bool selected, required bool disabled}) {
   final String? primary = roleColor(context, ThemeRoles.primary);
   if (primary == null) return null;
+  // A theme may name `primary` and omit `onSurface`; with no neutral to go to,
+  // keep the enabled palette rather than invent one.
+  final String? neutral = roleColorAlpha(
+      context, ThemeRoles.onSurface, DisabledDefaults.foregroundAlpha);
+  if (disabled && neutral != null) {
+    return _radioGlyph(selected: selected, ring: neutral, dot: neutral);
+  }
   final String border = roleColor(context, ThemeRoles.outline) ?? primary;
+  return _radioGlyph(
+      selected: selected, ring: selected ? primary : border, dot: primary);
+}
+
+/// The circle glyph's inline styles, given the resolved [ring] and [dot] inks.
+/// Shared by the enabled and disabled palettes so the geometry is stated once.
+Styles _radioGlyph({
+  required bool selected,
+  required String ring,
+  required String dot,
+}) {
   // Geometry from the framework-neutral specified default (RadioDefaults), read
   // here rather than hardcoded, so the web glyph and any other painted glyph
   // agree (DESIGN.md §8).
@@ -52,11 +80,11 @@ Styles? _radioStyles(BuildContext context, {required bool selected}) {
     'height': size,
     'margin': '0',
     'vertical-align': 'middle',
-    'border': '$width solid ${selected ? primary : border}',
+    'border': '$width solid $ring',
     'border-radius': '50%',
     'background-color': 'transparent',
     if (selected)
       'background-image':
-          'radial-gradient(circle, $primary 0 40%, transparent 45%)',
+          'radial-gradient(circle, $dot 0 40%, transparent 45%)',
   });
 }

@@ -68,11 +68,11 @@ void main() {
       widget root = Column(children: [
         Card(child: Text(text: "in card")),
         Divider(),
-        Checkbox(value: true),
-        // With a listener: this case asserts the *enabled* role mapping
-        // (primary → active track, outline → inactive). A handler-less slider
-        // is the disabled state, which abandons both roles for onSurface — see
-        // the cross-adapter Slider theming case in the conformance suite.
+        // With listeners: these cases assert the *enabled* role mapping.
+        // A handler-less control is the disabled state, which abandons its
+        // roles for the surface neutral — see the cross-adapter disabled cases
+        // in the conformance suite.
+        Checkbox(value: true, onChanged: event "c" {}),
         Slider(onChanged: event "s" {}),
         TextField(),
       ]);
@@ -123,8 +123,9 @@ void main() {
         '''
       import core;
       widget root = Column(children: [
-        Checkbox(value: true),
-        Checkbox(value: false),
+        // With listeners, per the enabled/disabled split noted above.
+        Checkbox(value: true, onChanged: event "c" {}),
+        Checkbox(value: false, onChanged: event "d" {}),
         Radio(selected: true, onChanged: event "a" {}),
         Radio(selected: false, onChanged: event "b" {}),
       ]);

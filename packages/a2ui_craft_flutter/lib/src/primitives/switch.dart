@@ -28,18 +28,34 @@ Widget buildSwitch(BuildContext context, DataSource source) {
         (bool v) => trigger(<String, Object?>{'value': v}),
   );
   final Color? outline = roleColor(context, ThemeRoles.outline);
+  // Disabled, both positions collapse to one pair from the surface neutral
+  // (DisabledDefaults): a faint track under a stronger thumb. The switch keeps
+  // saying which way it is set — the thumb still travels — while saying it
+  // cannot be moved. Material's own disabled colors read the *host* scheme, so
+  // as with the Slider a branded surface needed these stated to agree with the
+  // web glyph. Null when the theme omits `onSurface` (§9.4).
+  final Color? neutral = roleColorAlpha(
+      context, ThemeRoles.onSurface, DisabledDefaults.foregroundAlpha);
+  final Color? neutralTrack = roleColorAlpha(
+      context, ThemeRoles.onSurface, DisabledDefaults.backgroundAlpha);
+  final bool dim = onChanged == null && neutral != null;
+  // Material routes both track knobs through the disabled state, and takes the
+  // *inactive* thumb color for it whichever way the switch is set — so setting
+  // the pair to the neutral covers all four disabled combinations.
   // `.adaptive`: under the Cupertino idiom the switch takes the iOS look
   // while honoring the same knobs (Flutter's adaptive switch is a
   // Material implementation that restyles itself).
   return Switch.adaptive(
     value: value,
-    activeTrackColor: roleColor(context, ThemeRoles.primary),
-    activeThumbColor: roleColor(context, ThemeRoles.onPrimary),
+    activeTrackColor:
+        dim ? neutralTrack : roleColor(context, ThemeRoles.primary),
+    activeThumbColor: dim ? neutral : roleColor(context, ThemeRoles.onPrimary),
     // `outline` inks the inactive track *fill* (§8: the same part as the web
     // glyph). The off-thumb rides it as a contrasting neutral, not a role.
-    inactiveTrackColor: outline,
-    inactiveThumbColor:
-        outline == null ? null : Theme.of(context).colorScheme.surface,
+    inactiveTrackColor: dim ? neutralTrack : outline,
+    inactiveThumbColor: dim
+        ? neutral
+        : (outline == null ? null : Theme.of(context).colorScheme.surface),
     onChanged: onChanged,
   );
 }

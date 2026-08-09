@@ -111,34 +111,37 @@ abstract final class RadioDefaults {
   static const double borderWidth = 2;
 }
 
-/// `Slider`'s specified defaults for the **disabled** state.
+/// How every control paints itself once it has no handler to report to.
 ///
-/// Enabled, the slider's layers come straight from roles (`color.primary` inks
-/// the active track and the thumb, `color.outline` the inactive track). Disabled
-/// it must read as unusable, and "the same roles at low opacity" is not enough:
-/// a 38%-opacity accent still reads as the accent, just faded, where what the
-/// state has to say is *this is not a control right now*. So a disabled slider
-/// abandons the accent entirely and inks from `color.onSurface` — the surface's
-/// own neutral — at these alphas.
+/// Enabled, a control's layers come straight from roles: `color.primary` fills
+/// a checked box, inks a selected radio, fills a switch's on-track and a
+/// slider's active track; `color.outline` inks the unchecked and inactive
+/// counterparts. Disabled, it has to read as unusable — and "the same roles at
+/// low opacity" is not enough, because a 38%-opacity accent still reads as the
+/// accent, just faded, where what the state has to say is *this is not a
+/// control right now*.
 ///
-/// The numbers are Material 3's (`_SliderDefaultsM3`), so the Flutter adapter's
-/// native disabled slider and the web's painted one agree rather than each
-/// inventing a dimming. The difference is *where* the neutral comes from:
-/// Material reads the host `ColorScheme`, while both adapters here read the
-/// project theme's `color.onSurface`, so a branded surface gets a disabled
-/// state in its own neutral. Unthemed, neither adapter paints at all and the
-/// host's stock disabled rendering stands (§9.4).
+/// So a disabled control **abandons its roles entirely** and inks from
+/// `color.onSurface`, the surface's own neutral, at one of two alphas:
+/// [foregroundAlpha] for the parts you read as marks — glyphs, borders, thumbs,
+/// a slider's active track — and [backgroundAlpha] for the large areas they sit
+/// on, a switch's track and a slider's inactive track.
 ///
-/// The same alphas are what `Checkbox`, `Radio`, and `Switch` should adopt when
-/// their disabled states are painted; today those three paint their enabled
-/// look regardless.
-abstract final class SliderDefaults {
-  /// Opacity of `color.onSurface` for the disabled active track and thumb.
-  static const double disabledActiveAlpha = 0.38;
+/// The numbers are Material 3's, so a Flutter adapter's native control and the
+/// web's painted one agree rather than each inventing a dimming. What differs
+/// is *where* the neutral comes from: Material reads the host `ColorScheme`,
+/// while both adapters here read the project theme's `color.onSurface`, so a
+/// branded surface gets a disabled state in its own neutral. Unthemed, neither
+/// adapter paints at all and the host's stock disabled rendering stands (§9.4).
+abstract final class DisabledDefaults {
+  /// Opacity of `color.onSurface` for a disabled control's marks — a checked
+  /// fill, a radio's ring and dot, an unchecked border, a switch thumb, a
+  /// slider's active track and thumb.
+  static const double foregroundAlpha = 0.38;
 
-  /// Opacity of `color.onSurface` for the disabled inactive track — fainter
-  /// than the active portion, so the value is still legible at a glance.
-  static const double disabledInactiveAlpha = 0.12;
+  /// Opacity of `color.onSurface` for the areas those marks sit on — a switch
+  /// track, a slider's inactive track. Fainter, so the mark still reads.
+  static const double backgroundAlpha = 0.12;
 }
 
 /// `Switch`'s specified default geometry — the track and thumb of the painted

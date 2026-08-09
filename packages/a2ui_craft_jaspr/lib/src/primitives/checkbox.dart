@@ -26,8 +26,16 @@ Component buildCheckbox(BuildContext context, DataSource source) {
   return input(
     type: InputType.checkbox,
     checked: value,
+    // No `onChanged` → no value listener → the control cannot report changes,
+    // so it is disabled, matching `Button`, `Slider`, and the Flutter
+    // adapter's `Checkbox(onChanged: null)`. Without this the box was merely
+    // *unwired*: still focusable, still announced as enabled, and a click
+    // still flipped the native box on screen until the next rebuild put it
+    // back — a control that looks live and silently isn't.
+    disabled: onChanged == null,
     classes: 'craft-checkbox',
-    styles: _checkboxStyles(context, checked: value),
+    styles:
+        _checkboxStyles(context, checked: value, disabled: onChanged == null),
     events: onChanged == null
         ? null
         : <String, EventCallback>{'change': (_) => onChanged(!value)},
@@ -44,11 +52,28 @@ Component buildCheckbox(BuildContext context, DataSource source) {
 /// fully fills the checked state, `onPrimary` draws the mark. The input is a
 /// controlled element (re-rendered on every toggle), so the checked state
 /// styles inline — no pseudo-classes needed.
-Styles? _checkboxStyles(BuildContext context, {required bool checked}) {
+///
+/// [disabled] drops all three roles for `color.onSurface` at
+/// [DisabledDefaults.foregroundAlpha] — fill and box edge alike, one flat
+/// neutral where the enabled glyph plays `primary` against `outline` — with the
+/// mark switching to `color.surface` so it still reads against that fill.
+/// Fading the accent instead would leave a box that looks live in a lighter
+/// shade; going neutral says the state outright.
+Styles? _checkboxStyles(BuildContext context,
+    {required bool checked, required bool disabled}) {
   final String? primary = roleColor(context, ThemeRoles.primary);
   if (primary == null) return null;
-  final String border = roleColor(context, ThemeRoles.outline) ?? primary;
-  final String mark = roleColor(context, ThemeRoles.onPrimary) ?? '#ffffff';
+  // A theme may name `primary` and omit `onSurface`; with no neutral to go to,
+  // keep the enabled palette rather than invent one.
+  final String? neutral = roleColorAlpha(
+      context, ThemeRoles.onSurface, DisabledDefaults.foregroundAlpha);
+  final bool dim = disabled && neutral != null;
+  final String fill = dim ? neutral : primary;
+  final String border =
+      dim ? neutral : roleColor(context, ThemeRoles.outline) ?? primary;
+  final String mark = dim
+      ? roleColor(context, ThemeRoles.surface) ?? kSurfaceFallback
+      : roleColor(context, ThemeRoles.onPrimary) ?? '#ffffff';
   // The box geometry (size, corner, border width) is a framework-neutral
   // specified default (CheckboxDefaults) — read here, not hardcoded, so the web
   // glyph and any other painted glyph agree (DESIGN.md §8).
@@ -61,9 +86,9 @@ Styles? _checkboxStyles(BuildContext context, {required bool checked}) {
     'height': size,
     'margin': '0',
     'vertical-align': 'middle',
-    'border': '$width solid ${checked ? primary : border}',
+    'border': '$width solid ${checked ? fill : border}',
     'border-radius': radius,
-    'background-color': checked ? primary : 'transparent',
+    'background-color': checked ? fill : 'transparent',
     if (checked) 'background-image': _checkmarkImage(mark),
     if (checked) 'background-size': '100% 100%',
   });

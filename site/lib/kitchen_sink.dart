@@ -785,6 +785,12 @@ widget Root { check: true, sync: true, ship: "Standard" } =
         onChanged: set state.ship = "Overnight"),
       Text(text: "Overnight"),
     ]),
+    Row(gap: 10.0, crossAxisAlignment: "center", children: [
+      Radio(selected: true),
+      Text(text: "Disabled (no handler)", variant: "caption"),
+      Radio(selected: false),
+      Text(text: "Disabled, unselected", variant: "caption"),
+    ]),
     Row(gap: 8.0, crossAxisAlignment: "center", children: [
       Switch(value: state.sync,
         onChanged: set state.sync = switch state.sync { true: false, false: true }),
@@ -798,7 +804,8 @@ widget Root { check: true, sync: true, ship: "Standard" } =
 ''',
     footnote: 'checked fill → color.primary · mark/thumb → color.onPrimary · '
         'unchecked chrome → color.outline · the radio group is template state '
-        '+ equals()',
+        '+ equals() · disabled → color.onSurface at 38% (marks) and 12% (a '
+        'switch track), the same on both adapters',
   ),
   _Section(
     title: 'Slider',

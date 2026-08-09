@@ -28,6 +28,12 @@ Widget buildRadio(BuildContext context, DataSource source) {
     // `outline` rings the unselected one; null keeps the host look.
     accent: roleColor(context, ThemeRoles.primary),
     outline: roleColor(context, ThemeRoles.outline),
+    // Unlike Checkbox and Switch, this glyph is ours rather than Material's,
+    // so nothing was greying it: a handler-less radio kept its full accent.
+    // Disabled it drops both roles for the surface neutral, matching the web
+    // glyph and the other controls (DisabledDefaults).
+    disabledInk: roleColorAlpha(
+        context, ThemeRoles.onSurface, DisabledDefaults.foregroundAlpha),
   );
 }
 
@@ -42,6 +48,7 @@ class _CoreRadio extends StatelessWidget {
     required this.onChanged,
     this.accent,
     this.outline,
+    this.disabledInk,
   });
 
   final bool selected;
@@ -54,6 +61,11 @@ class _CoreRadio extends StatelessWidget {
   /// The `color.outline` role, ringing the unselected glyph; null keeps the
   /// host look.
   final Color? outline;
+
+  /// `color.onSurface` at [DisabledDefaults.foregroundAlpha] — inks the whole
+  /// glyph, selected or not, once [onChanged] is null. Null keeps the enabled
+  /// palette (an unthemed surface, or a theme that omits `onSurface`).
+  final Color? disabledInk;
 
   @override
   Widget build(BuildContext context) {
@@ -87,7 +99,9 @@ class _CoreRadio extends StatelessWidget {
               // glyph and the checkbox, rather than the Icon's 24px default. The
               // ring width stays the Material glyph's own (idiom latitude, §8).
               size: RadioDefaults.size,
-              color: selected ? accent : outline,
+              color: !enabled && disabledInk != null
+                  ? disabledInk
+                  : (selected ? accent : outline),
             ),
           ),
         ),

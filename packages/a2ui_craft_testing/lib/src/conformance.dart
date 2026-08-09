@@ -230,27 +230,32 @@ abstract interface class CraftTester {
   /// The three checkbox probes read the state where their layer is meaningful:
   /// fill and [checkboxMarkColorOf] the *checked* box, [checkboxBorderColorOf]
   /// the *unchecked* one — so a theming case renders one of each.
-  String? checkboxFillColorOf();
+  ///
+  /// [enabled] picks between two boxes in the same state, because a disabled
+  /// control does not fade its roles, it abandons them (see [DisabledDefaults]).
+  /// Which color a layer shows *is* the state, so the probes cannot be allowed
+  /// to guess which box they found.
+  String? checkboxFillColorOf({required bool enabled});
 
   /// The **box border** of the rendered *unchecked* `Checkbox`, canonicalized to
   /// `#AARRGGBB`, or null when none is drawn. Expect `color.outline` (on a
   /// checked box the fill subsumes the border — not probed).
-  String? checkboxBorderColorOf();
+  String? checkboxBorderColorOf({required bool enabled});
 
   /// The checkmark **mark** ink of the rendered *checked* `Checkbox` (layer 3),
   /// canonicalized to `#AARRGGBB`, or null when unthemed. Expect
   /// `color.onPrimary`. The mark shows only while checked.
-  String? checkboxMarkColorOf();
+  String? checkboxMarkColorOf({required bool enabled});
 
   /// The **selected glyph** color of the rendered *selected* `Radio` (its ring
   /// and dot, both `color.primary`), canonicalized to `#AARRGGBB`, or null when
   /// unthemed (blends into the host). Painted-decision probe (§9.6). A radio has
   /// no `onPrimary` ink — the dot is the accent itself.
-  String? radioSelectedColorOf();
+  String? radioSelectedColorOf({required bool enabled});
 
   /// The **ring** color of the rendered *unselected* `Radio` (`color.outline`),
   /// canonicalized to `#AARRGGBB`, or null when unthemed.
-  String? radioRingColorOf();
+  String? radioRingColorOf({required bool enabled});
 
   /// The **active track** fill of the rendered *on* `Switch` (layer 1,
   /// `color.primary`), canonicalized to `#AARRGGBB`, or null when unthemed.
@@ -259,16 +264,16 @@ abstract interface class CraftTester {
   /// The three switch probes read the state where their layer is meaningful: the
   /// active track and [switchThumbColorOf] the *on* switch, the inactive track
   /// the *off* one — so a theming case renders one of each.
-  String? switchActiveTrackColorOf();
+  String? switchActiveTrackColorOf({required bool enabled});
 
   /// The **on-thumb** ink of the rendered *on* `Switch` (layer 3,
   /// `color.onPrimary`), canonicalized to `#AARRGGBB`, or null when unthemed.
-  String? switchThumbColorOf();
+  String? switchThumbColorOf({required bool enabled});
 
   /// The **inactive track** fill of the rendered *off* `Switch` (`color.outline`
   /// — the same part on every adapter), canonicalized to `#AARRGGBB`, or null
   /// when unthemed.
-  String? switchInactiveTrackColorOf();
+  String? switchInactiveTrackColorOf({required bool enabled});
 
   /// Activates (taps/clicks) the interactive element carrying the given
   /// component `key`.
@@ -279,6 +284,23 @@ abstract interface class CraftTester {
 
   /// Toggles the (single) rendered switch, as a user click would.
   Future<void> toggleSwitch();
+
+  /// Whether the (single) rendered checkbox is interactive rather than
+  /// disabled. Flutter: `Checkbox.onChanged` is non-null; Jaspr: the box input
+  /// does not carry `disabled`.
+  ///
+  /// The three selection controls follow the same rule as `Button` and
+  /// `Slider`: a control with no handler cannot report a change, so it must be
+  /// disabled on every adapter rather than looking live on one of them. Like
+  /// [sliderEnabled] these read *the* control, so a case asserting them mounts
+  /// one of each type and no more.
+  bool checkboxEnabled();
+
+  /// Whether the (single) rendered radio is interactive.
+  bool radioEnabled();
+
+  /// Whether the (single) rendered switch is interactive.
+  bool switchEnabled();
 
   /// Whether the (single) rendered slider is interactive rather than disabled.
   /// Flutter: the `Slider`'s `onChanged` is non-null; Jaspr: the range input is
@@ -294,14 +316,14 @@ abstract interface class CraftTester {
   /// Which color that is *is* the state, which is why these three take a
   /// selector rather than reading "the" slider: enabled the fill is
   /// `color.primary`, disabled it is `color.onSurface` at
-  /// [SliderDefaults.disabledActiveAlpha]. Both adapters must agree, so neither
+  /// [DisabledDefaults.foregroundAlpha]. Both adapters must agree, so neither
   /// is free to invent its own dimming. A theming case mounts one of each (the
   /// Jaspr tester allows a single mount per test).
   String? sliderActiveTrackColorOf({required bool enabled});
 
   /// The **inactive track** fill of the [enabled]-state slider —
   /// `color.outline` enabled, `color.onSurface` at
-  /// [SliderDefaults.disabledInactiveAlpha] disabled — canonicalized to
+  /// [DisabledDefaults.backgroundAlpha] disabled — canonicalized to
   /// `#AARRGGBB`, or null when unthemed.
   String? sliderInactiveTrackColorOf({required bool enabled});
 
@@ -1346,7 +1368,7 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
     (CraftTester tester) async {
       // Enabled, the Slider is the accent: `primary` fills the active track and
       // the thumb, `outline` the inactive track (DESIGN.md §8). Disabled, it
-      // must stop *being* the accent — `color.onSurface` at SliderDefaults'
+      // must stop *being* the accent — `color.onSurface` at DisabledDefaults'
       // alphas — rather than showing the accent faded, which is what the web
       // adapter used to do (an `opacity: 0.5` over primary) while Flutter went
       // neutral grey. Same control, two different claims about whether it can
@@ -1526,15 +1548,125 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
         ]);
       ''', theme: theme('#6200EE', '#FFFFFF', '#33475B'));
 
-      expect(tester.checkboxFillColorOf(), '#FF6200EE');
-      expect(tester.checkboxMarkColorOf(), '#FFFFFFFF');
-      expect(tester.checkboxBorderColorOf(), '#FF33475B');
+      expect(tester.checkboxFillColorOf(enabled: true), '#FF6200EE');
+      expect(tester.checkboxMarkColorOf(enabled: true), '#FFFFFFFF');
+      expect(tester.checkboxBorderColorOf(enabled: true), '#FF33475B');
 
       // Re-theming re-inks every mapped part in place.
       await tester.retheme(theme('#00695C', '#F1F2F3', '#E0D6C4'));
-      expect(tester.checkboxFillColorOf(), '#FF00695C');
-      expect(tester.checkboxMarkColorOf(), '#FFF1F2F3');
-      expect(tester.checkboxBorderColorOf(), '#FFE0D6C4');
+      expect(tester.checkboxFillColorOf(enabled: true), '#FF00695C');
+      expect(tester.checkboxMarkColorOf(enabled: true), '#FFF1F2F3');
+      expect(tester.checkboxBorderColorOf(enabled: true), '#FFE0D6C4');
+    },
+  );
+
+  driver.defineTest(
+    'a Checkbox, Radio, and Switch without a handler are disabled, on both '
+    'adapters',
+    (CraftTester tester) async {
+      // The same rule `Button` and `Slider` already follow: no handler means
+      // the control cannot report a change, so it is disabled everywhere. On
+      // the web these three were merely *unwired* — focusable, announced as
+      // enabled, and a click still flipped the native glyph on screen until
+      // the next rebuild put it back. One of each type, so the probes (which
+      // read *the* control of their kind) are unambiguous.
+      await tester.mount('''
+        import core;
+        widget root = Column(children: [
+          Checkbox(value: true),
+          Radio(selected: true),
+          Switch(value: true),
+        ]);
+      ''');
+      expect(tester.checkboxEnabled(), isFalse);
+      expect(tester.radioEnabled(), isFalse);
+      expect(tester.switchEnabled(), isFalse);
+    },
+  );
+
+  driver.defineTest(
+    'a Checkbox, Radio, and Switch with a handler are interactive, on both '
+    'adapters',
+    (CraftTester tester) async {
+      await tester.mount('''
+        import core;
+        widget root = Column(children: [
+          Checkbox(value: true, onChanged: event "a" {}),
+          Radio(selected: true, onChanged: event "b" {}),
+          Switch(value: true, onChanged: event "c" {}),
+        ]);
+      ''');
+      expect(tester.checkboxEnabled(), isTrue);
+      expect(tester.radioEnabled(), isTrue);
+      expect(tester.switchEnabled(), isTrue);
+    },
+  );
+
+  driver.defineTest(
+    'a disabled Checkbox, Radio, and Switch ink from the neutral, on both '
+    'adapters',
+    (CraftTester tester) async {
+      // A disabled control abandons its roles rather than fading them
+      // (DisabledDefaults). Everything below reads `color.onSurface` — at 0.38
+      // (0x61) for the marks, 0.12 (0x1F) for a switch's track — so neither
+      // `primary` nor `outline` appears in the disabled half at all. The mark
+      // on a checked box goes to `color.surface`, which has to stay legible on
+      // the dimmed fill.
+      final CraftTheme theme = CraftTheme(resolveDesignTokens(<DesignTokenSet>[
+        parseDesignTokens(<String, Object?>{
+          'color': <String, Object?>{
+            r'$type': 'color',
+            'primary': <String, Object?>{r'$value': '#6200EE'},
+            'onPrimary': <String, Object?>{r'$value': '#FFFFFF'},
+            'outline': <String, Object?>{r'$value': '#33475B'},
+            'onSurface': <String, Object?>{r'$value': '#1B1B1F'},
+            'surface': <String, Object?>{r'$value': '#FAFBFC'},
+          },
+        }),
+      ]));
+
+      // One of each state, all in one mount (the Jaspr tester allows a single
+      // mount per test). The enabled rows are here as the control: the same
+      // theme, the same values, and they must still show their roles.
+      await tester.mount('''
+        import core;
+        widget root = Column(children: [
+          Checkbox(value: true, onChanged: event "a" {}),
+          Checkbox(value: false, onChanged: event "b" {}),
+          Checkbox(value: true),
+          Checkbox(value: false),
+          Radio(selected: true, onChanged: event "c" {}),
+          Radio(selected: false, onChanged: event "d" {}),
+          Radio(selected: true),
+          Radio(selected: false),
+          Switch(value: true, onChanged: event "e" {}),
+          Switch(value: false, onChanged: event "f" {}),
+          Switch(value: true),
+          Switch(value: false),
+        ]);
+      ''', theme: theme);
+
+      // Enabled: the roles, unchanged by any of this.
+      expect(tester.checkboxFillColorOf(enabled: true), '#FF6200EE');
+      expect(tester.checkboxMarkColorOf(enabled: true), '#FFFFFFFF');
+      expect(tester.checkboxBorderColorOf(enabled: true), '#FF33475B');
+      expect(tester.radioSelectedColorOf(enabled: true), '#FF6200EE');
+      expect(tester.radioRingColorOf(enabled: true), '#FF33475B');
+      expect(tester.switchActiveTrackColorOf(enabled: true), '#FF6200EE');
+      expect(tester.switchThumbColorOf(enabled: true), '#FFFFFFFF');
+      expect(tester.switchInactiveTrackColorOf(enabled: true), '#FF33475B');
+
+      // Disabled: the neutral, everywhere.
+      expect(tester.checkboxFillColorOf(enabled: false), '#611B1B1F');
+      expect(tester.checkboxMarkColorOf(enabled: false), '#FFFAFBFC');
+      expect(tester.checkboxBorderColorOf(enabled: false), '#611B1B1F');
+
+      expect(tester.radioSelectedColorOf(enabled: false), '#611B1B1F');
+      expect(tester.radioRingColorOf(enabled: false), '#611B1B1F');
+
+      expect(tester.switchActiveTrackColorOf(enabled: false), '#1F1B1B1F');
+      expect(tester.switchThumbColorOf(enabled: false), '#611B1B1F');
+      expect(tester.switchInactiveTrackColorOf(enabled: false), '#1F1B1B1F');
     },
   );
 
@@ -1566,13 +1698,13 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
         ]);
       ''', theme: theme('#6200EE', '#33475B'));
 
-      expect(tester.radioSelectedColorOf(), '#FF6200EE');
-      expect(tester.radioRingColorOf(), '#FF33475B');
+      expect(tester.radioSelectedColorOf(enabled: true), '#FF6200EE');
+      expect(tester.radioRingColorOf(enabled: true), '#FF33475B');
 
       // Re-theming re-inks both in place.
       await tester.retheme(theme('#00695C', '#E0D6C4'));
-      expect(tester.radioSelectedColorOf(), '#FF00695C');
-      expect(tester.radioRingColorOf(), '#FFE0D6C4');
+      expect(tester.radioSelectedColorOf(enabled: true), '#FF00695C');
+      expect(tester.radioRingColorOf(enabled: true), '#FFE0D6C4');
     },
   );
 
@@ -1605,15 +1737,15 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
         ]);
       ''', theme: theme('#6200EE', '#FFFFFF', '#33475B'));
 
-      expect(tester.switchActiveTrackColorOf(), '#FF6200EE');
-      expect(tester.switchThumbColorOf(), '#FFFFFFFF');
-      expect(tester.switchInactiveTrackColorOf(), '#FF33475B');
+      expect(tester.switchActiveTrackColorOf(enabled: true), '#FF6200EE');
+      expect(tester.switchThumbColorOf(enabled: true), '#FFFFFFFF');
+      expect(tester.switchInactiveTrackColorOf(enabled: true), '#FF33475B');
 
       // Re-theming re-inks every mapped part in place.
       await tester.retheme(theme('#00695C', '#F1F2F3', '#E0D6C4'));
-      expect(tester.switchActiveTrackColorOf(), '#FF00695C');
-      expect(tester.switchThumbColorOf(), '#FFF1F2F3');
-      expect(tester.switchInactiveTrackColorOf(), '#FFE0D6C4');
+      expect(tester.switchActiveTrackColorOf(enabled: true), '#FF00695C');
+      expect(tester.switchThumbColorOf(enabled: true), '#FFF1F2F3');
+      expect(tester.switchInactiveTrackColorOf(enabled: true), '#FFE0D6C4');
     },
   );
 

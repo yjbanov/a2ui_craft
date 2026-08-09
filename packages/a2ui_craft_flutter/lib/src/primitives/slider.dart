@@ -56,10 +56,10 @@ Widget buildSlider(BuildContext context, DataSource source) {
 /// the contract promises (§9.4).
 Widget _themedDisabled(BuildContext context, Slider slider) {
   final Color? active = roleColorAlpha(
-      context, ThemeRoles.onSurface, SliderDefaults.disabledActiveAlpha);
+      context, ThemeRoles.onSurface, DisabledDefaults.foregroundAlpha);
   if (active == null) return slider;
   final Color inactive = roleColorAlpha(
-      context, ThemeRoles.onSurface, SliderDefaults.disabledInactiveAlpha)!;
+      context, ThemeRoles.onSurface, DisabledDefaults.backgroundAlpha)!;
   return SliderTheme(
     data: SliderTheme.of(context).copyWith(
       disabledActiveTrackColor: active,

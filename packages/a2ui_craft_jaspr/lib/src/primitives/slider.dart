@@ -63,7 +63,7 @@ Component buildSlider(BuildContext context, DataSource source) {
 /// `outline` inks the inactive track, falling back to a translucent primary.
 ///
 /// [disabled] swaps the whole palette for `color.onSurface` at
-/// [SliderDefaults]' alphas, rather than merely fading the accent: the
+/// [DisabledDefaults]' alphas, rather than merely fading the accent: the
 /// stylesheet's `opacity: 0.5` alone left a disabled slider reading as *the
 /// accent, dimmed*, while the Flutter adapter's went neutral grey — the same
 /// control saying two different things about whether it can be touched.
@@ -75,12 +75,12 @@ Styles? _sliderStyles(BuildContext context,
   // neutral to go to then, so fall back to the accent and let the
   // stylesheet's dimming carry the state on its own.
   final String? neutral = roleColorAlpha(
-      context, ThemeRoles.onSurface, SliderDefaults.disabledActiveAlpha);
+      context, ThemeRoles.onSurface, DisabledDefaults.foregroundAlpha);
   final String active = disabled ? (neutral ?? primary) : primary;
   final String thumb = active;
   final String inactive = disabled
       ? (roleColorAlpha(context, ThemeRoles.onSurface,
-              SliderDefaults.disabledInactiveAlpha) ??
+              DisabledDefaults.backgroundAlpha) ??
           active)
       : roleColor(context, ThemeRoles.outline) ??
           'color-mix(in srgb, $primary 30%, transparent)';

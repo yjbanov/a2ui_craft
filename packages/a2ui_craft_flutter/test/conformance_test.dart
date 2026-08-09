@@ -207,76 +207,118 @@ class _FlutterCraftTester implements CraftTester {
   }
 
   @override
-  String? checkboxFillColorOf() {
-    // The checked box fills with the Checkbox's activeColor (`color.primary`).
-    final Color? c = _checkbox(checked: true)?.activeColor;
+  String? checkboxFillColorOf({required bool enabled}) {
+    final Checkbox? box = _checkbox(checked: true, enabled: enabled);
+    if (box == null) return null;
+    // Enabled the checked box fills with `activeColor` (`color.primary`).
+    // Disabled, Material deliberately drops `activeColor` — so the adapter
+    // states the fill through `fillColor` instead, and that is where the
+    // neutral has to be read from.
+    final Color? c = enabled
+        ? box.activeColor
+        : box.fillColor?.resolve(
+            <WidgetState>{WidgetState.disabled, WidgetState.selected});
     return c == null ? null : _argbHex(c);
   }
 
   @override
-  String? checkboxBorderColorOf() {
-    // The unchecked box's border is the Checkbox's `side` (`color.outline`).
-    final BorderSide? side = _checkbox(checked: false)?.side;
+  String? checkboxBorderColorOf({required bool enabled}) {
+    // The unchecked box's border is the Checkbox's `side` (`color.outline`
+    // enabled, the neutral disabled).
+    final BorderSide? side = _checkbox(checked: false, enabled: enabled)?.side;
     return side == null ? null : _argbHex(side.color);
   }
 
   @override
-  String? checkboxMarkColorOf() {
-    // The mark is the Checkbox's checkColor (`color.onPrimary`).
-    final Color? c = _checkbox(checked: true)?.checkColor;
+  String? checkboxMarkColorOf({required bool enabled}) {
+    // The mark is the Checkbox's checkColor (`color.onPrimary` enabled,
+    // `color.surface` disabled).
+    final Color? c = _checkbox(checked: true, enabled: enabled)?.checkColor;
     return c == null ? null : _argbHex(c);
   }
 
-  /// The rendered [Checkbox] whose value is [checked] (a theming case shows one
-  /// of each), or null when absent.
-  Checkbox? _checkbox({required bool checked}) {
+  @override
+  bool checkboxEnabled() =>
+      _tester.widget<Checkbox>(find.byType(Checkbox)).onChanged != null;
+
+  /// The rendered [Checkbox] in the given [checked] / [enabled] state (a
+  /// theming case shows one of each), or null when absent.
+  Checkbox? _checkbox({required bool checked, required bool enabled}) {
     for (final Element e in find.byType(Checkbox).evaluate()) {
       final Checkbox c = e.widget as Checkbox;
-      if (c.value == checked) return c;
+      if (c.value == checked && (c.onChanged != null) == enabled) return c;
     }
     return null;
   }
 
   @override
-  String? radioSelectedColorOf() => _radioColor(Icons.radio_button_checked);
+  String? radioSelectedColorOf({required bool enabled}) =>
+      _radioColor(Icons.radio_button_checked, enabled: enabled);
 
   @override
-  String? radioRingColorOf() => _radioColor(Icons.radio_button_off);
+  String? radioRingColorOf({required bool enabled}) =>
+      _radioColor(Icons.radio_button_off, enabled: enabled);
 
-  /// The color of the radio glyph [icon] (the custom `_CoreRadio` draws its
-  /// state as a Material radio `Icon` inked `primary` when selected, `outline`
-  /// when not), or null when unthemed.
-  String? _radioColor(IconData icon) {
-    final Iterable<Element> icons = find.byIcon(icon).evaluate();
-    if (icons.isEmpty) return null;
-    final Color? color = (icons.first.widget as Icon).color;
-    return color == null ? null : _argbHex(color);
+  @override
+  bool radioEnabled() => _radioDetectors().single.enabled;
+
+  /// The color of the radio glyph [icon] in the given [enabled] state (the
+  /// custom `_CoreRadio` draws its state as a Material radio `Icon` inked
+  /// `primary` when selected, `outline` when not, the neutral when disabled),
+  /// or null when unthemed.
+  ///
+  /// Reached through the glyph's own `FocusableActionDetector`, whose `enabled`
+  /// is the state: `find.byIcon` alone cannot tell two radios in the same
+  /// selection state apart.
+  String? _radioColor(IconData icon, {required bool enabled}) {
+    for (final FocusableActionDetector d in _radioDetectors()) {
+      if (d.enabled != enabled) continue;
+      final Icon glyph = (d.child as GestureDetector).child! as Icon;
+      if (glyph.icon != icon) continue;
+      return glyph.color == null ? null : _argbHex(glyph.color!);
+    }
+    return null;
   }
 
+  /// Every rendered `_CoreRadio`'s detector, identified by its
+  /// GestureDetector-wrapping-an-Icon child (other controls in the tree have
+  /// detectors of their own).
+  Iterable<FocusableActionDetector> _radioDetectors() =>
+      find.byType(FocusableActionDetector).evaluate().map((Element e) {
+        return e.widget as FocusableActionDetector;
+      }).where((FocusableActionDetector d) {
+        final Widget child = d.child;
+        return child is GestureDetector && child.child is Icon;
+      });
+
   @override
-  String? switchActiveTrackColorOf() {
-    final Color? c = _switch(on: true)?.activeTrackColor;
+  String? switchActiveTrackColorOf({required bool enabled}) {
+    final Color? c = _switch(on: true, enabled: enabled)?.activeTrackColor;
     return c == null ? null : _argbHex(c);
   }
 
   @override
-  String? switchThumbColorOf() {
-    final Color? c = _switch(on: true)?.activeThumbColor;
+  String? switchThumbColorOf({required bool enabled}) {
+    final Color? c = _switch(on: true, enabled: enabled)?.activeThumbColor;
     return c == null ? null : _argbHex(c);
   }
 
   @override
-  String? switchInactiveTrackColorOf() {
-    final Color? c = _switch(on: false)?.inactiveTrackColor;
+  String? switchInactiveTrackColorOf({required bool enabled}) {
+    final Color? c = _switch(on: false, enabled: enabled)?.inactiveTrackColor;
     return c == null ? null : _argbHex(c);
   }
 
-  /// The rendered [Switch] whose value is [on] (a theming case shows one of
-  /// each), or null when absent.
-  Switch? _switch({required bool on}) {
+  @override
+  bool switchEnabled() =>
+      _tester.widget<Switch>(find.byType(Switch)).onChanged != null;
+
+  /// The rendered [Switch] in the given [on] / [enabled] state (a theming case
+  /// shows one of each), or null when absent.
+  Switch? _switch({required bool on, required bool enabled}) {
     for (final Element e in find.byType(Switch).evaluate()) {
       final Switch s = e.widget as Switch;
-      if (s.value == on) return s;
+      if (s.value == on && (s.onChanged != null) == enabled) return s;
     }
     return null;
   }

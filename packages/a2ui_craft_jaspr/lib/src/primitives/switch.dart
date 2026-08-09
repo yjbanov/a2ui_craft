@@ -29,13 +29,28 @@ Component buildSwitch(BuildContext context, DataSource source) {
     (HandlerTrigger trigger) =>
         (bool v) => trigger(<String, Object?>{'value': v}),
   );
+  // No handler → the control cannot report changes, so it is disabled (see
+  // `Checkbox`). This one is *always* adapter-painted, so unlike the box and
+  // the radio there is no unthemed branch to fall through to: the neutral is
+  // used whenever the theme names `onSurface`.
+  final bool disabled = onChanged == null;
+  final String? neutral = roleColorAlpha(
+      context, ThemeRoles.onSurface, DisabledDefaults.foregroundAlpha);
+  final String? neutralTrack = roleColorAlpha(
+      context, ThemeRoles.onSurface, DisabledDefaults.backgroundAlpha);
+  final bool dim = disabled && neutral != null && neutralTrack != null;
   final String onTrack =
       roleColor(context, ThemeRoles.primary) ?? kButtonSurfaceFallback;
   final String onThumb =
       roleColor(context, ThemeRoles.onPrimary) ?? kButtonInkFallback;
   final String offTrack =
       roleColor(context, ThemeRoles.outline) ?? kSwitchOffTrackFallback;
-  final String thumb = value ? onThumb : kSwitchOffThumbFallback;
+  // Disabled, both positions collapse to one pair — a faint neutral track
+  // under a stronger neutral thumb. The switch keeps saying which way it is
+  // set (the thumb still travels) while saying it cannot be moved.
+  final String track = dim ? neutralTrack : (value ? onTrack : offTrack);
+  final String thumb =
+      dim ? neutral : (value ? onThumb : kSwitchOffThumbFallback);
   // Geometry from the framework-neutral specified default (SwitchDefaults): the
   // pill radius is half the track height, and the thumb centers sit an inset +
   // radius in from each edge — read here rather than hardcoded (DESIGN.md §8).
@@ -47,6 +62,7 @@ Component buildSwitch(BuildContext context, DataSource source) {
   return input(
     type: InputType.checkbox,
     checked: value,
+    disabled: disabled,
     classes: 'craft-switch',
     attributes: const <String, String>{'role': 'switch'},
     styles: Styles(raw: <String, String>{
@@ -60,7 +76,7 @@ Component buildSwitch(BuildContext context, DataSource source) {
       // Layer 1, the track: `primary` fill when on, `outline` when off — its own
       // `background-color`, mirroring the Checkbox's fill. Layer 3, the thumb: a
       // radial gradient `background-image` over it, mirroring the Checkbox mark.
-      'background-color': value ? onTrack : offTrack,
+      'background-color': track,
       'background-image': 'radial-gradient(circle at ${px(cx)}px ${px(cy)}px, '
           '$thumb 0 ${px(thumbRadius)}px, transparent ${px(thumbRadius + 1)}px)',
     }),

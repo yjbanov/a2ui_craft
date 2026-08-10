@@ -442,7 +442,11 @@
           ephemerally (JS/Dart/Kotlin, changing per template load) can't be AOT
           Dart; it runs in a **strong sandbox** (iframe/webview/web worker) and
           responds to template **events**. Additive: same `event 'foo' {…}`
-          template syntax, a new registry backend.
+          template syntax, a new registry backend. **Now designed** — logic is a
+          *surface driver* speaking A2UI Transport behind a session envelope,
+          not a function-registry backend: `research/logic/BUSINESS_LOGIC.md`
+          (design) + `research/logic/PHASE_1_PLAN.md` (reference-implementation
+          plan, shovel-ready).
         **Two refinements that pin the design:**
         - *Trust boundary — separate registries, not one library.* Shared
           *implementations* are fine, but **exposure = registration is per trust

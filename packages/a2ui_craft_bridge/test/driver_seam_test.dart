@@ -19,7 +19,11 @@
 ///
 ///  1. Action emission is **synchronous** with the callback today. The
 ///     always-async rule (BUSINESS_LOGIC.md §4) is therefore the session
-///     layer's job — nothing below this seam provides it.
+///     layer's job — nothing below this seam provides it. And per §5's
+///     turn-boundary rule, the session layer must provide it with
+///     *event-loop* scheduling (zero-length timers), not microtasks — a
+///     microtask-scheduled reply can land before the dispatching turn's
+///     microtask queue flushes, which no sandboxed transport can do.
 ///  2. A two-way (`{path}`-bound) setter writes **only the local data model**
 ///     — the optimistic echo — and emits nothing a driver could hear. The
 ///     envelope's `event` message must carry current two-way values itself

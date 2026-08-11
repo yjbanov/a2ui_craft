@@ -85,9 +85,16 @@ version-skew handshake failure; ordering violations detected.
   messages feed Transport ingest.
 - The Dart driver API: `abstract class Driver { onInit(ctx); onEvent(e); }`
   emitting messages — the shape `cart.dart` and the JS SDK both mirror.
-- `InProcessDriverRunner`: runs a Dart driver on microtasks. The always-async
-  rule means this runner is *behaviorally identical* to a sandboxed one — that
-  claim is exactly what the suite structure below will later verify.
+- `InProcessDriverRunner`: runs a Dart driver behind **zero-length timers**,
+  not microtasks — the design's turn-boundary rule (§5): a worker's
+  `postMessage` reply cannot arrive within the turn that dispatched the
+  event, so neither may this runner's, or it is observably *more prompt* than
+  what it stands in for and code grows a same-turn-delivery dependency the
+  worker then breaks. Both directions (event out, update in) cross a turn
+  boundary.
+- A conformance case pins the rule: after dispatching an event, a microtask
+  queued *later* in the same turn must still run before the driver's reply is
+  observable. Prove the guard fails against a microtask-scheduled runner.
 - **Conformance gains a driver dimension**: protocol-level cases (event in →
   write out → rendered result) written once in `a2ui_craft_testing`,
   **parameterized by runner**, initially bound to the in-process runner, run

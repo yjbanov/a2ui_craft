@@ -188,9 +188,23 @@ integration gets to leave implicit because a human is watching:
 Encoding: a JSON envelope; data payloads use the `DynamicContent` value
 vocabulary. Transports carry the envelope verbatim — `postMessage`
 (worker/iframe), platform channel (webview), WebSocket (server), and direct
-function calls resolving on microtasks (in-process). The pinned "handlers are
-always-async" refinement is what makes the in-process ↔ sandboxed swap
-unobservable to templates.
+function calls (in-process). The pinned "handlers are always-async"
+refinement is what makes the in-process ↔ sandboxed swap unobservable to
+templates — with one sharpening:
+
+**Delivery is turn-boundary async, not merely microtask async.** Every
+transport above except the in-process one delivers on the *event loop* — a
+worker's `postMessage` reply physically cannot arrive within the turn that
+dispatched the event. A microtask-scheduled in-process delivery *can*: it
+lands mid-flush, before same-turn work queued earlier, making the in-process
+runner observably **more prompt** than anything it stands in for — and
+inviting code to grow a dependency on same-turn delivery that a sandboxed
+runner then breaks. So the guarantee is stated as ordering, not
+implementation: **a driver message is never observable in the event-loop turn
+that produced its cause**, in either direction. In-process transports satisfy
+it with zero-length timers (or equivalent event-loop scheduling), not
+microtasks, and conformance pins it (the reply must not be visible until the
+dispatching turn's microtask queue has fully flushed).
 
 ### The contract file: declared events and keys
 
@@ -216,7 +230,7 @@ declared statically like everything else in the contract.
 
 | Runtime | Transport | When |
 |---|---|---|
-| in-process Dart | function call, microtask | build-time-vetted apps compiled into the host; **also the reference runner** the conformance suite drives |
+| in-process Dart | function call behind a zero-length timer (§5's turn-boundary rule) | build-time-vetted apps compiled into the host; **also the reference runner** the conformance suite drives |
 | web worker | `postMessage` | the web default: JS or Wasm logic, no DOM access, cheap |
 | iframe | `postMessage` | when logic needs origin isolation or its own network identity |
 | webview | platform channel | native (Flutter mobile/desktop) hosts running JS logic |
@@ -393,9 +407,9 @@ Staged:
    ordering, heartbeat, in `a2ui_craft_bridge` (it already owns the
    driver-facing seam). Pure Dart, framework-free.
 2. **In-process reference runner + conformance fixture** — a counter/cart
-   mini-app as a Dart driver on microtasks; the conformance suite drives the
-   *protocol*, so the same suite later runs verbatim against sandboxed
-   runners. (The suite is the defense against the per-adapter-drift risk
+   mini-app as a Dart driver behind zero-length timers (§5's turn-boundary
+   rule); the conformance suite drives the *protocol*, so the same suite
+   later runs verbatim against sandboxed runners. (The suite is the defense against the per-adapter-drift risk
    NEXT_THREADS grounding #2 identifies.)
 3. **Worker runner (Jaspr host) + a JS driver demo** on the site — the first
    proof of constraint 1: logic in a language the engine isn't written in.

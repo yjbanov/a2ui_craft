@@ -460,8 +460,12 @@
         - *Event handlers are always-async, effect-via-data-write.* You can't make
           async look sync without freezing the surface (observable jank, stalled
           agent updates, hung-sandbox hangs), so make *every* handler async from
-          day one (local Dart resolves on a microtask; a sandbox over postMessage)
-          — the local→sandbox swap is then unobservable. Handlers communicate only
+          day one (local Dart behind a zero-length timer; a sandbox over
+          postMessage) — the local→sandbox swap is then unobservable. Refined
+          in research/logic/BUSINESS_LOGIC.md §5: delivery must be
+          *turn-boundary* async, not merely microtask async — a
+          microtask-scheduled reply can land before the dispatching turn's
+          microtask queue flushes, which no sandboxed transport can do. Handlers communicate only
           through data-model writes, never a sync return. Pure function
           *expressions* stay synchronous. This routes through the §11 cancellable
           scheduler (timeouts/cancellation for free).

@@ -1,7 +1,7 @@
 # A reactive framework over A2UI — research note
 
 > **Status: research (2026-08-09).** Follows BUSINESS_LOGIC.md (the driver
-> design) and its authoring-API discussion. Prompted by promising prototypes:
+> design). Prompted by promising prototypes:
 > a React/Flutter-like reactive framework can be built **on top of** the A2UI
 > protocol, with the protocol playing the role of the DOM — the retained UI
 > CRUD vocabulary a reconciler needs to apply widget-rebuild deltas remotely.
@@ -24,6 +24,31 @@ patterns for app state, update localization (`setState`, inherited widgets /
 context), and testing. The two-language split — templates for UI, a driver for
 logic — becomes an *option* (see §7) rather than the only shape.
 
+### The authoring-altitude ladder (terms used throughout)
+
+How a driver gets *written* spans four altitudes; this note names them and
+the rest of the doc uses the names:
+
+- **L0 — the raw port.** The session envelope over `postMessage`/socket, JSON
+  in/out. Always exists underneath; what the conformance suite drives, and
+  what "any language can implement a driver" means concretely.
+- **L1 — the thin typed SDK.** Lifecycle callbacks + a context handle for
+  writes and structure; no opinion about how the author holds state. Phase
+  1's deliverable — PHASE_1_PLAN.md slice 2 sketches the minimal shape
+  (`Driver { onInit; onEvent }`); the fuller candidate design (a handler map
+  checked against the contract, writes buffered into one transactional turn,
+  handlers serialized with `ctx.post` self-events for long work) is still
+  under discussion and should be folded into the plan when settled.
+- **L2 — a state/reactivity framework.** The author declares state and UI
+  declaratively; the framework decides what crosses the wire and when. The
+  subject of this note.
+- **L3 — a full app framework.** Routing, effects systems, DI. Out of scope
+  at every point so far.
+
+The layering rule set when the L1 API was designed: **each rung compiles onto
+the one below and adds no protocol surface** — an L2 framework is a library
+over the L1 SDK, not a fork of the wire.
+
 Crucially, **nothing below the authoring layer changes**:
 
 - The wire still carries A2UI Transport inside the session envelope
@@ -36,9 +61,10 @@ Crucially, **nothing below the authoring layer changes**:
 - "Logic is a driver, not a library" survives intact — this is a better way
   to *write* a driver, not a new attachment point.
 
-This is the L2/L3 rung the authoring-API discussion deliberately deferred with
-"design the seams so L2 compiles down." The prototypes are evidence that the
-seams are in the right place.
+This is the L2 rung, taken up earlier than expected: the working bet while
+shaping L1 has been "keep the reference SDK thin, but place its seams — the
+transactional turn, the serialized queue — so an L2 can compile down later."
+The prototypes are evidence that the seams are in the right place.
 
 ## 2. Prior art: this architecture has shipped, repeatedly
 
@@ -285,7 +311,9 @@ mini-app stays hand-written L1 in Phase 1 (it must exercise the raw seam).
 2. Reference reactive framework, signals-based (§4.2), Dart first, JS mirror
    — compiled onto the L1 SDK, no protocol changes.
 3. Contract v2: the framework channel (§6) and the `owned`/`bound` key
-   distinction the authoring discussion already surfaced.
+   distinction (a two-way-bound key has two legitimate writers — the surface
+   echoing the user and the driver correcting — unlike a purely driver-owned
+   key; the contract should say which is which).
 4. Rewrite the cart as a framework showcase *alongside* (not replacing) the
    L1 version — the pair documents the layering.
 5. Static-subtree extraction and computed-to-function compilation (§7, §4.2)

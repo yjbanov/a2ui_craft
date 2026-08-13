@@ -72,7 +72,7 @@ The prototypes are evidence that the seams are in the right place.
 |---|---|---|---|---|
 | **React Native** | React + JS thread, shadow tree | batched view mutations over the bridge (now Fabric/JSI) | native views | the whole model at massive scale — a reactive framework whose "DOM" is an async mutation protocol to another realm |
 | **Shopify remote-ui → [Remote DOM](https://github.com/Shopify/remote-dom)** | third-party extension code in a web worker | serialized DOM mutations over `postMessage` | a **vetted host component set** | the sandboxed-worker variant *with our trust posture*, in production for Shopify UI extensions ([their write-up](https://shopify.engineering/remote-rendering-ui-extensibility)) |
-| **React Server Components** | server-rendered element tree | streamed tree (Flight) | client React materializes; **client components** mark the local-interactivity boundary | the server variant, and the boundary concept §7 borrows |
+| **React Server Components (RSC)** | server-rendered element tree | streamed tree (Flight) | client React materializes; **client components** (`'use client'`) mark the local-interactivity boundary | the server variant, and the boundary concept §7 borrows |
 | **Phoenix LiveView** | server-held socket state | events up, minimal diffs down | browser patches DOM | latency UX at real network distance |
 | **Jetpack Glance** | Compose runtime | RemoteViews | launcher/system process | a declarative runtime retargeted at a remote, restricted surface (the Kotlin path: Compose's `Applier` is explicitly retargetable) |
 | **SolidJS / Svelte 5 / preact signals** | — (in-process) | — | — | **fine-grained reactivity**: structure built once, value "holes" poked in place — the shape §4 argues fits our wire exactly |

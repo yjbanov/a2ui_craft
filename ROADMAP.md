@@ -451,11 +451,12 @@
           `packages/a2ui_craft_logic` (the reference implementation). The `cart`
           mini-app ships its logic twice — Dart and JavaScript — and the driver
           conformance suite runs unmodified against both, which is what proves
-          the coupling surface is the protocol. **Phase 2 (next): the reactive
-          driver framework** — researched in
-          `research/logic/REACTIVE_FRAMEWORK.md` (candidates ordered in its
-          §9); Phase 1's stated exit criterion is writing `PHASE_2_PLAN.md`
-          from its L1 ratification + wire measurements.
+          the coupling surface is the protocol. **Phase 2 (planned, shovel-ready): the
+          reactive driver framework** — `research/logic/PHASE_2_PLAN.md`, over
+          the research in `research/logic/REACTIVE_FRAMEWORK.md`. It builds the
+          measurement instrument *first*, because signals-as-bindings versus
+          VDOM-diff is an empirical question and building the framework first
+          would turn it into a taste question defended after the fact.
         **Two refinements that pin the design:**
         - *Trust boundary — separate registries, not one library.* Shared
           *implementations* are fine, but **exposure = registration is per trust

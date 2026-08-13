@@ -200,3 +200,49 @@ production posture explicitly.
 A dead control is a wiring mistake, not a crash. Faulting would take down a
 working mini-app over one mistyped event name. The session stays up and the
 author gets told.
+
+## Slice 4 — channel budgets and the failure path (2026-08-12)
+
+### D17. Calibration: 30 frames/second sustained, 120 of burst
+
+The design left this an open question ("where 'energetic user' ends and
+'overload' begins"). Picked, and both sides of the threshold are pinned by
+tests: a synthetic flood halts, and **ten taps a second for a full minute** does
+not.
+
+The asymmetry of the two errors decides it. Guessing low means a real user hits
+a wall; guessing high means a runaway loop takes a few hundred milliseconds
+longer to stop. So the ceiling sits far above any person — a fast tapper manages
+perhaps ten a second, a tremor or stuck key maybe treble that — and still stops
+a `while (true) write()` in well under a second. Both constants live in one
+named place, `budget.dart`.
+
+### D18. A driver's batch is charged **per message**, not per frame
+
+Not in the design, and it matters more than the rate does: per-handler batching
+(D10) means a driver's writes arrive as one frame, so charging per frame would
+let ten thousand writes through for the price of one. The inbound bucket takes
+one token per A2UI message carried, which is what actually makes the
+async-amplification attack cost what it costs.
+
+### D19. The failure path is a *runner*, not a widget
+
+The plan put the BSoD card in this slice. Building it revealed that the card is
+the easy half and the wrong half to generalize — it is host chrome, and each
+adapter draws its own. What every host needs identically is the lifecycle
+underneath it, because `DriverSession` is deliberately one-shot: every terminal
+state latches, so something has to hold the *next* session.
+
+`MiniAppRunner` is that something. It owns create-processor → replay `app.json`
+→ connect driver → fault → **restart**, so a host answers one question when it
+renders: is `fault` null? Draw the surface, or draw your own failure state with
+`restart` behind its button.
+
+Restart is a genuine cold start — new processor, replayed recorded stream, new
+driver with no memory of the old one — and a test asserts the second driver
+starts at zero. That is the MVP restoration policy stated as behavior rather
+than as an omission: a half-restored mini-app that *looks* recovered is worse
+than one that plainly starts over.
+
+The rendered failure card lands with the first real host (slice 5's cart), where
+there is a surface to actually take out of service.

@@ -34,5 +34,10 @@ abstract interface class DriverTransport {
   set onCrash(void Function(String reason)? handler);
 
   /// Tears the transport down. Idempotent.
+  ///
+  /// Implementations must **stop the driver**, not merely stop listening to it.
+  /// This is how a session kills both sides: terminate the worker, close the
+  /// socket, drop the runtime. A driver left running with nobody listening
+  /// burns CPU on behalf of a surface that is already out of service.
   void close();
 }

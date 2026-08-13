@@ -6,6 +6,7 @@ import 'dart:async';
 
 import 'package:a2ui_core/a2ui_core.dart';
 
+import 'budget.dart';
 import 'envelope.dart';
 import 'fault.dart';
 import 'session_machine.dart';
@@ -38,7 +39,8 @@ class DriverSession {
     required this.surfaceId,
     required this.transport,
     this.hostContext = const <String, Object?>{},
-  });
+    ChannelBudgets? budgets,
+  }) : budgets = budgets ?? ChannelBudgets();
 
   /// The processor whose surface group holds the driven surface.
   final MessageProcessor<ComponentApi> processor;
@@ -52,6 +54,10 @@ class DriverSession {
   /// Host-owned context handed to the driver at init — locale, display mode,
   /// theme selection.
   final Map<String, Object?> hostContext;
+
+  /// The rate ceilings on the channel, both directions. Draining either halts
+  /// the session.
+  final ChannelBudgets budgets;
 
   final LogicSessionMachine _machine =
       LogicSessionMachine(role: LogicRole.host);
@@ -118,6 +124,7 @@ class DriverSession {
 
   void _receive(Map<String, Object?> frame) {
     if (_disposed) return;
+    if (!_machine.isOpen) return;
     final LogicMessage message;
     try {
       message = _machine.receiveJson(frame);
@@ -133,6 +140,21 @@ class DriverSession {
           _flushQueuedEvents();
         }
       case UpdateMessage(:final List<A2uiMessage> messages):
+        // One token per message, not per frame: ten thousand writes in one
+        // batch is the flood, and charging it as a single frame would let it
+        // through.
+        if (!budgets.inbound.tryConsume(
+          messages.isEmpty ? 1 : messages.length,
+        )) {
+          _raise(
+            SessionFaultCode.budgetExhausted,
+            'The driver exceeded the channel budget '
+            '(${budgets.inbound.capacity} frames of burst, '
+            '${budgets.inbound.refillPerSecond}/s sustained). A driver writing '
+            'this fast is looping, not responding.',
+          );
+          return;
+        }
         _applyUpdate(messages);
       case TerminateMessage():
         // The machine already latched to `terminated`; nothing further to do.
@@ -216,7 +238,18 @@ class DriverSession {
   }
 
   void _handleAction(A2uiClientAction action) {
-    if (action.surfaceId != surfaceId || _disposed) return;
+    if (action.surfaceId != surfaceId || _disposed || !_machine.isOpen) return;
+    if (!budgets.outbound.tryConsume()) {
+      _raise(
+        SessionFaultCode.budgetExhausted,
+        'The surface exceeded the channel budget '
+        '(${budgets.outbound.capacity} events of burst, '
+        '${budgets.outbound.refillPerSecond}/s sustained). No person produces '
+        'events at this rate; continuous interaction belongs in the template, '
+        'not on the wire.',
+      );
+      return;
+    }
     final EventMessage event = EventMessage(
       name: action.name,
       surfaceId: action.surfaceId,
@@ -305,8 +338,16 @@ class DriverSession {
   }
 
   void _fault(SessionFault fault) {
-    if (!_ready.isCompleted) _ready.completeError(fault);
+    if (!_ready.isCompleted) {
+      _ready.completeError(fault);
+      // `ready` is a convenience, not an obligation — a host that listens on
+      // `onFault` instead must not be punished with an unhandled async error.
+      unawaited(_ready.future.catchError((Object _) {}));
+    }
     _onFault.emit(fault);
+    // Kill both sides. Closing the transport is what stops the driver: a
+    // faulted host has no use for it, and a worker left running would keep
+    // burning CPU with nobody listening.
     transport
       ..onFrame = null
       ..onCrash = null

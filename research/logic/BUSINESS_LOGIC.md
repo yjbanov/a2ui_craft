@@ -430,8 +430,12 @@ Staged:
 ## 12. Implementation sketch (slices, each conformance-tested on both adapters)
 
 1. **Protocol + session state machine** — envelope types, handshake,
-   ordering, heartbeat, in `a2ui_craft_bridge` (it already owns the
-   driver-facing seam). Pure Dart, framework-free.
+   ordering, heartbeat, in a **new package, `a2ui_craft_logic`** — layered
+   entirely on the public seam (`processMessages` in, `onAction` out,
+   `dataModel.get` for event-time two-way snapshots), which the slice-0
+   grounding test proves closes from outside. Existing packages take **zero
+   changes**; the no-logic pure-UI mode is structurally untouched. Pure
+   Dart, framework-free.
 2. **In-process reference runner + conformance fixture** — a counter/cart
    mini-app as a Dart driver behind zero-length timers (§5's turn-boundary
    rule); the conformance suite drives the *protocol*, so the same suite

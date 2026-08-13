@@ -63,9 +63,24 @@ through.
 
 ### 1. Protocol — envelope + session state machine (pure Dart)
 
-In `a2ui_craft_bridge` under `src/driver/`, **dependency-light by design** so
-it can later split into a published `a2ui_craft_driver` package for driver
-authors without dragging the host half along.
+In a **new package, `packages/a2ui_craft_logic`** — not in the bridge. The
+layering policy for the whole phase:
+
+- **Existing published packages take zero changes.** The session layers on
+  the public seam the slice-0 grounding test already drives from outside:
+  `MessageProcessor.processMessages` (inbound), `onAction` (outbound), and
+  `DataModel.get` (event-time two-way snapshots — verified public). Host-key
+  protection needs no engine hook either: the session is the party calling
+  `processMessages`, so it filters driver writes before ingest.
+- **If a needed seam turns out non-public, make the surgical exposure fix**
+  (a getter, a listener) in the owning package — never implement logic
+  machinery inside it. For `a2ui_core` (upstream, pub.dev) the order is
+  workaround first, upstream PR second.
+- What this buys: the no-logic pure-UI mode (templates + agent or
+  `app.json`) is structurally untouched, and logic stays pay-for-what-you-use
+  — a host that never loads a driver never depends on `a2ui_craft_logic`.
+
+Package deps: `a2ui_core` + `a2ui_craft` only. Contents of this slice:
 
 - Message envelope: `hello`, `init`, `event`, `update`, `error`, `terminate`,
   heartbeat. (`suspend`/`resume`/`snapshot` are *named* in the version doc as
@@ -155,10 +170,12 @@ identical on Flutter and Jaspr via the in-process runner.
 - A single-file, zero-dependency ES-module driver SDK (`driver.js`): wraps
   `postMessage`, exposes the same `onInit`/`onEvent` shape as the Dart API,
   speaks the slice-1 envelope verbatim.
-- `WorkerDriverRunner` in `a2ui_craft_jaspr`: spawns the worker, bridges
-  `postMessage` to `DriverSession`. The package already runs
-  `@TestOn('browser')` tests, so the worker executes for real in Chrome under
-  CI — no simulation.
+- `WorkerDriverRunner` in `a2ui_craft_logic` as a web-only sub-library
+  (`package:a2ui_craft_logic/web.dart`, on `package:web`): spawns the worker,
+  bridges `postMessage` to `DriverSession`. Nothing about it is
+  Jaspr-specific, so the adapters stay untouched — hosts *compose* a runner
+  with a surface. Browser tests run `@TestOn('browser')` in the logic
+  package itself (the Jaspr package is the CI precedent that this works).
 - Port the cart driver to `cart.js`.
 
 **Tests:** the slice-2 conformance cases and the slice-5 cart script run
@@ -168,9 +185,12 @@ cases: worker crash → fault → BSoD; heartbeat loss → same.
 
 ### 7. Manifest + loader + site + CLI
 
-- `ProjectManifest` gains the `logic` slot (`kind`, `entry`, `capabilities`);
-  `CraftProjectLoader` fetches the driver source; unsupported `kind` refuses
-  to load with a reason (design §6).
+- The `logic` slot (`kind`, `entry`, `capabilities`) lives in the same
+  `manifest.json` but is read by `a2ui_craft_logic`'s own loader, which also
+  fetches the driver source; unsupported `kind` refuses to load with a
+  reason (design §6). The existing `CraftProjectLoader`/`ProjectManifest`
+  stay untouched — **verified**: `ProjectManifest.parse` reads only its
+  known keys and ignores the rest, so the slot needs no change there.
 - The site gallery ships the cart mini-app — Jaspr pane on the **worker**
   runner, Flutter pane on the **in-process Dart** runner: one mini-app, two
   languages, two runners, side by side. That pane pair is the public
@@ -186,8 +206,9 @@ sample tests stay green.
 
 - **The central architectural risk is per-adapter drift** (NEXT_THREADS
   grounding #2). Mitigation is structural: the protocol, session, namespace
-  guardrails, and budgets live *once* in the bridge; adapters contribute only
-  runners. Nothing in slices 1–4 is written twice.
+  guardrails, budgets, and runners all live *once* in `a2ui_craft_logic`;
+  the adapters contribute nothing at all. Nothing in slices 1–6 is written
+  twice.
 - **Slice order is dependency order**, but 3 and 4 commute; pull 4 earlier if
   flood-halt wiring turns out to be needed for 3's fault plumbing.
 - **Flutter-host sandboxed runner is deliberately absent** — the Flutter pane

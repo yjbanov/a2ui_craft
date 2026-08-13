@@ -39,7 +39,7 @@ step "Check per-package LICENSE files match the root LICENSE"
 # root's LICENSE does not propagate. Keep them byte-identical so a stray edit to
 # one can't ship a divergent license. Covers only the published packages (those
 # without `publish_to: none`).
-for pkg in a2ui_craft a2ui_craft_bridge a2ui_craft_flutter a2ui_craft_jaspr; do
+for pkg in a2ui_craft a2ui_craft_bridge a2ui_craft_logic a2ui_craft_flutter a2ui_craft_jaspr; do
   cmp -s LICENSE "packages/$pkg/LICENSE" \
     || { echo "packages/$pkg/LICENSE differs from root LICENSE — run 'cp LICENSE packages/$pkg/LICENSE'."; exit 1; }
 done
@@ -49,6 +49,9 @@ step "Analyze: a2ui_craft (core)"
 
 step "Analyze: a2ui_craft_bridge (A2UI integration)"
 (cd packages/a2ui_craft_bridge && dart analyze)
+
+step "Analyze: a2ui_craft_logic (mini-app business logic)"
+(cd packages/a2ui_craft_logic && dart analyze)
 
 step "Analyze: a2ui_craft_testing"
 (cd packages/a2ui_craft_testing && dart analyze)
@@ -91,6 +94,9 @@ step "Test: craft (CLI scaffolding)"
 
 step "Test: a2ui_craft_bridge (A2UI translation)"
 (cd packages/a2ui_craft_bridge && dart test)
+
+step "Test: a2ui_craft_logic (driver protocol + session)"
+(cd packages/a2ui_craft_logic && dart test)
 
 step "Test: a2ui_craft_jaspr (parity)"
 (cd packages/a2ui_craft_jaspr && dart test)

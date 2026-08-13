@@ -177,6 +177,7 @@ void _writeMiniApps(StringBuffer b) {
     ..writeln('    required this.schema,')
     ..writeln('    required this.messages,')
     ..writeln('    required this.logic,')
+    ..writeln('    required this.driverJs,')
     ..writeln('  });')
     ..writeln()
     ..writeln('  final String id;')
@@ -190,6 +191,10 @@ void _writeMiniApps(StringBuffer b) {
     ..writeln()
     ..writeln("  /// The manifest's `logic` block, as JSON.")
     ..writeln('  final String logic;')
+    ..writeln()
+    ..writeln('  /// The JavaScript driver, as source — the portable half of')
+    ..writeln('  /// the mini-app, runnable in a worker on any host.')
+    ..writeln('  final String driverJs;')
     ..writeln()
     ..writeln('  /// The renderable half of the project.')
     ..writeln('  SampleSpec toSpec() => SampleSpec.fromData(')
@@ -214,7 +219,16 @@ void _writeMiniApps(StringBuffer b) {
     final String messages =
         File('$_miniAppRoot/$id/app.json').readAsStringSync();
     final String logic = '${_pretty.convert(project['logic'])}\n';
-    for (final String s in <String>[template, schema, messages, logic]) {
+    final String driverJs = File(
+            '$_miniAppRoot/$id/${(project['logic'] as Map<String, dynamic>)['entry']}')
+        .readAsStringSync();
+    for (final String s in <String>[
+      template,
+      schema,
+      messages,
+      logic,
+      driverJs
+    ]) {
       if (s.contains("'''")) {
         stderr.writeln("Mini-app '$id' contains ''' — cannot raw-embed.");
         exit(1);
@@ -235,6 +249,9 @@ void _writeMiniApps(StringBuffer b) {
       ..writeln("''',")
       ..writeln("    logic: r'''")
       ..write(logic)
+      ..writeln("''',")
+      ..writeln("    driverJs: r'''")
+      ..write(driverJs)
       ..writeln("''',")
       ..writeln('  ),');
   }

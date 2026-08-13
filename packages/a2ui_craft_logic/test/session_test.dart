@@ -420,6 +420,49 @@ void main() {
     });
   });
 
+  group('liveness', () {
+    test('a driver that stops answering is detected, not awaited', () async {
+      final (MessageProcessor<ComponentApi> processor, _) = _surface();
+      final DriverSession session = DriverSession(
+        processor: processor,
+        surfaceId: 's',
+        transport: _MuteAfterInit(),
+        heartbeat: const Duration(milliseconds: 20),
+      );
+      addTearDown(session.dispose);
+      final List<SessionFault> faults = <SessionFault>[];
+      session.onFault.addListener(faults.add);
+      session.start();
+      await session.ready;
+
+      // A crashed worker fires an error event; a hung one fires nothing at
+      // all, so without the probe this surface would sit looking healthy.
+      await Future<void>.delayed(const Duration(milliseconds: 120));
+      expect(faults.single.code, SessionFaultCode.heartbeatLost);
+      expect(session.state, LogicSessionState.faulted);
+    });
+
+    test('a live driver is never faulted for being idle', () async {
+      final (MessageProcessor<ComponentApi> processor, _) = _surface();
+      final DriverSession session = DriverSession(
+        processor: processor,
+        surfaceId: 's',
+        transport: InProcessDriverRunner(_RecordingDriver()),
+        heartbeat: const Duration(milliseconds: 10),
+      );
+      addTearDown(session.dispose);
+      final List<SessionFault> faults = <SessionFault>[];
+      session.onFault.addListener(faults.add);
+      session.start();
+
+      // Many probe intervals with no traffic at all: answering pings is the
+      // whole of what keeps a session alive.
+      await Future<void>.delayed(const Duration(milliseconds: 150));
+      expect(faults, isEmpty);
+      expect(session.isReady, isTrue);
+    });
+  });
+
   group('failure is loud', () {
     test('a handler that throws faults the session with its reason', () async {
       final (
@@ -521,4 +564,34 @@ class _Spy implements DriverTransport {
 
   @override
   void close() => _inner.close();
+}
+
+/// A transport that answers the handshake and then goes quiet — the hung
+/// driver a crash event never reports.
+class _MuteAfterInit implements DriverTransport {
+  void Function(Map<String, Object?> frame)? _onFrame;
+  int _seq = 0;
+
+  @override
+  set onFrame(void Function(Map<String, Object?> frame)? handler) =>
+      _onFrame = handler;
+
+  @override
+  set onCrash(void Function(String reason)? handler) {}
+
+  @override
+  void start() => Timer.run(() {
+        _seq += 1;
+        _onFrame?.call(
+          LogicFrame(seq: _seq, message: const HelloMessage()).toJson(),
+        );
+      });
+
+  @override
+  void send(Map<String, Object?> frame) {
+    // Swallows everything, pings included.
+  }
+
+  @override
+  void close() => _onFrame = null;
 }

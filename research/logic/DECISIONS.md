@@ -303,3 +303,58 @@ The gap belongs to workstream B (template computation): a `format`/`toString`
 function with a precision argument would close it, and it is exactly the kind of
 pure, local derivation tier 2 is for — pushing it to the driver would make every
 price change a round trip.
+
+## Slice 6 — the JavaScript worker runner (2026-08-13)
+
+### D25. The worker channel carries JSON **text**, not structured-cloned objects
+
+Structured clone would have worked and been marginally faster. Text won on three
+counts: it is what a socket or a platform channel carries anyway, so the JS SDK
+makes no assumption about which host is on the other end; it makes a
+non-serializable value fail at the author's desk rather than at some later
+transport boundary; and it keeps the SDK free of `dartify`/`jsify` asymmetries
+that would otherwise leak into the protocol's definition.
+
+### D26. The runner prepends the SDK, so a mini-app's logic is **one file**
+
+`WorkerDriverRunner.fromSource` concatenates `driverSdkJs` with the driver's own
+source and starts the worker from a blob. An ephemeral, CDN-delivered mini-app
+should not have to host, resolve, and version a second file just to speak the
+protocol. `fromUrl` remains for the production shape, where the script loads the
+SDK itself.
+
+`js/driver.js` is the source of truth — real JavaScript with real tooling — and
+a generator bakes it into a Dart constant, with a `check.sh` drift guard, the
+same pattern the sample and theme generators already use.
+
+### D27. H1 and H2 are proven, and the proof is that nothing was edited
+
+`packages/a2ui_craft_jaspr/test/driver_worker_test.dart` re-runs the **entire**
+driver conformance suite — including the shipped cart — against drivers written
+in JavaScript running in a web worker. It imports the suite's entry point and a
+different runner factory, and nothing else: no case redefined, relaxed, or
+skipped.
+
+That required extracting the Jaspr conformance harness out of
+`conformance_test.dart` into `conformance_harness.dart`, since two suites now
+run through it.
+
+### D28. The heartbeat exists now, and it is a real knob
+
+The protocol reserved ping/pong from slice 1 but the session never sent one. A
+crashed worker fires an error event; a *hung* one fires nothing at all, so
+without a probe a surface would sit looking healthy forever. `DriverSession`
+now probes on an interval with a one-interval deadline — one knob, not two —
+and `null` disables it.
+
+### D29. Finding: a periodic timer is a leak inside a Flutter widget test
+
+Adding the probe broke the Flutter driver conformance immediately: fake-async
+rightly reports a pending periodic timer as a leak, and `addTearDown` runs after
+that check. Worth knowing for any host embedding a mini-app in widget tests —
+dispose the session inside the test body, or pass `heartbeat: null`.
+
+The conformance suite takes the second option, and `MiniAppRunner` gained a
+`heartbeat` parameter to forward. Liveness is proven where a driver can actually
+hang: `a2ui_craft_logic`'s browser test, against a real worker that stops
+listening.

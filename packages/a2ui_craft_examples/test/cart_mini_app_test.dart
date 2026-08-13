@@ -236,11 +236,23 @@ void main() {
     );
   });
 
-  test("the project's logic slot names the driver the host must supply", () {
+  test('the project ships the same logic twice, in two languages', () {
+    // The pair is the language-neutrality exhibit: same events, same writes,
+    // same status strings, one written against a Dart API and one against a
+    // JavaScript one. The conformance script cannot tell them apart.
+    expect(cartMiniApp.driverJs, contains('a2uiDriver({'));
+    for (final String handler in CartDriver().handledEvents) {
+      expect(cartMiniApp.driverJs, contains('$handler:'),
+          reason: 'the JavaScript port must answer every event the Dart one '
+              'does, or the two are not the same mini-app');
+    }
+  });
+
+  test("the project's logic slot names the driver a host must run", () {
     final Map<String, Object?> logic =
         jsonDecode(cartMiniApp.logic) as Map<String, Object?>;
-    expect(logic['kind'], 'builtin');
-    expect(logic['entry'], 'cart');
+    expect(logic['kind'], 'worker');
+    expect(logic['entry'], 'cart.js');
     expect(logic['capabilities'], isEmpty);
   });
 }

@@ -1,8 +1,8 @@
 {
   "name": "Cart",
   "logic": {
-    "kind": "builtin",
-    "entry": "cart",
+    "kind": "worker",
+    "entry": "cart.js",
     "capabilities": []
   }
 }

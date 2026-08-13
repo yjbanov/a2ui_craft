@@ -40,6 +40,7 @@ class DriverSession {
     required this.transport,
     this.hostContext = const <String, Object?>{},
     ChannelBudgets? budgets,
+    this.heartbeat = const Duration(seconds: 5),
   }) : budgets = budgets ?? ChannelBudgets();
 
   /// The processor whose surface group holds the driven surface.
@@ -59,6 +60,17 @@ class DriverSession {
   /// the session.
   final ChannelBudgets budgets;
 
+  /// How often to probe the driver for life, and how long it has to answer.
+  ///
+  /// A driver that stops answering is *detected*, not merely awaited — a hung
+  /// worker produces no crash event, so without this a surface would sit
+  /// looking healthy forever. One knob: the deadline is one interval, so a
+  /// probe that goes unanswered by the next tick faults the session.
+  ///
+  /// `null` disables the probe, for hosts that have a better liveness signal of
+  /// their own.
+  final Duration? heartbeat;
+
   final LogicSessionMachine _machine =
       LogicSessionMachine(role: LogicRole.host);
   final Completer<void> _ready = Completer<void>();
@@ -67,6 +79,9 @@ class DriverSession {
 
   bool _started = false;
   bool _disposed = false;
+  Timer? _heartbeatTimer;
+  int _pingNonce = 0;
+  bool _awaitingPong = false;
 
   /// The session's lifecycle state.
   LogicSessionState get state => _machine.state;
@@ -91,6 +106,11 @@ class DriverSession {
   void start() {
     if (_started) return;
     _started = true;
+    // `ready` is a convenience, not an obligation: a host that watches
+    // `onFault` instead must not be punished with an unhandled async error if
+    // the session fails before the handshake. The listener goes on before
+    // anything can fail, because registering one afterwards is a race.
+    unawaited(_ready.future.catchError((Object _) {}));
     transport
       ..onFrame = _receive
       ..onCrash = _handleCrash;
@@ -111,6 +131,7 @@ class DriverSession {
   void dispose() {
     if (_disposed) return;
     _disposed = true;
+    _heartbeatTimer?.cancel();
     processor.groupModel.onAction.removeListener(_handleAction);
     if (_machine.isOpen) {
       _trySend(const TerminateMessage(reason: 'host disposed the session'));
@@ -138,6 +159,7 @@ class DriverSession {
         if (_machine.isReady) {
           if (!_ready.isCompleted) _ready.complete();
           _flushQueuedEvents();
+          _startHeartbeat();
         }
       case UpdateMessage(:final List<A2uiMessage> messages):
         // One token per message, not per frame: ten thousand writes in one
@@ -163,11 +185,38 @@ class DriverSession {
         // The machine already latched to `faulted` with the driver's reason.
         _fault(_machine.fault!);
       case PongMessage():
+        _awaitingPong = false;
       case InitMessage():
       case EventMessage():
       case PingMessage():
         break;
     }
+  }
+
+  void _startHeartbeat() {
+    final Duration? interval = heartbeat;
+    if (interval == null) return;
+    _heartbeatTimer = Timer.periodic(interval, (Timer _) {
+      if (!_machine.isReady) {
+        _heartbeatTimer?.cancel();
+        return;
+      }
+      if (_awaitingPong) {
+        // A crashed worker fires an error event; a *hung* one fires nothing at
+        // all. This is the only thing that tells the two apart from a dead
+        // channel, and a surface that cannot tell is a surface that lies.
+        _heartbeatTimer?.cancel();
+        _raise(
+          SessionFaultCode.heartbeatLost,
+          'The driver did not answer a liveness probe within '
+          '${interval.inMilliseconds}ms.',
+        );
+        return;
+      }
+      _pingNonce += 1;
+      _awaitingPong = true;
+      _trySend(PingMessage(nonce: _pingNonce));
+    });
   }
 
   void _applyUpdate(List<A2uiMessage> messages) {
@@ -338,12 +387,8 @@ class DriverSession {
   }
 
   void _fault(SessionFault fault) {
-    if (!_ready.isCompleted) {
-      _ready.completeError(fault);
-      // `ready` is a convenience, not an obligation — a host that listens on
-      // `onFault` instead must not be punished with an unhandled async error.
-      unawaited(_ready.future.catchError((Object _) {}));
-    }
+    if (!_ready.isCompleted) _ready.completeError(fault);
+    _heartbeatTimer?.cancel();
     _onFault.emit(fault);
     // Kill both sides. Closing the transport is what stops the driver: a
     // faulted host has no use for it, and a worker left running would keep

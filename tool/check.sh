@@ -34,6 +34,12 @@ dart format packages/a2ui_craft/lib/src/default_theme.g.dart
 git diff --exit-code packages/a2ui_craft/lib/src/default_theme.g.dart \
   || { echo "default_theme.g.dart is stale — run tool/gen_default_theme.dart and commit."; exit 1; }
 
+step "Check the generated JS driver SDK is in sync with js/driver.js"
+dart run packages/a2ui_craft_logic/tool/gen_driver_sdk.dart
+dart format packages/a2ui_craft_logic/lib/src/driver_sdk.g.dart
+git diff --exit-code packages/a2ui_craft_logic/lib/src/driver_sdk.g.dart \
+  || { echo "driver_sdk.g.dart is stale — run tool/gen_driver_sdk.dart and commit."; exit 1; }
+
 step "Check per-package LICENSE files match the root LICENSE"
 # pub.dev requires a LICENSE file inside each published package; the workspace
 # root's LICENSE does not propagate. Keep them byte-identical so a stray edit to
@@ -98,11 +104,19 @@ step "Test: a2ui_craft_bridge (A2UI translation)"
 step "Test: a2ui_craft_logic (driver protocol + session)"
 (cd packages/a2ui_craft_logic && dart test)
 
+step "Test: a2ui_craft_logic (worker runner, headless Chrome)"
+(cd packages/a2ui_craft_logic && dart test -p chrome test/worker_runner_test.dart)
+
 step "Test: a2ui_craft_jaspr (parity)"
 (cd packages/a2ui_craft_jaspr && dart test)
 
 step "Test: a2ui_craft_jaspr (Flex geometry, headless Chrome)"
 (cd packages/a2ui_craft_jaspr && dart test -p chrome test/flex_geometry_test.dart test/control_styles_test.dart test/sample_view_binding_browser_test.dart test/craft_marker_test.dart)
+
+step "Test: a2ui_craft_jaspr (driver conformance vs. a JavaScript worker)"
+# The language-neutrality proof: the same conformance cases the in-process Dart
+# runner passes, re-run unmodified against drivers written in JavaScript.
+(cd packages/a2ui_craft_jaspr && dart test -p chrome test/driver_worker_test.dart)
 
 step "Test: a2ui_craft_jaspr/example (samples)"
 (cd packages/a2ui_craft_jaspr/example && dart test)

@@ -24,6 +24,9 @@ dependencies:
   # `a2ui_core`'s public seam, and the template engine (`a2ui_craft`) and the
   # framework adapters are deliberately absent — a driver never sees them.
   a2ui_core: ^0.0.1-wip002
+  # Web-only sub-library (`package:a2ui_craft_logic/web.dart`): the worker
+  # runner. Importing the main library never reaches it.
+  web: ^1.0.0
 
 dev_dependencies:
   # Test-only: the session tests read a component's resolved props through

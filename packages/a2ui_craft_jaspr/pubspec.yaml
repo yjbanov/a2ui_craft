@@ -29,6 +29,8 @@ dev_dependencies:
   # The custom-catalog test and a2ui_core seam spike define component schemas.
   json_schema_builder: any
   lints: ^4.0.0
+  # `@TestOn('browser')` on the worker-runner conformance run.
+  test: ^1.25.0
   # The Flex geometry conformance runs in a headless browser and reads real DOM
   # layout via getBoundingClientRect (dart test -p chrome).
   universal_web: any

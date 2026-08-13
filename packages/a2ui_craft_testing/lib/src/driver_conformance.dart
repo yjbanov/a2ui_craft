@@ -25,7 +25,7 @@ typedef DriverRunnerFactory = DriverTransport Function(String fixtureName);
 Driver conformanceDriver(String fixtureName) => switch (fixtureName) {
       'counter' => _CounterDriver(),
       'clamp' => _ClampDriver(),
-      'cart' => CartDriver(inventory: cartConformanceShop),
+      'cart' => CartDriver(),
       _ => throw ArgumentError.value(
           fixtureName,
           'fixtureName',
@@ -37,18 +37,6 @@ Driver conformanceDriver(String fixtureName) => switch (fixtureName) {
 /// runner.
 DriverTransport inProcessConformanceRunner(String fixtureName) =>
     InProcessDriverRunner(conformanceDriver(fixtureName));
-
-/// A one-product shop, so the cart case's assertions are about behavior and
-/// every control on screen is unambiguous — one row means one "Update" button.
-const List<CartProduct> cartConformanceShop = <CartProduct>[
-  CartProduct(
-    sku: 'kbd',
-    name: 'Keyboard',
-    detail: 'Clicky, and loud about it.',
-    priceCents: 5000,
-    stock: 2,
-  ),
-];
 
 /// Answers `go` by counting, and seeds a status line at init.
 class _CounterDriver extends Driver {
@@ -126,6 +114,15 @@ List<A2uiMessage> _messages(String eventName) => <A2uiMessage>[
       ),
     ];
 
+/// The liveness probe is off for the whole suite.
+///
+/// Not squeamishness: a periodic timer outlives the frame a widget test ends
+/// on, and Flutter's fake-async binding rightly calls that a leak. These cases
+/// are about the *rendered loop*; whether a hung driver is detected is proven
+/// where it can actually be hung — `a2ui_craft_logic`'s browser test, against a
+/// real worker that stops listening.
+const Duration? _noHeartbeat = null;
+
 /// The shared behavioral specification for a surface driven by **business
 /// logic** rather than by an agent or a recorded stream.
 ///
@@ -153,6 +150,7 @@ void runDriverConformance(
         processor: processor,
         surfaceId: 'conformance',
         transport: makeRunner('counter'),
+        heartbeat: _noHeartbeat,
       );
       addTearDown(session.dispose);
 
@@ -189,6 +187,7 @@ void runDriverConformance(
         processor: processor,
         surfaceId: 'conformance',
         transport: makeRunner('clamp'),
+        heartbeat: _noHeartbeat,
       );
       addTearDown(session.dispose);
 
@@ -233,6 +232,7 @@ void runDriverConformance(
             A2uiMessage.fromJson(m! as Map<String, dynamic>),
         ],
         createTransport: () => makeRunner('cart'),
+        heartbeat: _noHeartbeat,
       );
       addTearDown(runner.dispose);
 
@@ -257,15 +257,17 @@ void runDriverConformance(
       // Tier 3: a decision with consequences beyond the surface.
       await tester.activateButton('Add an item');
       await tester.settleDriver();
-      expect(tester.hasText('Keyboard'), isTrue);
-      expect(tester.hasText('Added Keyboard.'), isTrue);
+      expect(tester.hasText('Mechanical keyboard'), isTrue);
+      expect(tester.hasText('Added Mechanical keyboard.'), isTrue);
 
       // Tier 1: expanding a row never reaches the driver, so a plain pump —
       // no channel turn at all — is enough to see it.
-      expect(tester.hasText('Clicky, and loud about it.'), isFalse);
+      const String detail =
+          'Tactile switches, no backlight, two-year warranty.';
+      expect(tester.hasText(detail), isFalse);
       await tester.activateButton('Details');
       await tester.pump();
-      expect(tester.hasText('Clicky, and loud about it.'), isTrue);
+      expect(tester.hasText(detail), isTrue);
 
       // The optimistic echo: a two-way binding writes the local model at
       // tier-1 latency and the driver is never told. Writing the bound path is
@@ -277,16 +279,19 @@ void runDriverConformance(
       // what comes back is what the shop will honour.
       await tester.activateButton('Update');
       await tester.settleDriver();
-      expect(tester.hasText('Only 2 Keyboard in stock.'), isTrue);
+      expect(
+        tester.hasText('Only 3 Mechanical keyboard in stock.'),
+        isTrue,
+      );
 
       // Tier 2: a threshold the surface evaluates for itself, from data the
-      // driver wrote. Two keyboards at \$50 is \$100.
+      // driver wrote. Three keyboards is well past the free-shipping line.
       expect(tester.hasText('Free shipping unlocked'), isTrue);
 
       await tester.activateButton('Check out');
       await tester.settleDriver();
-      expect(tester.hasText(r'Ordered 2 item(s) for $100.00.'), isTrue);
-      expect(tester.hasText('Keyboard'), isFalse,
+      expect(tester.hasText(r'Ordered 3 item(s) for $267.00.'), isTrue);
+      expect(tester.hasText('Mechanical keyboard'), isFalse,
           reason: 'the order emptied the cart, and the row went with it');
     },
   );

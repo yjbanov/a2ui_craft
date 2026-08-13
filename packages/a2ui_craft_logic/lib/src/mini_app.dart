@@ -35,6 +35,7 @@ class MiniAppRunner {
     required this.createTransport,
     required this.surfaceId,
     this.hostContext = const <String, Object?>{},
+    this.heartbeat = const Duration(seconds: 5),
   });
 
   /// Builds a fresh processor, with the host's catalogs registered.
@@ -52,6 +53,10 @@ class MiniAppRunner {
 
   /// Host-owned context published to the surface and handed to the driver.
   final Map<String, Object?> hostContext;
+
+  /// The liveness probe interval passed to each session; see
+  /// [DriverSession.heartbeat]. `null` disables it.
+  final Duration? heartbeat;
 
   final EventNotifier<MiniAppRunner> _onChanged =
       EventNotifier<MiniAppRunner>();
@@ -114,6 +119,7 @@ class MiniAppRunner {
       surfaceId: surfaceId,
       transport: createTransport(),
       hostContext: hostContext,
+      heartbeat: heartbeat,
     );
     session.onFault.addListener(_handleFault);
     _processor = processor;

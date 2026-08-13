@@ -1308,8 +1308,29 @@ project** is a self-contained, *ephemerally loadable* bundle of everything a
 template author ships — catalog templates (`.craft`), their A2UI bindings
 (component schema), a theme (§9.5), and config (a small manifest: name, catalog
 id, theme reference, mode wiring). Being ephemeral, it contains **data only** —
-no code; ephemeral business logic (ROADMAP.md's sandboxed-logic layer) gets a
-manifest slot *later*, empty for now.
+with one deliberate exception, described next.
+
+A project that ships **business logic** is a *mini-app with a driver*, and it
+declares one in a `logic` manifest slot:
+
+```json
+"logic": {
+  "kind": "worker",       // worker | iframe | webview | remote | builtin
+  "entry": "cart.js",     // the script to run, or a built-in's registry key
+  "capabilities": []      // none are grantable yet
+}
+```
+
+The driver's source is the exception to data-only, and the exception is
+contained: it never executes in the host's context. It runs in a sandbox that
+grants nothing but an asynchronous channel, over which it may only send A2UI
+Transport messages — so the no-arbitrary-code-in-the-payload invariant (§11)
+holds where it matters, at the surface. A host advertises the kinds it can run
+and **refuses to load** anything else, loudly: a mini-app without its logic is
+not a degraded app, it is a screen of controls that answer nothing.
+
+The design is `research/logic/BUSINESS_LOGIC.md`; the reference implementation
+is `packages/a2ui_craft_logic`.
 
 A project is **agent-optional**, which splits its A2UI messages into two roles:
 

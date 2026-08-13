@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-/// The files `craft create` writes for a new project — the counter starter, the
-/// only template for now. Everything is **data**: an RFW template, a JSON-Schema
+/// The files `craft create` writes for a new project — the counter starter, or
+/// (with `--logic`) a mini-app that ships its own driver. Everything is **data**: an RFW template, a JSON-Schema
 /// catalog, an A2UI bootstrap, dev test scenarios, a project manifest, and a
 /// Firebase Hosting config. There is nothing to compile; deploying is copying
 /// these files to a CDN.
@@ -219,4 +219,208 @@ The host app and this project deploy **independently**. Edit `template.craft` (o
 any file), re-run `firebase deploy`, and reload the host — the UI updates with
 **no host redeploy**. That is the ephemeral-loadability property: the UI travels
 the author's channel, not the app store's.
+''';
+
+/// The files (relative path → contents) of a new **mini-app** named [name] — a
+/// project that ships business logic.
+///
+/// The difference from [counterProjectFiles] is one manifest slot and one extra
+/// file. A mini-app declares a `logic` block naming a driver, and the driver
+/// answers the events the template dispatches. It is not renderable without
+/// that driver, which is deliberate: a mini-app loaded with its logic missing
+/// would be a screen of controls that answer nothing.
+Map<String, String> miniAppProjectFiles(String name) {
+  final String display = humanizeName(name);
+  return <String, String>{
+    'manifest.json': _miniAppManifest(display),
+    'template.craft': _miniAppTemplateCraft,
+    'schema.json': _miniAppSchemaJson,
+    'app.json': _miniAppJson,
+    'logic.js': _miniAppLogicJs,
+    'firebase.json': _firebaseJson,
+    'README.md': _miniAppReadme(display, name),
+  };
+}
+
+// The `logic` slot: where the driver runs, and what to run. `worker` is the
+// portable default — no DOM, no host objects, and the same script on every web
+// host. `capabilities` is empty because this version grants none.
+String _miniAppManifest(String display) => '''
+{
+  "name": "$display",
+  "catalogId": "reserve",
+  "logic": {
+    "kind": "worker",
+    "entry": "logic.js",
+    "capabilities": []
+  }
+}
+''';
+
+// Nothing here decides anything. The field echoes what the user types at
+// tier-1 latency (two-way binding, no round trip); the status line shows
+// whatever the driver last said.
+const String _miniAppTemplateCraft = r'''
+import core;
+
+widget Reserve = Card(child: Column(crossAxisAlignment: "stretch", gap: 8.0,
+  children: [
+    Heading(text: args.title, level: 2),
+    Text(text: args.prompt, variant: "caption"),
+    TextField(value: args.name, onChanged: args.setName),
+    Text(text: args.status),
+    Button(onPressed: args.check, child: Text(text: args.checkLabel)),
+  ]));
+''';
+
+// `actions` is the agent-facing half: the inference catalog. A driver-backed
+// action is a capability an agent can invoke without knowing how it works.
+const String _miniAppSchemaJson = r'''
+{
+  "catalogId": "reserve",
+  "components": {
+    "Reserve": {
+      "properties": {
+        "title": { "$ref": "DynamicString" },
+        "prompt": { "$ref": "DynamicString" },
+        "name": { "$ref": "DynamicString" },
+        "status": { "$ref": "DynamicString" },
+        "checkLabel": { "$ref": "DynamicString" },
+        "check": { "$ref": "Action" }
+      }
+    }
+  },
+  "actions": [
+    {
+      "name": "reserve",
+      "description": "Reserves the username currently in the field, if it is available."
+    }
+  ]
+}
+''';
+
+// The cold boot: a complete, honest surface before the driver connects.
+const String _miniAppJson = r'''
+[
+  {
+    "version": "v0.9",
+    "createSurface": {
+      "surfaceId": "app",
+      "catalogId": "reserve",
+      "sendDataModel": false
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateDataModel": {
+      "surfaceId": "app",
+      "path": "/",
+      "value": {
+        "name": "",
+        "status": "Connecting…"
+      }
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateComponents": {
+      "surfaceId": "app",
+      "components": [
+        {
+          "id": "root",
+          "component": "Reserve",
+          "title": "Reserve a username",
+          "prompt": "Three characters or more.",
+          "name": { "path": "/name" },
+          "status": { "path": "/status" },
+          "checkLabel": "Reserve",
+          "check": { "event": { "name": "reserve" } }
+        }
+      ]
+    }
+  }
+]
+''';
+
+// The driver: the part the template cannot be. Which names are taken has to
+// survive the surface, so it is tier 3 by definition.
+//
+// The `a2uiDriver` function comes from the A2UI Craft driver SDK, which the
+// host prepends when it starts the worker — this file is the whole of the
+// logic, with nothing to install and nothing to build.
+const String _miniAppLogicJs = r'''
+var taken = ['ada', 'grace', 'alan'];
+
+a2uiDriver({
+  onInit: function (ctx) {
+    ctx.write('/status', 'Type a name and reserve it.');
+  },
+  handlers: {
+    reserve: function (ctx, event) {
+      // The field is two-way bound, so what the user typed is already on
+      // screen. The event carries it here, and what this writes back is
+      // authoritative.
+      var name = String(event.values['/name'] || '').trim().toLowerCase();
+      if (name.length < 3) {
+        ctx.write('/status', 'Too short — three characters or more.');
+        return;
+      }
+      if (taken.indexOf(name) !== -1) {
+        ctx.write('/status', '"' + name + '" is taken. Try another.');
+        return;
+      }
+      taken.push(name);
+      ctx.write('/status', 'Reserved "' + name + '".');
+    },
+  },
+});
+''';
+
+String _miniAppReadme(String display, String name) => '''
+# $display — an A2UI Craft mini-app
+
+A **mini-app**: an A2UI Craft project that ships its own business logic. The
+template renders and the driver decides, and they are coupled by nothing but a
+protocol — so the driver can be written in any language that can hold state and
+read and write JSON. This one is JavaScript, running in a web worker.
+
+## Files
+
+| File | Role | Deployed? |
+|---|---|---|
+| `manifest.json` | Name, catalog id, and the **`logic` slot** naming the driver. | ✅ |
+| `template.craft` | The UI, as an RFW template over the core primitives. | ✅ |
+| `schema.json` | The component API, plus the **`actions`** an agent may invoke. | ✅ |
+| `app.json` | The cold boot: a complete surface before the driver connects. | ✅ |
+| `logic.js` | The **driver** — the part the template cannot be. | ✅ |
+| `firebase.json` | Firebase Hosting config (CORS + cache). | ❌ (config) |
+
+## What belongs where
+
+Most interaction should never cross the wire:
+
+| Tier | Mechanism | Latency | Belongs here |
+|---|---|---|---|
+| 1 | template `state` + `set` | none | open tab, draft text, expand/collapse |
+| 2 | template functions | none | formatting, arithmetic, visibility |
+| 3 | the driver | round trip | validate, submit, fetch, persist |
+
+Rule of thumb: **if it must survive the surface, or have effects beyond it, it
+is tier 3.** Everything else belongs in the template. In this project, which
+names are already taken is tier 3 — the surface cannot know it, and one that
+pretended to would be lying.
+
+## Deploy to a CDN (Firebase Hosting)
+
+No build step; deployment is publishing these static files:
+
+```sh
+firebase login
+firebase use --add          # pick or create a Firebase project
+firebase deploy --only hosting
+```
+
+Point a host at `https://<project>.web.app/` to load and render `$name`. Edit
+any file, re-deploy, reload the host — including `logic.js`. The UI *and its
+behavior* travel the author's channel, with no host redeploy.
 ''';

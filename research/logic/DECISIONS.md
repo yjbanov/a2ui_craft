@@ -358,3 +358,52 @@ The conformance suite takes the second option, and `MiniAppRunner` gained a
 `heartbeat` parameter to forward. Liveness is proven where a driver can actually
 hang: `a2ui_craft_logic`'s browser test, against a real worker that stops
 listening.
+
+## Slice 7 — manifest, loader, site, CLI (2026-08-13)
+
+### D30. The `logic` slot parses **strictly**, unlike the rest of the manifest
+
+`ProjectManifest.parse` is deliberately total: a malformed theme block leaves a
+project unthemed. `LogicManifest` cannot work that way. An *absent* slot is
+fine — that is an ordinary pure-UI project — but a slot that is present and
+unreadable throws, because the alternative is loading a mini-app with its logic
+quietly missing.
+
+Totality is the rule for **untrusted, agent-supplied data**. A project's own
+declaration about itself is a different thing, and it gets to be wrong out loud.
+
+Same reasoning behind refusing a project that requests a capability this version
+cannot grant: running it with less power than it says it needs fails exactly
+like running it with none, only later and less legibly.
+
+### D31. The driver's source is data-only's one exception, and it is contained
+
+DESIGN.md §10 said a project contains "data only — no code". A mini-app ships a
+driver, so §10 now names the exception and bounds it: the driver never executes
+in the host's context. It runs in a sandbox granted nothing but an asynchronous
+channel, over which it may only send A2UI Transport messages — so §11's
+no-arbitrary-code-in-the-payload invariant holds where it matters, at the
+surface.
+
+### D32. The failure card is per-host chrome, and now there are two of it
+
+D19 predicted this: the runner generalizes, the card does not. The site has two
+— a Flutter `_StoppedCard` and a Jaspr `_stoppedCard` — saying the same thing
+("This mini-app stopped", the fault, a *Start over* button wired to
+`MiniAppRunner.restart`). That duplication is correct: each is drawn in its own
+framework's idiom, and neither belongs in a published package.
+
+### D33. Verified live, not just under test
+
+The site's `/mini-app/cart` route runs the shipped project twice, side by side:
+the Jaspr pane starts the project's own `cart.js` in a **web worker**, the
+Flutter pane runs the Dart port compiled in. Checked in a browser:
+
+- both cold-boot to "Connecting to the cart…" and both drivers replace it;
+- "Add an item" produces the same row, total, and status in both panes;
+- typing `7` into the quantity field echoes instantly, and the JavaScript
+  driver's authoritative write clamps it back to the 3 in stock, with the
+  status reading "Only 3 Mechanical keyboard in stock."
+
+The two panes hold independent sessions, so acting on one leaves the other
+alone — which is the separate-surfaces topology (design §9.1) on screen.

@@ -249,10 +249,19 @@ void main() {
   });
 
   test("the project's logic slot names the driver a host must run", () {
-    final Map<String, Object?> logic =
-        jsonDecode(cartMiniApp.logic) as Map<String, Object?>;
-    expect(logic['kind'], 'worker');
-    expect(logic['entry'], 'cart.js');
-    expect(logic['capabilities'], isEmpty);
+    final LogicManifest logic = LogicManifest.parse(
+      '{"name": "Cart", "logic": ${cartMiniApp.logic}}',
+    )!;
+    expect(logic.kind, DriverKind.worker);
+    expect(logic.entry, 'cart.js');
+    expect(logic.capabilities, isEmpty);
+
+    // A web host runs it as declared; a Flutter host that cannot start a
+    // worker refuses rather than showing a cart nothing answers.
+    logic.requireSupported(<DriverKind>{DriverKind.worker});
+    expect(
+      () => logic.requireSupported(<DriverKind>{DriverKind.builtin}),
+      throwsA(isA<UnsupportedDriverKind>()),
+    );
   });
 }

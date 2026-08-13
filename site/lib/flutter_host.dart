@@ -3,9 +3,12 @@
 // found in the LICENSE file.
 
 import 'package:a2ui_core/a2ui_core.dart';
+import 'package:a2ui_craft_bridge/a2ui_craft_bridge.dart';
 import 'package:a2ui_craft_flutter/a2ui_craft_flutter.dart';
+import 'package:a2ui_craft_logic/a2ui_craft_logic.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/scheduler.dart';
 
 /// Builds the Flutter widget embedded via `FlutterEmbedView`: a minimal Material
 /// shell around the Flutter [SampleView]. This file is the only one that imports
@@ -212,5 +215,204 @@ class _RenderMeasureBox extends RenderProxyBox {
       final ValueChanged<double>? report = onHeight;
       if (report != null && _reported == height) report(height);
     });
+  }
+}
+
+/// Builds the Flutter widget for a **mini-app** pane: the project's surface,
+/// driven by an in-process Dart driver, with a host-owned failure state.
+///
+/// The counterpart to [flutterSampleApp] for a project that ships logic. The
+/// difference that matters is who owns the surface: a sample's `SampleView`
+/// builds its own processor from a message list, but a mini-app's surface is
+/// owned by a [MiniAppRunner], because the surface has to outlive individual
+/// sessions and be replaceable on restart.
+Widget flutterMiniAppApp({
+  required String surfaceId,
+  required String template,
+  required Map<String, Object?> schema,
+  required List<A2uiMessage> Function() coldBoot,
+  required Driver Function() createDriver,
+  required bool dark,
+  ValueChanged<double>? onContentHeight,
+}) {
+  return MaterialApp(
+    debugShowCheckedModeBanner: false,
+    theme: ThemeData(useMaterial3: true),
+    darkTheme: ThemeData(useMaterial3: true, brightness: Brightness.dark),
+    themeMode: dark ? ThemeMode.dark : ThemeMode.light,
+    home: Scaffold(
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: _FlutterMiniApp(
+            surfaceId: surfaceId,
+            template: template,
+            schema: schema,
+            coldBoot: coldBoot,
+            createDriver: createDriver,
+            onContentHeight: onContentHeight,
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+class _FlutterMiniApp extends StatefulWidget {
+  const _FlutterMiniApp({
+    required this.surfaceId,
+    required this.template,
+    required this.schema,
+    required this.coldBoot,
+    required this.createDriver,
+    this.onContentHeight,
+  });
+
+  final String surfaceId;
+  final String template;
+  final Map<String, Object?> schema;
+  final List<A2uiMessage> Function() coldBoot;
+  final Driver Function() createDriver;
+  final ValueChanged<double>? onContentHeight;
+
+  @override
+  State<_FlutterMiniApp> createState() => _FlutterMiniAppState();
+}
+
+class _FlutterMiniAppState extends State<_FlutterMiniApp> {
+  static const LibraryName _scope = LibraryName(<String>['project']);
+
+  late final Runtime _runtime = Runtime()
+    ..update(const LibraryName(<String>['core']), createCoreComponents())
+    ..registerFunctions(createCoreFunctions())
+    ..update(_scope, parseLibraryFile(widget.template));
+
+  late final MiniAppRunner _runner = MiniAppRunner(
+    surfaceId: widget.surfaceId,
+    createProcessor: () => MessageProcessor<ComponentApi>(
+      catalogs: <Catalog<ComponentApi>>[loadCatalog(widget.schema)],
+    ),
+    coldBoot: widget.coldBoot,
+    createTransport: () => InProcessDriverRunner(widget.createDriver()),
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    _runner.onChanged.addListener(_onChanged);
+    _runner.start();
+  }
+
+  @override
+  void dispose() {
+    _runner.onChanged.removeListener(_onChanged);
+    _runner.dispose();
+    super.dispose();
+  }
+
+  void _onChanged(MiniAppRunner _) {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final SessionFault? fault = _runner.fault;
+    return _MeasuredHeight(
+      onHeight: widget.onContentHeight,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: fault == null
+            ? A2uiToRfwAdapter(
+                id: 'root',
+                surface: _runner.surface!,
+                runtime: _runtime,
+                scope: _scope,
+              )
+            : _StoppedCard(fault: fault, onRestart: _runner.restart),
+      ),
+    );
+  }
+}
+
+/// The host-owned failure state — the *chrome*, not the template, because a
+/// template cannot know its driver is gone.
+///
+/// A surface whose driver is dead must say so rather than impersonate a working
+/// app: tier-1 and tier-2 interactions could technically keep working, but
+/// letting them invites the user to build up work that tier 3 will never
+/// persist. Freeze beats betray.
+class _StoppedCard extends StatelessWidget {
+  const _StoppedCard({required this.fault, required this.onRestart});
+
+  final SessionFault fault;
+  final VoidCallback onRestart;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.errorContainer,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Text('This mini-app stopped.',
+              style: theme.textTheme.titleMedium
+                  ?.copyWith(color: theme.colorScheme.onErrorContainer)),
+          const SizedBox(height: 8),
+          Text('${fault.code.name}: ${fault.message}',
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(color: theme.colorScheme.onErrorContainer)),
+          const SizedBox(height: 16),
+          FilledButton(onPressed: onRestart, child: const Text('Start over')),
+        ],
+      ),
+    );
+  }
+}
+
+/// Reports its child's laid-out height, so the embedding page can size the
+/// canvas the Flutter view draws into.
+class _MeasuredHeight extends SingleChildRenderObjectWidget {
+  const _MeasuredHeight({required this.onHeight, required super.child});
+
+  final ValueChanged<double>? onHeight;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) =>
+      _RenderMeasuredHeight(onHeight);
+
+  @override
+  void updateRenderObject(
+    BuildContext context,
+    covariant _RenderMeasuredHeight renderObject,
+  ) =>
+      renderObject.onHeight = onHeight;
+}
+
+class _RenderMeasuredHeight extends RenderProxyBox {
+  _RenderMeasuredHeight(this.onHeight);
+
+  ValueChanged<double>? onHeight;
+  double? _reported;
+
+  @override
+  void performLayout() {
+    super.performLayout();
+    final double height = size.height;
+    if (height.isFinite && height != _reported) {
+      _reported = height;
+      final ValueChanged<double>? report = onHeight;
+      if (report != null) {
+        // Reporting during layout would re-enter the pipeline; the embedding
+        // page applies it on the next frame instead.
+        SchedulerBinding.instance
+            .addPostFrameCallback((Duration _) => report(height));
+      }
+    }
   }
 }

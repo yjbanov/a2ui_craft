@@ -1,6 +1,10 @@
 # Business logic for templates — the mini-app design
 
-> **Status: proposal (2026-08-08).** Fills in the "Later — ephemeral sandboxed
+> **Status: implemented (2026-08-13).** Phase 1 is built —
+> `packages/a2ui_craft_logic`, the `cart` reference mini-app, and both runners.
+> See [PHASE_1_PLAN.md](PHASE_1_PLAN.md) for the slices and
+> [DECISIONS.md](DECISIONS.md) for what building it changed. Originally a
+> proposal (2026-08-08). Fills in the "Later — ephemeral sandboxed
 > logic" slot in ROADMAP.md's template-computation arc, and the empty `logic`
 > manifest slot reserved in DESIGN.md §10. Workstream B (template functions /
 > logic blocks) is the *sibling* layer — pure, local, in-template computation —

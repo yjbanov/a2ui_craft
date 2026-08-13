@@ -23,5 +23,8 @@ dependencies:
 dev_dependencies:
   a2ui_craft: any
   a2ui_craft_examples: any
+  # The scaffolded mini-app's manifest is verified with the parser that will
+  # actually read it.
+  a2ui_craft_logic: any
   lints: ^4.0.0
   test: ^1.25.0

@@ -12,7 +12,7 @@ queued. Topic design docs live in `research/<topic>/`; this file is only about
 | **B** | Template computation — logic blocks + user-defined functions | Needs design |
 | **C** | Agent semantics / annotations | `agent-semantics` worktree, design-only |
 | **D** | Animation Phase 1 | Planned & shovel-ready (`research/animation/PHASE_1_PLAN.md`) |
-| **E** | Business-logic drivers (mini-apps) | Designed & planned (`research/logic/`), shovel-ready |
+| **E** | Business-logic drivers (mini-apps) | Designed & planned (`research/logic/`), shovel-ready. Phase 1's exit criterion is writing the Phase 2 plan for the reactive framework (`REACTIVE_FRAMEWORK.md` §9) |
 
 **Logic blocks and user-defined functions are one arc, not two threads.** A
 curly-braced block *is* the body syntax a user-defined function needs. One design

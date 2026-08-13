@@ -216,3 +216,17 @@ sample tests stay green.
   are the next phase's opening question.
 - **Protocol version starts at `0.x`** with handshake enforcement live from
   slice 1, so breaking the envelope during the phase is cheap and *visible*.
+
+## Exit criterion: this phase ends by opening Phase 2
+
+Phase 1 is not done when slice 7 lands — it is done when
+**`PHASE_2_PLAN.md` exists**: the sliced plan for the reactive driver
+framework (REACTIVE_FRAMEWORK.md, candidates ordered in its §9). That plan is
+deliberately *not* drafted now because its inputs are this phase's outputs —
+the ratified L1 API the framework compiles onto, and the wire measurements
+(diff sizes, messages per interaction, data-model growth) that §9 says gate
+the signals-vs-coarse and list-representation decisions. Assuming the phase's
+hypotheses hold, writing that plan is the phase's final deliverable; if they
+don't hold, the final deliverable is the write-up of what broke and what that
+means for the framework idea. Either way, the phase ends with a document,
+not a merge.

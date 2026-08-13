@@ -446,7 +446,11 @@
           *surface driver* speaking A2UI Transport behind a session envelope,
           not a function-registry backend: `research/logic/BUSINESS_LOGIC.md`
           (design) + `research/logic/PHASE_1_PLAN.md` (reference-implementation
-          plan, shovel-ready).
+          plan, shovel-ready). **Phase 2 (queued behind Phase 1): the reactive
+          driver framework** — researched in
+          `research/logic/REACTIVE_FRAMEWORK.md` (candidates ordered in its
+          §9); Phase 1's stated exit criterion is writing `PHASE_2_PLAN.md`
+          from that phase's L1 ratification + wire measurements.
         **Two refinements that pin the design:**
         - *Trust boundary — separate registries, not one library.* Shared
           *implementations* are fine, but **exposure = registration is per trust

@@ -1,0 +1,39 @@
+{
+  "catalogId": "cart",
+  "components": {
+    "CartView": {
+      "properties": {
+        "title": { "$ref": "DynamicString" },
+        "rows": { "$ref": "ChildList" },
+        "totalCents": { "$ref": "DataBinding" },
+        "status": { "$ref": "DynamicString" },
+        "addLabel": { "$ref": "DynamicString" },
+        "add": { "$ref": "Action" },
+        "checkoutLabel": { "$ref": "DynamicString" },
+        "checkout": { "$ref": "Action" }
+      },
+      "required": ["title", "rows"]
+    },
+    "CartRow": {
+      "properties": {
+        "name": { "$ref": "DynamicString" },
+        "detail": { "$ref": "DynamicString" },
+        "qty": { "$ref": "DynamicString" },
+        "lineCents": { "$ref": "DataBinding" },
+        "apply": { "$ref": "Action" },
+        "remove": { "$ref": "Action" }
+      },
+      "required": ["name"]
+    }
+  },
+  "actions": [
+    {
+      "name": "addItem",
+      "description": "Adds the next available product to the cart. Takes no arguments; the mini-app decides what is next."
+    },
+    {
+      "name": "checkout",
+      "description": "Places the order for everything currently in the cart, and empties it."
+    }
+  ]
+}

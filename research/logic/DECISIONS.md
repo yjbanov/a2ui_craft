@@ -246,3 +246,60 @@ than one that plainly starts over.
 
 The rendered failure card lands with the first real host (slice 5's cart), where
 there is a surface to actually take out of service.
+
+## Slice 5 — the cart mini-app (2026-08-12)
+
+### D20. Mini-apps live outside `samples/`, and outside the gallery
+
+A sample is renderable on its own; a mini-app is not. Put the cart in the
+gallery and it becomes exactly what the design warns against — "a lie shaped
+like an app", every control wired and nothing answering — for any host that
+doesn't load its driver.
+
+So the project data lives in `mini_apps/cart/` and is baked by the same
+generator into `rawMiniApps` / `cartMiniApp`, keeping the code-free-data-is-the-
+source-of-truth property. The Dart driver lives in `lib/src/mini_apps/` because
+code cannot live in the data tree.
+
+### D21. `kind: "builtin"` means "the host compiles this driver in"
+
+The manifest's `logic.kind` vocabulary already had the slot; the cart uses it.
+A Dart driver cannot be *fetched* — it has to be linked — so `builtin` names a
+driver the host resolves from its own registry, and `entry` is the registry key
+rather than a file path. The JavaScript port in slice 6 will use
+`kind: "worker"` with `entry` as a real relative path, which is the case the
+loader has to handle for real.
+
+### D22. Conformance renders the *shipped* project, not a look-alike
+
+`CraftTester.buildAdapter` gained an optional `templateSource`, registering a
+project's own `.craft` under a `project` library instead of the demo catalog.
+Small change, large consequence: the cart case exercises the real
+`template.craft`, the real `schema.json`, and the real recorded boot stream, so
+the conformance suite can no longer pass while the shipped project is broken.
+
+`activateButton(label)` came along with it, because a real screen renders
+several buttons under one A2UI component and keying by component id cannot say
+which control the user pressed.
+
+### D23. Cold boot is asserted on the model, not on the screen
+
+The first version of the cart case asserted the pre-connect status text after
+mounting, and failed on Jaspr — mounting is itself a turn of the event loop
+there, so the driver had already answered. The fix is not a longer wait but a
+better question: cold-boot completeness is a property of the *surface*, so
+assert it on the data model before mounting, and assert only post-connect state
+on screen. A test that depends on out-racing the driver is testing the harness.
+
+### D24. Finding: templates cannot format numbers
+
+Writing the cart surfaced a real gap. The standard function library has
+`divide`, `floor`, `mod` — but nothing that turns a number into a *string*, so
+there is no way to render `8900` cents as `"89.00"` in a template. Currency
+display is limited to whole units.
+
+The cart prices in whole dollars and says so in a comment rather than hiding it.
+The gap belongs to workstream B (template computation): a `format`/`toString`
+function with a precision argument would close it, and it is exactly the kind of
+pure, local derivation tier 2 is for — pushing it to the driver would make every
+price change a round trip.

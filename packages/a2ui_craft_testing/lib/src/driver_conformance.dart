@@ -2,7 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:convert';
+
 import 'package:a2ui_core/a2ui_core.dart';
+import 'package:a2ui_craft_bridge/a2ui_craft_bridge.dart';
+import 'package:a2ui_craft_examples/a2ui_craft_examples.dart';
 import 'package:a2ui_craft_logic/a2ui_craft_logic.dart';
 import 'package:test/test.dart';
 
@@ -21,6 +25,7 @@ typedef DriverRunnerFactory = DriverTransport Function(String fixtureName);
 Driver conformanceDriver(String fixtureName) => switch (fixtureName) {
       'counter' => _CounterDriver(),
       'clamp' => _ClampDriver(),
+      'cart' => CartDriver(inventory: cartConformanceShop),
       _ => throw ArgumentError.value(
           fixtureName,
           'fixtureName',
@@ -32,6 +37,18 @@ Driver conformanceDriver(String fixtureName) => switch (fixtureName) {
 /// runner.
 DriverTransport inProcessConformanceRunner(String fixtureName) =>
     InProcessDriverRunner(conformanceDriver(fixtureName));
+
+/// A one-product shop, so the cart case's assertions are about behavior and
+/// every control on screen is unambiguous — one row means one "Update" button.
+const List<CartProduct> cartConformanceShop = <CartProduct>[
+  CartProduct(
+    sku: 'kbd',
+    name: 'Keyboard',
+    detail: 'Clicky, and loud about it.',
+    priceCents: 5000,
+    stock: 2,
+  ),
+];
 
 /// Answers `go` by counting, and seeds a status line at init.
 class _CounterDriver extends Driver {
@@ -195,6 +212,82 @@ void runDriverConformance(
       await tester.activate('act');
       await tester.settleDriver();
       expect(tester.hasText('agreed: false'), isTrue);
+    },
+  );
+
+  driver.defineTest(
+    'the cart mini-app runs identically on every adapter',
+    (CraftTester tester) async {
+      // The *shipped* project — its real template, its real schema, its real
+      // recorded boot stream — not a fixture that resembles one.
+      final MiniAppRunner runner = MiniAppRunner(
+        surfaceId: 'cart',
+        createProcessor: () => MessageProcessor<ComponentApi>(
+          catalogs: <Catalog<ComponentApi>>[
+            loadCatalog(jsonDecode(cartMiniApp.schema) as Map<String, Object?>),
+          ],
+        ),
+        coldBoot: () => <A2uiMessage>[
+          for (final Object? m
+              in jsonDecode(cartMiniApp.messages) as List<Object?>)
+            A2uiMessage.fromJson(m! as Map<String, dynamic>),
+        ],
+        createTransport: () => makeRunner('cart'),
+      );
+      addTearDown(runner.dispose);
+
+      runner.start();
+      // Cold boot: the recorded stream composes a complete, honest surface
+      // before any driver connects — asserted on the model, because mounting
+      // is itself a turn of the event loop on some adapters and the driver may
+      // already have answered by the time anything is on screen.
+      expect(
+        runner.surface!.dataModel.get('/cart/status'),
+        'Connecting to the cart…',
+      );
+
+      await tester.mountComponent(tester.buildAdapter(
+        runner.surface!,
+        'root',
+        templateSource: cartMiniApp.template,
+      ));
+      await tester.settleDriver();
+      expect(tester.hasText('Cart ready. Add something.'), isTrue);
+
+      // Tier 3: a decision with consequences beyond the surface.
+      await tester.activateButton('Add an item');
+      await tester.settleDriver();
+      expect(tester.hasText('Keyboard'), isTrue);
+      expect(tester.hasText('Added Keyboard.'), isTrue);
+
+      // Tier 1: expanding a row never reaches the driver, so a plain pump —
+      // no channel turn at all — is enough to see it.
+      expect(tester.hasText('Clicky, and loud about it.'), isFalse);
+      await tester.activateButton('Details');
+      await tester.pump();
+      expect(tester.hasText('Clicky, and loud about it.'), isTrue);
+
+      // The optimistic echo: a two-way binding writes the local model at
+      // tier-1 latency and the driver is never told. Writing the bound path is
+      // exactly what the injected setter does when a user types.
+      runner.surface!.dataModel.set('/cart/items/0/qty', '7');
+      await tester.pump();
+
+      // The authoritative correction: the event carries the echoed value, and
+      // what comes back is what the shop will honour.
+      await tester.activateButton('Update');
+      await tester.settleDriver();
+      expect(tester.hasText('Only 2 Keyboard in stock.'), isTrue);
+
+      // Tier 2: a threshold the surface evaluates for itself, from data the
+      // driver wrote. Two keyboards at \$50 is \$100.
+      expect(tester.hasText('Free shipping unlocked'), isTrue);
+
+      await tester.activateButton('Check out');
+      await tester.settleDriver();
+      expect(tester.hasText(r'Ordered 2 item(s) for $100.00.'), isTrue);
+      expect(tester.hasText('Keyboard'), isFalse,
+          reason: 'the order emptied the cart, and the row went with it');
     },
   );
 }

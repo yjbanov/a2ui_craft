@@ -15,6 +15,9 @@ dependencies:
   a2ui_craft: ^0.1.0-dev.1
   # The A2UI conformance suite builds surfaces via the bridge over a2ui_core.
   a2ui_craft_bridge: ^0.1.0-dev.1
+  # The driver dimension renders the *shipped* cart mini-app — its real
+  # project files and its real driver — rather than a look-alike fixture.
+  a2ui_craft_examples: any
   # The driver-conformance dimension drives surfaces through a `DriverSession`.
   a2ui_craft_logic: ^0.1.0-dev.1
   a2ui_core: any

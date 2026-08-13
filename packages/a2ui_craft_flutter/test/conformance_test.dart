@@ -84,12 +84,21 @@ class _FlutterCraftTester implements CraftTester {
       MaterialApp(home: Scaffold(body: Center(child: child)));
 
   @override
-  Object buildAdapter(SurfaceModel<ComponentApi> surface, String id) {
+  Object buildAdapter(
+    SurfaceModel<ComponentApi> surface,
+    String id, {
+    String? templateSource,
+  }) {
+    LibraryName scope = a2uiDemoCatalogName;
+    if (templateSource != null) {
+      scope = projectCatalogName;
+      _runtime.update(scope, parseLibraryFile(templateSource));
+    }
     return A2uiToRfwAdapter(
       id: id,
       surface: surface,
       runtime: _runtime,
-      scope: a2uiDemoCatalogName,
+      scope: scope,
     );
   }
 
@@ -336,6 +345,14 @@ class _FlutterCraftTester implements CraftTester {
   @override
   Future<void> activate(String key) async {
     await _tester.tap(find.byKey(ValueKey<String>(key)));
+    await _tester.pump();
+  }
+
+  @override
+  Future<void> activateButton(String label) async {
+    // Tapping the label hits the button's own gesture region; the label is
+    // what a user aims at too.
+    await _tester.tap(find.text(label));
     await _tester.pump();
   }
 

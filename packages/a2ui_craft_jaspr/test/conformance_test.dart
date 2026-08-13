@@ -64,12 +64,21 @@ class _JasprCraftTester implements CraftTester {
   }
 
   @override
-  Object buildAdapter(SurfaceModel<ComponentApi> surface, String id) {
+  Object buildAdapter(
+    SurfaceModel<ComponentApi> surface,
+    String id, {
+    String? templateSource,
+  }) {
+    LibraryName scope = a2uiDemoCatalogName;
+    if (templateSource != null) {
+      scope = projectCatalogName;
+      _runtime.update(scope, parseLibraryFile(templateSource));
+    }
     return A2uiToRfwAdapter(
       id: id,
       surface: surface,
       runtime: _runtime,
-      scope: a2uiDemoCatalogName,
+      scope: scope,
     );
   }
 
@@ -397,6 +406,11 @@ class _JasprCraftTester implements CraftTester {
     final Key k = ValueKey<String>(key);
     return _tester.click(find.byKey(k));
   }
+
+  @override
+  Future<void> activateButton(String label) => _tester.click(
+        find.ancestor(of: find.text(label), matching: find.tag('button')),
+      );
 
   @override
   Future<void> toggleCheckbox() async {

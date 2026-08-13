@@ -1,0 +1,8 @@
+{
+  "name": "Cart",
+  "logic": {
+    "kind": "builtin",
+    "entry": "cart",
+    "capabilities": []
+  }
+}

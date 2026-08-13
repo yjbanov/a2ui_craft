@@ -15,6 +15,7 @@ import 'dart:convert';
 import 'dart:io';
 
 const String _root = 'packages/a2ui_craft_examples/samples';
+const String _miniAppRoot = 'packages/a2ui_craft_examples/mini_apps';
 const String _out =
     'packages/a2ui_craft_examples/lib/src/generated_samples.g.dart';
 const JsonEncoder _pretty = JsonEncoder.withIndent('  ');
@@ -146,8 +147,104 @@ void main() {
         'rawSamples[$i].toSpec(framework);');
   }
 
+  _writeMiniApps(b);
+
   File(_out).writeAsStringSync(b.toString());
   stdout.writeln('Generated ${ids.length} samples → $_out');
+}
+
+/// Bakes the **mini-apps** — projects that ship business logic, so unlike a
+/// sample they are not renderable on their own. They live outside `samples/`
+/// and outside the gallery for exactly that reason: a mini-app without its
+/// driver is not a degraded demo, it is a screen of controls that answer
+/// nothing.
+void _writeMiniApps(StringBuffer b) {
+  final List<String> ids =
+      (jsonDecode(File('$_miniAppRoot/manifest.json').readAsStringSync())
+              as List)
+          .cast<String>();
+
+  b
+    ..writeln()
+    ..writeln("/// One mini-app's project data: the same three files a sample")
+    ..writeln('/// has, plus the manifest `logic` slot naming the driver that')
+    ..writeln('/// answers its events.')
+    ..writeln('class RawMiniApp {')
+    ..writeln('  const RawMiniApp({')
+    ..writeln('    required this.id,')
+    ..writeln('    required this.label,')
+    ..writeln('    required this.template,')
+    ..writeln('    required this.schema,')
+    ..writeln('    required this.messages,')
+    ..writeln('    required this.logic,')
+    ..writeln('  });')
+    ..writeln()
+    ..writeln('  final String id;')
+    ..writeln('  final String label;')
+    ..writeln('  final String template;')
+    ..writeln('  final String schema;')
+    ..writeln()
+    ..writeln('  /// The recorded Transport stream that cold-boots the')
+    ..writeln('  /// surface before any driver connects.')
+    ..writeln('  final String messages;')
+    ..writeln()
+    ..writeln("  /// The manifest's `logic` block, as JSON.")
+    ..writeln('  final String logic;')
+    ..writeln()
+    ..writeln('  /// The renderable half of the project.')
+    ..writeln('  SampleSpec toSpec() => SampleSpec.fromData(')
+    ..writeln('        label: label,')
+    ..writeln('        template: template,')
+    ..writeln('        schemaJson: schema,')
+    ..writeln('        messagesJson: messages,')
+    ..writeln('      );')
+    ..writeln('}')
+    ..writeln()
+    ..writeln('/// Every built-in mini-app.')
+    ..writeln('const List<RawMiniApp> rawMiniApps = <RawMiniApp>[');
+
+  for (final String id in ids) {
+    final Map<String, dynamic> project =
+        jsonDecode(File('$_miniAppRoot/$id/manifest.json').readAsStringSync())
+            as Map<String, dynamic>;
+    final String template =
+        File('$_miniAppRoot/$id/template.craft').readAsStringSync();
+    final String schema =
+        File('$_miniAppRoot/$id/schema.json').readAsStringSync();
+    final String messages =
+        File('$_miniAppRoot/$id/app.json').readAsStringSync();
+    final String logic = '${_pretty.convert(project['logic'])}\n';
+    for (final String s in <String>[template, schema, messages, logic]) {
+      if (s.contains("'''")) {
+        stderr.writeln("Mini-app '$id' contains ''' — cannot raw-embed.");
+        exit(1);
+      }
+    }
+    b
+      ..writeln('  RawMiniApp(')
+      ..writeln("    id: '$id',")
+      ..writeln('    label: ${_dartString(project['name'] as String)},')
+      ..writeln("    template: r'''")
+      ..write(template)
+      ..writeln("''',")
+      ..writeln("    schema: r'''")
+      ..write(schema)
+      ..writeln("''',")
+      ..writeln("    messages: r'''")
+      ..write(messages)
+      ..writeln("''',")
+      ..writeln("    logic: r'''")
+      ..write(logic)
+      ..writeln("''',")
+      ..writeln('  ),');
+  }
+  b.writeln('];');
+  for (int i = 0; i < ids.length; i++) {
+    b
+      ..writeln()
+      ..writeln('/// The `${ids[i]}` mini-app.')
+      ..writeln('final RawMiniApp ${_camel(ids[i])}MiniApp = rawMiniApps[$i];');
+  }
 }
 
 String _camel(String snake) {

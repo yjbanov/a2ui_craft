@@ -1,0 +1,62 @@
+[
+  {
+    "version": "v0.9",
+    "createSurface": {
+      "surfaceId": "cart",
+      "catalogId": "cart",
+      "sendDataModel": false
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateDataModel": {
+      "surfaceId": "cart",
+      "path": "/cart",
+      "value": {
+        "items": [],
+        "totalCents": 0,
+        "status": "Connecting to the cart…"
+      }
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateComponents": {
+      "surfaceId": "cart",
+      "components": [
+        {
+          "id": "root",
+          "component": "CartView",
+          "title": "Your cart",
+          "rows": { "path": "/cart/items", "componentId": "row" },
+          "totalCents": { "path": "/cart/totalCents" },
+          "status": { "path": "/cart/status" },
+          "addLabel": "Add an item",
+          "add": { "event": { "name": "addItem" } },
+          "checkoutLabel": "Check out",
+          "checkout": { "event": { "name": "checkout" } }
+        },
+        {
+          "id": "row",
+          "component": "CartRow",
+          "name": { "path": "name" },
+          "detail": { "path": "detail" },
+          "qty": { "path": "qty" },
+          "lineCents": { "path": "lineCents" },
+          "apply": {
+            "event": {
+              "name": "setQuantity",
+              "context": { "sku": { "path": "sku" }, "qty": { "path": "qty" } }
+            }
+          },
+          "remove": {
+            "event": {
+              "name": "removeItem",
+              "context": { "sku": { "path": "sku" } }
+            }
+          }
+        }
+      ]
+    }
+  }
+]

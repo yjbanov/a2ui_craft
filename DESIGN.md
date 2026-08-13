@@ -19,14 +19,33 @@ updatable without a host redeploy.
 ## 1. The problem
 
 [A2UI](https://github.com/google/A2UI)'s premise is that an agent (an LLM) can
-drive real, trustworthy UI by *composing a catalog*: a small, pre-vetted set of
+drive real, trustworthy UI by *composing a catalog*: a pre-vetted set of
 components the client offers, addressed over a declarative, data-only protocol.
 The protocol is deliberately renderer-agnostic — it says which catalog
 components go where, with what data, and never how to draw them.
 
-That leaves the expensive part to every client: **someone must implement the
-catalog.** Today that means hand-writing each catalog widget natively, once per
-UI framework. Three costs follow:
+While the protocol does not dictate what the catalog item properties must and
+must not do, there is pressure for the agent-facing catalog to be primarily or
+exclusively about semantics and application logic, and to avoid visual aspects
+of the composed UI. The primary reasons for this are:
+
+* **Visual consistency:** multiple instantiations of the same semantic widget
+  (e.g. button, checkbox, card, switch) must look and feel the same. However, if the
+  visual look is generated every time there's risk that the agent will deviate
+  from the design language in unpredictable ways, hurting the user
+  experience. Even if the agent is deterministic (e.g. when A2UI is used in SDUI
+  capacity) complex layouts would bloat the over-the-wire payloads with visual
+  information.
+* **Context size:** agents perform better when the task is simpler and the context
+  needed to explain the task is smaller. If the widget catalog is too low
+  level and the A2UI payloads contain theming and other visual information,
+  it requires bigger and more complex context to explain to the agent how to
+  wield those low-level widgets and theming primitives effectively.
+
+Another problem is in the development model of agentic experiences. The catalog
+that's directly bound to native widgets leaves the expensive part to every
+client: **someone must implement the catalog.** Today that means hand-writing
+each catalog widget natively, once per UI framework. Three costs follow:
 
 1. **Multiplied authoring.** A catalog of N widgets on M frameworks is N×M
    implementations, kept behaviorally in sync by hand. The multiplication

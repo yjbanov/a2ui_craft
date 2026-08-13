@@ -141,3 +141,62 @@ similar.
 deliberately *not* available in the turn that caused it: Flutter elapses its
 fake clock, Jaspr yields to the real event loop, and neither adapter contains
 any other driver-aware code.
+
+## Slice 3 — guardrails and the agent-facing declaration (2026-08-12)
+
+### D12. The reserved namespace is `/host`, and it is *published*, not just defended
+
+The design called for "a reserved namespace the host refuses driver writes to"
+but left it abstract. Made concrete: the session writes its `hostContext` into
+the surface's data model at **`/host`**, and refuses any driver write that lands
+inside it.
+
+Publishing it is the part worth arguing for. It turns host context from a
+one-shot payload the driver receives at init into ordinary bound data a
+*template* can read — `{"path": "/host/locale"}` works like any other binding,
+with no new mechanism. The namespace then defends itself for the obvious
+reason: there is exactly one writer per key, and this one is the host.
+
+Two writes are refused, not one: anything under `/host`, and a write to the
+**root path**, which would swallow the namespace wholesale. The second is easy
+to miss and would have quietly defeated the first.
+
+### D13. Scope is a ceiling too: a driver may address only its own surface
+
+Not in the design, but it falls out of the same principle and cost nothing.
+A driver is given one surface; a message aimed at any other is refused with
+`scopeViolation`. Without this, `DeleteSurfaceMessage(surfaceId: 'someone
+else')` was reachable from any driver, which makes the "a driver gets exactly
+the agent's power" claim weaker than it sounds.
+
+### D14. Vetting is per-batch, not per-message
+
+A batch containing one illegal message is refused **whole**. This preserves the
+all-or-nothing property the driver's own per-handler batching already provides:
+a refusal must not be able to leave the surface in a state no handler ever
+intended. The test puts the offending write *second* precisely so that
+per-message enforcement would fail it.
+
+### D15. The dev-mode diagnostic needs a named-handler shape to exist at all
+
+"Report events that arrived with no handler" is undetectable inside a `switch`
+statement — the driver silently falls through and nothing knows. So the SDK
+gains `HandlerDriver`, a driver that dispatches from a name→handler map. That is
+what makes both halves of the mistake visible: an event with no handler is
+reported through `DriverContext.diagnostic`, and `unusedHandlers` names handlers
+nothing ever dispatched to.
+
+`HandlerDriver.handledEvents` is also exactly the set
+`InferenceCatalog.unimplementedActions` checks against, so "the driver
+implements every action it advertises" becomes a one-line assertion in a
+mini-app's own tests rather than a hope.
+
+Diagnostics route to a `DriverDiagnosticSink`; the default is assert-gated
+(loud in JIT/debug, stripped from release), and `silentDiagnostics` states the
+production posture explicitly.
+
+### D16. An unhandled event is a diagnostic, not a fault
+
+A dead control is a wiring mistake, not a crash. Faulting would take down a
+working mini-app over one mistyped event name. The session stays up and the
+author gets told.

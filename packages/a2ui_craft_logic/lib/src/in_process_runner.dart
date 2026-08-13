@@ -28,8 +28,14 @@ import 'transport.dart';
 /// worker.
 class InProcessDriverRunner implements DriverTransport {
   /// Creates a runner hosting [driver].
-  InProcessDriverRunner(Driver driver) {
-    _runtime = DriverRuntime(driver, send: _fromDriver);
+  ///
+  /// [diagnostics] is forwarded to the driver runtime; see [DriverRuntime].
+  InProcessDriverRunner(Driver driver, {DriverDiagnosticSink? diagnostics}) {
+    _runtime = DriverRuntime(
+      driver,
+      send: _fromDriver,
+      diagnostics: diagnostics,
+    );
   }
 
   late final DriverRuntime _runtime;

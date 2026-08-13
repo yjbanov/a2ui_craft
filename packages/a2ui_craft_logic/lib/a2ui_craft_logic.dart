@@ -19,6 +19,7 @@ export 'src/driver.dart';
 export 'src/envelope.dart';
 export 'src/fault.dart';
 export 'src/in_process_runner.dart';
+export 'src/inference_catalog.dart';
 export 'src/session.dart';
 export 'src/session_machine.dart';
 export 'src/transport.dart';

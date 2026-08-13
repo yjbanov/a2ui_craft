@@ -36,6 +36,9 @@ enum SessionFaultCode {
 
   /// The driver tried to write a data key the host reserves for itself.
   hostKeyViolation,
+
+  /// The driver addressed a surface it was not given.
+  scopeViolation,
 }
 
 /// A terminal session failure.

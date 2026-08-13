@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 import 'dart:async';
+import 'dart:developer' as developer;
 
 import 'package:a2ui_core/a2ui_core.dart';
 
@@ -79,6 +80,84 @@ abstract interface class DriverContext {
   /// Reports a failure to the host. Terminal: the session ends and the host
   /// takes the surface out of service.
   void fail(String code, String message, {Object? details});
+
+  /// Reports a development-time problem — something wired wrong rather than
+  /// something gone wrong.
+  ///
+  /// Loud in development, silent in production. This is what stands in for the
+  /// build-time refusal a declared event list would have bought: a control
+  /// whose event no handler answers is a dead control, and a dead control must
+  /// at least be a *diagnosed* one while the author is still at the keyboard.
+  void diagnostic(String message);
+}
+
+/// Where a driver's development-time diagnostics go.
+typedef DriverDiagnosticSink = void Function(String message);
+
+/// A diagnostic sink that reports nothing — the production posture, stated
+/// explicitly.
+void silentDiagnostics(String message) {}
+
+/// One named handler in a [HandlerDriver].
+typedef DriverHandler = FutureOr<void> Function(
+  DriverContext context,
+  DriverEvent event,
+);
+
+/// A [Driver] that dispatches events to handlers by name.
+///
+/// The recommended shape, because naming the handlers is what makes the
+/// mismatches visible: an event with no handler is reported through
+/// [DriverContext.diagnostic], and [unusedHandlers] names the other half of the
+/// same mistake — a handler nothing ever dispatches to.
+///
+/// It is also the surface [InferenceCatalog.unimplementedActions] checks
+/// against, so a mini-app can assert in its own tests that it implements every
+/// action it advertises to an agent.
+abstract class HandlerDriver extends Driver {
+  late final Map<String, DriverHandler> _handlers = handlers;
+  final Set<String> _fired = <String>{};
+
+  /// The handlers this driver implements, keyed by event name. Read once.
+  Map<String, DriverHandler> get handlers;
+
+  /// The event names this driver answers.
+  Set<String> get handledEvents => _handlers.keys.toSet();
+
+  /// Handlers that have not received an event yet.
+  ///
+  /// A development aid, not an assertion: early in a session most handlers are
+  /// legitimately unused. It earns its keep in a test that drives every path
+  /// and expects the set to empty out.
+  Set<String> get unusedHandlers => handledEvents.difference(_fired);
+
+  @override
+  FutureOr<void> onEvent(DriverContext context, DriverEvent event) {
+    final DriverHandler? handler = _handlers[event.name];
+    if (handler == null) {
+      context.diagnostic(
+        "No handler for event '${event.name}', dispatched by "
+        "'${event.sourceComponentId}'. This driver handles: "
+        '${(handledEvents.toList()..sort()).join(', ')}.',
+      );
+      return null;
+    }
+    _fired.add(event.name);
+    return handler(context, event);
+  }
+}
+
+/// The default diagnostic sink: loud in development, silent in production.
+///
+/// Asserts are enabled in JIT/debug builds and stripped from release builds, so
+/// this reports exactly where a developer is watching and nowhere else.
+DriverDiagnosticSink? _developmentDiagnostics() {
+  DriverDiagnosticSink? sink;
+  assert(() {
+    sink = (String message) => developer.log(message, name: 'a2ui.driver');
+    return true;
+  }());
+  return sink;
 }
 
 /// Author-written business logic for one surface.
@@ -111,14 +190,22 @@ abstract class Driver {
 /// a worker runner's JavaScript SDK is the same object written in JavaScript.
 class DriverRuntime implements DriverContext {
   /// Creates a runtime driving [driver], writing outbound frames to [send].
-  DriverRuntime(this.driver,
-      {required void Function(Map<String, Object?>) send})
-      : _sendFrame = send;
+  ///
+  /// Pass [diagnostics] to redirect development-time reports; the default is
+  /// loud in development builds and silent in release ones. Pass
+  /// [silentDiagnostics] to silence it unconditionally.
+  DriverRuntime(
+    this.driver, {
+    required void Function(Map<String, Object?>) send,
+    DriverDiagnosticSink? diagnostics,
+  })  : _sendFrame = send,
+        _diagnostics = diagnostics ?? _developmentDiagnostics();
 
   /// The author's logic.
   final Driver driver;
 
   final void Function(Map<String, Object?>) _sendFrame;
+  final DriverDiagnosticSink? _diagnostics;
   final LogicSessionMachine _machine =
       LogicSessionMachine(role: LogicRole.driver);
 
@@ -189,6 +276,9 @@ class DriverRuntime implements DriverContext {
     _pending.clear();
     _emit(ErrorMessage(code: code, message: message, details: details));
   }
+
+  @override
+  void diagnostic(String message) => _diagnostics?.call(message);
 
   /// Ends the session in an orderly way.
   void terminate(String reason) {

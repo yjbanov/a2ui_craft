@@ -11,6 +11,15 @@ import 'fault.dart';
 import 'session_machine.dart';
 import 'transport.dart';
 
+/// The data-model namespace the host keeps for itself.
+///
+/// A session publishes its `hostContext` here — locale, display mode, whatever
+/// else the host maintains — so templates can bind `/host/locale` like any
+/// other data, and refuses any driver write that lands inside it. The host
+/// knows its own keys, so nothing has to be declared: enforcement is by
+/// namespace, by the party that owns it.
+const String hostReservedNamespace = '/host';
+
 /// The host-side half of a driver session.
 ///
 /// Binds a [DriverTransport] to a rendered surface: user actions leaving the
@@ -80,6 +89,15 @@ class DriverSession {
       ..onFrame = _receive
       ..onCrash = _handleCrash;
     processor.groupModel.onAction.addListener(_handleAction);
+    if (hostContext.isNotEmpty) {
+      processor.processMessages(<A2uiMessage>[
+        UpdateDataModelMessage(
+          surfaceId: surfaceId,
+          path: hostReservedNamespace,
+          value: hostContext,
+        ),
+      ]);
+    }
     transport.start();
   }
 
@@ -131,6 +149,12 @@ class DriverSession {
   }
 
   void _applyUpdate(List<A2uiMessage> messages) {
+    // Vet the whole batch before applying any of it, so a refusal cannot leave
+    // the surface half-updated — the same all-or-nothing property the driver's
+    // own per-handler batching provides.
+    for (final A2uiMessage message in messages) {
+      if (!_isPermitted(message)) return;
+    }
     try {
       processor.processMessages(messages);
     } catch (error) {
@@ -143,6 +167,52 @@ class DriverSession {
         'The driver sent an update the engine refused: $error',
       );
     }
+  }
+
+  /// Whether the driver is allowed to send [message], faulting the session if
+  /// not.
+  ///
+  /// Two ceilings, both structural. A driver drives *one* surface, so a message
+  /// aimed anywhere else is out of scope no matter what it says. And the data
+  /// model has one writer per key, so a write into the host's own namespace —
+  /// or a write to the root, which would swallow it — is refused before it can
+  /// touch the model.
+  bool _isPermitted(A2uiMessage message) {
+    final String target = switch (message) {
+      CreateSurfaceMessage(:final String surfaceId) => surfaceId,
+      UpdateComponentsMessage(:final String surfaceId) => surfaceId,
+      UpdateDataModelMessage(:final String surfaceId) => surfaceId,
+      DeleteSurfaceMessage(:final String surfaceId) => surfaceId,
+      _ => surfaceId,
+    };
+    if (target != surfaceId) {
+      _raise(
+        SessionFaultCode.scopeViolation,
+        "The driver of surface '$surfaceId' addressed surface '$target'.",
+      );
+      return false;
+    }
+    if (message is! UpdateDataModelMessage) return true;
+
+    final String path = message.path ?? '/';
+    if (path == '/') {
+      _raise(
+        SessionFaultCode.hostKeyViolation,
+        'The driver tried to replace the whole data model, which would take '
+        'the host-owned $hostReservedNamespace namespace with it.',
+      );
+      return false;
+    }
+    if (path == hostReservedNamespace ||
+        path.startsWith('$hostReservedNamespace/')) {
+      _raise(
+        SessionFaultCode.hostKeyViolation,
+        "The driver tried to write '$path', inside the host-owned "
+        '$hostReservedNamespace namespace.',
+      );
+      return false;
+    }
+    return true;
   }
 
   void _handleAction(A2uiClientAction action) {

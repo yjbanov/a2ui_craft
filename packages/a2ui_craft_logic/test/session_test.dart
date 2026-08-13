@@ -1,0 +1,524 @@
+// Copyright 2013 The Flutter Authors
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+import 'dart:async';
+import 'dart:convert';
+
+import 'package:a2ui_core/a2ui_core.dart';
+import 'package:a2ui_craft_bridge/a2ui_craft_bridge.dart';
+import 'package:a2ui_craft_logic/a2ui_craft_logic.dart';
+import 'package:test/test.dart';
+
+// ---------------------------------------------------------------------------
+// Fixtures
+// ---------------------------------------------------------------------------
+
+/// A surface with a bound label, a two-way-bound quantity field, and a button.
+(MessageProcessor<ComponentApi>, SurfaceModel<ComponentApi>) _surface() {
+  final MessageProcessor<ComponentApi> processor =
+      MessageProcessor<ComponentApi>(catalogs: <Catalog<ComponentApi>>[
+    MinimalCatalog(),
+  ]);
+  processor.processMessages(<A2uiMessage>[
+    CreateSurfaceMessage(surfaceId: 's', catalogId: MinimalCatalog().id),
+    UpdateDataModelMessage(surfaceId: 's', path: '/label', value: 'start'),
+    UpdateDataModelMessage(surfaceId: 's', path: '/qty', value: 1),
+    UpdateComponentsMessage(surfaceId: 's', components: <Map<String, dynamic>>[
+      <String, dynamic>{
+        'id': 'label',
+        'component': 'Text',
+        'text': <String, dynamic>{'path': '/label'},
+      },
+      <String, dynamic>{
+        'id': 'qty',
+        'component': 'TextField',
+        'label': 'Quantity',
+        'value': <String, dynamic>{'path': '/qty'},
+      },
+      <String, dynamic>{'id': 'lbl', 'component': 'Text', 'text': 'Go'},
+      <String, dynamic>{
+        'id': 'btn',
+        'component': 'Button',
+        'child': 'lbl',
+        'action': <String, dynamic>{
+          'event': <String, dynamic>{
+            'name': 'bump',
+            'context': <String, dynamic>{'by': 2},
+          },
+        },
+      },
+    ]),
+  ]);
+  return (processor, processor.groupModel.getSurface('s')!);
+}
+
+/// Records what it was told, and answers `bump` by writing twice.
+class _RecordingDriver extends Driver {
+  final List<DriverEvent> events = <DriverEvent>[];
+  String? seenSurfaceId;
+  Map<String, Object?> seenHostContext = const <String, Object?>{};
+  int total = 0;
+
+  @override
+  void onInit(DriverContext context) {
+    seenSurfaceId = context.surfaceId;
+    seenHostContext = context.hostContext;
+    context.write('/label', 'ready');
+  }
+
+  @override
+  void onEvent(DriverContext context, DriverEvent event) {
+    events.add(event);
+    switch (event.name) {
+      case 'bump':
+        total += (event['by'] as int?) ?? 1;
+        // Two writes in one handler: they must land together.
+        context
+          ..write('/total', total)
+          ..write('/label', 'total $total');
+      case 'setQuantity':
+        // The authoritative correction of an optimistic echo: clamp to stock.
+        final int requested = (event.values['/qty'] as int?) ?? 0;
+        context.write('/qty', requested > 5 ? 5 : requested);
+      case 'boom':
+        throw StateError('handler exploded');
+    }
+  }
+}
+
+/// Identical to [InProcessDriverRunner] except that it schedules on the
+/// **microtask** queue.
+///
+/// Exists only so the turn-boundary conformance case can be shown to have
+/// teeth: the guard must fail against this runner. If it ever passes here, the
+/// guard has stopped testing anything.
+class _MicrotaskRunner implements DriverTransport {
+  _MicrotaskRunner(Driver driver) {
+    _runtime = DriverRuntime(driver, send: _fromDriver);
+  }
+
+  late final DriverRuntime _runtime;
+  void Function(Map<String, Object?> frame)? _onFrame;
+  bool _closed = false;
+
+  @override
+  set onFrame(void Function(Map<String, Object?> frame)? handler) =>
+      _onFrame = handler;
+
+  @override
+  set onCrash(void Function(String reason)? handler) {}
+
+  @override
+  void start() => _defer(() => _runtime.start());
+
+  @override
+  void send(Map<String, Object?> frame) {
+    final Map<String, Object?> copy = _copy(frame);
+    _defer(() => _runtime.receive(copy));
+  }
+
+  @override
+  void close() {
+    _closed = true;
+    _onFrame = null;
+  }
+
+  void _fromDriver(Map<String, Object?> frame) {
+    final Map<String, Object?> copy = _copy(frame);
+    _defer(() => _onFrame?.call(copy));
+  }
+
+  void _defer(void Function() action) => scheduleMicrotask(() {
+        if (!_closed) action();
+      });
+
+  Map<String, Object?> _copy(Map<String, Object?> frame) =>
+      jsonDecode(jsonEncode(frame)) as Map<String, Object?>;
+}
+
+/// Yields to the **microtask** queue only. Zero-length timers cannot run here:
+/// the loop never lets control return to the event loop.
+Future<void> _flushMicrotasks([int rounds = 20]) async {
+  for (var i = 0; i < rounds; i++) {
+    await null;
+  }
+}
+
+/// Yields to the event loop, letting zero-length timers fire.
+Future<void> _settle([int rounds = 8]) async {
+  for (var i = 0; i < rounds; i++) {
+    await Future<void>.delayed(Duration.zero);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+void main() {
+  group('handshake', () {
+    test('the driver learns its surface and the host context', () async {
+      final (MessageProcessor<ComponentApi> processor, _) = _surface();
+      final _RecordingDriver driver = _RecordingDriver();
+      final DriverSession session = DriverSession(
+        processor: processor,
+        surfaceId: 's',
+        transport: InProcessDriverRunner(driver),
+        hostContext: const <String, Object?>{'locale': 'en-US'},
+      );
+      addTearDown(session.dispose);
+
+      session.start();
+      await session.ready;
+      await _settle();
+
+      expect(driver.seenSurfaceId, 's');
+      expect(driver.seenHostContext, <String, Object?>{'locale': 'en-US'});
+      expect(session.isReady, isTrue);
+    });
+
+    test("onInit's writes reach the surface", () async {
+      final (
+        MessageProcessor<ComponentApi> processor,
+        SurfaceModel<ComponentApi> surface,
+      ) = _surface();
+      final DriverSession session = DriverSession(
+        processor: processor,
+        surfaceId: 's',
+        transport: InProcessDriverRunner(_RecordingDriver()),
+      );
+      addTearDown(session.dispose);
+
+      expect(surface.dataModel.get('/label'), 'start');
+      session.start();
+      await _settle();
+      expect(surface.dataModel.get('/label'), 'ready');
+    });
+  });
+
+  group('the loop closes: event out, write in', () {
+    test('a user action reaches the driver and its write re-renders', () async {
+      final (
+        MessageProcessor<ComponentApi> processor,
+        SurfaceModel<ComponentApi> surface,
+      ) = _surface();
+      final _RecordingDriver driver = _RecordingDriver();
+      final DriverSession session = DriverSession(
+        processor: processor,
+        surfaceId: 's',
+        transport: InProcessDriverRunner(driver),
+      );
+      addTearDown(session.dispose);
+      session.start();
+      await _settle();
+
+      final A2uiComponentBinding label = A2uiComponentBinding(surface, 'label');
+      addTearDown(label.dispose);
+      final A2uiComponentBinding button = A2uiComponentBinding(surface, 'btn');
+      addTearDown(button.dispose);
+
+      (button.resolvedProps!['action']! as Function)();
+      await _settle();
+
+      expect(driver.events.single.name, 'bump');
+      expect(driver.events.single.sourceComponentId, 'btn');
+      expect(driver.events.single.context, <String, Object?>{'by': 2});
+      expect(surface.dataModel.get('/total'), 2);
+      expect(label.resolvedProps!['text'], 'total 2');
+    });
+
+    test('one handler\'s writes arrive as one update', () async {
+      final (MessageProcessor<ComponentApi> processor, _) = _surface();
+      final InProcessDriverRunner runner =
+          InProcessDriverRunner(_RecordingDriver());
+      final List<String> types = <String>[];
+      final DriverSession session = DriverSession(
+        processor: processor,
+        surfaceId: 's',
+        transport: _Spy(runner, types),
+      );
+      addTearDown(session.dispose);
+      session.start();
+      await _settle();
+      types.clear();
+
+      final A2uiComponentBinding button = A2uiComponentBinding(
+        processor.groupModel.getSurface('s')!,
+        'btn',
+      );
+      addTearDown(button.dispose);
+      (button.resolvedProps!['action']! as Function)();
+      await _settle();
+
+      // Two writes, one frame — a handler's effects land all at once or not at
+      // all, never half-applied.
+      expect(types.where((String t) => t == 'update'), hasLength(1));
+    });
+
+    test('events dispatched before the handshake are held, not dropped',
+        () async {
+      final (
+        MessageProcessor<ComponentApi> processor,
+        SurfaceModel<ComponentApi> surface,
+      ) = _surface();
+      final _RecordingDriver driver = _RecordingDriver();
+      final DriverSession session = DriverSession(
+        processor: processor,
+        surfaceId: 's',
+        transport: InProcessDriverRunner(driver),
+      );
+      addTearDown(session.dispose);
+      session.start();
+
+      // The control was enabled, so something must answer it — even though the
+      // driver has not finished booting.
+      final A2uiComponentBinding button = A2uiComponentBinding(surface, 'btn');
+      addTearDown(button.dispose);
+      (button.resolvedProps!['action']! as Function)();
+      expect(session.isReady, isFalse);
+
+      await _settle();
+      expect(driver.events.single.name, 'bump');
+      expect(surface.dataModel.get('/total'), 2);
+    });
+  });
+
+  group('turn-boundary delivery', () {
+    test('a reply is never observable in the turn that caused it', () async {
+      final (
+        MessageProcessor<ComponentApi> processor,
+        SurfaceModel<ComponentApi> surface,
+      ) = _surface();
+      final DriverSession session = DriverSession(
+        processor: processor,
+        surfaceId: 's',
+        transport: InProcessDriverRunner(_RecordingDriver()),
+      );
+      addTearDown(session.dispose);
+      session.start();
+      await _settle();
+
+      final A2uiComponentBinding button = A2uiComponentBinding(surface, 'btn');
+      addTearDown(button.dispose);
+      (button.resolvedProps!['action']! as Function)();
+
+      // Draining the microtask queue — everything the dispatching turn had
+      // queued — must not reveal the driver's answer. A worker's postMessage
+      // reply physically cannot arrive this soon, so neither may the runner
+      // that stands in for one.
+      await _flushMicrotasks();
+      expect(surface.dataModel.get('/total'), isNull);
+
+      // A turn of the event loop, and it is there.
+      await _settle();
+      expect(surface.dataModel.get('/total'), 2);
+    });
+
+    test('the guard fails against a microtask-scheduled runner', () async {
+      final (
+        MessageProcessor<ComponentApi> processor,
+        SurfaceModel<ComponentApi> surface,
+      ) = _surface();
+      final DriverSession session = DriverSession(
+        processor: processor,
+        surfaceId: 's',
+        transport: _MicrotaskRunner(_RecordingDriver()),
+      );
+      addTearDown(session.dispose);
+      session.start();
+      await _flushMicrotasks();
+
+      final A2uiComponentBinding button = A2uiComponentBinding(surface, 'btn');
+      addTearDown(button.dispose);
+      (button.resolvedProps!['action']! as Function)();
+      await _flushMicrotasks();
+
+      // Same probe, opposite result: microtask scheduling makes the in-process
+      // driver observably more prompt than any sandbox could be, which is
+      // exactly what the guard above exists to forbid. If this ever starts
+      // reporting null, the guard has stopped testing anything.
+      expect(surface.dataModel.get('/total'), 2);
+    });
+  });
+
+  group('optimistic echo and authoritative correction', () {
+    test('a two-way write echoes at once, then the driver clamps it back',
+        () async {
+      final (
+        MessageProcessor<ComponentApi> processor,
+        SurfaceModel<ComponentApi> surface,
+      ) = _surface();
+      // Rewire the button to submit the quantity rather than bump a total.
+      processor.processMessages(<A2uiMessage>[
+        UpdateComponentsMessage(
+            surfaceId: 's',
+            components: <Map<String, dynamic>>[
+              <String, dynamic>{
+                'id': 'btn',
+                'component': 'Button',
+                'child': 'lbl',
+                'action': <String, dynamic>{
+                  'event': <String, dynamic>{'name': 'setQuantity'},
+                },
+              },
+            ]),
+      ]);
+      final DriverSession session = DriverSession(
+        processor: processor,
+        surfaceId: 's',
+        transport: InProcessDriverRunner(_RecordingDriver()),
+      );
+      addTearDown(session.dispose);
+      session.start();
+      await _settle();
+
+      final A2uiComponentBinding qty = A2uiComponentBinding(surface, 'qty');
+      addTearDown(qty.dispose);
+      final A2uiComponentBinding button = A2uiComponentBinding(surface, 'btn');
+      addTearDown(button.dispose);
+
+      // The echo: the control moves at tier-1 latency, with no round trip.
+      (qty.resolvedProps!['setValue']! as Function)(42);
+      expect(qty.resolvedProps!['value'], 42);
+
+      (button.resolvedProps!['action']! as Function)();
+      await _settle();
+
+      // The correction: the driver clamps to stock and the surface reconciles.
+      expect(qty.resolvedProps!['value'], 5);
+    });
+
+    test('an event carries the current value of every absolute binding',
+        () async {
+      final (
+        MessageProcessor<ComponentApi> processor,
+        SurfaceModel<ComponentApi> surface,
+      ) = _surface();
+      final _RecordingDriver driver = _RecordingDriver();
+      final DriverSession session = DriverSession(
+        processor: processor,
+        surfaceId: 's',
+        transport: InProcessDriverRunner(driver),
+      );
+      addTearDown(session.dispose);
+      session.start();
+      await _settle();
+
+      final A2uiComponentBinding qty = A2uiComponentBinding(surface, 'qty');
+      addTearDown(qty.dispose);
+      (qty.resolvedProps!['setValue']! as Function)(9);
+
+      final A2uiComponentBinding button = A2uiComponentBinding(surface, 'btn');
+      addTearDown(button.dispose);
+      (button.resolvedProps!['action']! as Function)();
+      await _settle();
+
+      // The driver never saw the echo happen; the event is how it finds out.
+      expect(driver.events.single.values['/qty'], 9);
+      expect(driver.events.single.values, contains('/label'));
+    });
+  });
+
+  group('failure is loud', () {
+    test('a handler that throws faults the session with its reason', () async {
+      final (
+        MessageProcessor<ComponentApi> processor,
+        SurfaceModel<ComponentApi> surface,
+      ) = _surface();
+      processor.processMessages(<A2uiMessage>[
+        UpdateComponentsMessage(
+            surfaceId: 's',
+            components: <Map<String, dynamic>>[
+              <String, dynamic>{
+                'id': 'btn',
+                'component': 'Button',
+                'child': 'lbl',
+                'action': <String, dynamic>{
+                  'event': <String, dynamic>{'name': 'boom'},
+                },
+              },
+            ]),
+      ]);
+      final DriverSession session = DriverSession(
+        processor: processor,
+        surfaceId: 's',
+        transport: InProcessDriverRunner(_RecordingDriver()),
+      );
+      addTearDown(session.dispose);
+      final List<SessionFault> faults = <SessionFault>[];
+      session.onFault.addListener(faults.add);
+      session.start();
+      await _settle();
+
+      final A2uiComponentBinding button = A2uiComponentBinding(surface, 'btn');
+      addTearDown(button.dispose);
+      (button.resolvedProps!['action']! as Function)();
+      await _settle();
+
+      expect(faults, hasLength(1));
+      expect(faults.single.code, SessionFaultCode.driverError);
+      expect(faults.single.message, contains('handler exploded'));
+      expect(session.state, LogicSessionState.faulted);
+    });
+
+    test('a frame no sandbox could carry is a crash, not a silent drop',
+        () async {
+      final (MessageProcessor<ComponentApi> processor, _) = _surface();
+      final DriverSession session = DriverSession(
+        processor: processor,
+        surfaceId: 's',
+        transport: InProcessDriverRunner(_UnencodableDriver()),
+      );
+      addTearDown(session.dispose);
+      final List<SessionFault> faults = <SessionFault>[];
+      session.onFault.addListener(faults.add);
+      session.start();
+      await _settle();
+
+      expect(faults.single.code, SessionFaultCode.driverCrash);
+      expect(faults.single.message, contains('JSON-encodable'));
+    });
+  });
+}
+
+/// Writes a value that cannot cross a sandbox boundary.
+class _UnencodableDriver extends Driver {
+  @override
+  void onInit(DriverContext context) =>
+      context.write('/when', DateTime(2026, 8, 12));
+
+  @override
+  void onEvent(DriverContext context, DriverEvent event) {}
+}
+
+/// Wraps a transport, recording the type of every frame the host sends and
+/// receives.
+class _Spy implements DriverTransport {
+  _Spy(this._inner, this._types);
+
+  final DriverTransport _inner;
+  final List<String> _types;
+
+  @override
+  set onFrame(void Function(Map<String, Object?> frame)? handler) =>
+      _inner.onFrame = handler == null
+          ? null
+          : (Map<String, Object?> frame) {
+              _types.add(frame['type']! as String);
+              handler(frame);
+            };
+
+  @override
+  set onCrash(void Function(String reason)? handler) =>
+      _inner.onCrash = handler;
+
+  @override
+  void start() => _inner.start();
+
+  @override
+  void send(Map<String, Object?> frame) => _inner.send(frame);
+
+  @override
+  void close() => _inner.close();
+}

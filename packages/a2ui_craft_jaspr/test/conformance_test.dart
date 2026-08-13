@@ -83,6 +83,17 @@ class _JasprCraftTester implements CraftTester {
   Future<void> pump() => _tester.pump();
 
   @override
+  Future<void> settleDriver() async {
+    // Real async here: yielding to the event loop is what lets the session's
+    // zero-length timers fire, which is exactly the wait a sandboxed driver
+    // would impose.
+    for (var i = 0; i < 8; i++) {
+      await Future<void>.delayed(Duration.zero);
+      await _tester.pump();
+    }
+  }
+
+  @override
   // A CSS transition targets the inline style immediately, so the endpoint is
   // already set; just flush a frame.
   Future<void> settle() => _tester.pump();
@@ -528,4 +539,5 @@ class _JasprConformanceDriver implements CraftConformanceDriver {
 void main() {
   runCoreComponentConformance(_JasprConformanceDriver());
   runA2uiConformance(_JasprConformanceDriver());
+  runDriverConformance(_JasprConformanceDriver());
 }

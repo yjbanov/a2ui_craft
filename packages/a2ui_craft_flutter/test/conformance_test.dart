@@ -102,6 +102,16 @@ class _FlutterCraftTester implements CraftTester {
   Future<void> pump() => _tester.pump();
 
   @override
+  Future<void> settleDriver() async {
+    // The test binding runs in fake async, so elapsing zero time is what fires
+    // the session's zero-length timers; each pump also flushes microtasks and
+    // rebuilds whatever the resulting data writes invalidated.
+    for (var i = 0; i < 8; i++) {
+      await _tester.pump(Duration.zero);
+    }
+  }
+
+  @override
   Future<void> settle() => _tester.pumpAndSettle();
 
   @override
@@ -409,4 +419,5 @@ class _FlutterConformanceDriver implements CraftConformanceDriver {
 void main() {
   runCoreComponentConformance(_FlutterConformanceDriver());
   runA2uiConformance(_FlutterConformanceDriver());
+  runDriverConformance(_FlutterConformanceDriver());
 }

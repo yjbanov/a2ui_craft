@@ -1,0 +1,245 @@
+// Copyright 2013 The Flutter Authors
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+import 'dart:async';
+
+import 'package:a2ui_core/a2ui_core.dart';
+
+import 'envelope.dart';
+import 'fault.dart';
+import 'session_machine.dart';
+import 'transport.dart';
+
+/// The host-side half of a driver session.
+///
+/// Binds a [DriverTransport] to a rendered surface: user actions leaving the
+/// surface become `event` messages, and the driver's `update` messages are fed
+/// straight into A2UI Transport ingest.
+///
+/// It layers entirely on public API — `MessageProcessor.processMessages`
+/// inbound, `SurfaceGroupModel.onAction` outbound, `DataModel.get` for
+/// event-time binding snapshots — so no engine package knows drivers exist and
+/// a host that never loads one pays nothing.
+class DriverSession {
+  /// Creates a session driving [surfaceId] within [processor]'s surface group,
+  /// talking to a driver over [transport].
+  DriverSession({
+    required this.processor,
+    required this.surfaceId,
+    required this.transport,
+    this.hostContext = const <String, Object?>{},
+  });
+
+  /// The processor whose surface group holds the driven surface.
+  final MessageProcessor<ComponentApi> processor;
+
+  /// The surface this session drives.
+  final String surfaceId;
+
+  /// The channel to the driver.
+  final DriverTransport transport;
+
+  /// Host-owned context handed to the driver at init — locale, display mode,
+  /// theme selection.
+  final Map<String, Object?> hostContext;
+
+  final LogicSessionMachine _machine =
+      LogicSessionMachine(role: LogicRole.host);
+  final Completer<void> _ready = Completer<void>();
+  final EventNotifier<SessionFault> _onFault = EventNotifier<SessionFault>();
+  final List<EventMessage> _queuedEvents = <EventMessage>[];
+
+  bool _started = false;
+  bool _disposed = false;
+
+  /// The session's lifecycle state.
+  LogicSessionState get state => _machine.state;
+
+  /// Why the session failed, or `null` if it has not.
+  SessionFault? get fault => _machine.fault;
+
+  /// Whether the handshake completed and events are flowing.
+  bool get isReady => _machine.isReady;
+
+  /// Completes when the handshake completes; completes with a [SessionFault] if
+  /// the session fails first.
+  Future<void> get ready => _ready.future;
+
+  /// Fires once, when the session faults.
+  ///
+  /// A host listens here to take the surface out of service: a surface whose
+  /// driver is dead must say so, not impersonate a working app.
+  EventListenable<SessionFault> get onFault => _onFault;
+
+  /// Opens the channel and waits for the driver to announce itself.
+  void start() {
+    if (_started) return;
+    _started = true;
+    transport
+      ..onFrame = _receive
+      ..onCrash = _handleCrash;
+    processor.groupModel.onAction.addListener(_handleAction);
+    transport.start();
+  }
+
+  /// Ends the session in an orderly way and releases everything it holds.
+  void dispose() {
+    if (_disposed) return;
+    _disposed = true;
+    processor.groupModel.onAction.removeListener(_handleAction);
+    if (_machine.isOpen) {
+      _trySend(const TerminateMessage(reason: 'host disposed the session'));
+    }
+    transport
+      ..onFrame = null
+      ..onCrash = null
+      ..close();
+    _onFault.dispose();
+  }
+
+  void _receive(Map<String, Object?> frame) {
+    if (_disposed) return;
+    final LogicMessage message;
+    try {
+      message = _machine.receiveJson(frame);
+    } on SessionFault catch (fault) {
+      _fault(fault);
+      return;
+    }
+    switch (message) {
+      case HelloMessage():
+        _trySend(InitMessage(surfaceId: surfaceId, context: hostContext));
+        if (_machine.isReady) {
+          if (!_ready.isCompleted) _ready.complete();
+          _flushQueuedEvents();
+        }
+      case UpdateMessage(:final List<A2uiMessage> messages):
+        _applyUpdate(messages);
+      case TerminateMessage():
+        // The machine already latched to `terminated`; nothing further to do.
+        break;
+      case ErrorMessage():
+        // The machine already latched to `faulted` with the driver's reason.
+        _fault(_machine.fault!);
+      case PongMessage():
+      case InitMessage():
+      case EventMessage():
+      case PingMessage():
+        break;
+    }
+  }
+
+  void _applyUpdate(List<A2uiMessage> messages) {
+    try {
+      processor.processMessages(messages);
+    } catch (error) {
+      // A driver whose messages the engine rejects is as dead as one that
+      // crashed: the surface's state is now whatever the failing batch left
+      // behind, which is exactly the half-applied condition the batching rule
+      // exists to prevent.
+      _raise(
+        SessionFaultCode.driverError,
+        'The driver sent an update the engine refused: $error',
+      );
+    }
+  }
+
+  void _handleAction(A2uiClientAction action) {
+    if (action.surfaceId != surfaceId || _disposed) return;
+    final EventMessage event = EventMessage(
+      name: action.name,
+      surfaceId: action.surfaceId,
+      sourceComponentId: action.sourceComponentId,
+      context: Map<String, Object?>.from(action.context),
+      values: _boundValues(),
+    );
+    if (!_machine.isReady) {
+      // The surface can be tapped before the driver finishes booting. Holding
+      // the event is honest — the control was enabled, so something must
+      // answer it — where dropping it would make a live control silently inert.
+      _queuedEvents.add(event);
+      return;
+    }
+    _trySend(event);
+  }
+
+  void _flushQueuedEvents() {
+    final List<EventMessage> queued = List<EventMessage>.of(_queuedEvents);
+    _queuedEvents.clear();
+    for (final EventMessage event in queued) {
+      _trySend(event);
+    }
+  }
+
+  /// Snapshots the current value of every absolutely-bound data path on the
+  /// surface.
+  ///
+  /// Discovered by walking the components' own properties, so it needs no
+  /// declaration from anyone: a template that binds `/cart/total` is the
+  /// statement that `/cart/total` matters. Paths *relative* to a list item are
+  /// deliberately excluded — one component template stands for every row, so
+  /// there is no single value to report; a template carries those in the
+  /// action's own arguments, where they resolve per row.
+  Map<String, Object?> _boundValues() {
+    final SurfaceModel<ComponentApi>? surface =
+        processor.groupModel.getSurface(surfaceId);
+    if (surface == null) return const <String, Object?>{};
+    final Set<String> paths = <String>{};
+    for (final ComponentModel component in surface.componentsModel.all) {
+      _collectPaths(component.properties, paths);
+    }
+    final List<String> sorted = paths.toList()..sort();
+    return <String, Object?>{
+      for (final String path in sorted) path: surface.dataModel.get(path),
+    };
+  }
+
+  static void _collectPaths(Object? node, Set<String> out) {
+    if (node is Map) {
+      final Object? path = node['path'];
+      if (path is String && !node.containsKey('componentId')) {
+        // A binding is a leaf: its `path` is the whole of it.
+        if (path.startsWith('/')) out.add(path);
+        return;
+      }
+      for (final Object? value in node.values) {
+        _collectPaths(value, out);
+      }
+    } else if (node is List) {
+      for (final Object? value in node) {
+        _collectPaths(value, out);
+      }
+    }
+  }
+
+  void _handleCrash(String reason) {
+    if (_disposed || !_machine.isOpen) return;
+    _raise(SessionFaultCode.driverCrash, reason);
+  }
+
+  void _raise(SessionFaultCode code, String message, {Object? details}) {
+    try {
+      _machine.raise(code, message, details: details);
+    } on SessionFault catch (fault) {
+      _fault(fault);
+    }
+  }
+
+  void _trySend(LogicMessage message) {
+    try {
+      transport.send(_machine.send(message).toJson());
+    } on SessionFault catch (fault) {
+      _fault(fault);
+    }
+  }
+
+  void _fault(SessionFault fault) {
+    if (!_ready.isCompleted) _ready.completeError(fault);
+    _onFault.emit(fault);
+    transport
+      ..onFrame = null
+      ..onCrash = null
+      ..close();
+  }
+}

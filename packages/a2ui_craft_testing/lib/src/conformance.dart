@@ -148,6 +148,15 @@ abstract interface class CraftTester {
   /// Processes pending frames after an out-of-band change (e.g. a [data] update).
   Future<void> pump();
 
+  /// Lets a driver session's channel turn, then flushes the resulting frames.
+  ///
+  /// Distinct from [pump] because a driver's answer is deliberately *not*
+  /// available within the turn that caused it: frames cross the event loop, not
+  /// the microtask queue, so that an in-process driver is no more prompt than
+  /// the sandboxed one it stands in for. Adapters implement this by letting
+  /// pending zero-length timers fire and pumping in between.
+  Future<void> settleDriver();
+
   /// Advances past any **in-flight implicit animation** so a settled endpoint
   /// can be read. Flutter pumps the animation to completion; Jaspr's transitions
   /// target the inline style immediately, so this just flushes a frame. Reading

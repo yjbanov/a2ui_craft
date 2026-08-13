@@ -35,10 +35,10 @@ the rest of the doc uses the names:
 - **L1 — the thin typed SDK.** Lifecycle callbacks + a context handle for
   writes and structure; no opinion about how the author holds state. Phase
   1's deliverable — PHASE_1_PLAN.md slice 2 sketches the minimal shape
-  (`Driver { onInit; onEvent }`); the fuller candidate design (a handler map
-  checked against the contract, writes buffered into one transactional turn,
-  handlers serialized with `ctx.post` self-events for long work) is still
-  under discussion and should be folded into the plan when settled.
+  (`Driver { onInit; onEvent }`); the fuller candidate design (a handler
+  map, writes buffered into one transactional turn, handlers serialized with
+  `ctx.post` self-events for long work) is still under discussion and should
+  be folded into the plan when settled.
 - **L2 — a state/reactivity framework.** The author declares state and UI
   declaratively; the framework decides what crosses the wire and when. The
   subject of this note.
@@ -226,29 +226,29 @@ when the item view resolves to a single catalog component over item data, and
 explodes into explicit children otherwise. Authors think "list"; the
 framework thinks "which channel."
 
-## 6. Events and the contract under a framework
+## 6. Events under a framework
 
-A tension to resolve honestly: the contract file's strength is **static
-verifiability** — declared events, checked on both ends. But a reactive
-framework attaches *closures*: `onPressed: () => cart.add(sku)` wants an
-auto-generated event name per component instance, unknowable at
-contract-authoring time.
+A reactive framework attaches *closures*: `onPressed: () => cart.add(sku)`
+wants an auto-generated event name per component instance, unknowable ahead
+of time. This was the strongest single argument in the mandatory contract
+file's demotion (BUSINESS_LOGIC.md §5) — an enumerated event list and a
+framework that allocates event names cannot coexist — and with the contract
+gone the picture is simply:
 
-Resolution: split the event space by audience, mirroring the catalog tiers:
+- **UI wiring events** — framework-allocated names, never declared anywhere.
+  Fully subject to budgets, ordering, and the serialized handler queue: a
+  closure-dispatched event is still an event, compiled onto the same L1
+  queue.
+- **Business actions** — the one place naming still matters is the
+  agent-facing surface: an action exposed through the inference catalog
+  (`checkout`) is author-named and declared in `schema.json`, because its
+  counterparty is an agent, not the author's own code. A framework app that
+  exposes actions declares those — and only those.
 
-- **Business actions** — author-named, contract-declared,
-  inference-catalog-eligible (`checkout`). These stay statically verified;
-  they are the agent- and host-facing API surface.
-- **UI wiring events** — framework-allocated names on a designated framework
-  channel the contract enables as a unit (`"frameworkChannel": true`). Never
-  agent-visible, never in the inference catalog, but fully subject to
-  budgets, ordering, and the serialized handler queue — a closure-dispatched
-  event is still an event; the framework compiles it onto the same L1 queue.
-
-The cost, stated plainly: per-event static verifiability narrows to the
-business tier. That is the tier where it mattered — the host/platform rules
-and the agent API — while UI wiring was never meaningfully auditable as a
-name list anyway.
+Static verifiability thereby lives exactly where its audience is external —
+the agent API — while everything internal to the app is checked the way app
+code is always checked: by running it (plus the SDK's dev-mode
+unhandled-event diagnostics, and opt-in codegen for teams that want types).
 
 ## 7. Templates become the client-component boundary
 
@@ -310,10 +310,11 @@ mini-app stays hand-written L1 in Phase 1 (it must exercise the raw seam).
    growth, list churn — the §4.2-vs-§4.3 and §5 decisions want numbers.
 2. Reference reactive framework, signals-based (§4.2), Dart first, JS mirror
    — compiled onto the L1 SDK, no protocol changes.
-3. Contract v2: the framework channel (§6) and the `owned`/`bound` key
-   distinction (a two-way-bound key has two legitimate writers — the surface
-   echoing the user and the driver correcting — unlike a purely driver-owned
-   key; the contract should say which is which).
+3. `schema.json` action entries authored from framework apps (§6), and —
+   as tooling metadata, not enforcement — the `owned`/`bound` key
+   distinction (a two-way-bound key has two legitimate writers, the surface
+   echoing the user and the driver correcting, unlike a purely driver-owned
+   key).
 4. Rewrite the cart as a framework showcase *alongside* (not replacing) the
    L1 version — the pair documents the layering.
 5. Static-subtree extraction and computed-to-function compilation (§7, §4.2)

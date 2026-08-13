@@ -206,25 +206,47 @@ it with zero-length timers (or equivalent event-loop scheduling), not
 microtasks, and conformance pins it (the reply must not be visible until the
 dispatching turn's microtask queue has fully flushed).
 
-### The contract file: declared events and keys
+### Considered and demoted: a mandatory contract file
 
-A project's `schema.json` already declares its components to the agent. Extend
-the project bundle with a **logic contract**: the events the templates dispatch
-(names + argument shapes) and the data keys the driver owns (names + value
-shapes). This buys three things, all in service of constraint 1:
+An earlier revision added a bundle-level **logic contract**: the events the
+templates dispatch and the keys the driver owns, declared in a `contract.json`,
+buying authoring-time checks on both sides, codegen'd per-language SDKs, and
+host-side write validation. Demoted — it was over-architecture, on three
+counts:
 
-1. **Authoring-time checking on both sides** — a template dispatching an
-   undeclared event, or a driver writing an undeclared key, fails at build/load
-   time rather than as a silent no-op.
-2. **Per-language SDKs by codegen, not by hand** — the contract is plain
-   schema, so thin typed wrappers for TypeScript, Dart, Kotlin, Python are
-   generated, and none of them is the "real" one. The protocol stays the truth.
-3. **Host-side write validation** — the host can reject an out-of-contract
-   write from a buggy or compromised driver before it touches the model.
+- **It was a third copy of the project's own sources.** In the common case
+  the template author and the logic author are the same party, and the
+  information already exists: templates *name* the events they dispatch and
+  the paths they bind. Any codegen tool that wants to offer typed events and
+  key accessors can derive them from the `.craft` sources directly — an
+  opt-in DX layer, not an architectural artifact whose drift becomes a new
+  failure mode.
+- **The checks that guard trust boundaries work at runtime, without
+  declarations.** The host protects *its own* keys — which it knows —
+  structurally, via a reserved namespace; drivers never needed to declare
+  theirs. Templates are already **total against bad data** (agent-supplied
+  data is untrusted by design, so driver-written garbage changes nothing —
+  it degrades only the driver's own surface). Budgets bound behavior. None
+  of this reads a schema.
+- **A framework makes it unworkable anyway.** Under an L2 authoring
+  framework (REACTIVE_FRAMEWORK.md), UI and logic are one codebase and UI
+  events are framework-allocated — a mandatory event enumeration fights the
+  layer whose whole point is that no second artifact exists.
 
-The contract is also where the **inference catalog** lives (§8): the entries
-— templates and driver-backed actions — the mini-app exposes to an agent,
-declared statically like everything else in the contract.
+What we consciously give up: bind-time refusal of a typo'd event name — a
+mismatch is now a dead control instead of a build error. The mitigation is a
+**dev-mode diagnostic**: during development the SDK reports events that
+arrived with no handler (and handlers that never receive events) loudly.
+Runtime, cheap, declaration-free; opt-in codegen restores full static typing
+for teams that want it.
+
+What stays static: **the agent-facing surface, and only that.** The inference
+catalog (§8) — exposed templates plus driver-backed actions — remains a
+static declaration, but it lives in `schema.json`, which already is the
+project's agent-facing file, and is needed only when the mini-app exposes
+itself to inference at all. It is the app↔agent API, not a UI↔logic
+contract, and its verifiability arguments (§8) are untouched by this
+demotion.
 
 ## 6. Runtimes and transports
 
@@ -246,7 +268,6 @@ The manifest slot reserved in DESIGN.md §10 gets its shape:
 "logic": {
   "kind": "worker",            // worker | iframe | webview | remote | builtin
   "entry": "logic.js",         // or "url": "wss://…" for remote
-  "contract": "contract.json", // events + owned keys (§5)
   "capabilities": []           // §7; empty in v1
 }
 ```
@@ -267,10 +288,14 @@ host can't audit it. The sandbox grants nothing but the channel:
   still a vetted, declarative vocabulary, so DESIGN.md §11's
   no-arbitrary-code-in-the-payload invariant survives. The *agent's* ceiling
   is narrower: the inference catalog (§8).
-- **Data ceiling:** root-key ownership. The contract declares the driver's
-  keys; host-owned context keys (locale, media, theme) are read-only to it; in
-  agent+driver coexistence each writer gets a disjoint namespace. One writer
-  per key is also what makes §5's last-write-wins ordering sufficient.
+- **Data ceiling:** namespace, enforced by the party that owns it. Host-owned
+  context keys (locale, media, theme) live in a reserved namespace the host
+  refuses driver writes to — the host knows its own keys and needs no
+  declaration from the driver (§5). Everything else on the mini-app's surface
+  is the driver's. In agent+driver coexistence (§9, deferred) each writer
+  gets a disjoint namespace, which is when declared ownership earns its way
+  back in. One writer per key is also what makes §5's last-write-wins
+  ordering sufficient.
 - **Compute/rate ceiling:** the channel token bucket (§5); the sandbox's own
   CPU is the platform's problem (a worker can spin, but it can't touch
   anything).
@@ -318,8 +343,9 @@ anything runs**:
   host/platform rules at load time (nothing appears mid-session that wasn't
   vetted);
 - the *mini-app author* can check that the driver actually implements every
-  declared action (and nothing undeclared) — the same authoring-time
-  discipline the contract file gives events and keys (§5);
+  declared action (and nothing undeclared) — the one place authoring-time
+  declaration survives §5's demotion, because the counterparty is an agent,
+  not the author's own code;
 - the *agent side* gets a vocabulary that is fixed for the session — bakeable
   into prompts and tool lists once, no mid-session tool-churn.
 
@@ -358,7 +384,7 @@ Three topologies, in order of arrival:
    (validation, enrichment), and the driver exposes its actions to the agent
    through the inference catalog (§8). This is the MCP-shaped future — a
    mini-app whose business actions are agent-invocable. The *vocabulary* for
-   it lands early (the contract's static inference catalog, §5/§8); the
+   it lands early (`schema.json`'s static inference catalog, §8); the
    mediation machinery stays out of scope until 1 and 2 are real.
 
 ## 10. State and restoration
@@ -413,7 +439,7 @@ Staged:
    NEXT_THREADS grounding #2 identifies.)
 3. **Worker runner (Jaspr host) + a JS driver demo** on the site — the first
    proof of constraint 1: logic in a language the engine isn't written in.
-4. **Manifest slot + contract file + `CraftProjectLoader`** wiring; `craft
+4. **Manifest slot + `CraftProjectLoader`** wiring; `craft
    create` gains a logic-bearing variant.
 5. **Flutter-host runner** — webview (mobile/desktop) or worker (Flutter
    web); the runner matrix per host platform is the open engineering here.
@@ -422,9 +448,6 @@ Staged:
 
 ## 13. Open questions
 
-- **Contract schema shape** (§5): reuse/extend `schema.json`'s conventions or
-  a sibling file; how argument/value shapes are expressed (JSON Schema
-  subset?).
 - **Inference-catalog action schema** (§8): what a driver-backed *action*
   entry looks like to the agent — arguments, result shape, relationship to
   A2UI's existing function/`checks` machinery.

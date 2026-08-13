@@ -14,8 +14,8 @@
 |---|---|---|
 | H1 | **Language neutrality**: the coupling surface is the protocol, so logic can be written in a language the engine isn't | the same mini-app runs with its driver in **Dart** (in-process) and in **JavaScript** (web worker), one conformance suite passing against both |
 | H2 | **Asynchrony is livable**: always-async handlers + two-way echo keep the UX correct at any latency, and the in-process ↔ sandboxed swap is unobservable | slice 2's protocol-level conformance cases run **verbatim** against the worker runner in slice 6 — zero template or test edits |
-| H3 | **Templates stay decoupled**: a template names only events and data paths | swapping the cart's driver implementation (Dart ↔ JS) requires zero template changes — enforced by the contract file, not by review |
-| H4 | **The security posture holds at the channel**: budgets both directions, write partition, loud failure | slice 3 (contract enforcement) + slice 4 (budget halt, BSoD path) |
+| H3 | **Templates stay decoupled**: a template names only events and data paths | swapping the cart's driver implementation (Dart ↔ JS) requires zero template changes |
+| H4 | **The security posture holds at the channel**: budgets both directions, reserved host keys, loud failure | slice 3 (namespace guardrails) + slice 4 (budget halt, BSoD path) |
 
 ## The reference mini-app: `cart`
 
@@ -33,9 +33,9 @@ And the two protocol behaviors worth demonstrating on purpose:
 - **optimistic echo + authoritative correction** — quantity is two-way bound
   (echoes instantly); the driver clamps it to stock and writes the clamped
   value back;
-- **a driver-backed action in the contract** — `checkout` is declared as an
+- **a driver-backed action in `schema.json`** — `checkout` is declared as an
   inference-catalog entry (design §8). No live agent in this phase; the
-  declaration proves the contract shape, not mediation.
+  declaration proves the agent-facing shape, not mediation.
 
 The project ships the *same driver twice*: `drivers/cart.dart` and
 `drivers/cart.js`, observably identical. That pair **is** the H1 exhibit.
@@ -103,19 +103,26 @@ version-skew handshake failure; ordering violations detected.
 **Tests:** the new conformance cases on Flutter + Jaspr; session lifecycle
 unit tests.
 
-### 3. Contract file + enforcement
+### 3. Runtime guardrails + the agent-facing declaration
 
-- `contract.json` schema: declared events (name + argument shape), owned data
-  keys (name + value shape), inference-catalog entries (exposed templates +
-  driver-backed actions — `checkout`'s declaration lands here).
-- Host-side enforcement in `DriverSession`: an out-of-contract write is
-  rejected *before* touching the model and faults the session; an undeclared
-  event name is refused at template-bind time.
+No contract file — that was demoted as over-architecture (design §5: the
+event/key vocabulary already lives in the templates; trust-boundary checks
+work at runtime). What this slice actually builds:
 
-**Tests:** a violation matrix (undeclared key write, host-key write,
-undeclared event, wrong-shaped argument), each proven to fault; the
-guard-fails-against-pre-fix-code rule applies — assert the violations pass
-silently with enforcement stubbed out, then that they fault with it on.
+- **Host-reserved namespace** in `DriverSession`: the host's own keys
+  (locale, media, theme) reject driver writes *before* touching the model and
+  fault the session. The host knows its keys; no driver declaration needed.
+- **Dev-mode diagnostics** in the SDK: an event delivered with no matching
+  handler is reported loudly (the mitigation for losing bind-time typo
+  refusal — a dead control must be a diagnosed control during development).
+- **`schema.json` grows action entries** — the static inference catalog
+  (design §8): `checkout` is declared here as a driver-backed action.
+  Declaration and parsing only; no live agent in this phase.
+
+**Tests:** host-key write faults (proven to pass silently with enforcement
+stubbed out, then to fault with it on — the guard-the-guard rule);
+unhandled-event diagnostic fires in dev mode and is silent in production
+mode; action-entry parse round-trip.
 
 ### 4. Channel budgets + the failure path (BSoD MVP)
 
@@ -134,8 +141,9 @@ restart re-runs `init` from scratch.
 
 ### 5. The cart mini-app on the Dart driver, both adapters
 
-Project files (`template.craft`, `schema.json`, `contract.json`, `app.json`
-cold-boot stream, manifest) + `drivers/cart.dart`, rendered through the
+Project files (`template.craft`, `schema.json` with the `checkout` action
+entry, `app.json` cold-boot stream, manifest) + `drivers/cart.dart`, rendered
+through the
 existing sample infrastructure on **both** adapters.
 
 **Tests:** scripted end-to-end conformance — add item, change quantity past
@@ -160,9 +168,9 @@ cases: worker crash → fault → BSoD; heartbeat loss → same.
 
 ### 7. Manifest + loader + site + CLI
 
-- `ProjectManifest` gains the `logic` slot (`kind`, `entry`, `contract`,
-  `capabilities`); `CraftProjectLoader` fetches contract + driver source;
-  unsupported `kind` refuses to load with a reason (design §6).
+- `ProjectManifest` gains the `logic` slot (`kind`, `entry`, `capabilities`);
+  `CraftProjectLoader` fetches the driver source; unsupported `kind` refuses
+  to load with a reason (design §6).
 - The site gallery ships the cart mini-app — Jaspr pane on the **worker**
   runner, Flutter pane on the **in-process Dart** runner: one mini-app, two
   languages, two runners, side by side. That pane pair is the public
@@ -177,8 +185,8 @@ sample tests stay green.
 ## Sequencing notes & risks
 
 - **The central architectural risk is per-adapter drift** (NEXT_THREADS
-  grounding #2). Mitigation is structural: the protocol, session, contract
-  enforcement, and budgets live *once* in the bridge; adapters contribute only
+  grounding #2). Mitigation is structural: the protocol, session, namespace
+  guardrails, and budgets live *once* in the bridge; adapters contribute only
   runners. Nothing in slices 1–4 is written twice.
 - **Slice order is dependency order**, but 3 and 4 commute; pull 4 earlier if
   flood-halt wiring turns out to be needed for 3's fault plumbing.

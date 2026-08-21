@@ -13,6 +13,7 @@
 library a2ui_craft_examples;
 
 export 'src/demo_properties.dart';
+export 'src/mini_apps/cart_driver.dart';
 export 'src/project.dart';
 export 'src/project_loader.dart';
 export 'src/sample_spec.dart';

@@ -8,6 +8,7 @@ import 'package:jaspr_router/jaspr_router.dart';
 import 'gallery.dart';
 import 'kitchen_sink.dart';
 import 'load_screen.dart';
+import 'mini_app_screen.dart';
 import 'sample_screen.dart';
 
 /// The A2UI Craft demo site: a gallery of samples, each openable on its own
@@ -29,6 +30,11 @@ class App extends StatelessComponent {
           path: '/sample/:id',
           builder: (BuildContext context, RouteState state) =>
               SampleScreen(id: state.params['id'] ?? ''),
+        ),
+        Route(
+          path: '/mini-app/:id',
+          builder: (BuildContext context, RouteState state) =>
+              MiniAppScreen(id: state.params['id'] ?? ''),
         ),
         Route(
           path: '/load',

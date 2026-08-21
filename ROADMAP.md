@@ -442,15 +442,21 @@
           ephemerally (JS/Dart/Kotlin, changing per template load) can't be AOT
           Dart; it runs in a **strong sandbox** (iframe/webview/web worker) and
           responds to template **events**. Additive: same `event 'foo' {…}`
-          template syntax, a new registry backend. **Now designed** — logic is a
-          *surface driver* speaking A2UI Transport behind a session envelope,
-          not a function-registry backend: `research/logic/BUSINESS_LOGIC.md`
-          (design) + `research/logic/PHASE_1_PLAN.md` (reference-implementation
-          plan, shovel-ready). **Phase 2 (queued behind Phase 1): the reactive
-          driver framework** — researched in
-          `research/logic/REACTIVE_FRAMEWORK.md` (candidates ordered in its
-          §9); Phase 1's stated exit criterion is writing `PHASE_2_PLAN.md`
-          from that phase's L1 ratification + wire measurements.
+          template syntax, a new registry backend. **Built (Phase 1, 2026-08-13)**
+          — logic is a *surface driver* speaking A2UI Transport behind a session
+          envelope, not a function-registry backend:
+          `research/logic/BUSINESS_LOGIC.md` (design),
+          `research/logic/PHASE_1_PLAN.md` (the slices),
+          `research/logic/DECISIONS.md` (what building it changed), and
+          `packages/a2ui_craft_logic` (the reference implementation). The `cart`
+          mini-app ships its logic twice — Dart and JavaScript — and the driver
+          conformance suite runs unmodified against both, which is what proves
+          the coupling surface is the protocol. **Phase 2 (planned, shovel-ready): the
+          reactive driver framework** — `research/logic/PHASE_2_PLAN.md`, over
+          the research in `research/logic/REACTIVE_FRAMEWORK.md`. It builds the
+          measurement instrument *first*, because signals-as-bindings versus
+          VDOM-diff is an empirical question and building the framework first
+          would turn it into a taste question defended after the fact.
         **Two refinements that pin the design:**
         - *Trust boundary — separate registries, not one library.* Shared
           *implementations* are fine, but **exposure = registration is per trust

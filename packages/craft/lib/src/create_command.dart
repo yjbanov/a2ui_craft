@@ -20,6 +20,12 @@ class CreateCommand extends Command<int> {
         defaultsTo: '.',
       )
       ..addFlag(
+        'logic',
+        help: 'Scaffold a mini-app: a project that ships its own business '
+            'logic (a driver) alongside its UI.',
+        negatable: false,
+      )
+      ..addFlag(
         'force',
         help: 'Overwrite an existing, non-empty target directory.',
         negatable: false,
@@ -65,14 +71,18 @@ class CreateCommand extends Command<int> {
     }
     dir.createSync(recursive: true);
 
-    final Map<String, String> files = counterProjectFiles(projectName);
+    final bool withLogic = args.flag('logic');
+    final Map<String, String> files = withLogic
+        ? miniAppProjectFiles(projectName)
+        : counterProjectFiles(projectName);
     for (final MapEntry<String, String> entry in files.entries) {
       File(p.join(dir.path, entry.key)).writeAsStringSync(entry.value);
     }
 
     stdout
-      ..writeln('Created A2UI Craft project "${humanizeName(projectName)}" at '
-          '${dir.path}/')
+      ..writeln('Created A2UI Craft '
+          '${withLogic ? 'mini-app' : 'project'} '
+          '"${humanizeName(projectName)}" at ${dir.path}/')
       ..writeln('  ${files.keys.join(', ')}')
       ..writeln()
       ..writeln('Deploy it to a CDN (no build step):')

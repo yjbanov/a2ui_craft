@@ -217,7 +217,13 @@ sample tests stay green.
 - **Protocol version starts at `0.x`** with handshake enforcement live from
   slice 1, so breaking the envelope during the phase is cheap and *visible*.
 
-## Exit criterion: this phase ends by opening Phase 2
+## Exit criterion: this phase ends by opening Phase 2 — ✅ met (2026-08-13)
+
+All seven slices landed and [PHASE_2_PLAN.md](PHASE_2_PLAN.md) is written, so
+this phase is closed. The hypothesis verdicts are in that plan's opening
+table (H1 and H3 proven, H2 proven at worker latency, H4 mostly); what building
+it changed is in [DECISIONS.md](DECISIONS.md). The original statement of the
+criterion follows.
 
 Phase 1 is not done when slice 7 lands — it is done when
 **`PHASE_2_PLAN.md` exists**: the sliced plan for the reactive driver

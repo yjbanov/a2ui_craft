@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 import 'package:a2ui_core/a2ui_core.dart';
+import 'package:a2ui_craft_bridge/a2ui_craft_bridge.dart';
 import 'package:a2ui_craft_flutter/a2ui_craft_flutter.dart';
+import 'package:a2ui_craft_logic/a2ui_craft_logic.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
@@ -30,11 +32,10 @@ import 'package:flutter/rendering.dart';
 ///   sizes the view to its content along the vertical axis, filling the host's
 ///   width — no measurement, no fixed canvas. A `MaterialApp`/`Scaffold`/
 ///   `Overlay` *fills* its constraints and cannot live under an unbounded
-///   height, so this uses a lightweight, **hugging** Material shell
-///   ([_AutoSizeSurface]) with a transparent background, so the surface blends
-///   into the host card exactly as the Jaspr render does. Suited to a page
-///   that stacks many independent specimens (the kitchen sink); [onContentHeight]
-///   is unused.
+///   height, so this uses a lightweight, **hugging** Material shell with a
+///   transparent background, so the surface blends into the host card exactly
+///   as the Jaspr render does. Suited to a page that stacks many independent
+///   specimens (the kitchen sink); [onContentHeight] is unused.
 Widget flutterSampleApp({
   required String template,
   required Map<String, Object?> schema,
@@ -212,5 +213,170 @@ class _RenderMeasureBox extends RenderProxyBox {
       final ValueChanged<double>? report = onHeight;
       if (report != null && _reported == height) report(height);
     });
+  }
+}
+
+/// Builds the Flutter widget for a **mini-app** pane: the project's surface,
+/// driven by whatever transport the caller connects, with a host-owned
+/// failure state.
+///
+/// The counterpart to [flutterSampleApp] for a project that ships logic. The
+/// difference that matters is who owns the surface: a sample's `SampleView`
+/// builds its own processor from a message list, but a mini-app's surface is
+/// owned by a [MiniAppRunner], because the surface has to outlive individual
+/// sessions and be replaceable on restart. The transport is the caller's
+/// choice — an in-process Dart stand-in, a worker running the project's own
+/// JavaScript — because which sandbox runs the driver is precisely what the
+/// project does not get to say.
+Widget flutterMiniAppApp({
+  required String template,
+  required Map<String, Object?> schema,
+  required List<A2uiMessage> Function() coldBoot,
+  required DriverTransport Function() createTransport,
+  required bool dark,
+  ValueChanged<double>? onContentHeight,
+}) {
+  return MaterialApp(
+    debugShowCheckedModeBanner: false,
+    theme: ThemeData(useMaterial3: true),
+    darkTheme: ThemeData(useMaterial3: true, brightness: Brightness.dark),
+    themeMode: dark ? ThemeMode.dark : ThemeMode.light,
+    home: Scaffold(
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: _FlutterMiniApp(
+            template: template,
+            schema: schema,
+            coldBoot: coldBoot,
+            createTransport: createTransport,
+            onContentHeight: onContentHeight,
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+class _FlutterMiniApp extends StatefulWidget {
+  const _FlutterMiniApp({
+    required this.template,
+    required this.schema,
+    required this.coldBoot,
+    required this.createTransport,
+    this.onContentHeight,
+  });
+
+  final String template;
+  final Map<String, Object?> schema;
+  final List<A2uiMessage> Function() coldBoot;
+  final DriverTransport Function() createTransport;
+  final ValueChanged<double>? onContentHeight;
+
+  @override
+  State<_FlutterMiniApp> createState() => _FlutterMiniAppState();
+}
+
+class _FlutterMiniAppState extends State<_FlutterMiniApp> {
+  static const LibraryName _scope = LibraryName(<String>['project']);
+
+  late final Runtime _runtime = Runtime()
+    ..update(const LibraryName(<String>['core']), createCoreComponents())
+    ..registerFunctions(createCoreFunctions())
+    ..update(_scope, parseLibraryFile(widget.template));
+
+  late final MiniAppRunner _runner = MiniAppRunner(
+    createProcessor: () => MessageProcessor<ComponentApi>(
+      catalogs: <Catalog<ComponentApi>>[loadCatalog(widget.schema)],
+    ),
+    coldBoot: widget.coldBoot,
+    createTransport: widget.createTransport,
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    _runner.onChanged.addListener(_onChanged);
+    _runner.start();
+  }
+
+  @override
+  void dispose() {
+    _runner.onChanged.removeListener(_onChanged);
+    _runner.dispose();
+    super.dispose();
+  }
+
+  void _onChanged(MiniAppRunner _) {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final SessionFault? fault = _runner.fault;
+    final SurfaceModel<ComponentApi>? surface = _runner.surface;
+    // The measure/report wrapper is the sample pane's own (`_ReportHeight`),
+    // not a second copy: two render objects doing the same job is two places
+    // to fix the resize feedback loop, and the copy had already dropped the
+    // convergence re-check.
+    return _ReportHeight(
+      onHeight: widget.onContentHeight,
+      child: fault != null || surface == null
+          ? _StoppedCard(
+              fault: fault ??
+                  const SessionFault(
+                    SessionFaultCode.malformed,
+                    'The mini-app has no surface to render.',
+                  ),
+              onRestart: _runner.restart,
+            )
+          : A2uiToRfwAdapter(
+              id: 'root',
+              surface: surface,
+              runtime: _runtime,
+              scope: _scope,
+            ),
+    );
+  }
+}
+
+/// The host-owned failure state — the *chrome*, not the template, because a
+/// template cannot know its driver is gone.
+///
+/// A surface whose driver is dead must say so rather than impersonate a working
+/// app: tier-1 and tier-2 interactions could technically keep working, but
+/// letting them invites the user to build up work that tier 3 will never
+/// persist. Freeze beats betray.
+class _StoppedCard extends StatelessWidget {
+  const _StoppedCard({required this.fault, required this.onRestart});
+
+  final SessionFault fault;
+  final VoidCallback onRestart;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.errorContainer,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Text('This mini-app stopped.',
+              style: theme.textTheme.titleMedium
+                  ?.copyWith(color: theme.colorScheme.onErrorContainer)),
+          const SizedBox(height: 8),
+          Text('${fault.code.name}: ${fault.message}',
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(color: theme.colorScheme.onErrorContainer)),
+          const SizedBox(height: 16),
+          FilledButton(onPressed: onRestart, child: const Text('Start over')),
+        ],
+      ),
+    );
   }
 }

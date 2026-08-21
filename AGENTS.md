@@ -20,6 +20,11 @@ It is a Dart [pub workspace](https://dart.dev/tools/pub/workspaces):
   `a2ui_core` (the A2UI protocol/data/binding package): an `A2uiComponentBinding`
   surfaces each component's resolved props, which the adapters render as RFW
   template args.
+- `packages/a2ui_craft_logic` — **business logic for mini-apps**: the session
+  protocol a driver speaks to the surface it drives, the host-side session, and
+  the reference runners (in-process Dart, web worker). Layered entirely on
+  public API, so a host that never loads a driver never depends on it. Design:
+  `research/logic/BUSINESS_LOGIC.md`.
 - `packages/a2ui_craft_flutter` — adapter that renders templates as Flutter widgets.
 - `packages/a2ui_craft_jaspr` — adapter that renders templates as HTML DOM (Jaspr).
 - `packages/a2ui_craft_examples` — shared, framework-neutral sample definitions

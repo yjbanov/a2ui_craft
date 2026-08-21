@@ -34,12 +34,18 @@ dart format packages/a2ui_craft/lib/src/default_theme.g.dart
 git diff --exit-code packages/a2ui_craft/lib/src/default_theme.g.dart \
   || { echo "default_theme.g.dart is stale — run tool/gen_default_theme.dart and commit."; exit 1; }
 
+step "Check the generated JS driver SDK is in sync with js/driver.js"
+dart run packages/a2ui_craft_logic/tool/gen_driver_sdk.dart
+dart format packages/a2ui_craft_logic/lib/src/driver_sdk.g.dart
+git diff --exit-code packages/a2ui_craft_logic/lib/src/driver_sdk.g.dart \
+  || { echo "driver_sdk.g.dart is stale — run tool/gen_driver_sdk.dart and commit."; exit 1; }
+
 step "Check per-package LICENSE files match the root LICENSE"
 # pub.dev requires a LICENSE file inside each published package; the workspace
 # root's LICENSE does not propagate. Keep them byte-identical so a stray edit to
 # one can't ship a divergent license. Covers only the published packages (those
 # without `publish_to: none`).
-for pkg in a2ui_craft a2ui_craft_bridge a2ui_craft_flutter a2ui_craft_jaspr; do
+for pkg in a2ui_craft a2ui_craft_bridge a2ui_craft_logic a2ui_craft_flutter a2ui_craft_jaspr; do
   cmp -s LICENSE "packages/$pkg/LICENSE" \
     || { echo "packages/$pkg/LICENSE differs from root LICENSE — run 'cp LICENSE packages/$pkg/LICENSE'."; exit 1; }
 done
@@ -49,6 +55,9 @@ step "Analyze: a2ui_craft (core)"
 
 step "Analyze: a2ui_craft_bridge (A2UI integration)"
 (cd packages/a2ui_craft_bridge && dart analyze)
+
+step "Analyze: a2ui_craft_logic (mini-app business logic)"
+(cd packages/a2ui_craft_logic && dart analyze)
 
 step "Analyze: a2ui_craft_testing"
 (cd packages/a2ui_craft_testing && dart analyze)
@@ -92,11 +101,22 @@ step "Test: craft (CLI scaffolding)"
 step "Test: a2ui_craft_bridge (A2UI translation)"
 (cd packages/a2ui_craft_bridge && dart test)
 
+step "Test: a2ui_craft_logic (driver protocol + session)"
+(cd packages/a2ui_craft_logic && dart test)
+
+step "Test: a2ui_craft_logic (worker runner, headless Chrome)"
+(cd packages/a2ui_craft_logic && dart test -p chrome test/worker_runner_test.dart)
+
 step "Test: a2ui_craft_jaspr (parity)"
 (cd packages/a2ui_craft_jaspr && dart test)
 
 step "Test: a2ui_craft_jaspr (Flex geometry, headless Chrome)"
 (cd packages/a2ui_craft_jaspr && dart test -p chrome test/flex_geometry_test.dart test/control_styles_test.dart test/sample_view_binding_browser_test.dart test/craft_marker_test.dart)
+
+step "Test: a2ui_craft_jaspr (mini-app conformance vs. a JavaScript worker)"
+# The language-neutrality proof: the same conformance cases the in-process Dart
+# runner passes, re-run unmodified against drivers written in JavaScript.
+(cd packages/a2ui_craft_jaspr && dart test -p chrome test/mini_app_worker_conformance_test.dart)
 
 step "Test: a2ui_craft_jaspr/example (samples)"
 (cd packages/a2ui_craft_jaspr/example && dart test)

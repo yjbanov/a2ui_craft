@@ -298,6 +298,15 @@ to a template as **args** — not data references. Consequences:
   of resolved props) and `a2uiArgsFromProps` (props → template args, child
   injection, callback wiring).
 
+- **Logic (`a2ui_craft_logic`)** is the business-logic layer: the driver
+  session protocol (envelope, state machine, budgets, faults), the host-side
+  `DriverSession`/`MiniAppRunner`, the in-process and web-worker runners, the
+  JavaScript driver SDK, and the `logic` manifest slot. It depends **only on
+  `a2ui_core`** — never on `a2ui_craft`, the bridge, or an adapter — because a
+  driver attaches to a *surface*, not to a template or a renderer; no engine
+  package knows drivers exist. (Design:
+  `research/logic/BUSINESS_LOGIC.md`.)
+
 - **`a2ui_core`** is consumed as a **git dependency** on `flutter/genui`
   (`packages/a2ui_core`) so we track latest and others can run the repo locally;
   it will be pinned to a published version once the team cuts a release. It is
@@ -1308,8 +1317,16 @@ project** is a self-contained, *ephemerally loadable* bundle of everything a
 template author ships — catalog templates (`.craft`), their A2UI bindings
 (component schema), a theme (§9.5), and config (a small manifest: name, catalog
 id, theme reference, mode wiring). Being ephemeral, it contains **data only** —
-no code; ephemeral business logic (ROADMAP.md's sandboxed-logic layer) gets a
-manifest slot *later*, empty for now.
+no code.
+
+The manifest is an **open map**: this engine reads the keys it owns and ignores
+every other, so a layer built on top of the templating system can claim keys of
+its own without the engine knowing they exist. Ephemeral business logic
+(ROADMAP.md's sandboxed-logic layer) claims `logic`, and what that key means is
+that layer's business — see `research/logic/BUSINESS_LOGIC.md`. Nothing about
+it reaches the renderer: whatever drives a surface sits on the far side of the
+A2UI Transport connection, and from here an agent, a recorded message stream,
+and an author's program are indistinguishable.
 
 A project is **agent-optional**, which splits its A2UI messages into two roles:
 
@@ -1448,6 +1465,7 @@ a2ui-craft/
 └── packages/
     ├── a2ui_craft/               # core: vendored RFW formats, tokens/theme, functions
     ├── a2ui_craft_bridge/        # A2UI → engine, on a2ui_core (framework-neutral)
+    ├── a2ui_craft_logic/         # business-logic drivers: session protocol, runners, JS SDK
     ├── a2ui_craft_testing/       # shared conformance + geometry suites (not published)
     ├── a2ui_craft_examples/      # sample projects, SampleSpec, CraftProjectLoader
     ├── a2ui_craft_flutter/       # Flutter adapter (runtime + core primitives + example)

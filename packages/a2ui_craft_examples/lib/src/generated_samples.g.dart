@@ -4742,3 +4742,420 @@ SampleSpec incrementalDashboardSpec(String framework) =>
     rawSamples[47].toSpec(framework);
 SampleSpec formValidatorSpec(String framework) =>
     rawSamples[48].toSpec(framework);
+
+/// One mini-app's project data: the same three files a sample
+/// has, plus the manifest `logic` slot naming the driver that
+/// answers its events.
+class RawMiniApp {
+  const RawMiniApp({
+    required this.id,
+    required this.label,
+    required this.template,
+    required this.schema,
+    required this.messages,
+    required this.logic,
+    required this.driverJs,
+  });
+
+  final String id;
+  final String label;
+  final String template;
+  final String schema;
+
+  /// The recorded Transport stream that cold-boots the
+  /// surface before any driver connects.
+  final String messages;
+
+  /// The manifest's `logic` block, as JSON.
+  final String logic;
+
+  /// The JavaScript driver, as source — the portable half of
+  /// the mini-app, runnable in a worker on any host.
+  final String driverJs;
+
+  /// The renderable half of the project.
+  SampleSpec toSpec() => SampleSpec.fromData(
+        label: label,
+        template: template,
+        schemaJson: schema,
+        messagesJson: messages,
+      );
+}
+
+/// Every built-in mini-app.
+const List<RawMiniApp> rawMiniApps = <RawMiniApp>[
+  RawMiniApp(
+    id: 'cart',
+    label: 'Cart',
+    template: r'''
+import core;
+
+// The cart mini-app's catalog.
+//
+// Everything in this file is tier 1 (local widget state, never crosses the
+// wire) or tier 2 (pure derivation from bound data). Nothing here decides
+// anything: prices, quantities, stock limits, and the order itself are the
+// driver's business, because they must survive the surface.
+
+// One line of the cart.
+//
+// `open` is the tier-1 example: whether a row is expanded is nobody's business
+// but this surface's, so it lives in widget state and no driver ever hears
+// about it.
+widget CartRow { open: false } = Column(crossAxisAlignment: "stretch", gap: 2.0,
+  children: [
+    Row(gap: 8.0, crossAxisAlignment: "center", children: [
+      Expanded(child: Text(text: args.name)),
+      // Tier 2: the driver keeps money in cents (integers do not drift); the
+      // surface divides for display. Pure, local, no round trip.
+      //
+      // Whole dollars only: the standard function library has no
+      // number-to-string formatter, so there is no way to write "89.00" from
+      // 8900 in a template today. The shop prices in whole dollars to keep the
+      // demo honest about it.
+      Text(text: "$"),
+      Text(text: floor(value: divide(a: args.lineCents, b: 100))),
+    ]),
+    Row(gap: 8.0, crossAxisAlignment: "center", children: [
+      Text(text: "Qty", variant: "caption"),
+      SizedBox(
+        width: 72.0,
+        child: TextField(value: args.qty, onChanged: args.setQty),
+      ),
+      Button(onPressed: args.apply, child: Text(text: "Update")),
+      Button(onPressed: args.remove, child: Text(text: "Remove")),
+      Expanded(child: SizedBox()),
+      Button(
+        onPressed: set state.open = switch state.open {
+          true: false,
+          default: true,
+        },
+        child: Text(text: switch state.open {
+          true: "Hide",
+          default: "Details",
+        }),
+      ),
+    ]),
+    Text(
+      text: switch state.open { true: args.detail, default: "" },
+      variant: "caption",
+    ),
+  ]);
+
+widget CartView = Card(child: Column(crossAxisAlignment: "stretch", gap: 12.0,
+  children: [
+    Heading(text: args.title, level: 2),
+    Column(crossAxisAlignment: "stretch", gap: 8.0, children: args.rows),
+    Divider(),
+    Row(mainAxisAlignment: "spaceBetween", crossAxisAlignment: "center",
+      children: [
+        Text(text: "Total"),
+        Row(gap: 1.0, children: [
+          Text(text: "$"),
+          Text(text: floor(value: divide(a: args.totalCents, b: 100))),
+        ]),
+      ]),
+    // Tier 2 again: a threshold the surface can evaluate for itself. Asking a
+    // driver would be a round trip to learn something already on screen.
+    Text(
+      text: switch greaterThanOrEqual(a: args.totalCents, b: 5000) {
+        true: "Free shipping unlocked",
+        default: "Spend $50 for free shipping",
+      },
+      variant: "caption",
+    ),
+    Text(text: args.status, variant: "caption"),
+    Row(gap: 8.0, children: [
+      Button(onPressed: args.add, child: Text(text: args.addLabel)),
+      Button(onPressed: args.checkout, child: Text(text: args.checkoutLabel)),
+    ]),
+  ]));
+''',
+    schema: r'''
+{
+  "catalogId": "cart",
+  "components": {
+    "CartView": {
+      "properties": {
+        "title": { "$ref": "DynamicString" },
+        "rows": { "$ref": "ChildList" },
+        "totalCents": { "$ref": "DataBinding" },
+        "status": { "$ref": "DynamicString" },
+        "addLabel": { "$ref": "DynamicString" },
+        "add": { "$ref": "Action" },
+        "checkoutLabel": { "$ref": "DynamicString" },
+        "checkout": { "$ref": "Action" }
+      },
+      "required": ["title", "rows"]
+    },
+    "CartRow": {
+      "properties": {
+        "name": { "$ref": "DynamicString" },
+        "detail": { "$ref": "DynamicString" },
+        "qty": { "$ref": "DynamicString" },
+        "lineCents": { "$ref": "DataBinding" },
+        "apply": { "$ref": "Action" },
+        "remove": { "$ref": "Action" }
+      },
+      "required": ["name"]
+    }
+  },
+  "actions": [
+    {
+      "name": "addItem",
+      "description": "Adds the next available product to the cart. Takes no arguments; the mini-app decides what is next."
+    },
+    {
+      "name": "checkout",
+      "description": "Places the order for everything currently in the cart, and empties it."
+    }
+  ]
+}
+''',
+    messages: r'''
+[
+  {
+    "version": "v0.9",
+    "createSurface": {
+      "surfaceId": "cart",
+      "catalogId": "cart",
+      "sendDataModel": false
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateDataModel": {
+      "surfaceId": "cart",
+      "path": "/cart",
+      "value": {
+        "items": [],
+        "totalCents": 0,
+        "status": "Connecting to the cart…"
+      }
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateComponents": {
+      "surfaceId": "cart",
+      "components": [
+        {
+          "id": "root",
+          "component": "CartView",
+          "title": "Your cart",
+          "rows": { "path": "/cart/items", "componentId": "row" },
+          "totalCents": { "path": "/cart/totalCents" },
+          "status": { "path": "/cart/status" },
+          "addLabel": "Add an item",
+          "add": { "event": { "name": "addItem" } },
+          "checkoutLabel": "Check out",
+          "checkout": { "event": { "name": "checkout" } }
+        },
+        {
+          "id": "row",
+          "component": "CartRow",
+          "name": { "path": "name" },
+          "detail": { "path": "detail" },
+          "qty": { "path": "qty" },
+          "lineCents": { "path": "lineCents" },
+          "apply": {
+            "event": {
+              "name": "setQuantity",
+              "context": { "sku": { "path": "sku" }, "qty": { "path": "qty" } }
+            }
+          },
+          "remove": {
+            "event": {
+              "name": "removeItem",
+              "context": { "sku": { "path": "sku" } }
+            }
+          }
+        }
+      ]
+    }
+  }
+]
+''',
+    logic: r'''
+{
+  "entry": "cart.js",
+  "language": "javascript",
+  "capabilities": []
+}
+''',
+    driverJs: r'''
+// Copyright 2013 The Flutter Authors
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+//
+// The cart mini-app's business logic, in JavaScript — the same state machine as
+// `lib/src/mini_apps/cart_driver.dart`, written against the same protocol.
+//
+// This file is the whole point of the exercise. The template does not know it
+// exists, the engine is written in a different language, and the conformance
+// script that drives the Dart version drives this one unchanged. If the two
+// ever diverge in behaviour, the suite says so.
+
+var inventory = [
+  {
+    sku: 'kbd',
+    name: 'Mechanical keyboard',
+    detail: 'Tactile switches, no backlight, two-year warranty.',
+    priceCents: 8900,
+    stock: 3,
+  },
+  {
+    sku: 'mug',
+    name: 'Enamel mug',
+    detail: 'Holds 350ml. Dishwasher safe, microwave regrettably not.',
+    priceCents: 1500,
+    stock: 12,
+  },
+  {
+    sku: 'cbl',
+    name: 'Braided USB-C cable',
+    detail: 'Two metres, 100W, and it survives being wound round a laptop.',
+    priceCents: 2200,
+    stock: 2,
+  },
+];
+
+var quantities = {};
+
+function productFor(sku) {
+  for (var i = 0; i < inventory.length; i++) {
+    if (inventory[i].sku === sku) return inventory[i];
+  }
+  return null;
+}
+
+function held(sku) {
+  return Object.prototype.hasOwnProperty.call(quantities, sku);
+}
+
+function totalCents() {
+  var total = 0;
+  for (var i = 0; i < inventory.length; i++) {
+    var p = inventory[i];
+    if (held(p.sku)) total += p.priceCents * quantities[p.sku];
+  }
+  return total;
+}
+
+function dollars(cents) {
+  return '$' + Math.floor(cents / 100) + '.' +
+      String(cents % 100).padStart(2, '0');
+}
+
+// A quantity is digits and nothing else — the same regex the Dart port
+// guards with, because the native parsers disagree: parseInt reads prefixes
+// ('2x' → 2) and Dart's int parser reads 0x hex ('0x3' → 3 where parseInt
+// yields 0 — one cart deletes the row, the other stocks three). The regex is
+// the shared contract; the parse behind it then cannot diverge.
+function asInt(value) {
+  if (typeof value === 'number') return Math.round(value);
+  if (typeof value === 'string' && /^[+-]?[0-9]+$/.test(value.trim())) {
+    return parseInt(value.trim(), 10);
+  }
+  return null;
+}
+
+// Writes the whole cart. Every write in one handler lands together, so the
+// rows, the total, and the status line can never disagree on screen.
+function publish(ctx, status) {
+  var items = [];
+  for (var i = 0; i < inventory.length; i++) {
+    var p = inventory[i];
+    if (!held(p.sku)) continue;
+    items.push({
+      sku: p.sku,
+      name: p.name,
+      detail: p.detail,
+      // A string, because the quantity field is a text field and its optimistic
+      // echo writes back a string.
+      qty: String(quantities[p.sku]),
+      lineCents: p.priceCents * quantities[p.sku],
+    });
+  }
+  ctx.write('/cart/items', items);
+  ctx.write('/cart/totalCents', totalCents());
+  ctx.write('/cart/status', status);
+}
+
+a2uiDriver({
+  onInit: function (ctx) {
+    publish(ctx, 'Cart ready. Add something.');
+  },
+  handlers: {
+    addItem: function (ctx, event) {
+      var next = null;
+      for (var i = 0; i < inventory.length && next === null; i++) {
+        if (!held(inventory[i].sku)) next = inventory[i];
+      }
+      if (next === null) {
+        publish(ctx, 'That is everything the shop has.');
+        return;
+      }
+      quantities[next.sku] = 1;
+      publish(ctx, 'Added ' + next.name + '.');
+    },
+
+    removeItem: function (ctx, event) {
+      var sku = event.get('sku');
+      if (!sku || !held(sku)) {
+        publish(ctx, 'Nothing to remove.');
+        return;
+      }
+      var product = productFor(sku);
+      delete quantities[sku];
+      publish(ctx, 'Removed ' + (product ? product.name : sku) + '.');
+    },
+
+    // The authoritative correction behind an optimistic echo: what arrives is
+    // the value already on screen, and what leaves is the value the shop will
+    // actually honour.
+    setQuantity: function (ctx, event) {
+      var sku = event.get('sku');
+      var product = sku ? productFor(sku) : null;
+      if (!product) {
+        publish(ctx, 'Unknown item.');
+        return;
+      }
+      var parsed = asInt(event.get('qty'));
+      var requested = parsed === null
+          ? (held(sku) ? quantities[sku] : 1)
+          : parsed;
+      var allowed = Math.min(Math.max(requested, 0), product.stock);
+      if (allowed === 0) {
+        delete quantities[sku];
+        publish(ctx, 'Removed ' + product.name + '.');
+        return;
+      }
+      quantities[sku] = allowed;
+      publish(
+          ctx,
+          allowed === requested
+              ? product.name + ': ' + allowed + '.'
+              : 'Only ' + allowed + ' ' + product.name + ' in stock.');
+    },
+
+    checkout: function (ctx, event) {
+      var skus = Object.keys(quantities);
+      if (skus.length === 0) {
+        publish(ctx, 'The cart is empty.');
+        return;
+      }
+      var total = totalCents();
+      var units = 0;
+      for (var i = 0; i < skus.length; i++) units += quantities[skus[i]];
+      quantities = {};
+      publish(ctx, 'Ordered ' + units + ' item(s) for ' + dollars(total) + '.');
+    },
+  },
+});
+''',
+  ),
+];
+
+/// The `cart` mini-app.
+final RawMiniApp cartMiniApp = rawMiniApps[0];

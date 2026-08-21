@@ -30,6 +30,10 @@ const LibraryName a2uiDemoCatalogName = LibraryName(<String>['catalog']);
 /// The `a2ui_core` catalog id that A2UI `createSurface` messages reference.
 const String a2uiDemoCatalogId = 'demo';
 
+/// The library name a **project's own** template is registered under when a
+/// case passes `templateSource` to `CraftTester.buildAdapter`.
+const LibraryName projectCatalogName = LibraryName(<String>['project']);
+
 /// The `a2ui_core` component schemas mirroring [a2uiDemoCatalogSource]. These
 /// drive `GenericBinder`'s behavior scraping (which prop is data-bound, an
 /// action, or a structural child list).
@@ -147,6 +151,15 @@ abstract interface class CraftTester {
 
   /// Processes pending frames after an out-of-band change (e.g. a [data] update).
   Future<void> pump();
+
+  /// Lets a driver session's channel turn, then flushes the resulting frames.
+  ///
+  /// Distinct from [pump] because a driver's answer is deliberately *not*
+  /// available within the turn that caused it: frames cross the event loop, not
+  /// the microtask queue, so that an in-process driver is no more prompt than
+  /// the sandboxed one it stands in for. Adapters implement this by letting
+  /// pending zero-length timers fire and pumping in between.
+  Future<void> settleDriver();
 
   /// Advances past any **in-flight implicit animation** so a settled endpoint
   /// can be read. Flutter pumps the animation to completion; Jaspr's transitions
@@ -279,6 +292,13 @@ abstract interface class CraftTester {
   /// component `key`.
   Future<void> activate(String key);
 
+  /// Activates the (single) button whose accessible name is [label].
+  ///
+  /// The sibling of [buttonCount], for surfaces where one A2UI component
+  /// renders several buttons — a real screen, in other words, where keying by
+  /// component id is not enough to say which control the user pressed.
+  Future<void> activateButton(String label);
+
   /// Toggles the (single) rendered checkbox, as a user click would.
   Future<void> toggleCheckbox();
 
@@ -334,7 +354,16 @@ abstract interface class CraftTester {
 
   /// Creates a framework-specific adapter for the A2UI component [id] in
   /// [surface], rendering it against the demo catalog ([a2uiDemoCatalogName]).
-  Object buildAdapter(SurfaceModel<ComponentApi> surface, String id);
+  ///
+  /// Pass [templateSource] to render against a **project's own** catalog
+  /// instead — the adapter registers it under [projectCatalogName] first. That
+  /// is how a shipped mini-app (its real `.craft`, its real `schema.json`) is
+  /// rendered by this suite rather than a fixture that resembles one.
+  Object buildAdapter(
+    SurfaceModel<ComponentApi> surface,
+    String id, {
+    String? templateSource,
+  });
 
   /// Renders a host component directly (e.g. an `A2uiToRfwAdapter`).
   Future<void> mountComponent(Object component);

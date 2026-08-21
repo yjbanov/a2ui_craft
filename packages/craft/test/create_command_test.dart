@@ -7,6 +7,7 @@ import 'dart:io';
 
 import 'package:a2ui_craft/a2ui_craft.dart';
 import 'package:a2ui_craft_examples/a2ui_craft_examples.dart';
+import 'package:a2ui_craft_logic/a2ui_craft_logic.dart';
 import 'package:args/command_runner.dart';
 import 'package:craft/src/create_command.dart';
 import 'package:path/path.dart' as p;
@@ -77,6 +78,64 @@ void main() {
       );
       expect(scenario.messages, isNotEmpty, reason: '${entry.key} is empty');
     }
+  });
+
+  test('--logic scaffolds a mini-app that declares its own driver', () async {
+    final int code =
+        await _run(<String>['create', 'my_app', '--logic', '-o', tmp.path]);
+    expect(code, 0);
+    final String dir = p.join(tmp.path, 'my_app');
+    String read(String f) => File(p.join(dir, f)).readAsStringSync();
+
+    for (final String f in const <String>[
+      'manifest.json',
+      'template.craft',
+      'schema.json',
+      'app.json',
+      'logic.js',
+      'firebase.json',
+      'README.md',
+    ]) {
+      expect(File(p.join(dir, f)).existsSync(), isTrue, reason: '$f missing');
+    }
+
+    // The scaffold has to be loadable by the parser that will actually read
+    // it, not merely look right.
+    final LogicManifest logic = LogicManifest.parse(read('manifest.json'))!;
+    expect(logic.language, DriverLanguage.javascript);
+    expect(logic.entry, 'logic.js');
+    logic.requireSupported(const HostLogicSupport(
+      languages: <DriverLanguage>{DriverLanguage.javascript},
+    ));
+
+    // The template and its cold boot render as an ordinary project would.
+    final SampleSpec spec = SampleSpec.fromData(
+      label: 'My App',
+      template: read('template.craft'),
+      schemaJson: read('schema.json'),
+      messagesJson: read('app.json'),
+    );
+    expect(spec.messages, isNotEmpty);
+    expect(parseLibraryFile(read('template.craft')).widgets, isNotEmpty);
+
+    // The driver answers exactly the action the schema advertises to an agent.
+    final InferenceCatalog catalog = InferenceCatalog.parse(
+      jsonDecode(read('schema.json')) as Map<String, Object?>,
+    );
+    expect(catalog.actionNames, <String>{'reserve'});
+    for (final String action in catalog.actionNames) {
+      expect(read('logic.js'), contains('$action:'),
+          reason: 'the scaffolded driver must implement what it advertises');
+    }
+
+    // A counter project is not a mini-app: no logic slot, no driver.
+    expect(await _run(<String>['create', 'plain', '-o', tmp.path]), 0);
+    expect(
+      LogicManifest.parse(
+        File(p.join(tmp.path, 'plain', 'manifest.json')).readAsStringSync(),
+      ),
+      isNull,
+    );
   });
 
   test('refuses a non-empty target without --force', () async {

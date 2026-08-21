@@ -13,7 +13,7 @@ description: >-
 
 # Publishing A2UI Craft to pub.dev
 
-The workspace has **seven** member packages but only **four are public**. The
+The workspace has **eight** member packages but only **five are public**. The
 rest carry `publish_to: none` and must never be published.
 
 | Public (publish) | Private (`publish_to: none`) |
@@ -22,6 +22,13 @@ rest carry `publish_to: none` and must never be published.
 | `a2ui_craft_bridge` | `a2ui_craft_examples` |
 | `a2ui_craft_flutter` | `craft` (CLI) |
 | `a2ui_craft_jaspr` | `site`, both `example`s, `tool/testing` |
+| `a2ui_craft_logic` | |
+
+**`a2ui_craft_logic` is deliberately independent of the other four**: it
+depends only on `a2ui_core` (never on `a2ui_craft` or an adapter), so it slots
+anywhere in the publish order after nothing at all — but it *does* carry the
+`a2ui_core` prerelease coupling (gotcha #1) and is pinned by version from
+`site` and `a2ui_craft_testing` (gotcha #3).
 
 **`craft` (CLI) is private for two reasons**, not just convenience: the name
 `craft` is already taken on pub.dev by an unrelated package (so publishing needs
@@ -31,8 +38,9 @@ both. Its runtime deps are only `args` + `path`, so it has no `a2ui_core`
 prerelease coupling.
 
 **Dependency order (publish in this order):** `a2ui_craft` → `a2ui_craft_bridge`
-→ `a2ui_craft_flutter` / `a2ui_craft_jaspr`. A package can't be published until
-the sibling versions it depends on already exist on pub.dev. `melos publish`
+→ `a2ui_craft_flutter` / `a2ui_craft_jaspr`; `a2ui_craft_logic` depends on no
+sibling and can go at any point. A package can't be published until the
+sibling versions it depends on already exist on pub.dev. `melos publish`
 computes this order automatically.
 
 ## Workspace-specific gotchas (get these wrong and it won't resolve or publish)
@@ -52,12 +60,12 @@ computes this order automatically.
    stable release AND every member widens its constraint.
 
 3. **Version bumps must stay coherent across the WHOLE workspace, not just the
-   four public packages.** The unpublished members (`site`, both `example`s,
+   five public packages.** The unpublished members (`site`, both `example`s,
    `a2ui_craft_testing`) pin the public packages by version. If you bump
    `a2ui_craft` to `X` but leave `site`'s `a2ui_craft: ^old` behind, `pub get`
    fails with "version solving failed". After any bump, grep and fix every pin:
    ```
-   grep -rn -E 'a2ui_craft(_bridge|_jaspr|_flutter)?:\s*\^' --include=pubspec.yaml packages site
+   grep -rn -E 'a2ui_craft(_bridge|_jaspr|_flutter|_logic)?:\s*\^' --include=pubspec.yaml packages site
    ```
    Do NOT blanket-sed `a2ui_craft*` — that also rewrites `a2ui_craft_examples`
    and `a2ui_craft_testing`, which are versioned independently and stay put.
@@ -69,7 +77,7 @@ computes this order automatically.
 
 ## Per-package hygiene pub.dev requires
 
-Each of the four public packages needs, in its own directory:
+Each of the five public packages needs, in its own directory:
 
 - **`LICENSE`** — pub.dev requires it *inside the package*; the workspace root's
   LICENSE does NOT propagate (neither pub workspaces nor melos fan it out). It's
@@ -99,7 +107,7 @@ hosted on pub.dev.
    If it doesn't build against hosted, you can't publish yet — wait for a newer
    `a2ui_core` release.
 
-2. **Bump versions** (all four together; keep them in lockstep for a coordinated
+2. **Bump versions** (all five together; keep them in lockstep for a coordinated
    release). Update each public `pubspec.yaml` `version:`, the sibling
    constraints (`^<new>` in the packages that depend on them), and every
    unpublished-member pin (gotcha #3). `dart run melos version` can drive this;
@@ -117,6 +125,7 @@ hosted on pub.dev.
    (cd packages/a2ui_craft_bridge && dart pub publish --dry-run)
    (cd packages/a2ui_craft_jaspr  && dart pub publish --dry-run)
    (cd packages/a2ui_craft_flutter && flutter pub publish --dry-run)
+   (cd packages/a2ui_craft_logic  && dart pub publish --dry-run)
    ```
    Expected non-blocking noise: an "uncommitted files" warning (publish from a
    clean tree instead) and a hint that `a2ui_core` is overridden in the root
@@ -127,7 +136,7 @@ hosted on pub.dev.
 
 7. **Publish, in dependency order.** `melos publish` orchestrates it:
    ```
-   dart run melos publish              # dry-run of all four, in order
+   dart run melos publish              # dry-run of all five, in order
    dart run melos publish --no-dry-run # the real thing (needs pub.dev auth + TTY)
    ```
    The real publish requires interactive confirmation and pub.dev credentials —

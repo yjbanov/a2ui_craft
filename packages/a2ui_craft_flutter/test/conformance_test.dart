@@ -84,12 +84,21 @@ class _FlutterCraftTester implements CraftTester {
       MaterialApp(home: Scaffold(body: Center(child: child)));
 
   @override
-  Object buildAdapter(SurfaceModel<ComponentApi> surface, String id) {
+  Object buildAdapter(
+    SurfaceModel<ComponentApi> surface,
+    String id, {
+    String? templateSource,
+  }) {
+    LibraryName scope = a2uiDemoCatalogName;
+    if (templateSource != null) {
+      scope = projectCatalogName;
+      _runtime.update(scope, parseLibraryFile(templateSource));
+    }
     return A2uiToRfwAdapter(
       id: id,
       surface: surface,
       runtime: _runtime,
-      scope: a2uiDemoCatalogName,
+      scope: scope,
     );
   }
 
@@ -100,6 +109,16 @@ class _FlutterCraftTester implements CraftTester {
 
   @override
   Future<void> pump() => _tester.pump();
+
+  @override
+  Future<void> settleDriver() async {
+    // The test binding runs in fake async, so elapsing zero time is what fires
+    // the session's zero-length timers; each pump also flushes microtasks and
+    // rebuilds whatever the resulting data writes invalidated.
+    for (var i = 0; i < 8; i++) {
+      await _tester.pump(Duration.zero);
+    }
+  }
 
   @override
   Future<void> settle() => _tester.pumpAndSettle();
@@ -330,6 +349,14 @@ class _FlutterCraftTester implements CraftTester {
   }
 
   @override
+  Future<void> activateButton(String label) async {
+    // Tapping the label hits the button's own gesture region; the label is
+    // what a user aims at too.
+    await _tester.tap(find.text(label));
+    await _tester.pump();
+  }
+
+  @override
   Future<void> toggleCheckbox() async {
     await _tester.tap(find.byType(Checkbox));
     await _tester.pump();
@@ -409,4 +436,5 @@ class _FlutterConformanceDriver implements CraftConformanceDriver {
 void main() {
   runCoreComponentConformance(_FlutterConformanceDriver());
   runA2uiConformance(_FlutterConformanceDriver());
+  runDriverConformance(_FlutterConformanceDriver());
 }

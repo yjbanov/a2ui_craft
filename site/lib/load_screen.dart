@@ -2,9 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:convert';
+
 import 'package:a2ui_core/a2ui_core.dart';
 import 'package:a2ui_craft_examples/a2ui_craft_examples.dart';
 import 'package:a2ui_craft_jaspr/a2ui_craft_jaspr.dart';
+import 'package:a2ui_craft_logic/a2ui_craft_logic.dart';
+import 'package:a2ui_craft_logic/web.dart';
 import 'package:jaspr/dom.dart';
 import 'package:jaspr/jaspr.dart';
 import 'package:jaspr_flutter_embed/jaspr_flutter_embed.dart';
@@ -12,6 +16,7 @@ import 'package:jaspr_router/jaspr_router.dart';
 
 import 'flutter_host.dart';
 import 'icons.dart';
+import 'mini_app_screen.dart';
 import 'theme_mode.dart';
 
 /// The "URL bar" screen: type the base URL of a **deployed** A2UI Craft project
@@ -28,7 +33,14 @@ class LoadScreen extends StatefulComponent {
 }
 
 class _LoadScreenState extends State<LoadScreen> {
-  final CraftProjectLoader _loader = CraftProjectLoader();
+  // This host runs JavaScript drivers (in a worker); a fetched project that
+  // ships one is loaded driver and all, and one this host cannot run is
+  // refused with a reason instead of rendered as inert chrome.
+  final CraftProjectLoader _loader = CraftProjectLoader(
+    logicSupport: const HostLogicSupport(
+      languages: <DriverLanguage>{DriverLanguage.javascript},
+    ),
+  );
 
   void Function()? _unsubscribeTheme;
 
@@ -239,7 +251,10 @@ class _LoadScreenState extends State<LoadScreen> {
         _toggle('Flutter'),
         if (project.manifest.theme != null)
           _modePicker(project.manifest.theme!),
-        if (project.tests.isNotEmpty) _scenarioPicker(project),
+        // Scenarios replay canned message streams with no driver attached, so
+        // a driver-backed project renders its live bootstrap only.
+        if (project.tests.isNotEmpty && project.manifest.logic == null)
+          _scenarioPicker(project),
       ],
     );
   }
@@ -321,8 +336,38 @@ class _LoadScreenState extends State<LoadScreen> {
     );
   }
 
+  /// The fetched driver source, when the project ships logic this host runs.
+  String? get _driverJs => _project?.driverJs;
+
+  /// The project's bootstrap, freshly decoded per boot.
+  ///
+  /// Never hand a runner the same message instances twice: the data model
+  /// adopts the value objects a message carries, and the driver's writes then
+  /// mutate them — a second pane (or a restart) booting from the shared
+  /// instances would start from the first session's leftovers instead of the
+  /// recorded stream.
+  List<A2uiMessage> _freshBoot() => <A2uiMessage>[
+        for (final A2uiMessage m in _project!.spec.messages)
+          A2uiMessage.fromJson(
+            jsonDecode(jsonEncode(m.toJson())) as Map<String, dynamic>,
+          ),
+      ];
+
   Component _jasprView() {
     final LoadedProject project = _project!;
+    final String? driverJs = _driverJs;
+    if (driverJs != null) {
+      // A driver-backed project: the same pane the gallery's mini-apps use,
+      // running the *fetched* file in a worker — the loop the scaffolded
+      // README promises ("point a host at your deployed URL").
+      return JasprMiniAppPane(
+        key: _jasprKey,
+        template: project.spec.catalogSource,
+        schema: project.spec.catalogSchema,
+        coldBoot: _freshBoot,
+        createTransport: () => WorkerDriverRunner.fromSource(driverJs),
+      );
+    }
     return SampleView(
       key: _jasprKey,
       template: project.spec.catalogSource,
@@ -335,22 +380,40 @@ class _LoadScreenState extends State<LoadScreen> {
 
   Component _flutterView() {
     final LoadedProject project = _project!;
-    _flutterWidget ??= flutterSampleApp(
-      template: project.spec.catalogSource,
-      schema: project.spec.catalogSchema,
-      messages: _messages,
-      dark: SiteTheme.effectiveDark,
-      onAction: _onAction,
-      onContentHeight: (double height) {
-        // Reported from Flutter's frame callbacks — may land after this
-        // screen unmounted (embed teardown is async).
-        if (!mounted) return;
-        final double px = height.ceilToDouble();
-        if (_flutterHeight == px) return;
-        setState(() => _flutterHeight = px);
-      },
-      theme: _theme,
-    );
+    final String? driverJs = _driverJs;
+    _flutterWidget ??= driverJs != null
+        ? flutterMiniAppApp(
+            template: project.spec.catalogSource,
+            schema: project.spec.catalogSchema,
+            coldBoot: _freshBoot,
+            // The same fetched JavaScript as the Jaspr pane, in a worker:
+            // the embedded engine is a web host like any other, and the
+            // project said nothing about where its driver runs.
+            createTransport: () => WorkerDriverRunner.fromSource(driverJs),
+            dark: SiteTheme.effectiveDark,
+            onContentHeight: (double height) {
+              if (!mounted) return;
+              final double px = height.ceilToDouble();
+              if (_flutterHeight == px) return;
+              setState(() => _flutterHeight = px);
+            },
+          )
+        : flutterSampleApp(
+            template: project.spec.catalogSource,
+            schema: project.spec.catalogSchema,
+            messages: _messages,
+            dark: SiteTheme.effectiveDark,
+            onAction: _onAction,
+            onContentHeight: (double height) {
+              // Reported from Flutter's frame callbacks — may land after this
+              // screen unmounted (embed teardown is async).
+              if (!mounted) return;
+              final double px = height.ceilToDouble();
+              if (_flutterHeight == px) return;
+              setState(() => _flutterHeight = px);
+            },
+            theme: _theme,
+          );
     return FlutterEmbedView(
       key: ValueKey<String>('flutter-$_renderKey'),
       styles: Styles(raw: <String, String>{

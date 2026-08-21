@@ -12,7 +12,7 @@ queued. Topic design docs live in `research/<topic>/`; this file is only about
 | **B** | Template computation — logic blocks + user-defined functions | Needs design |
 | **C** | Agent semantics / annotations | `agent-semantics` worktree, design-only |
 | **D** | Animation Phase 1 | Planned & shovel-ready (`research/animation/PHASE_1_PLAN.md`) |
-| **E** | Business-logic drivers (mini-apps) | Designed & planned (`research/logic/`), shovel-ready. Phase 1's exit criterion is writing the Phase 2 plan for the reactive framework (`REACTIVE_FRAMEWORK.md` §9) |
+| **E** | Business-logic drivers (mini-apps) | ✅ Phase 1 built (`packages/a2ui_craft_logic`, the `cart` mini-app, both runners). Phase 2 (the reactive framework) is planned and shovel-ready: `research/logic/PHASE_2_PLAN.md`, which starts by **measuring** the L1 baseline before building anything |
 
 **Logic blocks and user-defined functions are one arc, not two threads.** A
 curly-braced block *is* the body syntax a user-defined function needs. One design

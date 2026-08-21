@@ -83,6 +83,11 @@ class _GalleryScreenState extends State<GalleryScreen> {
             // way a real host app would — proof it's a separate, ephemeral
             // artifact.
             _actionLink('/load', 'Load a project from a URL'),
+            // A mini-app is a project that ships its own business logic. It
+            // is not in the sample grid because it is not renderable without
+            // its driver — a mini-app loaded without one would be a screen of
+            // controls that answer nothing.
+            _actionLink('/mini-app/cart', 'Run a mini-app (logic included)'),
             // The specimen page: every core primitive rendered live under the
             // default theme.
             _actionLink('/primitives', 'Browse the core primitives'),

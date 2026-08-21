@@ -1,0 +1,82 @@
+import core;
+
+// The cart mini-app's catalog.
+//
+// Everything in this file is tier 1 (local widget state, never crosses the
+// wire) or tier 2 (pure derivation from bound data). Nothing here decides
+// anything: prices, quantities, stock limits, and the order itself are the
+// driver's business, because they must survive the surface.
+
+// One line of the cart.
+//
+// `open` is the tier-1 example: whether a row is expanded is nobody's business
+// but this surface's, so it lives in widget state and no driver ever hears
+// about it.
+widget CartRow { open: false } = Column(crossAxisAlignment: "stretch", gap: 2.0,
+  children: [
+    Row(gap: 8.0, crossAxisAlignment: "center", children: [
+      Expanded(child: Text(text: args.name)),
+      // Tier 2: the driver keeps money in cents (integers do not drift); the
+      // surface divides for display. Pure, local, no round trip.
+      //
+      // Whole dollars only: the standard function library has no
+      // number-to-string formatter, so there is no way to write "89.00" from
+      // 8900 in a template today. The shop prices in whole dollars to keep the
+      // demo honest about it.
+      Text(text: "$"),
+      Text(text: floor(value: divide(a: args.lineCents, b: 100))),
+    ]),
+    Row(gap: 8.0, crossAxisAlignment: "center", children: [
+      Text(text: "Qty", variant: "caption"),
+      SizedBox(
+        width: 72.0,
+        child: TextField(value: args.qty, onChanged: args.setQty),
+      ),
+      Button(onPressed: args.apply, child: Text(text: "Update")),
+      Button(onPressed: args.remove, child: Text(text: "Remove")),
+      Expanded(child: SizedBox()),
+      Button(
+        onPressed: set state.open = switch state.open {
+          true: false,
+          default: true,
+        },
+        child: Text(text: switch state.open {
+          true: "Hide",
+          default: "Details",
+        }),
+      ),
+    ]),
+    Text(
+      text: switch state.open { true: args.detail, default: "" },
+      variant: "caption",
+    ),
+  ]);
+
+widget CartView = Card(child: Column(crossAxisAlignment: "stretch", gap: 12.0,
+  children: [
+    Heading(text: args.title, level: 2),
+    Column(crossAxisAlignment: "stretch", gap: 8.0, children: args.rows),
+    Divider(),
+    Row(mainAxisAlignment: "spaceBetween", crossAxisAlignment: "center",
+      children: [
+        Text(text: "Total"),
+        Row(gap: 1.0, children: [
+          Text(text: "$"),
+          Text(text: floor(value: divide(a: args.totalCents, b: 100))),
+        ]),
+      ]),
+    // Tier 2 again: a threshold the surface can evaluate for itself. Asking a
+    // driver would be a round trip to learn something already on screen.
+    Text(
+      text: switch greaterThanOrEqual(a: args.totalCents, b: 5000) {
+        true: "Free shipping unlocked",
+        default: "Spend $50 for free shipping",
+      },
+      variant: "caption",
+    ),
+    Text(text: args.status, variant: "caption"),
+    Row(gap: 8.0, children: [
+      Button(onPressed: args.add, child: Text(text: args.addLabel)),
+      Button(onPressed: args.checkout, child: Text(text: args.checkoutLabel)),
+    ]),
+  ]));

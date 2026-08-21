@@ -320,7 +320,7 @@ abstract class ResolvedTokens {
 - §9.7 open questions largely **answered by the ecosystem**: dark mode =
   modifier-contexts + resolutionOrder; token vocabulary = *our* semantic contract
   layered on DTCG (the one bespoke bit).
-- The theming phasing (ROADMAP.md) gains a concrete artifact: **Phase 1 = a runtime Dart DTCG parser +
+- The theming phasing (HISTORY.md) gains a concrete artifact: **Phase 1 = a runtime Dart DTCG parser +
   resolver for the `color`/`dimension`/`fontFamily`/`fontWeight`/`number` subset**,
   plus the semantic contract and ambient role-defaults.
 

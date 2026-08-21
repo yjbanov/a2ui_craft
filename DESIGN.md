@@ -3,8 +3,9 @@
 > **Status:** active. This document is the source of truth for the project's
 > direction. Code and skills should defer to it; when reality and this document
 > disagree, fix one of them deliberately. This document describes the design as
-> it stands; implementation status and slice-by-slice plans live in
-> [ROADMAP.md](ROADMAP.md).
+> it stands. What is still open — and in what order — lives in
+> [ROADMAP.md](ROADMAP.md); what has already been built, and what building it
+> taught, lives in [HISTORY.md](HISTORY.md).
 
 **In one paragraph:** A2UI lets an agent drive real UI by composing a small,
 vetted catalog of components — but someone must implement that catalog, by
@@ -307,10 +308,13 @@ to a template as **args** — not data references. Consequences:
   package knows drivers exist. (Design:
   `research/logic/BUSINESS_LOGIC.md`.)
 
-- **`a2ui_core`** is consumed as a **git dependency** on `flutter/genui`
-  (`packages/a2ui_core`) so we track latest and others can run the repo locally;
-  it will be pinned to a published version once the team cuts a release. It is
-  pre-1.0, so some API churn is expected. Its dependencies are pure Dart
+- **`a2ui_core`** (from `flutter/genui`) is consumed as a **published
+  prerelease**, `^0.0.1-wip002`. Because a bare `any` will not match a
+  prerelease, the workspace root carries a `dependency_overrides` pinning the
+  whole workspace to it; that affects local resolution only, never the published
+  packages' own declared constraints. Both the override and the pin come out
+  once `a2ui_core` cuts a stable release. It is pre-1.0, so some API churn is
+  expected. Its dependencies are pure Dart
   (`collection`, `json_schema_builder`, `meta`, `preact_signals` — no Flutter),
   so it is Jaspr-compatible.
 
@@ -566,6 +570,23 @@ the same events.
 4. **The core component contract.** For any component in the shared core library
    (`Text`, `Row`, `Column`, `Button`, …), the *name*, its *argument names*, and
    its *observable behavior* are identical across adapters.
+5. **Value semantics — typing and formatting.** Two rules, both learned the hard
+   way:
+   - *Strict, never coercing.* A function that takes a number takes numbers
+     only; a string in a numeric position is a type error yielding null (an
+     absent result), never a silently parsed number. **Totality** — bad input
+     yields null rather than throwing — exists so that wrong-typed *untrusted
+     data* cannot crash the UI. It is not a license to guess at author intent,
+     and the two must not be confused: an author's type mistake deserves an
+     early, useful error (argument-schema validation in debug), not a JS-style
+     `"5" → 5`.
+   - *Value → string is canonical, not host-native.* Dart's own `toString`
+     differs across compile targets — `(4.0).toString()` is `"4.0"` on the VM
+     and `"4"` under dart2js, which rendered `divide(20, 5)` differently on
+     Flutter and Jaspr. Coercion to display form therefore lives **once**, in
+     the shared core, and pins the canonical shape (an integer-valued double
+     carries no trailing `.0` anywhere). Any value-to-text conversion an adapter
+     performs on its own is a divergence waiting to happen.
 
 ### MAY deviate (framework latitude)
 
@@ -760,6 +781,20 @@ cross-axis and hugs its main-axis by `auto`. The fix is to **not inherit either
 platform's defaults** — make sizing **explicit** through a shared dimension type.
 That single decision removes the largest source of silent divergence, and it is
 the seed of the type model below.
+
+**`hug` is per-axis, and the cross axis defers to the parent.** The obvious
+reading of "hug" — CSS `fit-content` on both axes — is wrong, and the two
+adapters disagreed visibly because of it. Flutter carries a bounded cross extent
+*down* through hug intermediaries, so a `fill` child (a `width: "fill"` row
+inside a `Box(width: 300)`) or a full-bleed divider raises the column to the
+available width; `fit-content` severs exactly that, collapsing to content so no
+greedy descendant can expand it. So a hugging flex keeps `fit-content` on its
+**main** axis and leaves the **cross** axis to `auto`, which fills a block parent
+yet still shrink-wraps when the flex is itself a flex *item* — which is what
+Flutter's constraint flow does. The general lesson generalizes past this case:
+where the two platforms differ, the shared model has to name the *constraint
+behavior* it wants, not borrow a keyword from either side that happens to look
+like it.
 
 #### Considered and rejected: Yoga as a shared runtime layout engine
 
@@ -1094,8 +1129,8 @@ data, and most of it turns out to be ephemeral-capable already:
    swaps tokens, not templates.
 3. **New render code / novel interaction behaviors** — a genuinely new painted
    widget, a custom gesture or animation. These **cannot** be ephemeral (same limit
-   as custom primitives; this is the "Later — ephemeral sandboxed logic" layer in
-   ROADMAP.md's two-layer plan).
+   as custom primitives; this is what the ephemeral **business-logic driver**
+   layer is for — `a2ui_craft_logic`, `research/logic/BUSINESS_LOGIC.md`).
 
 So the honest boundary: **ephemeral theming governs *appearance + composition*, not
 new rendering or behavior.** The browser analogy holds exactly — the engine
@@ -1322,7 +1357,7 @@ no code.
 The manifest is an **open map**: this engine reads the keys it owns and ignores
 every other, so a layer built on top of the templating system can claim keys of
 its own without the engine knowing they exist. Ephemeral business logic
-(ROADMAP.md's sandboxed-logic layer) claims `logic`, and what that key means is
+(`a2ui_craft_logic`) claims `logic`, and what that key means is
 that layer's business — see `research/logic/BUSINESS_LOGIC.md`. Nothing about
 it reaches the renderer: whatever drives a surface sits on the far side of the
 A2UI Transport connection, and from here an agent, a recorded message stream,
@@ -1450,7 +1485,8 @@ ephemeral surface) is on the table.
 ```
 a2ui-craft/
 ├── DESIGN.md                     # this document (source of truth)
-├── ROADMAP.md                    # status & slice-by-slice implementation plans
+├── ROADMAP.md                    # what is still open, and in what order
+├── HISTORY.md                    # what has been built, and what it taught
 ├── README.md
 ├── AGENTS.md                     # agent-agnostic guidance (build/test, pointers)
 ├── LICENSE                       # BSD-3-Clause (forked from RFW)

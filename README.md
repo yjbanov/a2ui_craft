@@ -54,8 +54,14 @@ framework" is a continuously tested invariant, not just a claim.
 
 ## Status
 
-The harness is in place: a Flutter-free core plus two working adapters proving
-the same template renders on Flutter and on the DOM, with a cross-framework
-behavioral conformance suite. A2UI integration and the cross-platform component
-library (**H2**) are both underway. See [`ROADMAP.md`](ROADMAP.md) for status
-and [`DESIGN.md` §6](DESIGN.md) for the A2UI rendering architecture.
+A Flutter-free core plus two working adapters — Flutter and Jaspr — prove the
+same template renders on both, held together by a conformance suite that asserts
+real geometry rather than structure. On top of that: A2UI integration, the
+cross-platform primitive library (**H2**), theming over W3C DTCG tokens,
+responsive size classes, motion, normalized controls, and **business-logic
+mini-apps** whose logic ships as data and runs in a sandbox — the same
+conformance suite passes against a Dart driver and a JavaScript one.
+
+See [`HISTORY.md`](HISTORY.md) for what has been built,
+[`ROADMAP.md`](ROADMAP.md) for what is open, and
+[`DESIGN.md` §6](DESIGN.md) for the A2UI rendering architecture.

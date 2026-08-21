@@ -29,3 +29,20 @@ surface with no agent), optional `tests.json` dev scenarios, a `manifest.json`,
 and a `firebase.json` (CORS + cache) so deploying is one command. It is
 hard-coded to the counter starter for now; more templates and an assemble/build
 step come later.
+
+### Mini-apps: `--logic`
+
+```sh
+craft create my_cart --logic
+```
+
+Scaffolds a project that ships its own **business logic** beside its UI: the
+same files plus a `logic.js` driver, and a `manifest.json` whose `logic` slot
+names the entry file and the language it is written in — never where to run it.
+Where the driver runs (a web worker, an iframe, a webview, an embedded engine)
+is the *host's* decision, which is what lets one published bundle work
+everywhere. A host that cannot run the named language refuses the project with a
+reason rather than rendering chrome nothing will answer.
+
+The driver speaks the A2UI Transport session protocol; see
+`package:a2ui_craft_logic` for the runners and the JavaScript driver SDK.

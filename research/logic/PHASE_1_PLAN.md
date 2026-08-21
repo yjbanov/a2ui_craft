@@ -204,8 +204,8 @@ sample tests stay green.
 
 ## Sequencing notes & risks
 
-- **The central architectural risk is per-adapter drift** (NEXT_THREADS
-  grounding #2). Mitigation is structural: the protocol, session, namespace
+- **The central architectural risk is per-adapter drift** (the
+  evaluation-duplicated-per-adapter hazard; see ROADMAP.md). Mitigation is structural: the protocol, session, namespace
   guardrails, budgets, and runners all live *once* in `a2ui_craft_logic`;
   the adapters contribute nothing at all. Nothing in slices 1–6 is written
   twice.

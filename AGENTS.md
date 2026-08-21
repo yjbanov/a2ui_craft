@@ -4,6 +4,9 @@ Guidance for AI coding agents working in this repository. Humans should read
 [`README.md`](README.md) and [`DESIGN.md`](DESIGN.md) — agents should read those
 too. `DESIGN.md` is the **source of truth** for direction and decisions; when
 code and `DESIGN.md` disagree, fix one of them deliberately.
+[`ROADMAP.md`](ROADMAP.md) holds what is still open and in what order;
+[`HISTORY.md`](HISTORY.md) holds what has already been built and what building it
+taught — check it before proposing something that has already been decided.
 
 ## Project overview
 
@@ -29,7 +32,12 @@ It is a Dart [pub workspace](https://dart.dev/tools/pub/workspaces):
 - `packages/a2ui_craft_jaspr` — adapter that renders templates as HTML DOM (Jaspr).
 - `packages/a2ui_craft_examples` — shared, framework-neutral sample definitions
   (RFW template + JSON-Schema catalog + A2UI messages) the Flutter and Jaspr
-  example galleries both render. Demo only; not published.
+  example galleries both render, plus `CraftProjectLoader`. Demo only; not
+  published.
+- `packages/a2ui_craft_testing` — the shared conformance suites (behavioral,
+  geometry-with-tolerance, theming, driver). Not published.
+- `packages/craft` — the `craft` CLI, which scaffolds a deployable project
+  (`craft create`, `--logic` for a mini-app).
 
 ## Dev environment
 
@@ -123,10 +131,11 @@ Quick rules of thumb:
 ## Scope guardrail
 
 Current scope is **Flutter + Jaspr, Dart-only**. The cross-platform core
-component/type library ("H2" in `DESIGN.md`) is **in progress**, built as a
-constrained common model (see `DESIGN.md` §8): the `Flex` and `Box` slices —
-value types, explicit sizing, and geometry conformance — have landed, and the
-core primitives grow depth-first from there. The older seed primitives outside
-that work remain **minimal harness fixtures**. Grow the core primitives as a task
-calls for it; don't start unrelated large efforts (a third framework, theming)
-unsolicited.
+component/type library ("H2" in `DESIGN.md`) is built as a constrained common
+model (see `DESIGN.md` §8): value types, explicit sizing, and geometry
+conformance, with the primitive set grown depth-first from layout. Theming,
+responsive structure, motion, typography, the normalized controls, and the
+mini-app logic drivers have all landed — see `HISTORY.md` before treating any of
+them as unexplored ground. Grow the core primitives as a task calls for it;
+don't start unrelated large efforts (a third adapter, `extended_primitives`, the
+Ahem golden mode) unsolicited — `ROADMAP.md` says why each is waiting.

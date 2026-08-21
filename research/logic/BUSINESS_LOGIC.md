@@ -5,7 +5,7 @@
 > See [PHASE_1_PLAN.md](PHASE_1_PLAN.md) for the slices and
 > [DECISIONS.md](DECISIONS.md) for what building it changed. Originally a
 > proposal (2026-08-08). Fills in the "Later — ephemeral sandboxed
-> logic" slot in ROADMAP.md's template-computation arc, and the empty `logic`
+> logic" slot in the template-computation arc (HISTORY.md), and the empty `logic`
 > manifest slot reserved in DESIGN.md §10. Workstream B (template functions /
 > logic blocks) is the *sibling* layer — pure, local, in-template computation —
 > and is not re-designed here; §4 defines the boundary between them.
@@ -465,8 +465,8 @@ Staged:
 2. **In-process reference runner + conformance fixture** — a counter/cart
    mini-app as a Dart driver behind zero-length timers (§5's turn-boundary
    rule); the conformance suite drives the *protocol*, so the same suite
-   later runs verbatim against sandboxed runners. (The suite is the defense against the per-adapter-drift risk
-   NEXT_THREADS grounding #2 identifies.)
+   later runs verbatim against sandboxed runners. (The suite is the defense against the
+   per-adapter evaluation-drift risk ROADMAP.md identifies.)
 3. **Worker runner (Jaspr host) + a JS driver demo** on the site — the first
    proof of constraint 1: logic in a language the engine isn't written in.
 4. **Manifest slot + `CraftProjectLoader`** wiring; `craft

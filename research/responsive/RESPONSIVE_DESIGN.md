@@ -200,7 +200,7 @@ number.
 
 - **Phase 0 — already have.** Intrinsic flexbox responsiveness. Document it as the
   first tool; add a responsive sample (e.g. a card grid) to prove it.
-- **Phase 1 — the spine + the ergonomic consumer.** `MediaContext` +
+- **Phase 1 — the spine + the ergonomic consumer. ✅ done.** `MediaContext` +
   `WindowSizeClass` value type (Pillar B, total), the render-time `media` input
   (immutable-snapshot reactivity, both adapters), and the **`Responsive` primitive**.
   Minimal, high-leverage: structural restructuring with a shared vocabulary and *no*

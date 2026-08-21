@@ -5,25 +5,34 @@
 import 'dart:convert';
 
 import 'package:a2ui_craft/a2ui_craft.dart';
+import 'package:a2ui_craft_logic/a2ui_craft_logic.dart';
 
 /// A project's consolidated manifest — its `manifest.json` (DESIGN.md §10):
 /// the container config for the ephemeral bundle, holding everything *about*
 /// the project that isn't one of its trio files.
 ///
 /// v1 fields: [name] (display name), [catalogId] (which component catalog the
-/// project targets — null means the host/default catalog), and [theme] (the
-/// theme reference + mode wiring, a [ProjectTheme]). Ephemeral business logic
-/// gets a slot here later (ROADMAP.md), empty for now. Parsing is total: a malformed or
-/// partial manifest yields empty/absent fields rather than throwing.
+/// project targets — null means the host/default catalog), [theme] (the
+/// theme reference + mode wiring, a [ProjectTheme]), and [logic] (the driver
+/// the project ships, a [LogicManifest]). One file, one parser: a second
+/// parser of the same document is how the production load path and a demo
+/// screen end up reading different projects from the same bytes.
+///
+/// Parsing is total — a malformed or partial manifest yields empty/absent
+/// fields — **except** for the `logic` slot, which throws
+/// [MalformedLogicManifest]: a broken theme leaves a project unthemed, but a
+/// mini-app loaded with its logic quietly missing is a screen of controls
+/// that answer nothing.
 class ProjectManifest {
   const ProjectManifest({
     required this.name,
     this.catalogId,
     this.theme,
+    this.logic,
   });
 
-  /// Parses a project `manifest.json` string. Total — malformed input yields an
-  /// empty [name] and no catalog/theme.
+  /// Parses a project `manifest.json` string. Total, except that a declared
+  /// but unreadable `logic` slot throws [MalformedLogicManifest].
   static ProjectManifest parse(String json) {
     Object? decoded;
     try {
@@ -42,6 +51,7 @@ class ProjectManifest {
       // The theme block is a nested ProjectTheme config; re-encode and reuse the
       // one parser so the manifest and a standalone theme file agree.
       theme: theme == null ? null : ProjectTheme.tryParse(jsonEncode(theme)),
+      logic: LogicManifest.read(m),
     );
   }
 
@@ -53,6 +63,9 @@ class ProjectManifest {
 
   /// The project's theme (reference + mode wiring), or null when it ships none.
   final ProjectTheme? theme;
+
+  /// The driver the project ships, or null for a pure-UI project.
+  final LogicManifest? logic;
 }
 
 /// The theme wiring of a project — the **4th trio file**, `theme.json`

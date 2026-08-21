@@ -61,11 +61,15 @@ function dollars(cents) {
       String(cents % 100).padStart(2, '0');
 }
 
+// A quantity is digits and nothing else — the same regex the Dart port
+// guards with, because the native parsers disagree: parseInt reads prefixes
+// ('2x' → 2) and Dart's int parser reads 0x hex ('0x3' → 3 where parseInt
+// yields 0 — one cart deletes the row, the other stocks three). The regex is
+// the shared contract; the parse behind it then cannot diverge.
 function asInt(value) {
   if (typeof value === 'number') return Math.round(value);
-  if (typeof value === 'string') {
-    var parsed = parseInt(value.trim(), 10);
-    return isNaN(parsed) ? null : parsed;
+  if (typeof value === 'string' && /^[+-]?[0-9]+$/.test(value.trim())) {
+    return parseInt(value.trim(), 10);
   }
   return null;
 }

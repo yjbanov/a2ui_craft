@@ -249,9 +249,12 @@ void main() {
   });
 
   test("the project's logic slot names the driver a host must run", () {
-    final LogicManifest logic = LogicManifest.parse(
-      '{"name": "Cart", "logic": ${cartMiniApp.logic}}',
-    )!;
+    // The baked block is decoded and read directly — no fake document spliced
+    // together from strings, which would break the day the blob holds
+    // anything the splice did not anticipate.
+    final LogicManifest logic = LogicManifest.read(<String, Object?>{
+      'logic': jsonDecode(cartMiniApp.logic),
+    })!;
     expect(logic.language, DriverLanguage.javascript);
     expect(logic.entry, 'cart.js');
     expect(logic.capabilities, isEmpty);

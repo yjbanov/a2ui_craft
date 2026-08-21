@@ -115,4 +115,58 @@ void main() {
     // and needs nothing hosted alongside it.
     expect(driverSdkJs, contains('global.a2uiDriver = a2uiDriver;'));
   });
+
+  test('a JavaScript driver that detects a protocol failure says so', () async {
+    // A driver that latches silently is indistinguishable from a hung one: a
+    // host with a heartbeat would misreport this seconds later as a lost
+    // heartbeat, and a host without one would wait forever. The SDK must
+    // post an error frame naming the real cause before it latches.
+    final WorkerDriverRunner runner = WorkerDriverRunner.fromSource(
+      'a2uiDriver({ handlers: {} });',
+    );
+    addTearDown(runner.close);
+    final List<Map<String, Object?>> frames = <Map<String, Object?>>[];
+    runner.onFrame = frames.add;
+    runner.start();
+    await _settle();
+    expect(frames.last['type'], 'hello');
+
+    // A frame from nowhere: seq 7 when the driver expects 1.
+    runner.send(
+      LogicFrame(
+        seq: 7,
+        message: const InitMessage(surfaceId: 's'),
+      ).toJson(),
+    );
+    await _settle();
+
+    final Map<String, Object?> error = frames.lastWhere(
+      (Map<String, Object?> f) => f['type'] == 'error',
+      orElse: () => fail('the driver went silent instead of reporting'),
+    );
+    final Map<String, Object?> body = error['body']! as Map<String, Object?>;
+    expect(body['code'], 'outOfOrder');
+    expect('${body['message']}', contains('Expected frame #1'));
+  });
+
+  test(
+      'a driver that posts non-frames on the channel is reported, not '
+      'silently dropped', () async {
+    // A third-party library in logic.js, a debug postMessage, an emscripten
+    // shim: anything else speaking on the default channel means the protocol
+    // stream can no longer be trusted. Dropped silently, this would surface
+    // later as a baffling out-of-order fault — or never.
+    final WorkerDriverRunner runner = WorkerDriverRunner.fromSource(
+      "a2uiDriver({ handlers: {} });\npostMessage('loaded!');",
+    );
+    addTearDown(runner.close);
+    final List<String> crashes = <String>[];
+    runner.onFrame = (Map<String, Object?> _) {};
+    runner.onCrash = crashes.add;
+    runner.start();
+    await _settle();
+
+    expect(crashes, isNotEmpty);
+    expect(crashes.single, contains('not a JSON frame'));
+  });
 }

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:a2ui_core/a2ui_core.dart';
 
@@ -41,6 +42,7 @@ class DriverSession {
     this.hostContext = const <String, Object?>{},
     ChannelBudgets? budgets,
     this.heartbeat = const Duration(seconds: 5),
+    this.handshakeTimeout = const Duration(seconds: 10),
   }) : budgets = budgets ?? ChannelBudgets();
 
   /// The processor whose surface group holds the driven surface.
@@ -71,6 +73,18 @@ class DriverSession {
   /// their own.
   final Duration? heartbeat;
 
+  /// How long the driver has to say `hello` after [start].
+  ///
+  /// The heartbeat cannot cover this window — pings are only legal on a ready
+  /// session — and a driver that boots cleanly but never speaks produces no
+  /// crash event either. Without a deadline, that driver leaves the surface
+  /// saying "Connecting…" forever while user events queue without bound; this
+  /// is the flaky-network case a production host meets first.
+  ///
+  /// `null` disables the deadline, for hosts that manage connection
+  /// establishment themselves.
+  final Duration? handshakeTimeout;
+
   final LogicSessionMachine _machine =
       LogicSessionMachine(role: LogicRole.host);
   final Completer<void> _ready = Completer<void>();
@@ -80,14 +94,22 @@ class DriverSession {
   bool _started = false;
   bool _disposed = false;
   Timer? _heartbeatTimer;
+  Timer? _handshakeTimer;
   int _pingNonce = 0;
   bool _awaitingPong = false;
+  SessionFault? _terminalFault;
+  List<String>? _boundPathsCache;
 
   /// The session's lifecycle state.
   LogicSessionState get state => _machine.state;
 
-  /// Why the session failed, or `null` if it has not.
-  SessionFault? get fault => _machine.fault;
+  /// Why the session stopped, or `null` while it is running.
+  ///
+  /// Covers both endings: a machine-level fault, and the driver's own orderly
+  /// [TerminateMessage] (surfaced as [SessionFaultCode.driverTerminated],
+  /// because the host's obligation — take the surface out of service — is the
+  /// same either way).
+  SessionFault? get fault => _terminalFault ?? _machine.fault;
 
   /// Whether the handshake completed and events are flowing.
   bool get isReady => _machine.isReady;
@@ -125,22 +147,47 @@ class DriverSession {
       ]);
     }
     transport.start();
+    final Duration? deadline = handshakeTimeout;
+    if (deadline != null) {
+      _handshakeTimer = Timer(deadline, () {
+        if (_machine.isReady || !_machine.isOpen) return;
+        _raise(
+          SessionFaultCode.handshakeTimedOut,
+          'The driver did not complete the handshake within '
+          '${deadline.inMilliseconds}ms. Its runtime may have loaded without '
+          'ever calling the SDK, or a remote endpoint accepted the connection '
+          'and went silent.',
+        );
+      });
+    }
   }
 
   /// Ends the session in an orderly way and releases everything it holds.
   void dispose() {
     if (_disposed) return;
     _disposed = true;
-    _heartbeatTimer?.cancel();
-    processor.groupModel.onAction.removeListener(_handleAction);
     if (_machine.isOpen) {
       _trySend(const TerminateMessage(reason: 'host disposed the session'));
     }
+    _teardownChannel();
+    _onFault.dispose();
+  }
+
+  /// Releases everything the session holds on the processor and the transport.
+  ///
+  /// Shared by [dispose] and [_halt] — the two must not drift, because a
+  /// faulted session that keeps its `onAction` listener stays subscribed to a
+  /// long-lived model, retaining the whole dead session for as long as the
+  /// host keeps the processor.
+  void _teardownChannel() {
+    _handshakeTimer?.cancel();
+    _heartbeatTimer?.cancel();
+    processor.groupModel.onAction.removeListener(_handleAction);
+    _queuedEvents.clear();
     transport
       ..onFrame = null
       ..onCrash = null
       ..close();
-    _onFault.dispose();
   }
 
   void _receive(Map<String, Object?> frame) {
@@ -150,11 +197,12 @@ class DriverSession {
     try {
       message = _machine.receiveJson(frame);
     } on SessionFault catch (fault) {
-      _fault(fault);
+      _halt(fault);
       return;
     }
     switch (message) {
       case HelloMessage():
+        _handshakeTimer?.cancel();
         _trySend(InitMessage(surfaceId: surfaceId, context: hostContext));
         if (_machine.isReady) {
           if (!_ready.isCompleted) _ready.complete();
@@ -164,10 +212,16 @@ class DriverSession {
       case UpdateMessage(:final List<A2uiMessage> messages):
         // One token per message, not per frame: ten thousand writes in one
         // batch is the flood, and charging it as a single frame would let it
-        // through.
-        if (!budgets.inbound.tryConsume(
-          messages.isEmpty ? 1 : messages.length,
-        )) {
+        // through. The charge is clamped at the burst capacity, though — a
+        // bucket can never hold more than that, so an unclamped charge would
+        // make any single batch larger than the burst *permanently*
+        // undeliverable, no matter how long the channel sat idle. A
+        // full-capacity batch is legal exactly once per drained-and-refilled
+        // bucket, so the sustained rate still governs over time.
+        final int charge = messages.isEmpty
+            ? 1
+            : math.min(messages.length, budgets.inbound.capacity);
+        if (!budgets.inbound.tryConsume(charge)) {
           _raise(
             SessionFaultCode.budgetExhausted,
             'The driver exceeded the channel budget '
@@ -178,12 +232,17 @@ class DriverSession {
           return;
         }
         _applyUpdate(messages);
-      case TerminateMessage():
-        // The machine already latched to `terminated`; nothing further to do.
-        break;
+      case TerminateMessage(:final String reason):
+        // The machine latched to `terminated`, but latching is not enough: the
+        // host must take the surface out of service, or the user goes on
+        // tapping enabled controls that nothing will ever answer.
+        _halt(SessionFault(
+          SessionFaultCode.driverTerminated,
+          'The driver ended the session: $reason',
+        ));
       case ErrorMessage():
         // The machine already latched to `faulted` with the driver's reason.
-        _fault(_machine.fault!);
+        _halt(_machine.fault!);
       case PongMessage():
         _awaitingPong = false;
       case InitMessage():
@@ -237,29 +296,55 @@ class DriverSession {
         SessionFaultCode.driverError,
         'The driver sent an update the engine refused: $error',
       );
+      return;
+    }
+    // Structural change may add or remove bindings; the next event re-walks.
+    for (final A2uiMessage message in messages) {
+      if (message is CreateSurfaceMessage ||
+          message is UpdateComponentsMessage) {
+        _boundPathsCache = null;
+        break;
+      }
     }
   }
 
   /// Whether the driver is allowed to send [message], faulting the session if
   /// not.
   ///
-  /// Two ceilings, both structural. A driver drives *one* surface, so a message
-  /// aimed anywhere else is out of scope no matter what it says. And the data
-  /// model has one writer per key, so a write into the host's own namespace —
-  /// or a write to the root, which would swallow it — is refused before it can
+  /// Three ceilings, all structural. A driver drives *one* surface, so a
+  /// message aimed anywhere else is out of scope no matter what it says. The
+  /// surface's *lifecycle* belongs to the host — a driver recomposes within
+  /// its surface, or replaces it wholesale with `createSurface`, but never
+  /// removes it, because the host is rendering it and a surface that vanishes
+  /// under the renderer takes the host down with it. And the data model has
+  /// one writer per key, so a write into the host's own namespace — or a
+  /// write to the root, which would swallow it — is refused before it can
   /// touch the model.
   bool _isPermitted(A2uiMessage message) {
-    final String target = switch (message) {
+    final String? target = switch (message) {
       CreateSurfaceMessage(:final String surfaceId) => surfaceId,
       UpdateComponentsMessage(:final String surfaceId) => surfaceId,
       UpdateDataModelMessage(:final String surfaceId) => surfaceId,
       DeleteSurfaceMessage(:final String surfaceId) => surfaceId,
-      _ => surfaceId,
+      // A message with no surface target has nothing to scope-check — stated
+      // as an explicit allow. (A wildcard that *computed* a passing
+      // comparison here would be an invisible allow, and `A2uiMessage` is not
+      // sealed: new message types must be considered, not waved through.)
+      _ => null,
     };
-    if (target != surfaceId) {
+    if (target != null && target != surfaceId) {
       _raise(
         SessionFaultCode.scopeViolation,
         "The driver of surface '$surfaceId' addressed surface '$target'.",
+      );
+      return false;
+    }
+    if (message is DeleteSurfaceMessage) {
+      _raise(
+        SessionFaultCode.scopeViolation,
+        "The driver tried to delete surface '$surfaceId'. The surface's "
+        'lifecycle belongs to the host: a driver may recompose its surface, '
+        'or replace it with createSurface, but only the host removes it.',
       );
       return false;
     }
@@ -333,18 +418,28 @@ class DriverSession {
   /// deliberately excluded — one component template stands for every row, so
   /// there is no single value to report; a template carries those in the
   /// action's own arguments, where they resolve per row.
+  ///
+  /// The walk is cached: the path *set* only changes when structure does, and
+  /// this runs on the interaction path — per tap — where re-traversing every
+  /// component's property tree would be paid by surfaces whose drivers never
+  /// even read `event.values`. [_applyUpdate] invalidates on structural
+  /// messages.
   Map<String, Object?> _boundValues() {
     final SurfaceModel<ComponentApi>? surface =
         processor.groupModel.getSurface(surfaceId);
     if (surface == null) return const <String, Object?>{};
+    final List<String> paths = _boundPathsCache ??= _collectBoundPaths(surface);
+    return <String, Object?>{
+      for (final String path in paths) path: surface.dataModel.get(path),
+    };
+  }
+
+  static List<String> _collectBoundPaths(SurfaceModel<ComponentApi> surface) {
     final Set<String> paths = <String>{};
     for (final ComponentModel component in surface.componentsModel.all) {
       _collectPaths(component.properties, paths);
     }
-    final List<String> sorted = paths.toList()..sort();
-    return <String, Object?>{
-      for (final String path in sorted) path: surface.dataModel.get(path),
-    };
+    return paths.toList()..sort();
   }
 
   static void _collectPaths(Object? node, Set<String> out) {
@@ -374,7 +469,7 @@ class DriverSession {
     try {
       _machine.raise(code, message, details: details);
     } on SessionFault catch (fault) {
-      _fault(fault);
+      _halt(fault);
     }
   }
 
@@ -382,20 +477,18 @@ class DriverSession {
     try {
       transport.send(_machine.send(message).toJson());
     } on SessionFault catch (fault) {
-      _fault(fault);
+      _halt(fault);
     }
   }
 
-  void _fault(SessionFault fault) {
+  /// Takes the session out of service: records [fault], releases everything —
+  /// closing the transport is what stops the driver — and only then tells the
+  /// host, so a listener that immediately restarts sees a fully torn-down
+  /// session.
+  void _halt(SessionFault fault) {
+    _terminalFault ??= fault;
     if (!_ready.isCompleted) _ready.completeError(fault);
-    _heartbeatTimer?.cancel();
+    _teardownChannel();
     _onFault.emit(fault);
-    // Kill both sides. Closing the transport is what stops the driver: a
-    // faulted host has no use for it, and a worker left running would keep
-    // burning CPU with nobody listening.
-    transport
-      ..onFrame = null
-      ..onCrash = null
-      ..close();
   }
 }

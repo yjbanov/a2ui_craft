@@ -33,22 +33,24 @@ Future<void> _settle([int rounds = 8]) async {
   }
 }
 
-/// Writes [count] values in a single handler — the async-amplification attack,
-/// arriving as one enormous batch.
+/// Writes [count] values in a single handler — one enormous batch per turn:
+/// at init, and again on every event.
 class _FloodDriver extends Driver {
   _FloodDriver(this.count);
 
   final int count;
 
   @override
-  void onInit(DriverContext context) {
+  void onInit(DriverContext context) => _spam(context);
+
+  @override
+  void onEvent(DriverContext context, DriverEvent event) => _spam(context);
+
+  void _spam(DriverContext context) {
     for (var i = 0; i < count; i++) {
       context.write('/spam/$i', i);
     }
   }
-
-  @override
-  void onEvent(DriverContext context, DriverEvent event) {}
 }
 
 class _QuietDriver extends Driver {
@@ -104,13 +106,54 @@ void main() {
   });
 
   group('the driver direction', () {
-    test('a flood halts the session', () async {
-      final (MessageProcessor<ComponentApi> processor, _) = _surface();
+    test('a sustained flood halts the session', () async {
+      final (
+        MessageProcessor<ComponentApi> processor,
+        SurfaceModel<ComponentApi> surface,
+      ) = _surface();
       final DriverSession session = DriverSession(
         processor: processor,
         surfaceId: 's',
         transport: InProcessDriverRunner(
-          // One batch, comfortably past the burst allowance.
+          // A full-burst batch at init, and another on every event: the first
+          // drains the bucket; the second arrives against an empty one.
+          _FloodDriver(defaultChannelBurst),
+          diagnostics: silentDiagnostics,
+        ),
+      );
+      addTearDown(session.dispose);
+      final List<SessionFault> faults = <SessionFault>[];
+      session.onFault.addListener(faults.add);
+      session.start();
+      await _settle();
+      expect(faults, isEmpty, reason: 'one full burst is legal');
+
+      await _tap(surface);
+      await _settle();
+
+      expect(faults.single.code, SessionFaultCode.budgetExhausted);
+      expect(faults.single.message, contains('looping, not responding'));
+      expect(session.state, LogicSessionState.faulted);
+    });
+
+    test(
+        'a single batch larger than the burst is delivered, not misread as '
+        'a loop', () async {
+      // A form seeding hundreds of paths in onInit is one legitimate batch.
+      // The bucket can never hold more than its capacity, so an unclamped
+      // per-message charge would make this batch *permanently* undeliverable —
+      // faulting the driver as "looping" on the session's first frame, and on
+      // every restart, deterministically. The charge is clamped at capacity:
+      // the batch lands, the bucket is empty, and the sustained rate governs
+      // from there (see the previous case).
+      final (
+        MessageProcessor<ComponentApi> processor,
+        SurfaceModel<ComponentApi> surface,
+      ) = _surface();
+      final DriverSession session = DriverSession(
+        processor: processor,
+        surfaceId: 's',
+        transport: InProcessDriverRunner(
           _FloodDriver(defaultChannelBurst * 3),
           diagnostics: silentDiagnostics,
         ),
@@ -121,9 +164,13 @@ void main() {
       session.start();
       await _settle();
 
-      expect(faults.single.code, SessionFaultCode.budgetExhausted);
-      expect(faults.single.message, contains('looping, not responding'));
-      expect(session.state, LogicSessionState.faulted);
+      expect(faults, isEmpty);
+      expect(session.isReady, isTrue);
+      expect(
+        surface.dataModel.get('/spam/${defaultChannelBurst * 3 - 1}'),
+        defaultChannelBurst * 3 - 1,
+        reason: 'the whole batch landed, last write included',
+      );
     });
 
     test('a batch is charged per message, not per frame', () async {

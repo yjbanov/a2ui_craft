@@ -28,25 +28,31 @@ class WorkerDriverRunner implements DriverTransport {
   ///
   /// The [driverSdkJs] is prepended, so an ephemeral mini-app ships exactly one
   /// file of logic and does not have to host or resolve the SDK separately.
+  /// This is also how a *fetched* project runs: the host downloads the
+  /// manifest's `logic.entry` as text and starts a worker from it, SDK
+  /// included, so the published file needs no import of its own.
   WorkerDriverRunner.fromSource(String source)
-      : _url = web.URL.createObjectURL(
-          web.Blob(
-            <JSAny>['$driverSdkJs\n$source'.toJS].toJS,
-            web.BlobPropertyBag(type: 'text/javascript'),
-          ),
-        ),
-        _ownsUrl = true;
+      : _source = source,
+        _url = null;
 
-  /// Runs the driver served at [url].
+  /// Runs the driver served at [url], for scripts that load the SDK
+  /// themselves (e.g. via `importScripts`).
   ///
-  /// The production shape: a project's `logic.entry`, resolved against the
-  /// bundle's base URL. The script must load the SDK itself.
+  /// Most hosts should prefer fetching the entry and using [fromSource] — a
+  /// scaffolded `logic.js` is written against a host-supplied SDK and would
+  /// die at load with `a2uiDriver is not defined` if started directly from its
+  /// URL.
   WorkerDriverRunner.fromUrl(String url)
       : _url = url,
-        _ownsUrl = false;
+        _source = null;
 
-  final String _url;
-  final bool _ownsUrl;
+  final String? _source;
+
+  /// The worker's script URL. For [fromSource] this is a blob URL created
+  /// lazily in [start] — not in the constructor, so a runner that is created
+  /// but never started pins nothing for the document's lifetime.
+  String? _url;
+  bool _ownsUrl = false;
 
   web.Worker? _worker;
   void Function(Map<String, Object?> frame)? _onFrame;
@@ -63,12 +69,39 @@ class WorkerDriverRunner implements DriverTransport {
   @override
   void start() {
     if (_closed || _worker != null) return;
-    final web.Worker worker = web.Worker(_url.toJS);
+    final String? source = _source;
+    if (_url == null && source != null) {
+      _url = web.URL.createObjectURL(
+        web.Blob(
+          <JSAny>['$driverSdkJs\n$source'.toJS].toJS,
+          web.BlobPropertyBag(type: 'text/javascript'),
+        ),
+      );
+      _ownsUrl = true;
+    }
+    final web.Worker worker = web.Worker(_url!.toJS);
     _worker = worker;
     worker.onmessage = (web.MessageEvent event) {
       if (_closed) return;
-      final Object? decoded = jsonDecode((event.data as JSString).toDart);
-      if (decoded is Map<String, Object?>) _onFrame?.call(decoded);
+      // The default channel is the protocol's alone. Anything else arriving
+      // on it — a library's stray postMessage, a debug string, a structured
+      // clone — is a driver that is not speaking the protocol, reported as
+      // such rather than silently dropped: dropped, it would surface later as
+      // a baffling out-of-order fault, or never.
+      final Object? decoded;
+      try {
+        decoded = jsonDecode((event.data as JSString).toDart);
+      } on Object catch (error) {
+        _onCrash?.call(
+          'The driver posted a message that is not a JSON frame: $error',
+        );
+        return;
+      }
+      if (decoded is! Map<String, Object?>) {
+        _onCrash?.call('The driver posted a non-frame message: $decoded');
+        return;
+      }
+      _onFrame?.call(decoded);
     }.toJS;
     worker.onerror = (web.Event event) {
       if (_closed) return;
@@ -104,6 +137,7 @@ class WorkerDriverRunner implements DriverTransport {
     // keep burning CPU for a surface that is already out of service.
     _worker?.terminate();
     _worker = null;
-    if (_ownsUrl) web.URL.revokeObjectURL(_url);
+    final String? url = _url;
+    if (_ownsUrl && url != null) web.URL.revokeObjectURL(url);
   }
 }

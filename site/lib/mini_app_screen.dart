@@ -27,6 +27,17 @@ List<A2uiMessage> _decodeMessages(String json) => <A2uiMessage>[
         A2uiMessage.fromJson(m! as Map<String, dynamic>),
     ];
 
+/// The Dart stand-ins the *Flutter pane* substitutes for a mini-app's shipped
+/// JavaScript, keyed by mini-app id.
+///
+/// A registry, not a hardcoded constructor: the route resolves any mini-app
+/// by id, and wiring whichever one arrives to the cart's driver would run the
+/// wrong logic against the wrong template — silently. An id with no entry
+/// renders an honest note instead.
+final Map<String, Driver Function()> _dartDrivers = <String, Driver Function()>{
+  'cart': CartDriver.new,
+};
+
 /// One mini-app, shown twice: the same project driven by logic written in two
 /// languages, running in two very different places.
 ///
@@ -48,22 +59,34 @@ class MiniAppScreen extends StatefulComponent {
 class _MiniAppScreenState extends State<MiniAppScreen> {
   double? _flutterHeight;
 
-  RawMiniApp? get _app {
+  // Resolved once: `build` re-runs on every height report, and re-parsing the
+  // manifest and schema JSON each time buys nothing — the panes consume them
+  // only on first mount anyway.
+  late final RawMiniApp? _app = () {
     for (final RawMiniApp a in rawMiniApps) {
       if (a.id == component.id) return a;
     }
     return null;
-  }
+  }();
+
+  late final LogicManifest? _logic = _app == null
+      ? null
+      // The baked block, decoded and read by the one manifest reader — no
+      // fake document spliced together from strings.
+      : LogicManifest.read(<String, Object?>{
+          'logic': jsonDecode(_app.logic),
+        });
+
+  late final Map<String, Object?>? _schema =
+      _app == null ? null : jsonDecode(_app.schema) as Map<String, Object?>;
 
   @override
   Component build(BuildContext context) {
     final RawMiniApp? app = _app;
-    if (app == null) {
+    final LogicManifest? logic = _logic;
+    if (app == null || logic == null) {
       return div([Component.text('No such mini-app: ${component.id}')]);
     }
-    final LogicManifest logic = LogicManifest.parse(
-      '{"logic": ${app.logic}}',
-    )!;
 
     return div(
       styles: Styles(raw: <String, String>{
@@ -85,7 +108,16 @@ class _MiniAppScreenState extends State<MiniAppScreen> {
           <Component>[
             _pane(
               'Jaspr · driver in a web worker · JavaScript',
-              _JasprMiniAppPane(app: app),
+              JasprMiniAppPane(
+                template: app.template,
+                schema: _schema!,
+                coldBoot: () => _decodeMessages(app.messages),
+                // The shipped driver source, run as it ships. Nothing is
+                // compiled, nothing is bundled: the worker is started from
+                // the file the project publishes.
+                createTransport: () =>
+                    WorkerDriverRunner.fromSource(app.driverJs),
+              ),
             ),
             _pane('Flutter · driver in-process · Dart', _flutterPane(app)),
           ],
@@ -125,6 +157,10 @@ class _MiniAppScreenState extends State<MiniAppScreen> {
     );
   }
 
+  String _describeLogic(LogicManifest logic) => logic.isRemote
+      ? 'its logic lives at ${logic.url}'
+      : 'its logic is ${logic.language?.id}, in ${logic.entry}';
+
   Component _explainer(LogicManifest logic) {
     return p(
       styles: Styles(raw: <String, String>{
@@ -135,14 +171,14 @@ class _MiniAppScreenState extends State<MiniAppScreen> {
       }),
       <Component>[
         Component.text(
-          'The same project, driven twice. Its manifest says only that its '
-          'logic is ${logic.language!.id}, in ${logic.entry} — never where to '
-          'run it. This Jaspr pane chooses a web worker and runs that file '
-          'verbatim; the Flutter pane, which cannot start one, substitutes a '
-          'Dart port of the same logic compiled in. Expanding a row and '
-          'formatting money never reach either driver — those are the '
-          'template\'s job. Stock limits and the order are the driver\'s, '
-          'because they have to survive the surface.',
+          'The same project, driven twice. Its manifest says only that '
+          '${_describeLogic(logic)} — never where to run it. This Jaspr pane '
+          'chooses a web worker and runs that file verbatim; the Flutter '
+          'pane, which cannot start one, substitutes a Dart port of the same '
+          'logic compiled in. Expanding a row and formatting money never '
+          'reach either driver — those are the template\'s job. Stock limits '
+          'and the order are the driver\'s, because they have to survive the '
+          'surface.',
         ),
       ],
     );
@@ -173,6 +209,23 @@ class _MiniAppScreenState extends State<MiniAppScreen> {
   }
 
   Component _flutterPane(RawMiniApp app) {
+    final Driver Function()? createDriver = _dartDrivers[app.id];
+    if (createDriver == null) {
+      return div(
+        styles: Styles(raw: <String, String>{
+          'padding': '20px',
+          'color': 'var(--subtle)',
+          'font': '13px/1.5 system-ui',
+        }),
+        <Component>[
+          Component.text(
+            'No Dart port of this mini-app\'s logic ships with the site, so '
+            'this pane has nothing to substitute. The Jaspr pane runs the '
+            'shipped JavaScript.',
+          ),
+        ],
+      );
+    }
     return FlutterEmbedView(
       styles: Styles(raw: <String, String>{
         'width': '100%',
@@ -180,11 +233,10 @@ class _MiniAppScreenState extends State<MiniAppScreen> {
         'height': '${(_flutterHeight ?? 520).ceil()}px',
       }),
       widget: flutterMiniAppApp(
-        surfaceId: 'cart',
         template: app.template,
-        schema: jsonDecode(app.schema) as Map<String, Object?>,
+        schema: _schema!,
         coldBoot: () => _decodeMessages(app.messages),
-        createDriver: CartDriver.new,
+        createTransport: () => InProcessDriverRunner(createDriver()),
         dark: SiteTheme.effectiveDark,
         onContentHeight: (double h) {
           if (!h.isFinite || h == _flutterHeight) return;
@@ -195,34 +247,46 @@ class _MiniAppScreenState extends State<MiniAppScreen> {
   }
 }
 
-/// The Jaspr half: the mini-app's own JavaScript, in a worker.
-class _JasprMiniAppPane extends StatefulComponent {
-  const _JasprMiniAppPane({required this.app});
+/// A Jaspr-rendered mini-app pane: the project's surface, driven over
+/// whatever transport the caller connects — the shipped JavaScript in a
+/// worker for the gallery's mini-apps and for projects fetched over HTTP.
+class JasprMiniAppPane extends StatefulComponent {
+  const JasprMiniAppPane({
+    required this.template,
+    required this.schema,
+    required this.coldBoot,
+    required this.createTransport,
+    super.key,
+  });
 
-  final RawMiniApp app;
+  /// The project's `template.craft` source.
+  final String template;
+
+  /// The project's decoded `schema.json`.
+  final Map<String, Object?> schema;
+
+  /// The project's `app.json` bootstrap stream.
+  final List<A2uiMessage> Function() coldBoot;
+
+  /// Connects a driver — the host's choice of sandbox, not the project's.
+  final DriverTransport Function() createTransport;
 
   @override
-  State<_JasprMiniAppPane> createState() => _JasprMiniAppPaneState();
+  State<JasprMiniAppPane> createState() => _JasprMiniAppPaneState();
 }
 
-class _JasprMiniAppPaneState extends State<_JasprMiniAppPane> {
+class _JasprMiniAppPaneState extends State<JasprMiniAppPane> {
   late final Runtime _runtime = Runtime()
     ..update(const LibraryName(<String>['core']), createCoreComponents())
     ..registerFunctions(createCoreFunctions())
-    ..update(_projectScope, parseLibraryFile(component.app.template));
+    ..update(_projectScope, parseLibraryFile(component.template));
 
   late final MiniAppRunner _runner = MiniAppRunner(
-    surfaceId: 'cart',
     createProcessor: () => MessageProcessor<ComponentApi>(
-      catalogs: <Catalog<ComponentApi>>[
-        loadCatalog(jsonDecode(component.app.schema) as Map<String, Object?>),
-      ],
+      catalogs: <Catalog<ComponentApi>>[loadCatalog(component.schema)],
     ),
-    coldBoot: () => _decodeMessages(component.app.messages),
-    // The shipped driver source, run as it ships. Nothing is compiled, nothing
-    // is bundled: the worker is started from the file the project publishes.
-    createTransport: () =>
-        WorkerDriverRunner.fromSource(component.app.driverJs),
+    coldBoot: component.coldBoot,
+    createTransport: component.createTransport,
   );
 
   @override
@@ -245,12 +309,18 @@ class _JasprMiniAppPaneState extends State<_JasprMiniAppPane> {
   Component build(BuildContext context) {
     final SessionFault? fault = _runner.fault;
     if (fault != null) return _stoppedCard(fault);
+    final SurfaceModel<ComponentApi>? surface = _runner.surface;
+    if (surface == null) {
+      // Unreachable when the runner booted (a surface-less boot stream is a
+      // fault), but a null check that renders nothing beats one that throws.
+      return div(const <Component>[]);
+    }
     return div(
       styles: Styles(raw: <String, String>{'padding': '12px'}),
       <Component>[
         A2uiToRfwAdapter(
           id: 'root',
-          surface: _runner.surface!,
+          surface: surface,
           runtime: _runtime,
           scope: _projectScope,
         ),

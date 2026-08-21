@@ -298,6 +298,15 @@ to a template as **args** — not data references. Consequences:
   of resolved props) and `a2uiArgsFromProps` (props → template args, child
   injection, callback wiring).
 
+- **Logic (`a2ui_craft_logic`)** is the business-logic layer: the driver
+  session protocol (envelope, state machine, budgets, faults), the host-side
+  `DriverSession`/`MiniAppRunner`, the in-process and web-worker runners, the
+  JavaScript driver SDK, and the `logic` manifest slot. It depends **only on
+  `a2ui_core`** — never on `a2ui_craft`, the bridge, or an adapter — because a
+  driver attaches to a *surface*, not to a template or a renderer; no engine
+  package knows drivers exist. (Design:
+  `research/logic/BUSINESS_LOGIC.md`.)
+
 - **`a2ui_core`** is consumed as a **git dependency** on `flutter/genui`
   (`packages/a2ui_core`) so we track latest and others can run the repo locally;
   it will be pinned to a published version once the team cuts a release. It is
@@ -1456,6 +1465,7 @@ a2ui-craft/
 └── packages/
     ├── a2ui_craft/               # core: vendored RFW formats, tokens/theme, functions
     ├── a2ui_craft_bridge/        # A2UI → engine, on a2ui_core (framework-neutral)
+    ├── a2ui_craft_logic/         # business-logic drivers: session protocol, runners, JS SDK
     ├── a2ui_craft_testing/       # shared conformance + geometry suites (not published)
     ├── a2ui_craft_examples/      # sample projects, SampleSpec, CraftProjectLoader
     ├── a2ui_craft_flutter/       # Flutter adapter (runtime + core primitives + example)

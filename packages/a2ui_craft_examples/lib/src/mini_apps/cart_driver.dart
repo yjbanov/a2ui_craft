@@ -187,10 +187,18 @@ class CartDriver extends HandlerDriver {
   CartProduct? _productFor(String sku) =>
       inventory.where((CartProduct p) => p.sku == sku).firstOrNull;
 
+  /// A quantity is digits and nothing else — the semantics the JavaScript
+  /// port must match exactly, which is why neither side uses its language's
+  /// native parser unguarded: JS `parseInt` reads prefixes (`'2x'` → 2) and
+  /// Dart `int.tryParse` reads `0x` hex (`'0x3'` → 3, where `parseInt`
+  /// yields 0 — one cart deletes the row, the other stocks three). The
+  /// regex is the shared contract; the parse behind it then cannot diverge.
+  static final RegExp _integer = RegExp(r'^[+-]?[0-9]+$');
+
   static int? _asInt(Object? value) => switch (value) {
         final int i => i,
         final num n => n.round(),
-        final String s => int.tryParse(s.trim()),
+        final String s when _integer.hasMatch(s.trim()) => int.parse(s.trim()),
         _ => null,
       };
 

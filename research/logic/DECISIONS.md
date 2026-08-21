@@ -542,3 +542,158 @@ adapter libraries have no logic dependency (verified); the edge is dev-only, via
 this same testing package. Renaming the file (it was `driver_worker_test.dart`,
 which reads like WebDriver) removed the worst of the confusion, but the
 placement is worth revisiting alongside the dependency above.
+
+---
+
+## Hardening pass (2026-08-21) — what the pre-merge review found, and what changed
+
+Before merging `logic` into `main`, a multi-angle review of the whole branch
+diff surfaced a cluster of genuine holes — most of them in the **fault
+taxonomy**, which is exactly the part whose design promise is "a dead driver
+must say so." Each fix below is pinned by a test that was verified to fail
+against the pre-fix code (or is new behavior with its own guard).
+
+## A6. Every decode failure is a `malformed` fault — the A2UI codec's included
+
+`LogicFrame.fromJson`'s `update` case delegated to `A2uiMessage.fromJson`,
+whose validation and cast errors are not `LogicProtocolError` — so a bad A2UI
+payload inside a well-formed frame sailed past `receiveJson`'s catch *and*
+`DriverSession._receive`'s, surfacing as an unhandled async error while the
+session stayed `ready`. Trivial to hit from JavaScript, where `ctx.send()`
+hands author-built objects straight to the wire. The envelope now converts
+every decode failure into `LogicProtocolError`; nothing downstream has to
+remember to.
+
+## A7. Terminal means *told*: terminate, handshake timeout, and JS faults
+
+Three ways a session could end (or fail to start) without the host learning:
+
+- **An inbound driver `terminate` latched the machine and told nobody.** The
+  user kept tapping a fully-enabled dead cart; the heartbeat cancelled itself.
+  Now surfaced through `onFault` as `driverTerminated` — not a failure, but
+  the host's obligation (take the surface out of service) is identical, so it
+  travels the same channel. `DriverSession.fault` covers it too.
+- **No handshake deadline.** A worker that loads cleanly but never calls the
+  SDK produces no crash event, and pings are only legal on a ready session —
+  so the surface said "Connecting…" forever while events queued without bound
+  (the production flaky-network case). `handshakeTimeout` (default 10s) faults
+  with the new `handshakeTimedOut` code; the queue is bounded by it.
+- **The JS SDK's `fault()` discarded its reason and posted nothing** — a
+  driver that detected out-of-order framing or version skew just went quiet,
+  which a heartbeat-less host waits on forever and a heartbeat host misreports
+  as `heartbeatLost`. It now posts an `error` frame naming the real code
+  before latching, mirroring the Dart runtime.
+
+## A8. The scope check names its allowances; the surface's lifecycle is the host's
+
+`_isPermitted`'s wildcard arm bound the *session's* `surfaceId`, making the
+scope comparison vacuously true for any message type not enumerated — an
+invisible allow, and `A2uiMessage` is not sealed. The arm is now an explicit
+`null` ("no surface target — nothing to scope-check"). And a driver deleting
+*its own* surface — in scope, and permitted — nulled `MiniAppRunner.surface`
+while `fault` stayed null, so both site hosts died on `surface!` instead of
+showing the stopped card. Deleting is now refused: a driver recomposes within
+its surface or replaces it with `createSurface`; only the host removes it.
+
+## A9. The budget charge is clamped at burst capacity
+
+Per-message charging was right (a ten-thousand-write batch must not cost one
+token), but unclamped it made any single batch larger than the burst (120)
+**permanently** undeliverable — the bucket can never hold more — so a form
+seeding 150 paths in `onInit` faulted as "looping, not responding" on the
+session's first frame, deterministically, on every restart. The charge is now
+`min(batch, capacity)`: a full-capacity batch is legal exactly once per
+drained-and-refilled bucket, so the sustained rate still governs over time.
+
+## A10. `close()` really stops the in-process driver; `Driver.onTerminate` exists
+
+`InProcessDriverRunner.close()` dropped its handlers and nothing else — and
+because `dispose()` queues the farewell `terminate` and then closes in the
+same turn, the deferred frame was discarded by close's own guard. The runtime
+stayed `ready` forever; every restart leaked a live driver, while
+`WorkerDriverRunner.close()` really terminates its worker — precisely the
+observable difference the in-process runner exists to not have. Now: frames
+already in flight still deliver, and close schedules `DriverRuntime.stop()`
+behind them. Author-opened timers are the one thing nothing else in the
+isolate can cancel, so `Driver.onTerminate(reason)` (default no-op; also
+`onTerminate` in the JS SDK) is where a driver lets go of what it holds.
+
+## A11. One wire discipline for the JS SDK's own failures
+
+`post()` claimed a sequence number before `JSON.stringify` ran, so a
+non-serializable write burned a seq and desynchronized the stream — the host
+then faulted with a misleading `outOfOrder`. Serialization now happens before
+the seq is claimed, and an unencodable frame is reported as `driverCrash`
+(matching both Dart runners). The worker runner's inbound path got the same
+honesty: a message that is not a JSON frame (a library's stray `postMessage`,
+a debug string) is reported through `onCrash` instead of being dropped to
+surface later as a baffling ordering fault.
+
+## A12. The carts now share their integer semantics — and the suite would notice
+
+`parseInt` reads prefixes (`'2x'` → 2) and Dart's parser reads `0x` hex
+(`'0x3'` → 3 where `parseInt` yields 0 — one cart deletes the row, the other
+stocks three), so the "identical" drivers diverged on any non-clean input,
+and the conformance suite only ever typed `'7'`. Both ports now guard with
+the same regex (`^[+-]?[0-9]+$`; digits and nothing else), and the cart
+conformance case types `'2x'` — the step that fails if the semantics ever
+drift apart again.
+
+## A13. The production load path runs (or refuses) logic projects
+
+`CraftProjectLoader` ignored the manifest's `logic` slot entirely, so the
+scaffolded README's own instructions — `craft create --logic`, deploy, paste
+the URL — produced dead chrome frozen on "Connecting…": the exact inert-chrome
+outcome the design forbids, with `requireSupported` having zero non-test
+callers. The deeper cause was a **second parser**: `LogicManifest.parse`
+existed beside `ProjectManifest.parse`, and callers spliced JSON strings to
+reach it. Now one file has one parser (`ProjectManifest.logic`, populated by
+`LogicManifest.read`; the logic slot is the one *non-total* part of manifest
+parsing, by A1's own argument), the loader takes a `HostLogicSupport`
+(default `none` — refuse with a reason), fetches a bundled driver's source as
+text, and the site's `/load` screen runs it in a worker on both panes.
+`WorkerDriverRunner.fromUrl` is demoted from "the production shape" to the
+niche it is (scripts that import the SDK themselves); fetch-and-`fromSource`
+is the production shape, because the published file then needs no import.
+
+## A14. Sundry, from the same review
+
+- The JS SDK's `PROTOCOL_VERSION` is a hand-copy of `logicProtocolVersion`;
+  the SDK generator now fails if they disagree, so a version bump cannot
+  silently strand every JavaScript driver.
+- `_boundValues` re-walked every component's property tree per event; the
+  path set only changes on structural updates, so it is cached and
+  invalidated by `createSurface`/`updateComponents`.
+- A faulted session now runs the same teardown as `dispose` (listener
+  removed, queue cleared) instead of staying subscribed to the long-lived
+  action notifier.
+- `MiniAppRunner` reads the surface id from the boot stream's own
+  `createSurface` (hosts stop repeating it out of band; the site's mini-app
+  screen no longer hardcodes `'cart'`, and its Dart stand-in is a per-app
+  registry), and its `fault` reads through to the session instead of
+  mirroring it across four hand-synced sites. A boot stream that creates no
+  surface is refused loudly.
+- The driver conformance suite settles on the *session's own readiness*
+  before its first assertion instead of a fixed eight turns — a worker's boot
+  is wall-clock time no turn count guarantees; a loaded CI machine now slows
+  the test instead of failing it.
+- The publishing skill knows the fifth public package (dependency order,
+  dry-run list, version-sync grep); DESIGN.md §5/§12 list `a2ui_craft_logic`
+  and its depends-only-on-`a2ui_core` rule; `site/lib/flutter_host.dart`'s
+  duplicate measuring render object folded into the existing one (the copy
+  had already dropped the convergence guard).
+
+- Live verification of the `/load` path surfaced one more real bug, in the
+  new wiring itself: handing two runners (or one runner twice) the **same
+  decoded message instances** leaks state between boots — the data model
+  adopts the value objects a message carries, and a driver's writes mutate
+  them in place, so the second boot starts from the first session's
+  leftovers. The gallery path had masked this by re-decoding JSON per boot.
+  `MiniAppRunner.coldBoot` now documents the freshly-decoded contract and the
+  load screen decodes per boot.
+
+**Recorded, not done:** mini-app panes still bypass `SampleView`, so a themed
+logic project renders unthemed — the right fix is an externally-owned-surface
+mode on `SampleView`, deferred with A5. The JS SDK still trusts frame bodies
+it decodes (no per-field validation like the Dart machine's) — the fault
+*reporting* now matches, the legality table's rigor does not yet.

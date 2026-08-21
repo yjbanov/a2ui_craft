@@ -14,6 +14,9 @@
 
 import 'dart:io';
 
+import 'package:a2ui_craft_logic/a2ui_craft_logic.dart'
+    show logicProtocolVersion;
+
 const String _source = 'packages/a2ui_craft_logic/js/driver.js';
 const String _out = 'packages/a2ui_craft_logic/lib/src/driver_sdk.g.dart';
 
@@ -21,6 +24,21 @@ void main() {
   final String js = File(_source).readAsStringSync();
   if (js.contains("'''")) {
     stderr.writeln("driver.js contains ''' — cannot raw-embed.");
+    exit(1);
+  }
+  // The two ends must agree exactly, and the JS constant is a hand-written
+  // copy of the Dart one — so the generator, which every check.sh run
+  // executes, is where the copy is held to the original. Without this, a
+  // version bump in envelope.dart would leave every JavaScript driver
+  // announcing the old version and faulting with versionSkew at runtime,
+  // while every guard stayed green.
+  final String expected = "var PROTOCOL_VERSION = '$logicProtocolVersion';";
+  if (!js.contains(expected)) {
+    stderr.writeln(
+      'driver.js does not declare `$expected` — its PROTOCOL_VERSION has '
+      'drifted from logicProtocolVersion in lib/src/envelope.dart. The two '
+      'ends must agree exactly; update js/driver.js.',
+    );
     exit(1);
   }
 

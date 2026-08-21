@@ -28,6 +28,25 @@ enum SessionFaultCode {
   /// The peer stopped answering heartbeats.
   heartbeatLost,
 
+  /// The driver never completed the handshake: its runtime started (or seemed
+  /// to) but no `hello` arrived within the deadline.
+  ///
+  /// Distinct from [heartbeatLost] because the probe cannot run yet — pings are
+  /// only legal on a ready session — and distinct from [driverCrash] because
+  /// nothing reported dying. A script that loads cleanly but never calls the
+  /// SDK, or a remote endpoint that accepts the connection and says nothing,
+  /// both land here instead of leaving the surface saying "Connecting…"
+  /// forever.
+  handshakeTimedOut,
+
+  /// The driver ended the session on purpose — an orderly goodbye.
+  ///
+  /// Not a failure, but surfaced through the same channel because the host's
+  /// obligation is identical: take the surface out of service. A session that
+  /// ended quietly would leave every control accepting input that nothing will
+  /// ever answer.
+  driverTerminated,
+
   /// The driver reported an error of its own.
   driverError,
 

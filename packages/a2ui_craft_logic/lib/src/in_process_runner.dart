@@ -51,10 +51,14 @@ class InProcessDriverRunner implements DriverTransport {
   set onCrash(void Function(String reason)? handler) => _onCrash = handler;
 
   @override
-  void start() => _defer(() => _runtime.start());
+  void start() {
+    if (_closed) return;
+    _defer(() => _runtime.start());
+  }
 
   @override
   void send(Map<String, Object?> frame) {
+    if (_closed) return;
     final Map<String, Object?>? encoded = _encode(frame, 'host');
     if (encoded == null) return;
     _defer(() => _runtime.receive(encoded));
@@ -62,26 +66,34 @@ class InProcessDriverRunner implements DriverTransport {
 
   @override
   void close() {
+    if (_closed) return;
     _closed = true;
     _onFrame = null;
     _onCrash = null;
+    // Frames already in flight still deliver — the session's own farewell
+    // `terminate` is queued *before* close is called, and dropping it would
+    // leave the driver's machine open forever. Scheduled last, `stop` then
+    // ends the runtime even when no terminate was sent (the fault path): the
+    // close contract is "stop the driver", and a worker runner really does
+    // `terminate()` its worker, so the runner that stands in for it must not
+    // leave a live runtime behind. (Author-opened timers are the driver's own
+    // to cancel, in [Driver.onTerminate] — nothing else in this isolate can.)
+    Timer.run(
+      () => _runtime.stop('the host closed the transport'),
+    );
   }
 
   void _fromDriver(Map<String, Object?> frame) {
     final Map<String, Object?>? encoded = _encode(frame, 'driver');
     if (encoded == null) return;
+    // After close, `_onFrame` is null and the delivery is naturally inert.
     _defer(() => _onFrame?.call(encoded));
   }
 
   /// Schedules [action] on the event loop — a zero-length timer, not a
   /// microtask. Timers with equal expiry fire in creation order, so frames stay
   /// ordered.
-  void _defer(void Function() action) {
-    Timer.run(() {
-      if (_closed) return;
-      action();
-    });
-  }
+  void _defer(void Function() action) => Timer.run(action);
 
   Map<String, Object?>? _encode(Map<String, Object?> frame, String origin) {
     try {

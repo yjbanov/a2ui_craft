@@ -55,8 +55,10 @@ class _CountingDriver extends Driver {
 
 MiniAppRunner _runner(List<_CountingDriver> built) {
   var serial = 0;
+  // No surfaceId: the runner reads it from the boot stream's own
+  // createSurface, the way every host should — a host that repeats the id out
+  // of band is a host that can get it wrong.
   return MiniAppRunner(
-    surfaceId: 'app',
     createProcessor: _createProcessor,
     coldBoot: _coldBoot,
     createTransport: () {
@@ -81,6 +83,8 @@ void main() {
     addTearDown(runner.dispose);
 
     runner.start();
+    // The surface id came from the boot stream itself, not from the host.
+    expect(runner.activeSurfaceId, 'app');
     // First paint comes from the recorded stream — no round trip.
     expect(runner.surface!.dataModel.get('/status'), 'cold');
 
@@ -88,6 +92,27 @@ void main() {
     expect(runner.surface!.dataModel.get('/status'), 'live #1');
     expect(runner.isRunning, isTrue);
     expect(runner.fault, isNull);
+  });
+
+  test('a boot stream that creates no surface is refused loudly', () async {
+    // A mini-app with no surface is nothing to drive; running a driver
+    // against it would be a session about nothing, ending in a null
+    // dereference at whichever host renders first.
+    final MiniAppRunner runner = MiniAppRunner(
+      createProcessor: _createProcessor,
+      coldBoot: () => <A2uiMessage>[],
+      createTransport: () => InProcessDriverRunner(
+        _CountingDriver(1),
+        diagnostics: silentDiagnostics,
+      ),
+    );
+    addTearDown(runner.dispose);
+    runner.start();
+
+    expect(runner.fault!.code, SessionFaultCode.malformed);
+    expect(runner.fault!.message, contains('createSurface'));
+    expect(runner.isRunning, isFalse);
+    expect(runner.surface, isNull);
   });
 
   test('a driver failure stops the mini-app and says why', () async {

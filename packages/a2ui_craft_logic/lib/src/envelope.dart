@@ -112,7 +112,7 @@ sealed class LogicMessage {
         return UpdateMessage(<A2uiMessage>[
           for (final Object? entry in raw)
             if (entry is Map<String, dynamic>)
-              A2uiMessage.fromJson(entry)
+              _decodeA2uiMessage(entry)
             else
               throw LogicProtocolError(
                 'Each entry of an update must be an A2UI message object.',
@@ -446,6 +446,27 @@ final class LogicFrame {
 final Map<String, LogicMessageType> _typeByName = <String, LogicMessageType>{
   for (final LogicMessageType t in LogicMessageType.values) t.name: t,
 };
+
+/// Decodes one A2UI Transport message, converting any decode failure into a
+/// [LogicProtocolError].
+///
+/// `A2uiMessage.fromJson` throws its own validation and cast errors, and those
+/// are not [LogicProtocolError] — left unwrapped they would sail past the
+/// session's `malformed`-fault handling and surface as an unhandled error in
+/// whatever callback delivered the frame, leaving the session `ready` and the
+/// surface impersonating a working app. The envelope is the one place every
+/// decode failure funnels through, so the conversion happens here and nowhere
+/// else has to remember to.
+A2uiMessage _decodeA2uiMessage(Map<String, dynamic> json) {
+  try {
+    return A2uiMessage.fromJson(json);
+  } on Object catch (error) {
+    throw LogicProtocolError(
+      'Not a decodable A2UI message: $error',
+      details: json,
+    );
+  }
+}
 
 String _string(Map<String, Object?> body, String key) {
   final Object? value = body[key];

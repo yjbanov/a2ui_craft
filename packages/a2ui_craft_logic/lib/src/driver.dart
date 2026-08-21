@@ -181,6 +181,16 @@ abstract class Driver {
   /// Handlers are serialized: the next event waits for this one's future, so a
   /// driver never observes two handlers interleaving its state.
   FutureOr<void> onEvent(DriverContext context, DriverEvent event);
+
+  /// Called once when the session ends — the host said goodbye, or the
+  /// transport was closed.
+  ///
+  /// The place to cancel timers and subscriptions the driver opened. A worker
+  /// is simply killed and needs none of this; an in-process driver shares the
+  /// host's isolate, where nothing else *can* stop author-created timers — so
+  /// a driver that opens them and wants runner-independence implements this.
+  /// No writes are delivered after this point.
+  FutureOr<void> onTerminate(String reason) {}
 }
 
 /// The driver-side half of a session: owns the state machine, decodes frames,
@@ -251,13 +261,36 @@ class DriverRuntime implements DriverContext {
         _run(() => driver.onEvent(this, _toEvent(event)));
       case PingMessage(:final int nonce):
         _emit(PongMessage(nonce: nonce));
-      case TerminateMessage():
+      case TerminateMessage(:final String reason):
+        // The machine latched; give the author the chance to cancel what they
+        // opened. Runs on the handler chain so it never interleaves with a
+        // still-running handler.
+        _run(() => driver.onTerminate(reason));
       case ErrorMessage():
       case HelloMessage():
       case UpdateMessage():
       case PongMessage():
         break;
     }
+  }
+
+  /// Ends this runtime from the host side of the channel, when no
+  /// [TerminateMessage] made it across — a fault path, or a transport closed
+  /// mid-flight.
+  ///
+  /// Latches the machine (dropping any later write) and runs
+  /// [Driver.onTerminate]. Idempotent: a runtime that already terminated —
+  /// including by receiving the terminate frame — does nothing here.
+  void stop(String reason) {
+    if (!_machine.isOpen) return;
+    try {
+      // Latch by sending a terminate nobody will hear: the host is already
+      // gone, but the machine's own transition is the honest way to end it.
+      _machine.send(TerminateMessage(reason: reason));
+    } on SessionFault {
+      // Already latched.
+    }
+    _run(() => driver.onTerminate(reason));
   }
 
   @override

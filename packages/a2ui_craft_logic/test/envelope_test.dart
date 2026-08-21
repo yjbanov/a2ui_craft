@@ -174,5 +174,36 @@ void main() {
         throwsA(isA<LogicProtocolError>()),
       );
     });
+
+    test(
+        'an update entry that is not a decodable A2UI message is refused '
+        'as a protocol error, not as whatever the A2UI codec throws', () {
+      // The session machinery converts LogicProtocolError into a `malformed`
+      // fault and catches nothing else — so the envelope must be the place
+      // where every decode failure, the A2UI codec's included, takes that
+      // type. Unwrapped, this would escape as an unhandled async error and
+      // the session would stay `ready`.
+      expect(
+        () => LogicFrame.fromJson(<String, Object?>{
+          'seq': 1,
+          'type': 'update',
+          'body': <String, Object?>{
+            'messages': <Object?>[
+              <String, Object?>{
+                'version': 'v0.9',
+                'noSuchMessage': <String, Object?>{},
+              },
+            ],
+          },
+        }),
+        throwsA(
+          isA<LogicProtocolError>().having(
+            (LogicProtocolError e) => e.message,
+            'message',
+            contains('A2UI'),
+          ),
+        ),
+      );
+    });
   });
 }

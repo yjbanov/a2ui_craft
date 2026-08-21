@@ -212,6 +212,30 @@ void main() {
       expect(faults.single.code, SessionFaultCode.scopeViolation);
       expect(processor.groupModel.getSurface('other'), isNotNull);
     });
+
+    test('a driver may not delete its own surface either', () async {
+      // In scope, still refused: the host is *rendering* this surface, and a
+      // surface that vanishes under the renderer takes the host down with a
+      // null dereference instead of the stopped-card the failure policy
+      // promises. The lifecycle belongs to the host; a driver that wants a
+      // clean slate replaces with createSurface.
+      final (
+        MessageProcessor<ComponentApi> processor,
+        SurfaceModel<ComponentApi> surface,
+      ) = _surface();
+      final (DriverSession session, List<SessionFault> faults) = _session(
+        processor,
+        _RawDriver(<A2uiMessage>[DeleteSurfaceMessage(surfaceId: 's')]),
+      );
+      addTearDown(session.dispose);
+      session.start();
+      await _settle();
+
+      expect(faults.single.code, SessionFaultCode.scopeViolation);
+      expect(faults.single.message, contains('lifecycle'));
+      expect(processor.groupModel.getSurface('s'), same(surface),
+          reason: 'the rendered surface is untouched');
+    });
   });
 
   group('development-time diagnostics', () {

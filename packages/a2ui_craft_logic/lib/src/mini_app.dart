@@ -22,20 +22,27 @@ import 'transport.dart';
 /// replay of driver state — because a half-restored mini-app that *looks*
 /// recovered is worse than one that plainly starts over.
 class MiniAppRunner {
-  /// Creates a runner for the mini-app on [surfaceId].
+  /// Creates a runner for a mini-app.
   ///
   /// Each of the three factories is called afresh on every boot, so a restart
   /// is a genuine cold start rather than a reset of something that survived:
   /// [createProcessor] builds an empty surface group, [coldBoot] supplies the
   /// recorded Transport stream that composes the surface (the project's
   /// `app.json`), and [createTransport] connects a new driver.
+  ///
+  /// The surface id is read from the boot stream's own `createSurface` — the
+  /// project already states it there, and a host that repeats it out of band
+  /// is a host that can get it wrong (a runner told `'cart'` while the stream
+  /// creates `'app'` renders nothing, with nothing to say so). Pass
+  /// [surfaceId] only to disambiguate a boot stream that creates several.
   MiniAppRunner({
     required this.createProcessor,
     required this.coldBoot,
     required this.createTransport,
-    required this.surfaceId,
+    this.surfaceId,
     this.hostContext = const <String, Object?>{},
     this.heartbeat = const Duration(seconds: 5),
+    this.handshakeTimeout = const Duration(seconds: 10),
   });
 
   /// Builds a fresh processor, with the host's catalogs registered.
@@ -43,13 +50,20 @@ class MiniAppRunner {
 
   /// The recorded Transport stream that composes the surface before any driver
   /// connects — first paint without a round trip.
+  ///
+  /// Must return **freshly decoded** messages on every call, never a shared
+  /// list of instances: the data model adopts the value objects a message
+  /// carries, and a driver's writes may then mutate them in place — so a
+  /// restart (or a second runner) booting from the same instances would start
+  /// from the previous session's leftovers instead of the recorded stream.
   final List<A2uiMessage> Function() coldBoot;
 
   /// Connects a new driver.
   final DriverTransport Function() createTransport;
 
-  /// The surface the mini-app occupies.
-  final String surfaceId;
+  /// An explicit surface id, for boot streams that create more than one
+  /// surface. Usually null — see the constructor.
+  final String? surfaceId;
 
   /// Host-owned context published to the surface and handed to the driver.
   final Map<String, Object?> hostContext;
@@ -58,12 +72,17 @@ class MiniAppRunner {
   /// [DriverSession.heartbeat]. `null` disables it.
   final Duration? heartbeat;
 
+  /// The handshake deadline passed to each session; see
+  /// [DriverSession.handshakeTimeout]. `null` disables it.
+  final Duration? handshakeTimeout;
+
   final EventNotifier<MiniAppRunner> _onChanged =
       EventNotifier<MiniAppRunner>();
 
   MessageProcessor<ComponentApi>? _processor;
   DriverSession? _session;
-  SessionFault? _fault;
+  String? _activeSurfaceId;
+  SessionFault? _bootFault;
 
   /// Fires whenever the host should re-read this runner — a boot, a restart, a
   /// fault.
@@ -72,22 +91,31 @@ class MiniAppRunner {
   /// The current processor, or null before the first [start].
   MessageProcessor<ComponentApi>? get processor => _processor;
 
-  /// The mini-app's surface, or null before the first [start].
-  SurfaceModel<ComponentApi>? get surface =>
-      _processor?.groupModel.getSurface(surfaceId);
+  /// The id of the surface the running mini-app occupies, or null before the
+  /// first [start].
+  String? get activeSurfaceId => _activeSurfaceId;
+
+  /// The mini-app's surface, or null before the first [start] (or after a
+  /// boot stream that created none — see [fault]).
+  SurfaceModel<ComponentApi>? get surface {
+    final String? id = _activeSurfaceId;
+    return id == null ? null : _processor?.groupModel.getSurface(id);
+  }
 
   /// The current session, or null before the first [start].
   DriverSession? get session => _session;
 
   /// Why the mini-app stopped, or null while it is running.
   ///
-  /// A host renders its own full-surface failure state when this is non-null.
-  /// The message is developer-facing; what a user needs to be told is that the
-  /// mini-app stopped and that they can start it again.
-  SessionFault? get fault => _fault;
+  /// Read from the session itself — one source of truth, no mirror to fall
+  /// out of sync on a restart. A host renders its own full-surface failure
+  /// state when this is non-null. The message is developer-facing; what a
+  /// user needs to be told is that the mini-app stopped and that they can
+  /// start it again.
+  SessionFault? get fault => _bootFault ?? _session?.fault;
 
   /// Whether the mini-app is live.
-  bool get isRunning => _session != null && _fault == null;
+  bool get isRunning => _session != null && fault == null;
 
   /// Cold-boots the mini-app. Does nothing if it is already running.
   void start() {
@@ -111,33 +139,47 @@ class MiniAppRunner {
   }
 
   void _boot() {
-    _fault = null;
+    _bootFault = null;
     final MessageProcessor<ComponentApi> processor = createProcessor();
-    processor.processMessages(coldBoot());
+    final List<A2uiMessage> boot = coldBoot();
+    processor.processMessages(boot);
+    _processor = processor;
+    final String? id = surfaceId ??
+        boot.whereType<CreateSurfaceMessage>().firstOrNull?.surfaceId;
+    _activeSurfaceId = id;
+    if (id == null) {
+      // No surface, no mini-app: refuse loudly rather than run a driver
+      // against nothing.
+      _bootFault = const SessionFault(
+        SessionFaultCode.malformed,
+        'The boot stream created no surface, so there is nothing to drive. '
+        "A mini-app's app.json must begin with createSurface.",
+      );
+      _onChanged.emit(this);
+      return;
+    }
     final DriverSession session = DriverSession(
       processor: processor,
-      surfaceId: surfaceId,
+      surfaceId: id,
       transport: createTransport(),
       hostContext: hostContext,
       heartbeat: heartbeat,
+      handshakeTimeout: handshakeTimeout,
     );
     session.onFault.addListener(_handleFault);
-    _processor = processor;
     _session = session;
     session.start();
     _onChanged.emit(this);
   }
 
-  void _handleFault(SessionFault fault) {
-    _fault = fault;
-    _onChanged.emit(this);
-  }
+  void _handleFault(SessionFault fault) => _onChanged.emit(this);
 
   void _teardown() {
     _session?.dispose();
     _session = null;
     _processor?.groupModel.dispose();
     _processor = null;
-    _fault = null;
+    _activeSurfaceId = null;
+    _bootFault = null;
   }
 }

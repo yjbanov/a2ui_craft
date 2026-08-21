@@ -64,15 +64,33 @@ const String driverSdkJs = r'''
 
     function post(type, body) {
       if (state === 'faulted' || state === 'terminated') return;
+      // Serialize BEFORE claiming a sequence number: a value JSON cannot
+      // carry must not burn a seq, or the host sees a gap in the stream and
+      // faults with a misleading "out of order" instead of the real cause.
+      var text;
+      try {
+        text = JSON.stringify({ seq: outSeq + 1, type: type, body: body });
+      } catch (error) {
+        if (type === 'error') {
+          // The unencodable thing IS the error report; latching quietly is
+          // all that is left.
+          state = 'faulted';
+          pending = [];
+          return;
+        }
+        fault('driverCrash', 'A frame was not JSON-encodable: ' + error);
+        return;
+      }
       outSeq += 1;
-      global.postMessage(JSON.stringify({
-        seq: outSeq,
-        type: type,
-        body: body,
-      }));
+      global.postMessage(text);
     }
 
-    function fault(reason) {
+    // Says why before latching. A driver that latches silently is
+    // indistinguishable from a hung one: a host with a heartbeat misreports
+    // it seconds later as a lost heartbeat, and a host without one waits
+    // forever. The Dart runtime reports its failures; so must this side.
+    function fault(code, reason) {
+      post('error', { code: code, message: reason });
       state = 'faulted';
       pending = [];
     }
@@ -113,7 +131,7 @@ const String driverSdkJs = r'''
           message: message,
           details: details === undefined ? null : details,
         });
-        fault(message);
+        state = 'faulted';
       },
       diagnostic: function (message) {
         // Loud by default; a production build passes `diagnostics: false`.
@@ -192,14 +210,24 @@ const String driverSdkJs = r'''
 
     function receive(frame) {
       if (state === 'faulted' || state === 'terminated') return;
-      if (!frame || frame.seq !== inSeq + 1) return fault('out of order');
+      if (!frame || frame.seq !== inSeq + 1) {
+        return fault('outOfOrder',
+            'Expected frame #' + (inSeq + 1) + ', got #' +
+            (frame && frame.seq) + '. A message was lost, duplicated, or ' +
+            'reordered.');
+      }
       inSeq = frame.seq;
       var body = frame.body || {};
       switch (frame.type) {
         case 'init':
-          if (state !== 'handshaking') return fault('illegal init');
+          if (state !== 'handshaking') {
+            return fault('illegalMessage',
+                "An 'init' is not legal while the session is " + state + '.');
+          }
           if (body.protocolVersion !== PROTOCOL_VERSION) {
-            return fault('version skew');
+            return fault('versionSkew',
+                'This driver speaks protocol ' + PROTOCOL_VERSION +
+                '; the host speaks ' + body.protocolVersion + '.');
           }
           state = 'ready';
           surfaceId = body.surfaceId;
@@ -207,26 +235,45 @@ const String driverSdkJs = r'''
           if (spec.onInit) run(function () { return spec.onInit(context); });
           return;
         case 'event':
-          if (state !== 'ready') return fault('illegal event');
+          if (state !== 'ready') {
+            return fault('illegalMessage',
+                "An 'event' is not legal while the session is " + state + '.');
+          }
           run(function () { return dispatch(body); });
           return;
         case 'ping':
-          if (state !== 'ready') return fault('illegal ping');
+          if (state !== 'ready') {
+            return fault('illegalMessage',
+                "A 'ping' is not legal while the session is " + state + '.');
+          }
           post('pong', { nonce: body.nonce });
           return;
         case 'terminate':
           state = 'terminated';
+          // The author's chance to cancel what they opened. A worker is
+          // usually killed outright and never sees this; a driver that does
+          // must not be able to take the runtime down with it.
+          if (spec.onTerminate) {
+            try { spec.onTerminate(body.reason); } catch (ignored) {}
+          }
           return;
         case 'error':
           state = 'faulted';
           return;
         default:
-          return fault('unknown frame type ' + frame.type);
+          return fault('malformed', "Unknown frame type '" + frame.type + "'.");
       }
     }
 
     global.onmessage = function (event) {
-      receive(JSON.parse(event.data));
+      var frame;
+      try {
+        frame = JSON.parse(event.data);
+      } catch (error) {
+        return fault('malformed',
+            'The channel carried something that is not JSON: ' + error);
+      }
+      receive(frame);
     };
 
     // The driver speaks first: a worker's readiness is not observable to the

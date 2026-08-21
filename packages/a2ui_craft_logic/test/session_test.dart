@@ -622,6 +622,128 @@ void main() {
       expect(faults.single.code, SessionFaultCode.driverCrash);
       expect(faults.single.message, contains('JSON-encodable'));
     });
+
+    test(
+        'an update carrying a malformed A2UI message faults the session, '
+        'not the zone', () async {
+      // `ctx.send()` in JavaScript hands author-built objects straight to the
+      // wire, so this is easy to hit — and A2UI decode errors are not
+      // LogicProtocolError, so an unwrapped decode would escape every catch
+      // in the session machinery as an unhandled async error, leaving the
+      // machine `ready` and the surface impersonating a working app.
+      final (MessageProcessor<ComponentApi> processor, _) = _surface();
+      final DriverSession session = DriverSession(
+        processor: processor,
+        surfaceId: 's',
+        transport: _ScriptedTransport(<Map<String, Object?> Function(int)>[
+          (int seq) => <String, Object?>{
+                'seq': seq,
+                'type': 'update',
+                'body': <String, Object?>{
+                  'messages': <Object?>[
+                    <String, Object?>{
+                      'version': 'v0.9',
+                      'noSuchMessage': <String, Object?>{},
+                    },
+                  ],
+                },
+              },
+        ]),
+      );
+      addTearDown(session.dispose);
+      final List<SessionFault> faults = <SessionFault>[];
+      session.onFault.addListener(faults.add);
+      session.start();
+      await _settle();
+
+      expect(faults.single.code, SessionFaultCode.malformed);
+      expect(session.state, LogicSessionState.faulted);
+    });
+  });
+
+  group('the session ends', () {
+    test("a driver's goodbye takes the surface out of service", () async {
+      // An orderly `terminate` is not a failure, but silence about it would
+      // be: the machine latches, the host is never told, and the user goes on
+      // tapping enabled controls nothing will ever answer.
+      final (MessageProcessor<ComponentApi> processor, _) = _surface();
+      final DriverSession session = DriverSession(
+        processor: processor,
+        surfaceId: 's',
+        transport: _ScriptedTransport(<Map<String, Object?> Function(int)>[
+          (int seq) => LogicFrame(
+                seq: seq,
+                message: const TerminateMessage(reason: 'done for the day'),
+              ).toJson(),
+        ]),
+      );
+      addTearDown(session.dispose);
+      final List<SessionFault> faults = <SessionFault>[];
+      session.onFault.addListener(faults.add);
+      session.start();
+      await _settle();
+
+      expect(faults.single.code, SessionFaultCode.driverTerminated);
+      expect(faults.single.message, contains('done for the day'));
+      expect(session.fault, isNotNull,
+          reason: 'a host that polls instead of listening sees it too');
+      expect(session.state, LogicSessionState.terminated);
+    });
+
+    test('a driver that never says hello is faulted, not awaited forever',
+        () async {
+      // The heartbeat cannot cover this window — pings are only legal on a
+      // ready session — and nothing crashed, so nothing reports. Without a
+      // deadline the surface says "Connecting…" forever while events queue
+      // without bound.
+      final (MessageProcessor<ComponentApi> processor, _) = _surface();
+      final DriverSession session = DriverSession(
+        processor: processor,
+        surfaceId: 's',
+        transport: _NeverSpeaks(),
+        heartbeat: null,
+        handshakeTimeout: const Duration(milliseconds: 30),
+      );
+      addTearDown(session.dispose);
+      final List<SessionFault> faults = <SessionFault>[];
+      session.onFault.addListener(faults.add);
+      session.start();
+
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+      expect(faults.single.code, SessionFaultCode.handshakeTimedOut);
+      expect(session.state, LogicSessionState.faulted);
+    });
+
+    test('disposing the session stops the in-process driver', () async {
+      // The close contract is "stop the driver": a worker runner terminates
+      // its worker outright, so the runner that stands in for one must not
+      // leave a live runtime behind. In-process, author-opened timers are the
+      // one thing nothing else can stop — which is what onTerminate is for.
+      final (MessageProcessor<ComponentApi> processor, _) = _surface();
+      final _TickingDriver driver = _TickingDriver();
+      final DriverSession session = DriverSession(
+        processor: processor,
+        surfaceId: 's',
+        transport: InProcessDriverRunner(driver),
+      );
+      session.start();
+      await session.ready;
+      await _settle();
+      expect(driver.ticks, greaterThanOrEqualTo(0));
+
+      session.dispose();
+      await _settle();
+
+      expect(driver.terminations, hasLength(1),
+          reason: 'told once, with the reason');
+      expect(driver.terminations.single, contains('disposed'));
+
+      final int ticksAtDisposal = driver.ticks;
+      await Future<void>.delayed(const Duration(milliseconds: 30));
+      expect(driver.ticks, ticksAtDisposal,
+          reason: 'the periodic timer is cancelled — N restarts must not '
+              'leave N drivers burning CPU for surfaces out of service');
+    });
   });
 }
 
@@ -664,6 +786,93 @@ class _Spy implements DriverTransport {
 
   @override
   void close() => _inner.close();
+}
+
+/// A driver-side stand-in that answers the handshake and then plays back
+/// scripted frames verbatim — for wire shapes no real SDK would (or could)
+/// produce.
+class _ScriptedTransport implements DriverTransport {
+  _ScriptedTransport(this.afterInit);
+
+  /// Frame builders, each given the next sequence number, played after `init`.
+  final List<Map<String, Object?> Function(int seq)> afterInit;
+
+  void Function(Map<String, Object?> frame)? _onFrame;
+  int _seq = 0;
+
+  @override
+  set onFrame(void Function(Map<String, Object?> frame)? handler) =>
+      _onFrame = handler;
+
+  @override
+  set onCrash(void Function(String reason)? handler) {}
+
+  @override
+  void start() => Timer.run(() {
+        _seq += 1;
+        _onFrame?.call(
+          LogicFrame(seq: _seq, message: const HelloMessage()).toJson(),
+        );
+      });
+
+  @override
+  void send(Map<String, Object?> frame) {
+    if (frame['type'] != 'init') return;
+    for (final Map<String, Object?> Function(int seq) build in afterInit) {
+      Timer.run(() {
+        _seq += 1;
+        _onFrame?.call(build(_seq));
+      });
+    }
+  }
+
+  @override
+  void close() => _onFrame = null;
+}
+
+/// A transport whose driver never boots far enough to say anything at all —
+/// the entry-point typo, the hung top-level await, the remote endpoint that
+/// accepts the connection and goes silent.
+class _NeverSpeaks implements DriverTransport {
+  @override
+  set onFrame(void Function(Map<String, Object?> frame)? handler) {}
+
+  @override
+  set onCrash(void Function(String reason)? handler) {}
+
+  @override
+  void start() {}
+
+  @override
+  void send(Map<String, Object?> frame) {}
+
+  @override
+  void close() {}
+}
+
+/// Opens a periodic timer at init and cancels it at terminate — the author
+/// obligation [Driver.onTerminate] exists for.
+class _TickingDriver extends Driver {
+  Timer? _timer;
+  int ticks = 0;
+  final List<String> terminations = <String>[];
+
+  @override
+  void onInit(DriverContext context) {
+    _timer = Timer.periodic(
+      const Duration(milliseconds: 5),
+      (Timer _) => ticks++,
+    );
+  }
+
+  @override
+  void onEvent(DriverContext context, DriverEvent event) {}
+
+  @override
+  void onTerminate(String reason) {
+    terminations.add(reason);
+    _timer?.cancel();
+  }
 }
 
 /// A transport that answers the handshake and then goes quiet — the hung

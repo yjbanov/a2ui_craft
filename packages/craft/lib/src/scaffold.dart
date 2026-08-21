@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 /// The files `craft create` writes for a new project — the counter starter, or
-/// (with `--logic`) a mini-app that ships its own driver. Everything is **data**: an RFW template, a JSON-Schema
-/// catalog, an A2UI bootstrap, dev test scenarios, a project manifest, and a
-/// Firebase Hosting config. There is nothing to compile; deploying is copying
-/// these files to a CDN.
+/// (with `--logic`) a mini-app that ships its own driver. Everything is
+/// **data**: an RFW template, a JSON-Schema catalog, an A2UI bootstrap, dev
+/// test scenarios, a project manifest, and a Firebase Hosting config. There is
+/// nothing to compile; deploying is copying these files to a CDN.
 library;
 
 /// The files (relative path → contents) of a new counter project named [name].

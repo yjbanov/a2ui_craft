@@ -123,6 +123,22 @@ List<A2uiMessage> _messages(String eventName) => <A2uiMessage>[
 /// real worker that stops listening.
 const Duration? _noHeartbeat = null;
 
+/// Settles until the handshake completes, or gives up after enough rounds to
+/// cover a real worker's boot.
+///
+/// A fixed turn count is calibrated for the in-process runner, where every
+/// frame is a zero-length timer away; a worker's boot is *wall-clock* time —
+/// blob fetch, compile, evaluate — that no number of same-tab turns
+/// guarantees. Waiting on the session's own readiness makes the suite settle
+/// on the protocol's signal rather than a guessed constant, so a loaded CI
+/// machine slows the test down instead of failing it.
+Future<void> _settleUntilReady(
+    CraftTester tester, DriverSession session) async {
+  for (var i = 0; i < 100 && !session.isReady && session.fault == null; i++) {
+    await tester.settleDriver();
+  }
+}
+
 /// The shared behavioral specification for a surface driven by **business
 /// logic** rather than by an agent or a recorded stream.
 ///
@@ -160,6 +176,7 @@ void runDriverConformance(
       // Nothing has connected yet; the surface shows only what it cold-booted
       // with.
       session.start();
+      await _settleUntilReady(tester, session);
       await tester.settleDriver();
       expect(tester.hasText('ready'), isTrue,
           reason: "the driver's init write reached the rendered surface");
@@ -193,6 +210,7 @@ void runDriverConformance(
 
       await tester.mountComponent(tester.buildAdapter(surface, 'root'));
       session.start();
+      await _settleUntilReady(tester, session);
       await tester.settleDriver();
 
       // The echo: a two-way binding writes the local data model immediately,
@@ -220,7 +238,6 @@ void runDriverConformance(
       // The *shipped* project — its real template, its real schema, its real
       // recorded boot stream — not a fixture that resembles one.
       final MiniAppRunner runner = MiniAppRunner(
-        surfaceId: 'cart',
         createProcessor: () => MessageProcessor<ComponentApi>(
           catalogs: <Catalog<ComponentApi>>[
             loadCatalog(jsonDecode(cartMiniApp.schema) as Map<String, Object?>),
@@ -251,6 +268,7 @@ void runDriverConformance(
         'root',
         templateSource: cartMiniApp.template,
       ));
+      await _settleUntilReady(tester, runner.session!);
       await tester.settleDriver();
       expect(tester.hasText('Cart ready. Add something.'), isTrue);
 
@@ -268,6 +286,20 @@ void runDriverConformance(
       await tester.activateButton('Details');
       await tester.pump();
       expect(tester.hasText(detail), isTrue);
+
+      // An unparseable quantity: the strict shared semantics both driver
+      // languages implement. This is the step that catches drift between the
+      // Dart and JavaScript ports — `parseInt` would have read '2x' as 2 and
+      // updated the row, while Dart's parser reads it as nothing; under the
+      // shared regex both fall back to the held quantity and say so with the
+      // same words.
+      runner.surface!.dataModel.set('/cart/items/0/qty', '2x');
+      await tester.pump();
+      await tester.activateButton('Update');
+      await tester.settleDriver();
+      expect(tester.hasText('Mechanical keyboard: 1.'), isTrue,
+          reason: 'an unparseable quantity falls back to the held quantity — '
+              'identically in both driver languages');
 
       // The optimistic echo: a two-way binding writes the local model at
       // tier-1 latency and the driver is never told. Writing the bound path is

@@ -148,6 +148,39 @@ void main() {
       expect(surface.dataModel.get('$hostReservedNamespace/locale'), 'en-US');
     });
 
+    test('refuses every spelling that resolves inside it', () async {
+      // The data model's own parser is forgiving: a leading slash is optional,
+      // a trailing one is dropped, and '' and '//' both mean the root. Each of
+      // these writes lands exactly where '/host/locale' or '/' would, so a
+      // guard that compared the string it was handed would be guarding one
+      // spelling and waving through the rest.
+      for (final String path in <String>[
+        'host/locale',
+        'host',
+        '/host/',
+        '',
+        '//',
+      ]) {
+        final (
+          MessageProcessor<ComponentApi> processor,
+          SurfaceModel<ComponentApi> surface,
+        ) = _surface();
+        final (DriverSession session, List<SessionFault> faults) = _session(
+          processor,
+          _WritingDriver(<(String, Object?)>[(path, 'PWNED')]),
+          hostContext: const <String, Object?>{'locale': 'en-US'},
+        );
+        addTearDown(session.dispose);
+        session.start();
+        await _settle();
+
+        expect(faults.single.code, SessionFaultCode.hostKeyViolation,
+            reason: "a write to '$path' was let through");
+        expect(surface.dataModel.get('$hostReservedNamespace/locale'), 'en-US',
+            reason: "a write to '$path' reached the host's namespace");
+      }
+    });
+
     test('lets ordinary writes through — the guard is not a blanket', () async {
       final (
         MessageProcessor<ComponentApi> processor,

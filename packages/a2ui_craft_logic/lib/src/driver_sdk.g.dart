@@ -253,8 +253,18 @@ const String driverSdkJs = r'''
           // The author's chance to cancel what they opened. A worker is
           // usually killed outright and never sees this; a driver that does
           // must not be able to take the runtime down with it.
+          //
+          // On the handler chain, like every other author callback: a driver
+          // suspended on a promise must not have its teardown run underneath
+          // it. The Dart runtime states that as a contract, and a driver
+          // ported between the two languages does not get to relearn it. The
+          // chain is appended to directly rather than through `run`, whose
+          // failure path would report a fault on a session that has already
+          // ended.
           if (spec.onTerminate) {
-            try { spec.onTerminate(body.reason); } catch (ignored) {}
+            chain = chain.then(function () {
+              return spec.onTerminate(body.reason);
+            }).then(null, function (ignored) {});
           }
           return;
         case 'error':

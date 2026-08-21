@@ -115,6 +115,35 @@ void main() {
     expect(runner.surface, isNull);
   });
 
+  test('a boot stream that cannot be applied is a fault, not a throw',
+      () async {
+    // Decoding a project's `app.json` proves it is JSON, not that it is a
+    // valid program — and this is where it is applied for the first time. The
+    // runner promises the host exactly one question ("is `fault` null?"), so
+    // an exception escaping `start` would break the promise at the worst
+    // moment: with no surface to render and nothing to say about why.
+    final MiniAppRunner runner = MiniAppRunner(
+      createProcessor: _createProcessor,
+      coldBoot: () => throw const FormatException('not a message stream'),
+      createTransport: () => InProcessDriverRunner(
+        _CountingDriver(1),
+        diagnostics: silentDiagnostics,
+      ),
+    );
+    addTearDown(runner.dispose);
+
+    expect(runner.start, returnsNormally);
+    expect(runner.fault!.code, SessionFaultCode.malformed);
+    expect(runner.fault!.message, contains('not a message stream'));
+    expect(runner.isRunning, isFalse);
+    expect(runner.surface, isNull);
+
+    // And the failure state's own affordance survives it: "Start over" on a
+    // runner that never booted must not throw out of the button's callback.
+    expect(runner.restart, returnsNormally);
+    expect(runner.fault!.code, SessionFaultCode.malformed);
+  });
+
   test('a driver failure stops the mini-app and says why', () async {
     final MiniAppRunner runner = _runner(<_CountingDriver>[]);
     addTearDown(runner.dispose);

@@ -141,9 +141,27 @@ class MiniAppRunner {
   void _boot() {
     _bootFault = null;
     final MessageProcessor<ComponentApi> processor = createProcessor();
-    final List<A2uiMessage> boot = coldBoot();
-    processor.processMessages(boot);
     _processor = processor;
+    final List<A2uiMessage> boot;
+    try {
+      boot = coldBoot();
+      processor.processMessages(boot);
+    } on Object catch (error) {
+      // A boot stream can decode cleanly and still be a bad program: a
+      // component the catalog does not define, a path the data model refuses.
+      // Nothing downstream re-checks it — a fetched project's `app.json` is
+      // decoded by the loader and applied here for the first time — so letting
+      // this escape would leave the runner in the one state it promises is
+      // impossible: no surface, no fault, nothing to render and nothing to
+      // say. Worse, it escapes from `restart()` too, after teardown has
+      // already blanked the runner the failure state was rendering.
+      _bootFault = SessionFault(
+        SessionFaultCode.malformed,
+        'The boot stream could not be applied: $error',
+      );
+      _onChanged.emit(this);
+      return;
+    }
     final String? id = surfaceId ??
         boot.whereType<CreateSurfaceMessage>().firstOrNull?.surfaceId;
     _activeSurfaceId = id;

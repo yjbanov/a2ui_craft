@@ -692,6 +692,37 @@ is the production shape, because the published file then needs no import.
   `MiniAppRunner.coldBoot` now documents the freshly-decoded contract and the
   load screen decodes per boot.
 
+### A15 — Second pre-merge pass (2026-08-21)
+
+A second review, run after the first pass's fixes landed, found four things
+the first missed — all of them guards that only held for the *spelling* they
+were written against:
+
+- The host-namespace guard compared raw strings, but the data model's parser
+  is deliberately forgiving: a leading slash is optional, a trailing one is
+  dropped, and `''` and `'//'` both mean the root. So `host/locale` walked
+  into the host's namespace and `''` replaced the whole model — the two things
+  the guard exists to prevent, reachable by writing them differently. It now
+  compares *resolved segments*, and the reserved segment is derived from
+  `hostReservedNamespace` rather than restated.
+- `DriverSession.dispose` cancelled the handshake timer without completing
+  `ready`, so a host that awaited it and then tore the surface down waited
+  forever for a handshake nobody was still watching for — the same lie the
+  handshake deadline exists to prevent, one layer up. Disposal completes it
+  with a `StateError`: a deliberate ending by the host is not a fault (`fault`
+  stays null), but it is still an ending.
+- `MiniAppRunner._boot` let a bad boot stream throw out of `start` — and out
+  of `restart`, i.e. out of the "Start over" button of the failure state that
+  was rendering it. A project's `app.json` is only *decoded* by the loader;
+  this is where it is first *applied*, and an escape left the runner in the
+  one state it documents as impossible: no surface, no fault. It faults with
+  `malformed` instead.
+- The JS SDK called `onTerminate` synchronously from the message handler while
+  `DriverRuntime` runs it on the handler chain. A JS driver suspended on a
+  promise got its teardown run mid-handler; the Dart port of the same driver
+  did not. The chain is now appended to directly (not via `run`, whose failure
+  path would report a fault on a session that has already ended).
+
 **Recorded, not done:** mini-app panes still bypass `SampleView`, so a themed
 logic project renders unthemed — the right fix is an externally-owned-surface
 mode on `SampleView`, deferred with A5. The JS SDK still trusts frame bodies

@@ -714,6 +714,28 @@ void main() {
       expect(session.state, LogicSessionState.faulted);
     });
 
+    test('disposing before the handshake settles ready, never hangs it',
+        () async {
+      // `dispose` cancels the handshake timer — the one thing left that would
+      // have completed this future. A host that awaits `ready` and then tears
+      // the surface down (a widget disposed while a worker is still booting)
+      // would otherwise wait for a handshake nobody is still watching for.
+      final (MessageProcessor<ComponentApi> processor, _) = _surface();
+      final DriverSession session = DriverSession(
+        processor: processor,
+        surfaceId: 's',
+        transport: _NeverSpeaks(),
+        heartbeat: null,
+      );
+      session.start();
+      final Future<void> ready = session.ready;
+      session.dispose();
+
+      await expectLater(ready, throwsA(isA<StateError>()));
+      expect(session.fault, isNull,
+          reason: 'the host ended it on purpose; that is not a fault');
+    });
+
     test('disposing the session stops the in-process driver', () async {
       // The close contract is "stop the driver": a worker runner terminates
       // its worker outright, so the runner that stands in for one must not

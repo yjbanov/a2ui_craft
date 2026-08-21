@@ -22,6 +22,14 @@ import 'transport.dart';
 /// namespace, by the party that owns it.
 const String hostReservedNamespace = '/host';
 
+/// [hostReservedNamespace] as the data model itself sees it.
+///
+/// Derived rather than written out a second time: the guard compares resolved
+/// segments, and a constant that restated `'host'` by hand would be free to
+/// drift from the namespace it is meant to protect.
+final String _hostSegment =
+    DataPath.parse(hostReservedNamespace).segments.single;
+
 /// The host-side half of a driver session.
 ///
 /// Binds a [DriverTransport] to a rendered surface: user actions leaving the
@@ -43,7 +51,13 @@ class DriverSession {
     ChannelBudgets? budgets,
     this.heartbeat = const Duration(seconds: 5),
     this.handshakeTimeout = const Duration(seconds: 10),
-  }) : budgets = budgets ?? ChannelBudgets();
+  }) : budgets = budgets ?? ChannelBudgets() {
+    // `ready` is a convenience, not an obligation: a host that watches
+    // `onFault` instead must not be punished with an unhandled async error if
+    // the session fails. The listener goes on here, before anything at all can
+    // fail, because registering one afterwards is a race.
+    unawaited(_ready.future.catchError((Object _) {}));
+  }
 
   /// The processor whose surface group holds the driven surface.
   final MessageProcessor<ComponentApi> processor;
@@ -115,7 +129,9 @@ class DriverSession {
   bool get isReady => _machine.isReady;
 
   /// Completes when the handshake completes; completes with a [SessionFault] if
-  /// the session fails first.
+  /// the session fails first, or with a [StateError] if the host [dispose]s it
+  /// first — a deliberate ending by the host is not a fault, but it is still an
+  /// ending, and this future never simply hangs.
   Future<void> get ready => _ready.future;
 
   /// Fires once, when the session faults.
@@ -128,11 +144,6 @@ class DriverSession {
   void start() {
     if (_started) return;
     _started = true;
-    // `ready` is a convenience, not an obligation: a host that watches
-    // `onFault` instead must not be punished with an unhandled async error if
-    // the session fails before the handshake. The listener goes on before
-    // anything can fail, because registering one afterwards is a race.
-    unawaited(_ready.future.catchError((Object _) {}));
     transport
       ..onFrame = _receive
       ..onCrash = _handleCrash;
@@ -168,6 +179,15 @@ class DriverSession {
     _disposed = true;
     if (_machine.isOpen) {
       _trySend(const TerminateMessage(reason: 'host disposed the session'));
+    }
+    if (!_ready.isCompleted) {
+      // Nothing else ever will: the handshake timer that would have faulted
+      // this session is about to be cancelled. A `ready` left hanging is the
+      // same lie the handshake deadline exists to prevent, one layer up.
+      _ready.completeError(StateError(
+        'The host disposed the session before the driver completed the '
+        'handshake.',
+      ));
     }
     _teardownChannel();
     _onFault.dispose();
@@ -350,8 +370,15 @@ class DriverSession {
     }
     if (message is! UpdateDataModelMessage) return true;
 
+    // Guard what the write will *resolve to*, not how it was spelled.
+    // `DataPath.parse` is deliberately forgiving — '', '/' and '//' all mean
+    // the root, a trailing slash is dropped, and a leading slash is optional —
+    // so 'host/locale' lands squarely in the host's namespace and '' replaces
+    // the entire model. Comparing raw strings guards one spelling and leaves
+    // every other one open, which is not a guard at all.
     final String path = message.path ?? '/';
-    if (path == '/') {
+    final List<String> segments = DataPath.parse(path).segments;
+    if (segments.isEmpty) {
       _raise(
         SessionFaultCode.hostKeyViolation,
         'The driver tried to replace the whole data model, which would take '
@@ -359,8 +386,7 @@ class DriverSession {
       );
       return false;
     }
-    if (path == hostReservedNamespace ||
-        path.startsWith('$hostReservedNamespace/')) {
+    if (segments.first == _hostSegment) {
       _raise(
         SessionFaultCode.hostKeyViolation,
         "The driver tried to write '$path', inside the host-owned "

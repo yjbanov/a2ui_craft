@@ -252,16 +252,21 @@ void main() {
     final LogicManifest logic = LogicManifest.parse(
       '{"name": "Cart", "logic": ${cartMiniApp.logic}}',
     )!;
-    expect(logic.kind, DriverKind.worker);
+    expect(logic.language, DriverLanguage.javascript);
     expect(logic.entry, 'cart.js');
     expect(logic.capabilities, isEmpty);
 
-    // A web host runs it as declared; a Flutter host that cannot start a
-    // worker refuses rather than showing a cart nothing answers.
-    logic.requireSupported(<DriverKind>{DriverKind.worker});
+    // What the project does *not* say is the point: nothing here names a
+    // worker, an iframe, or a webview. A host that runs JavaScript is a host
+    // that can run this, however it chooses to do so.
+    logic.requireSupported(const HostLogicSupport(
+      languages: <DriverLanguage>{DriverLanguage.javascript},
+    ));
     expect(
-      () => logic.requireSupported(<DriverKind>{DriverKind.builtin}),
-      throwsA(isA<UnsupportedDriverKind>()),
+      () => logic.requireSupported(HostLogicSupport.none),
+      throwsA(isA<UnsupportedDriver>()),
+      reason: 'a host that runs no logic refuses rather than showing a cart '
+          'nothing answers',
     );
   });
 }

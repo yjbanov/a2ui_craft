@@ -407,3 +407,138 @@ Flutter pane runs the Dart port compiled in. Checked in a browser:
 
 The two panes hold independent sessions, so acting on one leaves the other
 alone — which is the separate-surfaces topology (design §9.1) on screen.
+
+---
+
+# Amendments after review (2026-08-13)
+
+Review of the entries above overturned three of them and found one bug. The
+originals are left standing so the record shows what changed and why.
+
+## A1. **D21 and D30 corrected** — the manifest names a *language*, not a runtime
+
+The reviewed objection: *the app doesn't choose the runtime, the host does.* The
+same bundle has to run on a page, in an iframe, in a web worker, in a webview,
+and inside an embedded engine like QuickJS. A project that declares
+`"kind": "worker"` has made itself un-portable across web and mobile in exchange
+for nothing.
+
+The slot is now:
+
+```json
+"logic": { "entry": "cart.js", "language": "javascript", "capabilities": [] }
+```
+
+and `requireSupported` asks *can this host run JavaScript?* rather than *does
+this host support workers?* A `HostLogicSupport` value carries what a host can
+do; nothing in it names a sandbox, and a test pins that there is no key a
+project could use to name one.
+
+Two things survive as genuinely app-level. **Bundled-versus-remote** is the
+project's to declare — "my logic lives on my server" is a fact only the author
+knows — so `url` and `entry` are mutually exclusive shapes. And the one
+runtime-adjacent thing an app can legitimately demand (origin isolation for
+logic handling a payment token) is a **capability**, a requirement rather than a
+preference about mechanism.
+
+`builtin` is gone from the schema entirely, which makes the code consistent with
+D21's own stated reasoning: a Dart driver compiled into a host is a **host
+substitution**, not something a project declares. The site's Flutter pane does
+exactly that and always did — it passes `CartDriver.new` directly, having read a
+manifest that asks for JavaScript.
+
+## A2. **D31 withdrawn** — there was no exception to make
+
+D31 amended DESIGN.md §10 to read "data only — with one deliberate exception"
+and then argued the exception was contained. That was wrong, and it is the way a
+clean invariant erodes: once "data only, except…" exists, the second exception
+argues from the first.
+
+From the renderer's side **there is no exception**. A renderer receives A2UI
+Transport messages and cannot tell whether they came from an agent, a recorded
+stream, or a driver. The driver is on the far side of an asynchronous boundary.
+Nothing about the templating system's data-only constraint is weakened by its
+existence.
+
+What is genuinely shared is only the *bundle format*, and the honest statement
+about that is much weaker: **the manifest is an open map**; the engine reads the
+keys it owns and ignores the rest; a layer above may claim keys of its own. That
+was already true in code — `ProjectManifest.parse` ignores unknown keys, which
+is why the slot needed no change there — so §10 now says that and nothing more.
+The `logic` key's schema, semantics, and sandbox argument live entirely in
+BUSINESS_LOGIC.md §6.
+
+The reviewed suggestion to split the templating design doc from the logic design
+doc is the same instinct one level up, and it is right for the same reason. Not
+done here (it is a large doc reorganization), but recorded as the direction.
+
+## A3. A real bug: **writes could escape their handler's turn**
+
+Not a design question — a defect, found in review. Given:
+
+```dart
+void onEvent(ctx, event) {
+  fetchSomething().then((v) => ctx.write('/x', v));   // not awaited
+}
+```
+
+the handler returned, `_flush()` shipped its (empty) batch, and the late write
+landed in `_pending` where it **sat until the next handler flushed it** —
+arriving out of order, attributed to an unrelated later event, or never at all
+if no further event came. The driver's model and the surface's would then
+disagree with nothing to say so, which is the worst failure shape available
+here.
+
+Fixed on both sides: a turn flag, and a write arriving outside a turn is
+reported loudly *and flushed immediately as its own update*. Shipping it alone
+is honest about when it happened and cannot corrupt anyone else's batch, and the
+driver plainly meant the write. A guard pins both halves and was shown to fail
+against the pre-fix code.
+
+This matters more in **JavaScript**, where there is no `unawaited_futures` lint
+and the runtime check is the only defense — which is most of the argument for
+doing it at runtime rather than leaving it to tooling.
+
+## A4. D1 and D13 are one gap, not two
+
+Review sharpened what D1 actually settled. "The driver speaks first" answers
+*who sends the first frame on an already-established channel*. It does **not**
+answer *who initiates the experience*, which this implementation answers the
+same way every time: the host. `MiniAppRunner` builds the processor, replays
+`app.json`, then connects.
+
+That excludes a real case — a server deciding a chat answer is better expressed
+as a template, and pushing one. And it is the *same* limitation D13 registers
+from the other side, because both come from one fact: **a session is pinned to
+exactly one host-chosen surface.** A driver can send `createSurface` today, but
+only for the id the host handed it in `init`.
+
+Closing it is one change, not two: `init` grants a *set* of surfaces (possibly
+empty, with the driver permitted to create), and the scope guard becomes
+`granted.contains(target)` instead of `target == surfaceId`. The guard stays
+exactly as meaningful. Nothing in the envelope blocks this — `surfaceId` is
+already on `init` and on every `event`.
+
+One distinction worth keeping separate, because the motivating example hides
+two different needs. *One driver, N concurrent surfaces* is multiplexing. *A
+shop remembering the cart was not empty last time* is state surviving surface
+teardown — sequential, not concurrent — which is much closer to the
+snapshot/restoration question (§10, deliberately unbuilt) than to multiplexing.
+Agent-partitioning needs the first; continuity needs the second. Different
+costs, different failure modes, plan separately.
+
+## A5. Known smell: `a2ui_craft_testing` depends on `a2ui_craft_examples`
+
+Not fixed, recorded. The shared conformance suite now knows about one specific
+demo project, so that the driver dimension can render the *shipped* cart rather
+than a look-alike (D22). Both packages are unpublished and nothing ships wrong,
+but a suite that is supposed to specify the framework should probably not import
+a particular app.
+
+Related and milder: `mini_app_worker_conformance_test.dart` lives in the Jaspr
+package because rendering needs a renderer and that is the only browser-capable
+harness here — a practical reason, not an architectural one. The published
+adapter libraries have no logic dependency (verified); the edge is dev-only, via
+this same testing package. Renaming the file (it was `driver_worker_test.dart`,
+which reads like WebDriver) removed the worst of the confusion, but the
+placement is worth revisiting alongside the dependency above.

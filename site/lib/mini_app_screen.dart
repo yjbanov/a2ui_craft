@@ -135,13 +135,14 @@ class _MiniAppScreenState extends State<MiniAppScreen> {
       }),
       <Component>[
         Component.text(
-          'The same project, driven twice. Its manifest asks for a '
-          '"${logic.kind.id}" driver at ${logic.entry}, which the Jaspr pane '
-          'runs verbatim in a sandbox; the Flutter pane runs a Dart port of '
-          'the same logic, compiled in. Expanding a row and formatting money '
-          'never reach either driver — those are the template\'s job. Stock '
-          'limits and the order are the driver\'s, because they have to '
-          'survive the surface.',
+          'The same project, driven twice. Its manifest says only that its '
+          'logic is ${logic.language!.id}, in ${logic.entry} — never where to '
+          'run it. This Jaspr pane chooses a web worker and runs that file '
+          'verbatim; the Flutter pane, which cannot start one, substitutes a '
+          'Dart port of the same logic compiled in. Expanding a row and '
+          'formatting money never reach either driver — those are the '
+          'template\'s job. Stock limits and the order are the driver\'s, '
+          'because they have to survive the surface.',
         ),
       ],
     );

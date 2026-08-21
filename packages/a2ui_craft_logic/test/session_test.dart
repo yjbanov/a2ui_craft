@@ -87,6 +87,25 @@ class _RecordingDriver extends Driver {
   }
 }
 
+/// Leaks a write out of its handler by not awaiting the future that makes it —
+/// the mistake `unawaited_futures` catches in Dart and nothing catches in
+/// JavaScript.
+class _LeakyDriver extends Driver {
+  @override
+  void onEvent(DriverContext context, DriverEvent event) {
+    switch (event.name) {
+      case 'leak':
+        context.write('/inTurn', 'batched');
+        unawaited(
+          Future<void>.delayed(Duration.zero)
+              .then((_) => context.write('/late', 'escaped')),
+        );
+      case 'later':
+        context.write('/later', 'ran');
+    }
+  }
+}
+
 /// Identical to [InProcessDriverRunner] except that it schedules on the
 /// **microtask** queue.
 ///
@@ -460,6 +479,87 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 150));
       expect(faults, isEmpty);
       expect(session.isReady, isTrue);
+    });
+  });
+
+  group('a write that escapes its handler', () {
+    test('is reported and sent on its own, not folded into a later batch',
+        () async {
+      final (
+        MessageProcessor<ComponentApi> processor,
+        SurfaceModel<ComponentApi> surface,
+      ) = _surface();
+      final List<String> reported = <String>[];
+      final List<String> types = <String>[];
+      final DriverSession session = DriverSession(
+        processor: processor,
+        surfaceId: 's',
+        transport: _Spy(
+          InProcessDriverRunner(_LeakyDriver(), diagnostics: reported.add),
+          types,
+        ),
+        heartbeat: null,
+      );
+      addTearDown(session.dispose);
+      session.start();
+      await _settle();
+      types.clear();
+
+      await surface.dispatchAction(
+        <String, dynamic>{
+          'event': <String, dynamic>{'name': 'leak'},
+        },
+        'btn',
+      );
+      await _settle();
+
+      // The handler's own write lands in the handler's batch...
+      expect(surface.dataModel.get('/inTurn'), 'batched');
+      // ...and the one that escaped lands too, rather than waiting in the
+      // batch for some later, unrelated handler to flush it.
+      expect(surface.dataModel.get('/late'), 'escaped');
+      expect(types.where((String t) => t == 'update'), hasLength(2),
+          reason: 'two turns, two updates — the late write is not smuggled '
+              "into anyone else's batch");
+
+      // And the author is told, because a silent divergence between the
+      // driver's model and the surface's is the worst possible outcome here.
+      expect(reported.single, contains('outside any handler turn'));
+    });
+
+    test('the guard has teeth: without it the write would ride along later',
+        () async {
+      // The failure this prevents, made concrete. The escaped write is
+      // observable *before* the next event, so it cannot have been carried by
+      // that event's batch — which is exactly what would happen if `_inTurn`
+      // were never consulted.
+      final (
+        MessageProcessor<ComponentApi> processor,
+        SurfaceModel<ComponentApi> surface,
+      ) = _surface();
+      final DriverSession session = DriverSession(
+        processor: processor,
+        surfaceId: 's',
+        transport: InProcessDriverRunner(
+          _LeakyDriver(),
+          diagnostics: silentDiagnostics,
+        ),
+        heartbeat: null,
+      );
+      addTearDown(session.dispose);
+      session.start();
+      await _settle();
+
+      await surface.dispatchAction(
+        <String, dynamic>{
+          'event': <String, dynamic>{'name': 'leak'},
+        },
+        'btn',
+      );
+      await _settle();
+      expect(surface.dataModel.get('/late'), 'escaped');
+      expect(surface.dataModel.get('/later'), isNull,
+          reason: 'no second event has happened yet');
     });
   });
 

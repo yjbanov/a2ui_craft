@@ -1,8 +1,8 @@
 {
   "name": "Cart",
   "logic": {
-    "kind": "worker",
     "entry": "cart.js",
+    "language": "javascript",
     "capabilities": []
   }
 }

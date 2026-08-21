@@ -102,9 +102,11 @@ void main() {
     // The scaffold has to be loadable by the parser that will actually read
     // it, not merely look right.
     final LogicManifest logic = LogicManifest.parse(read('manifest.json'))!;
-    expect(logic.kind, DriverKind.worker);
+    expect(logic.language, DriverLanguage.javascript);
     expect(logic.entry, 'logic.js');
-    logic.requireSupported(<DriverKind>{DriverKind.worker});
+    logic.requireSupported(const HostLogicSupport(
+      languages: <DriverLanguage>{DriverLanguage.javascript},
+    ));
 
     // The template and its cold boot render as an ordinary project would.
     final SampleSpec spec = SampleSpec.fromData(

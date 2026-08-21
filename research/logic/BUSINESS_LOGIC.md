@@ -266,20 +266,42 @@ Wasm in a worker is the language-neutrality endgame — one runner executing
 logic compiled from Rust, Kotlin, Dart, Go — but it is a *runner*, not a
 protocol concern, and not v1.
 
-The manifest slot reserved in DESIGN.md §10 gets its shape:
+The manifest key this layer claims in DESIGN.md §10's open map declares **what
+the logic is** and nothing about where it runs:
 
 ```json
 "logic": {
-  "kind": "worker",            // worker | iframe | webview | remote | builtin
-  "entry": "logic.js",         // or "url": "wss://…" for remote
+  "entry": "logic.js",         // the file this bundle ships…
+  "language": "javascript",    // …and what it is written in
   "capabilities": []           // §7; empty in v1
 }
 ```
 
-Hosts advertise which runners they support. An unsupported `kind` **refuses to
-load, loudly** — a mini-app without its logic is not a degraded app, it is a
-lie shaped like an app (every wired control disabled, nothing ever responding).
-Refusal with a reason beats inert chrome.
+or, for logic that never ships to the client at all:
+
+```json
+"logic": { "url": "wss://…", "capabilities": [] }
+```
+
+**The runtime is the host's choice, not the project's.** The same JavaScript
+runs on a page, in an iframe, in a web worker, in a webview, or in an embedded
+engine like QuickJS, and only the host knows which of those it is. A project
+that named a runtime would stop being portable across web and mobile for no
+gain, so it names a *language* — a property of the artifact it actually ships —
+and the host picks a sandbox that can run it. The one runtime-adjacent thing a
+project can legitimately demand (origin isolation for logic handling a payment
+token, say) is a **capability**, because that is a requirement of the app rather
+than a preference about mechanism.
+
+Bundled-versus-remote *is* the project's to declare: "my logic lives on my
+server" is a fact only the author knows.
+
+A host that cannot run what a project ships **refuses to load, loudly** — a
+mini-app without its logic is not a degraded app, it is a lie shaped like an app
+(every wired control disabled, nothing ever responding). Refusal with a reason
+beats inert chrome. A host may also *substitute*: one that recognizes a project
+and has a vetted driver compiled in may run that instead, which is a host
+decision the manifest neither knows nor constrains.
 
 ## 7. Trust model and the write partition
 

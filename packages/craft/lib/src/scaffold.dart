@@ -242,16 +242,18 @@ Map<String, String> miniAppProjectFiles(String name) {
   };
 }
 
-// The `logic` slot: where the driver runs, and what to run. `worker` is the
-// portable default — no DOM, no host objects, and the same script on every web
-// host. `capabilities` is empty because this version grants none.
+// The `logic` slot: *what* the logic is, never where it runs. A project names
+// the file it ships and the language that file is written in; whether the host
+// runs it in a worker, an iframe, a webview, or an embedded engine is the
+// host's decision, so the same bundle works everywhere. `capabilities` is
+// empty because this version grants none.
 String _miniAppManifest(String display) => '''
 {
   "name": "$display",
   "catalogId": "reserve",
   "logic": {
-    "kind": "worker",
     "entry": "logic.js",
+    "language": "javascript",
     "capabilities": []
   }
 }
@@ -382,13 +384,18 @@ String _miniAppReadme(String display, String name) => '''
 A **mini-app**: an A2UI Craft project that ships its own business logic. The
 template renders and the driver decides, and they are coupled by nothing but a
 protocol — so the driver can be written in any language that can hold state and
-read and write JSON. This one is JavaScript, running in a web worker.
+read and write JSON. This one is JavaScript.
+
+Note what the manifest does *not* say: where the driver runs. That is the
+host's decision — a web host may use a worker or an iframe, a mobile host a
+webview or an embedded engine — so the same bundle is portable across all of
+them.
 
 ## Files
 
 | File | Role | Deployed? |
 |---|---|---|
-| `manifest.json` | Name, catalog id, and the **`logic` slot** naming the driver. | ✅ |
+| `manifest.json` | Name, catalog id, and the **`logic` slot** — what the logic is, never where it runs. | ✅ |
 | `template.craft` | The UI, as an RFW template over the core primitives. | ✅ |
 | `schema.json` | The component API, plus the **`actions`** an agent may invoke. | ✅ |
 | `app.json` | The cold boot: a complete surface before the driver connects. | ✅ |

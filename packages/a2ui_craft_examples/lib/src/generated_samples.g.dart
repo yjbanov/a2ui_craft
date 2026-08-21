@@ -4978,8 +4978,8 @@ widget CartView = Card(child: Column(crossAxisAlignment: "stretch", gap: 12.0,
 ''',
     logic: r'''
 {
-  "kind": "worker",
   "entry": "cart.js",
+  "language": "javascript",
   "capabilities": []
 }
 ''',

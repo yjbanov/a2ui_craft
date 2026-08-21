@@ -113,10 +113,10 @@ step "Test: a2ui_craft_jaspr (parity)"
 step "Test: a2ui_craft_jaspr (Flex geometry, headless Chrome)"
 (cd packages/a2ui_craft_jaspr && dart test -p chrome test/flex_geometry_test.dart test/control_styles_test.dart test/sample_view_binding_browser_test.dart test/craft_marker_test.dart)
 
-step "Test: a2ui_craft_jaspr (driver conformance vs. a JavaScript worker)"
+step "Test: a2ui_craft_jaspr (mini-app conformance vs. a JavaScript worker)"
 # The language-neutrality proof: the same conformance cases the in-process Dart
 # runner passes, re-run unmodified against drivers written in JavaScript.
-(cd packages/a2ui_craft_jaspr && dart test -p chrome test/driver_worker_test.dart)
+(cd packages/a2ui_craft_jaspr && dart test -p chrome test/mini_app_worker_conformance_test.dart)
 
 step "Test: a2ui_craft_jaspr/example (samples)"
 (cd packages/a2ui_craft_jaspr/example && dart test)

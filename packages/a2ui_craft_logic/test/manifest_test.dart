@@ -5,6 +5,10 @@
 import 'package:a2ui_craft_logic/a2ui_craft_logic.dart';
 import 'package:test/test.dart';
 
+const HostLogicSupport _webHost = HostLogicSupport(
+  languages: <DriverLanguage>{DriverLanguage.javascript},
+);
+
 void main() {
   group('reading the slot', () {
     test('a project with no logic declares none', () {
@@ -15,15 +19,20 @@ void main() {
       );
     });
 
-    test('a worker driver names a script relative to the bundle', () {
+    test('bundled logic names a file and the language it is written in', () {
       final LogicManifest logic = LogicManifest.parse('''
         {
           "name": "Cart",
-          "logic": {"kind": "worker", "entry": "cart.js", "capabilities": []}
+          "logic": {
+            "entry": "cart.js",
+            "language": "javascript",
+            "capabilities": []
+          }
         }
       ''')!;
-      expect(logic.kind, DriverKind.worker);
+      expect(logic.language, DriverLanguage.javascript);
       expect(logic.entry, 'cart.js');
+      expect(logic.isRemote, isFalse);
       expect(
         logic.entryUrl('https://cdn.example/cart'),
         'https://cdn.example/cart/cart.js',
@@ -34,12 +43,30 @@ void main() {
       );
     });
 
-    test("a builtin driver's entry is a registry key, not a path", () {
+    test('remote logic names an endpoint and no language', () {
       final LogicManifest logic = LogicManifest.parse(
-        '{"logic": {"kind": "builtin", "entry": "cart"}}',
+        '{"logic": {"url": "wss://api.example/cart"}}',
       )!;
-      expect(logic.kind, DriverKind.builtin);
-      expect(logic.entry, 'cart');
+      expect(logic.isRemote, isTrue);
+      expect(logic.url, 'wss://api.example/cart');
+      expect(logic.language, isNull,
+          reason: 'logic that never ships has no artifact to describe');
+      expect(() => logic.entryUrl('https://cdn.example'), throwsStateError);
+    });
+
+    test('the manifest says nothing about where the driver runs', () {
+      // The whole point of the reshape: the same bundle has to work on a page,
+      // in a worker, in a webview, and inside an embedded engine. Which of
+      // those a host picks is the host's business, so the project cannot name
+      // it — there is no key here that could.
+      final LogicManifest logic = LogicManifest.parse(
+        '{"logic": {"entry": "cart.js", "language": "javascript"}}',
+      )!;
+      logic.requireSupported(_webHost);
+      logic.requireSupported(const HostLogicSupport(
+        languages: <DriverLanguage>{DriverLanguage.javascript},
+        remote: true,
+      ));
     });
   });
 
@@ -49,27 +76,52 @@ void main() {
     // mini-app loaded with its logic quietly missing is a screen of controls
     // that answer nothing.
 
-    test('a kind this version does not know', () {
+    test('a language this version does not know', () {
       expect(
-        () => LogicManifest.parse('{"logic": {"kind": "wasm", "entry": "a"}}'),
+        () => LogicManifest.parse(
+          '{"logic": {"entry": "a.wasm", "language": "wasm"}}',
+        ),
         throwsA(isA<MalformedLogicManifest>().having(
           (MalformedLogicManifest e) => e.message,
           'message',
-          contains('Unknown driver kind'),
+          contains('Unknown driver language'),
         )),
       );
     });
 
-    test('a missing entry', () {
+    test('bundled logic with no language', () {
       expect(
-        () => LogicManifest.parse('{"logic": {"kind": "worker"}}'),
+        () => LogicManifest.parse('{"logic": {"entry": "a.js"}}'),
         throwsA(isA<MalformedLogicManifest>()),
+      );
+    });
+
+    test('neither an entry nor a url', () {
+      expect(
+        () => LogicManifest.parse('{"logic": {"language": "javascript"}}'),
+        throwsA(isA<MalformedLogicManifest>()),
+      );
+    });
+
+    test('both an entry and a url', () {
+      expect(
+        () => LogicManifest.parse(
+          '{"logic": {"entry": "a.js", "language": "javascript", '
+          '"url": "wss://x"}}',
+        ),
+        throwsA(isA<MalformedLogicManifest>().having(
+          (MalformedLogicManifest e) => e.message,
+          'message',
+          contains('not both'),
+        )),
       );
     });
 
     test('an empty entry', () {
       expect(
-        () => LogicManifest.parse('{"logic": {"kind": "worker", "entry": ""}}'),
+        () => LogicManifest.parse(
+          '{"logic": {"entry": "", "language": "javascript"}}',
+        ),
         throwsA(isA<MalformedLogicManifest>()),
       );
     });
@@ -94,7 +146,7 @@ void main() {
       // so.
       expect(
         () => LogicManifest.parse(
-          '{"logic": {"kind": "worker", "entry": "a.js", '
+          '{"logic": {"entry": "a.js", "language": "javascript", '
           '"capabilities": ["fetch"]}}',
         ),
         throwsA(isA<MalformedLogicManifest>().having(
@@ -107,39 +159,44 @@ void main() {
   });
 
   group('host support', () {
-    test('a kind the host runs is accepted', () {
-      LogicManifest.parse('{"logic": {"kind": "worker", "entry": "a.js"}}')!
-          .requireSupported(<DriverKind>{DriverKind.worker});
+    test('a language the host runs is accepted', () {
+      LogicManifest.parse(
+        '{"logic": {"entry": "a.js", "language": "javascript"}}',
+      )!
+          .requireSupported(_webHost);
     });
 
-    test('a kind the host cannot run refuses, and says what it can', () {
+    test('a host that runs no logic refuses, and says so', () {
       expect(
         () => LogicManifest.parse(
-          '{"logic": {"kind": "webview", "entry": "a.js"}}',
+          '{"logic": {"entry": "a.js", "language": "javascript"}}',
         )!
-            .requireSupported(<DriverKind>{DriverKind.worker}),
-        throwsA(isA<UnsupportedDriverKind>().having(
-          (UnsupportedDriverKind e) => e.toString(),
+            .requireSupported(HostLogicSupport.none),
+        throwsA(isA<UnsupportedDriver>().having(
+          (UnsupportedDriver e) => e.toString(),
           'message',
-          allOf(contains('webview'), contains('worker')),
+          allOf(contains('javascript'), contains('no logic at all')),
         )),
       );
     });
-  });
 
-  group('the shipped cart declares itself readably', () {
-    test('its manifest parses and asks for a worker', () {
-      // Pinned here rather than only in the examples package, because this is
-      // the parser the failure would fall out of.
-      const String manifest = '''
-        {
-          "name": "Cart",
-          "logic": {"kind": "worker", "entry": "cart.js", "capabilities": []}
-        }
-      ''';
-      final LogicManifest logic = LogicManifest.parse(manifest)!;
-      expect(logic.kind, DriverKind.worker);
-      expect(logic.capabilities, isEmpty);
+    test('a host that runs JavaScript still refuses a remote driver', () {
+      // Connecting outward is a different capability from executing an
+      // artifact, and a host may reasonably have one without the other.
+      expect(
+        () => LogicManifest.parse('{"logic": {"url": "wss://api.example"}}')!
+            .requireSupported(_webHost),
+        throwsA(isA<UnsupportedDriver>().having(
+          (UnsupportedDriver e) => e.toString(),
+          'message',
+          contains('remote driver'),
+        )),
+      );
+    });
+
+    test('a host that allows remote drivers accepts one', () {
+      LogicManifest.parse('{"logic": {"url": "wss://api.example"}}')!
+          .requireSupported(const HostLogicSupport(remote: true));
     });
   });
 }

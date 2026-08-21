@@ -60,6 +60,7 @@ const String driverSdkJs = r'''
     var chain = Promise.resolve();
     var handlers = spec.handlers || {};
     var fired = {};
+    var inTurn = false;
 
     function post(type, body) {
       if (state === 'faulted' || state === 'terminated') return;
@@ -99,9 +100,11 @@ const String driverSdkJs = r'''
             value: value,
           },
         });
+        guardEscape();
       },
       send: function (messages) {
         for (var i = 0; i < messages.length; i++) pending.push(messages[i]);
+        guardEscape();
       },
       fail: function (code, message, details) {
         pending = [];
@@ -121,12 +124,43 @@ const String driverSdkJs = r'''
       },
     };
 
+    // Catches a write that arrived after its handler already returned — a
+    // promise the handler forgot to return or await:
+    //
+    //     handlers: {
+    //       save: function (ctx) {
+    //         fetch(url).then(function (r) { ctx.write('/x', r); });  // lost
+    //       },
+    //     }
+    //
+    // Left alone that write would sit in the batch until some later, unrelated
+    // handler flushed it — out of order, attributed to the wrong event, or
+    // never at all. So it is reported and sent on its own.
+    //
+    // This matters more here than in Dart: there is no `unawaited_futures`
+    // lint on this side, so the runtime check is the only thing standing
+    // between an author and a silent divergence.
+    function guardEscape() {
+      if (inTurn) return;
+      context.diagnostic(
+          'A write arrived outside any handler turn — a promise was probably ' +
+          'not returned or awaited. It is being sent on its own rather than ' +
+          "folded into the next handler's batch, but the ordering the driver " +
+          'intended is lost. Return the promise from your handler.');
+      flush();
+    }
+
     // Handlers are chained, so the next event waits for this one — a driver
     // never observes two of its own handlers interleaving its state.
     function run(fn) {
       chain = chain.then(function () {
+        inTurn = true;
         return fn();
-      }).then(flush, function (error) {
+      }).then(function () {
+        inTurn = false;
+        flush();
+      }, function (error) {
+        inTurn = false;
         pending = [];
         context.fail('handlerThrew', String(error));
       });

@@ -211,6 +211,7 @@ class DriverRuntime implements DriverContext {
 
   final List<A2uiMessage> _pending = <A2uiMessage>[];
   Future<void> _handlerChain = Future<void>.value();
+  bool _inTurn = false;
 
   String? _surfaceId;
   Map<String, Object?> _hostContext = const <String, Object?>{};
@@ -260,16 +261,18 @@ class DriverRuntime implements DriverContext {
   }
 
   @override
-  void write(String path, Object? value) => _pending.add(
-        UpdateDataModelMessage(
-          surfaceId: surfaceId,
-          path: path,
-          value: value,
-        ),
-      );
+  void write(String path, Object? value) {
+    _pending.add(
+      UpdateDataModelMessage(surfaceId: surfaceId, path: path, value: value),
+    );
+    _guardEscape();
+  }
 
   @override
-  void send(List<A2uiMessage> messages) => _pending.addAll(messages);
+  void send(List<A2uiMessage> messages) {
+    _pending.addAll(messages);
+    _guardEscape();
+  }
 
   @override
   void fail(String code, String message, {Object? details}) {
@@ -297,15 +300,48 @@ class DriverRuntime implements DriverContext {
   /// update. Handlers are chained so they never interleave.
   void _run(FutureOr<void> Function() handler) {
     _handlerChain = _handlerChain.then((_) async {
+      _inTurn = true;
       try {
         await handler();
       } catch (error, stack) {
+        _inTurn = false;
         _pending.clear();
         fail('handlerThrew', '$error', details: stack.toString());
         return;
       }
+      _inTurn = false;
       _flush();
     });
+  }
+
+  /// Catches a write that arrived after its handler already returned.
+  ///
+  /// The usual cause is a future the handler forgot to await:
+  ///
+  /// ```dart
+  /// void onEvent(ctx, event) {
+  ///   fetchSomething().then((v) => ctx.write('/x', v));  // not awaited
+  /// }
+  /// ```
+  ///
+  /// Left alone, that write would sit in the batch until some *later*,
+  /// unrelated handler flushed it — arriving out of order, attributed to the
+  /// wrong event, or never at all if no further event came. The surface and
+  /// the driver would then disagree about the data model with nothing to say
+  /// so.
+  ///
+  /// So it is reported loudly and sent immediately, as its own turn: the
+  /// driver plainly meant the write, and shipping it alone is both honest
+  /// about when it happened and incapable of corrupting anyone else's batch.
+  void _guardEscape() {
+    if (_inTurn) return;
+    diagnostic(
+      'A write arrived outside any handler turn — a future was probably not '
+      'awaited. It is being sent on its own rather than folded into the next '
+      "handler's batch, but the ordering the driver intended is lost. Await "
+      'the future, or move the work into a handler.',
+    );
+    _flush();
   }
 
   void _flush() {

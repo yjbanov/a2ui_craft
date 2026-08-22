@@ -19,35 +19,6 @@ proven by running the same conformance suite against a Dart driver and a
 JavaScript one. Two adapters (Flutter, Jaspr) are held together by a shared
 conformance suite that asserts real geometry, not structure.
 
-What has *not* happened is someone building a real application on it, under
-production conditions, without the repo's affordances at hand.
-
-## Now — build a real app on it
-
-The next move is not a framework feature. It is a **substantial demo app, built
-outside this repository** and deployed for real use — first to the web, and if it
-can be pulled off, to the Play Store and the App Store.
-
-Why outside the repo: the point is to stand where a user of this framework
-stands. An in-repo demo gets the tight fix-as-you-go loop, but it also gets
-path dependencies, the workspace's pub resolution, `check.sh`, and every
-affordance that a real adopter does not have. Out of the repo, the app needs its
-own infrastructure — Firebase config, integration tests, backend code
-uninteresting to Craft itself — and that is exactly the cost being measured. The
-loss of loop tightness is a deliberate, accepted trade.
-
-What it is expected to surface, and what nothing so far can:
-
-- **Ephemeral delivery under real network conditions.** A template or a driver
-  that fails to load on a subway is not a hypothetical; the framework's failure
-  posture ("freeze beats betray") has only ever been exercised against fixtures.
-- **The adopter's first hour.** Scaffolding, publishing, cache headers, the
-  edit → re-publish → reload cycle with a host that is *not* the demo site.
-- **Whether the primitive set is actually enough** for an app someone would use,
-  as opposed to a gallery sample that was chosen because it fits.
-
-Framework gaps found this way get fixed here, in slices, as they appear.
-
 ## Open threads
 
 ### Template computation — blocks and user-defined functions
@@ -245,17 +216,14 @@ is the thing to not do).
 
 ## Sequencing
 
-1. **The demo app** (above) is the active thread. It is the only thing that can
-   tell us which of the items below actually matter, and in which order — every
-   other ranking here is a guess made from inside the repo.
-2. **Design the blocks/user-defined-functions arc while the app is being built.**
-   It is design-heavy and implementation-light up front, which composes well with
-   a thread that is the reverse; and settling syntax before wider adoption is far
-   cheaper than settling it after.
-3. **Logic Phase 2** competes for the same implementation slot as the blocks arc.
-   It is already sliced and starts with measurement, so it can begin the moment
-   an implementation slot opens.
-4. **Everything else is demand-driven.** `extended_primitives` stands up when the
+1. **Design the blocks/user-defined-functions arc first.** It is the most
+   expensive item here to get wrong — template syntax is the public contract of
+   the format, and the packages are published — and it is design-heavy before it
+   is implementation-heavy, so it can be settled without holding an
+   implementation slot.
+2. **Logic Phase 2** is the first implementation thread to pick up: already
+   sliced, shovel-ready, and it starts by measuring rather than building.
+3. **Everything else is demand-driven.** `extended_primitives` stands up when the
    first genuinely heavy primitive lands, not before. The Ahem golden mode waits
    for the primitive set to stop moving. Security budgets (§11) need design
    before slices. The third adapter is a hypothesis test, best run when the

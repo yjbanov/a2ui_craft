@@ -22,7 +22,7 @@ dependencies:
   # The A2UI protocol, data model, and binding/function/checks resolution.
   # Only a prerelease is published today, so the constraint targets it
   # explicitly (a bare caret would not match a prerelease).
-  a2ui_core: ^0.0.1-wip002
+  a2ui_core: ^0.1.1
   # The catalog loader parses component schemas (JSON Schema) at runtime.
   json_schema_builder: ^0.1.5
 

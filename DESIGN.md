@@ -222,9 +222,9 @@ Flutter / Jaspr primitives
 
 ### Division of labor: `a2ui_core` above, RFW below
 
-`a2ui_core` (the Dart core package in `flutter/genui` that backs the `genui`
-Flutter renderer — mirroring how `web_core` backs the Angular/React/Lit
-renderers) owns the A2UI protocol, the data model, and the resolution of
+`a2ui_core` (the Dart core package in the A2UI project — mirroring how
+`web_core` backs the Angular/React/Lit renderers, and what backs the `genui`
+Flutter renderer) owns the A2UI protocol, the data model, and the resolution of
 bindings/functions/`checks`. It is **complementary to RFW, not a replacement**:
 `a2ui_core` sits *above* the template layer, RFW sits *below* it.
 
@@ -308,13 +308,11 @@ to a template as **args** — not data references. Consequences:
   package knows drivers exist. (Design:
   `research/logic/BUSINESS_LOGIC.md`.)
 
-- **`a2ui_core`** (from `flutter/genui`) is consumed as a **published
-  prerelease**, `^0.0.1-wip002`. Because a bare `any` will not match a
-  prerelease, the workspace root carries a `dependency_overrides` pinning the
-  whole workspace to it; that affects local resolution only, never the published
-  packages' own declared constraints. Both the override and the pin come out
-  once `a2ui_core` cuts a stable release. It is pre-1.0, so some API churn is
-  expected. Its dependencies are pure Dart
+- **`a2ui_core`** is consumed as an ordinary published dependency, `^0.1.1`,
+  from [a2ui-project/a2ui](https://github.com/a2ui-project/a2ui) (it moved there
+  from `flutter/genui`, and is **Apache-2.0** where this repo is BSD-3-Clause —
+  a permissive dependency, not vendored code). It is pre-1.0, so some API churn
+  is expected. Its dependencies are pure Dart
   (`collection`, `json_schema_builder`, `meta`, `preact_signals` — no Flutter),
   so it is Jaspr-compatible.
 

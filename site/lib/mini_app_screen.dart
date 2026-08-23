@@ -135,15 +135,17 @@ class _MiniAppScreenState extends State<MiniAppScreen> {
         'margin-bottom': '16px',
       }),
       <Component>[
+        // The same circled-arrow badge every other screen uses — this one had
+        // drifted to a bare icon, so "back" looked like a different control
+        // depending on which screen you were on.
         Link(
           to: '/gallery',
-          styles: Styles(raw: <String, String>{
-            'display': 'inline-flex',
-            'align-items': 'center',
-            'color': 'var(--subtle)',
-            'text-decoration': 'none',
-          }),
-          child: backIcon(),
+          classes: 'back-btn',
+          attributes: const <String, String>{
+            'aria-label': 'Back to gallery',
+            'title': 'Back to gallery',
+          },
+          child: span(classes: 'back-badge', <Component>[backIcon()]),
         ),
         h1(
           styles: Styles(raw: <String, String>{

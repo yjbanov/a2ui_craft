@@ -8,7 +8,7 @@ import 'package:jaspr/jaspr.dart';
 import 'package:jaspr_router/jaspr_router.dart';
 
 import 'icons.dart';
-import 'theme_mode.dart';
+import 'site_chrome.dart';
 
 /// The landing screen: a filter bar over a grid of sample cards. Each checkbox
 /// is one demonstrated property of the templating system (the vocabulary in
@@ -41,133 +41,124 @@ class _GalleryScreenState extends State<GalleryScreen> {
     final List<RawSample> visible = _visible;
     return div(
       styles: Styles(raw: <String, String>{
-        'max-width': '1100px',
-        'margin': '0 auto',
-        'padding': '32px 20px',
         'font-family': 'system-ui, -apple-system, sans-serif',
       }),
       [
+        const SiteHeader(current: '/gallery'),
         div(
           styles: Styles(raw: <String, String>{
-            'display': 'flex',
-            'align-items': 'center',
-            'justify-content': 'space-between',
-            'gap': '10px',
+            'max-width': '1100px',
+            'margin': '0 auto',
+            'padding': '32px 20px',
           }),
           [
             div(
               styles: Styles(raw: <String, String>{
                 'display': 'flex',
                 'align-items': 'center',
+                'justify-content': 'space-between',
                 'gap': '10px',
               }),
               [
-                // The gallery is no longer the root, so it needs a way back to
-                // it — the same circled arrow every other screen uses.
-                Link(
-                  to: '/',
-                  classes: 'back-btn',
-                  attributes: const <String, String>{
-                    'aria-label': 'Back to the home page',
-                    'title': 'Back to the home page',
-                  },
-                  child: span(classes: 'back-badge', <Component>[backIcon()]),
-                ),
                 h1(
                     styles: Styles(raw: <String, String>{'margin': '0'}),
                     [Component.text('Gallery')]),
               ],
             ),
-            const ThemeToggle(),
+            p(
+              styles: Styles(raw: <String, String>{
+                'color': 'var(--muted)',
+                'margin': '0'
+              }),
+              [
+                Component.text(
+                    'One UI protocol, two rendering engines. Open a sample, flip '
+                    'it between Flutter and Jaspr, and edit its template, schema, '
+                    'and messages live.'),
+              ],
+            ),
+            div(
+              styles: Styles(raw: <String, String>{
+                'display': 'flex',
+                'flex-wrap': 'wrap',
+                'gap': '10px',
+                'margin-top': '12px',
+              }),
+              [
+                // The production path: load a *deployed* project over HTTP, the
+                // way a real host app would — proof it's a separate, ephemeral
+                // artifact.
+                _actionLink('/load', 'Load a project from a URL'),
+                // A mini-app is a project that ships its own business logic. It
+                // is not in the sample grid because it is not renderable without
+                // its driver — a mini-app loaded without one would be a screen of
+                // controls that answer nothing.
+                _actionLink(
+                    '/mini-app/cart', 'Run a mini-app (logic included)'),
+                // The specimen page: every core primitive rendered live under the
+                // default theme.
+                _actionLink('/primitives', 'Browse the core primitives'),
+              ],
+            ),
+            _filterBar(visible.length),
+            div(
+              styles: Styles(raw: <String, String>{
+                'display': 'grid',
+                'grid-template-columns':
+                    'repeat(auto-fill, minmax(180px, 1fr))',
+                'gap': '12px',
+                'margin-top': '16px',
+              }),
+              [
+                // A real anchor (jaspr_router's Link → `<a href>`), not a div with a
+                // click handler: anchors are natively tappable on mobile (a bare div's
+                // synthesized click is unreliable there) and accessible — focusable,
+                // keyboard-activatable, open-in-new-tab — while still doing
+                // client-side navigation.
+                for (final RawSample s in visible)
+                  Link(
+                    to: '/sample/${s.id}',
+                    styles: Styles(raw: <String, String>{
+                      'display': 'flex',
+                      'flex-direction': 'column',
+                      'gap': '8px',
+                      'border': '1px solid var(--border)',
+                      'border-radius': '10px',
+                      'padding': '16px',
+                      'cursor': 'pointer',
+                      'background': 'var(--card)',
+                      'color': 'inherit',
+                      'text-decoration': 'none',
+                      'transition': 'box-shadow .15s, border-color .15s',
+                    }),
+                    child: div(
+                      styles: Styles(raw: <String, String>{
+                        'display': 'flex',
+                        'flex-direction': 'column',
+                        'gap': '8px',
+                      }),
+                      [
+                        Component.text(s.label),
+                        if (s.demonstrates.isNotEmpty)
+                          div(
+                            styles: Styles(raw: <String, String>{
+                              'display': 'flex',
+                              'flex-wrap': 'wrap',
+                              'gap': '4px',
+                            }),
+                            [
+                              for (final String id in s.demonstrates)
+                                _tagChip(demoPropertyById(id)?.label ?? id),
+                            ],
+                          ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
           ],
         ),
-        p(
-          styles: Styles(
-              raw: <String, String>{'color': 'var(--muted)', 'margin': '0'}),
-          [
-            Component.text(
-                'One UI protocol, two rendering engines. Open a sample, flip '
-                'it between Flutter and Jaspr, and edit its template, schema, '
-                'and messages live.'),
-          ],
-        ),
-        div(
-          styles: Styles(raw: <String, String>{
-            'display': 'flex',
-            'flex-wrap': 'wrap',
-            'gap': '10px',
-            'margin-top': '12px',
-          }),
-          [
-            // The production path: load a *deployed* project over HTTP, the
-            // way a real host app would — proof it's a separate, ephemeral
-            // artifact.
-            _actionLink('/load', 'Load a project from a URL'),
-            // A mini-app is a project that ships its own business logic. It
-            // is not in the sample grid because it is not renderable without
-            // its driver — a mini-app loaded without one would be a screen of
-            // controls that answer nothing.
-            _actionLink('/mini-app/cart', 'Run a mini-app (logic included)'),
-            // The specimen page: every core primitive rendered live under the
-            // default theme.
-            _actionLink('/primitives', 'Browse the core primitives'),
-          ],
-        ),
-        _filterBar(visible.length),
-        div(
-          styles: Styles(raw: <String, String>{
-            'display': 'grid',
-            'grid-template-columns': 'repeat(auto-fill, minmax(180px, 1fr))',
-            'gap': '12px',
-            'margin-top': '16px',
-          }),
-          [
-            // A real anchor (jaspr_router's Link → `<a href>`), not a div with a
-            // click handler: anchors are natively tappable on mobile (a bare div's
-            // synthesized click is unreliable there) and accessible — focusable,
-            // keyboard-activatable, open-in-new-tab — while still doing
-            // client-side navigation.
-            for (final RawSample s in visible)
-              Link(
-                to: '/sample/${s.id}',
-                styles: Styles(raw: <String, String>{
-                  'display': 'flex',
-                  'flex-direction': 'column',
-                  'gap': '8px',
-                  'border': '1px solid var(--border)',
-                  'border-radius': '10px',
-                  'padding': '16px',
-                  'cursor': 'pointer',
-                  'background': 'var(--card)',
-                  'color': 'inherit',
-                  'text-decoration': 'none',
-                  'transition': 'box-shadow .15s, border-color .15s',
-                }),
-                child: div(
-                  styles: Styles(raw: <String, String>{
-                    'display': 'flex',
-                    'flex-direction': 'column',
-                    'gap': '8px',
-                  }),
-                  [
-                    Component.text(s.label),
-                    if (s.demonstrates.isNotEmpty)
-                      div(
-                        styles: Styles(raw: <String, String>{
-                          'display': 'flex',
-                          'flex-wrap': 'wrap',
-                          'gap': '4px',
-                        }),
-                        [
-                          for (final String id in s.demonstrates)
-                            _tagChip(demoPropertyById(id)?.label ?? id),
-                        ],
-                      ),
-                  ],
-                ),
-              ),
-          ],
-        ),
+        const SiteFooter(),
       ],
     );
   }

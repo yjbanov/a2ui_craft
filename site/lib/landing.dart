@@ -6,7 +6,7 @@ import 'package:jaspr/dom.dart';
 import 'package:jaspr/jaspr.dart';
 import 'package:jaspr_router/jaspr_router.dart';
 
-import 'theme_mode.dart';
+import 'site_chrome.dart';
 
 /// The landing page: what A2UI Craft is, and four things it does.
 ///
@@ -28,65 +28,11 @@ class LandingScreen extends StatelessComponent {
         'font-family': 'system-ui, -apple-system, sans-serif',
       }),
       <Component>[
-        _topBar(),
+        const SiteHeader(),
         _hero(),
         for (final _Feature f in _features) _section(f),
+        const SiteFooter(),
       ],
-    );
-  }
-
-  /// The minimal chrome slice 1 needs: the wordmark, the gallery link, and the
-  /// colour-scheme toggle every other screen already carries. The full site
-  /// header (nav, footer) is slice 2.
-  Component _topBar() {
-    return div(
-      styles: Styles(raw: <String, String>{
-        'display': 'flex',
-        'align-items': 'center',
-        'gap': '12px',
-        'max-width': '1100px',
-        'margin': '0 auto',
-        'padding': '16px 20px',
-      }),
-      <Component>[
-        span(
-          styles: Styles(raw: <String, String>{
-            'font': '600 15px system-ui',
-            'color': 'var(--fg)',
-            // Never let the wordmark be the thing that compresses: without
-            // this it shrinks to a 37px column of stacked letters on a phone.
-            'flex': 'none',
-            'white-space': 'nowrap',
-          }),
-          <Component>[Component.text('A2UI Craft')],
-        ),
-        div(styles: Styles(raw: <String, String>{'flex': '1'}), const []),
-        // The nav folds away on a phone, following the toolbar convention the
-        // other screens already use: a bar that keeps "a favoured few" links
-        // visible just wraps to a second row and spends the axis a phone has
-        // least of. Everything here is reachable from the hero CTAs and the
-        // section links below.
-        _navLink('/gallery', 'Gallery'),
-        _navLink('/primitives', 'Primitives'),
-        _navLink('/load', 'Load a project'),
-        const ThemeToggle(),
-      ],
-    );
-  }
-
-  Component _navLink(String to, String label) {
-    return Link(
-      to: to,
-      classes: 'wide-only',
-      styles: Styles(raw: <String, String>{
-        'white-space': 'nowrap',
-        'color': 'var(--muted)',
-        'text-decoration': 'none',
-        'font': '14px system-ui',
-        'padding': '6px 8px',
-        'border-radius': '8px',
-      }),
-      child: Component.text(label),
     );
   }
 
@@ -95,7 +41,7 @@ class LandingScreen extends StatelessComponent {
       styles: Styles(raw: <String, String>{
         'max-width': '1100px',
         'margin': '0 auto',
-        'padding': '48px 20px 56px',
+        'padding': '56px 20px 60px',
       }),
       <Component>[
         _experimentalBadge(),
@@ -183,19 +129,7 @@ class LandingScreen extends StatelessComponent {
   Component _cta(String to, String label, {bool primary = false}) {
     return Link(
       to: to,
-      styles: Styles(raw: <String, String>{
-        'display': 'inline-flex',
-        'align-items': 'center',
-        'padding': '11px 20px',
-        'border-radius': '10px',
-        'font': '600 15px system-ui',
-        'text-decoration': 'none',
-        'border': primary
-            ? '1px solid var(--accent)'
-            : '1px solid var(--border-strong)',
-        'background': primary ? 'var(--accent)' : 'transparent',
-        'color': primary ? 'var(--accent-fg)' : 'var(--fg)',
-      }),
+      classes: primary ? 'landing-cta is-primary' : 'landing-cta',
       child: Component.text(label),
     );
   }
@@ -264,11 +198,7 @@ class LandingScreen extends StatelessComponent {
   Component _textLink(String to, String label) {
     return Link(
       to: to,
-      styles: Styles(raw: <String, String>{
-        'font': '600 15px system-ui',
-        'color': 'var(--accent)',
-        'text-decoration': 'none',
-      }),
+      classes: 'landing-section-link',
       child: Component.text('$label →'),
     );
   }

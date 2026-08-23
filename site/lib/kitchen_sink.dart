@@ -149,7 +149,7 @@ class _KitchenSinkScreenState extends State<KitchenSinkScreen> {
         // The circled arrow alone — the same back affordance the sample screen
         // uses, and the title beside it already says where you are.
         Link(
-          to: '/',
+          to: '/gallery',
           classes: 'back-btn',
           attributes: const <String, String>{
             'aria-label': 'Back to gallery',

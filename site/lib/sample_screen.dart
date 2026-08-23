@@ -555,7 +555,7 @@ class _SampleScreenState extends State<SampleScreen> {
         // it already says where you are.
         button(
           classes: 'back-btn',
-          onClick: () => context.push('/'),
+          onClick: () => context.push('/gallery'),
           attributes: const <String, String>{
             'aria-label': 'Back to gallery',
             'title': 'Back to gallery',

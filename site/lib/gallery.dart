@@ -55,9 +55,29 @@ class _GalleryScreenState extends State<GalleryScreen> {
             'gap': '10px',
           }),
           [
-            h1(
-                styles: Styles(raw: <String, String>{'margin': '0 0 4px'}),
-                [Component.text('A2UI Craft')]),
+            div(
+              styles: Styles(raw: <String, String>{
+                'display': 'flex',
+                'align-items': 'center',
+                'gap': '10px',
+              }),
+              [
+                // The gallery is no longer the root, so it needs a way back to
+                // it — the same circled arrow every other screen uses.
+                Link(
+                  to: '/',
+                  classes: 'back-btn',
+                  attributes: const <String, String>{
+                    'aria-label': 'Back to the home page',
+                    'title': 'Back to the home page',
+                  },
+                  child: span(classes: 'back-badge', <Component>[backIcon()]),
+                ),
+                h1(
+                    styles: Styles(raw: <String, String>{'margin': '0'}),
+                    [Component.text('Gallery')]),
+              ],
+            ),
             const ThemeToggle(),
           ],
         ),

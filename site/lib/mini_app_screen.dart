@@ -136,7 +136,7 @@ class _MiniAppScreenState extends State<MiniAppScreen> {
       }),
       <Component>[
         Link(
-          to: '/',
+          to: '/gallery',
           styles: Styles(raw: <String, String>{
             'display': 'inline-flex',
             'align-items': 'center',

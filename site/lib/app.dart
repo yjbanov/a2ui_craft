@@ -7,12 +7,14 @@ import 'package:jaspr_router/jaspr_router.dart';
 
 import 'gallery.dart';
 import 'kitchen_sink.dart';
+import 'landing.dart';
 import 'load_screen.dart';
 import 'mini_app_screen.dart';
 import 'sample_screen.dart';
 
-/// The A2UI Craft demo site: a gallery of samples, each openable on its own
-/// screen and renderable with either the Jaspr or the (embedded) Flutter adapter.
+/// The A2UI Craft site: a landing page at the root, over a gallery of samples —
+/// each openable on its own screen and renderable with either the Jaspr or the
+/// (embedded) Flutter adapter.
 class App extends StatelessComponent {
   const App({super.key});
 
@@ -23,6 +25,12 @@ class App extends StatelessComponent {
         Route(
           path: '/',
           title: 'A2UI Craft',
+          builder: (BuildContext context, RouteState state) =>
+              const LandingScreen(),
+        ),
+        Route(
+          path: '/gallery',
+          title: 'Gallery · A2UI Craft',
           builder: (BuildContext context, RouteState state) =>
               const GalleryScreen(),
         ),

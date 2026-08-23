@@ -136,6 +136,11 @@ deliberately strict. Counted over the 49 sample projects (2026-08-21):
   `workout_summary`. Candidates for upgrading, or for a future "catalog
   breadth" property.
 
+**The `/primitives` showcase has fallen two behind.** It covers 27 of the 29
+registered primitives; `Grid` and `Responsive` arrived with the responsive
+phases and never got specimen cards. The page is the manual cross-adapter gate,
+so a primitive missing from it is a primitive nothing eyeballs.
+
 Also still missing as primitives, each blocking spec examples that could
 otherwise be templatized: **`Modal`** (is an overlay a primitive, or a host-app
 concern the surface merely requests?), **`Tabs`**, **`ChoicePicker`**, and

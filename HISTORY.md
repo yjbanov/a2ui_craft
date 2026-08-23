@@ -20,6 +20,14 @@
 - Dev harness: shared parity-test fixture (`a2ui_craft_testing`) rendered
   identically by both adapters; single `tool/check.sh` entrypoint; CI;
   `LICENSE` + `VENDORED.md` provenance.
+- **One dependency, one import.** Each adapter's barrel re-exports
+  `package:a2ui_craft`, so the engine's value types, theming, media context, and
+  functions arrive alongside the rendering layer — making "depend on the adapter,
+  not the engine" true at the *import* level, not just the dependency level.
+  `Switch` is the one deliberate hole in the re-export: it names the engine's RFW
+  control-flow node and would shadow Flutter's `Switch` for any app that also
+  imports material, which is the common case. Apps that want the RFW node import
+  the engine directly.
 
 ## The A2UI bridge (M1–M6)
 
@@ -209,6 +217,28 @@ architecture (per-id host adapters + `Runtime.buildNode`), built bottom-up:
   first-toggle load fails. The fixed built-in primitive set is a known
   limitation (DartPad-style dynamic primitives are out of scope).
 
+- **`/primitives` — the kitchen-sink page.** One specimen card per primitive
+  family (small-caps title, blurb, rendered specimen, monospace role-mapping
+  footnote), covering every primitive in the set at the time (27) in multiple
+  states: heading levels 1–6,
+  body/caption text, enabled/disabled/explicit-colour/text/pill buttons,
+  checked/unchecked/disabled controls, a radio group, image variants, layout and
+  scroll demos. It is where cross-adapter and cross-brand divergences become
+  visible at a glance — the typography bug below was found on this page — and it
+  carries its own Jaspr/Flutter toggle and sticky header.
+- **The embedded Flutter view sizes itself to its content.** The embed's host
+  element is intrinsically sizeless to the DOM (it is a canvas), so the browser
+  cannot lay it out from the Flutter content — which is why every sample sat in a
+  hardcoded 640px box (560px on `/load`). The fix inverts it: the Flutter widget
+  and the Jaspr host compile into *one Dart app*, so the content can measure
+  itself and report back through a plain Dart callback. A measuring
+  `RenderProxyBox` inside the scroll view (unbounded height → intrinsic content
+  height under the host width) reports post-frame whenever the laid-out height
+  changes, and the screen sets the host element's height from the report; the old
+  fixed height survives only as the pre-first-report fallback. The report→resize
+  cycle converges because equal width yields equal measured height, and runtime
+  growth (steppers, incremental lists) tracks automatically. Toggle's embed hugs
+  at 150px, Product Card at 416px.
 - **Demo site on a phone.** The toolbars spelled every axis out inline —
   a segment per brand, per size class, per adapter, beside a `select` per
   axis — which reads at desk width and wraps into three rows on a phone
@@ -308,6 +338,30 @@ depth-first on layout.
   honor dependency-free. No sample used it. It returns — implemented for
   real — once `extended_primitives` exists.
 
+- **`Card` normalized; it owns its paint.** The primitive had diverged by
+  framework — Flutter returned Material's `Card` (inheriting its elevation shadow
+  and M3 surface-tint edge) while Jaspr hand-rolled a div with a different fixed
+  shadow, no border, and an ancestor that clipped it. That is the "framework must
+  never be visible" rule (§8) being broken in the open. Card now paints from one
+  shared spec on both sides — an outlined surface with a soft shadow — backed by
+  new Pillar-B value types `BorderSpec`, `Elevation`, and `ShadowSpec` +
+  `shadowForElevation(dp)`, so the border and the depth cue are specified by us
+  rather than inherited from each framework's stock chrome. (Named to dodge the
+  `Border`/`Shadow` classes both frameworks already export.)
+- **`Box` gained opt-in decoration** over those same shared types —
+  `cornerRadius`, `border`, `elevation` — closing the gap between what §8 Pillar D
+  says a Box is ("size + padding + margin + decoration") and what it carried (a
+  background). Unlike Card, decoration is **opt-in**: a bare Box paints nothing.
+  When set, `color` stays the author's explicit fill (Box reads no surface role),
+  a `border` with no colour inks `color.outline`, and `elevation` casts the
+  shared canonical shadow. Flutter folds the border width into its padding so
+  content sits the same distance from the edge as the CSS border-box.
+- **`data-craft` markers on the DOM.** Debugging Jaspr output was guesswork
+  because a `<div>` gives no hint whether it is a Box, a Row, or a Column. The
+  runtime now stamps every core-primitive element with `data-craft="<Name>"`,
+  added centrally at the one point the runtime invokes a primitive's builder, so
+  the rendered DOM is legible in the inspector without each primitive
+  remembering to do it.
 - **Cross-axis hug sizing — defer to the parent (`auto`), not
   `fit-content`.** Surfaced by the Contact Card and Stats Card rendering
   differently on the two adapters. Root cause: Flutter carries a bounded
@@ -401,6 +455,23 @@ depth-first on layout.
     VM/dart2js; only the whole-value ".0" differed.) A concrete instance of
     the "number-format" determinism note below — the shared coercion is the
     right layer to enforce it.
+
+- **The samples put the library to work.** Four display cards became live
+  computations rather than static renderings, which is what turned the function
+  library from a tested capability into a demonstrated one: `step_counter`
+  (a button bumps `steps`; distance ÷2000, calories `round(×0.04)`, and goal
+  progress `min(×100÷10000, 100)` all derive and re-render), `product_card`
+  (a −/+ stepper clamped at 1 with `max` drives a live line total),
+  `account_balance` (deposit/withdraw compute a new balance, the withdrawal
+  clamped at 0, rendered as dollars by dividing cents), and `coffee_order`
+  (rewritten from a static `...for` list into a cart: each line's quantity is
+  local state, a reusable stateless `Line` widget takes the quantity, the −/+
+  handlers, and the computed line total as args, and the parent sums the lines).
+  `product_card` established the **numeric-prop pattern** — a plain
+  `{"type": "integer"}` component prop flows through as a real number, so
+  `multiply` then `divide(…, 100)` computes exact dollars from cents. The
+  `calculator` sample joined them as the purpose-built showcase: arithmetic and
+  state, entirely in-template.
 
 ## Theming & design systems (§9)
 
@@ -780,6 +851,23 @@ Control-by-control slices, each spec → both adapters → conformance → sampl
   `/load` screen has no idiom picker yet. Also still open from earlier
   slices: interactive Select conformance, the Radio grouping /
   change-vs-click TODO, disabled-button visuals.
+
+- **8. The grooming pass — specified defaults, not hand-mirrored ones.**
+  Getting the role *mapping* right left the geometry hand-written on each side,
+  which is the same hazard one layer down. Each painted-glyph control gained
+  framework-neutral defaults in `primitive_specs.dart` that both adapters read:
+  `CheckboxDefaults` (size 18, corner 4, border width 2), `RadioDefaults`
+  (size 18, border 2), `SwitchDefaults` (track 36×20, thumb 14, inset 4). The
+  Jaspr glyphs stopped hardcoding those numbers (CSS output unchanged), and the
+  Flutter side closed real drift — the custom radio glyph went 24 → 18. Two
+  findings came out of it: the semantic contract's table **claimed `outline` had
+  no control consumers and `onPrimary` none at all** while Checkbox/Radio/Switch
+  were already reading both, so the table was lying about the very thing it is
+  the source of truth for; and the Switch's two adapters **disagreed about what
+  `outline` inks** — Jaspr filled the inactive *track*, Flutter the inactive
+  *thumb* plus a track border, which §8 forbids outright. Both now fill the
+  inactive track, with the off-thumb a contrasting neutral rather than a role.
+  Paint models written up per control under `research/theming/`.
 
 ## Business-logic drivers — mini-apps (Phase 1)
 

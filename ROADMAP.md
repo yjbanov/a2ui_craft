@@ -136,10 +136,14 @@ deliberately strict. Counted over the 49 sample projects (2026-08-21):
   `workout_summary`. Candidates for upgrading, or for a future "catalog
   breadth" property.
 
-**The `/primitives` showcase has fallen two behind.** It covers 27 of the 29
-registered primitives; `Grid` and `Responsive` arrived with the responsive
-phases and never got specimen cards. The page is the manual cross-adapter gate,
-so a primitive missing from it is a primitive nothing eyeballs.
+**`Responsive` is the one primitive `/primitives` does not show.** `Grid` has a
+specimen now; `Responsive` cannot get one until the page supplies a
+`MediaContext`, because with no size-class input it would always render its
+`compact` child and demonstrate nothing. That means a size-class picker on the
+page (the sample screen already has the pattern) *and* a `media` parameter on
+`FlutterSpecimen`, which has none — a page feature, not a specimen. Until then
+the manual cross-adapter gate has a hole exactly where the responsive behaviour
+is.
 
 Also still missing as primitives, each blocking spec examples that could
 otherwise be templatized: **`Modal`** (is an overlay a primitive, or a host-app

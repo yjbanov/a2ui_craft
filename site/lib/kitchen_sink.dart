@@ -643,6 +643,37 @@ widget Root = Column(gap: 6.0, crossAxisAlignment: "start", children: [
         '#AARRGGBB colors are the author\'s, outside the contract',
   ),
   _Section(
+    title: 'Grid',
+    blurb: 'Auto-fit columns with no breakpoints: as many equal columns as fit '
+        'at the minimum width, then the leftover space shared out. Narrow the '
+        'window — the specimen reflows on its own, with nothing measuring it.',
+    template: r'''
+import core;
+
+widget Cell = Box(padding: 12.0, color: args.c, cornerRadius: 8.0,
+  child: Text(text: args.t, variant: "caption"));
+
+widget Root = Column(gap: 10.0, crossAxisAlignment: "stretch", children: [
+  Text(text: "minColumnWidth: 140 · gap 10", variant: "caption"),
+  Grid(minColumnWidth: 140.0, gap: 10.0, runGap: 10.0, children: [
+    Cell(c: "#331A73E8", t: "one"), Cell(c: "#33669DF6", t: "two"),
+    Cell(c: "#331A73E8", t: "three"), Cell(c: "#33669DF6", t: "four"),
+    Cell(c: "#331A73E8", t: "five"), Cell(c: "#33669DF6", t: "six"),
+  ]),
+  Divider(),
+  Text(text: "minColumnWidth: 90 — narrower minimum, more columns", variant: "caption"),
+  Grid(minColumnWidth: 90.0, gap: 8.0, runGap: 8.0, children: [
+    Cell(c: "#3334A853", t: "a"), Cell(c: "#3381C995", t: "b"),
+    Cell(c: "#3334A853", t: "c"), Cell(c: "#3381C995", t: "d"),
+    Cell(c: "#3334A853", t: "e"), Cell(c: "#3381C995", t: "f"),
+    Cell(c: "#3334A853", t: "g"), Cell(c: "#3381C995", t: "h"),
+  ]),
+]);
+''',
+    footnote: 'intrinsic responsiveness — no size class, no media query; both '
+        'adapters derive the column count from the same formula',
+  ),
+  _Section(
     title: 'Card · Divider',
     blurb: 'Card paints the surface role; Divider inks a hairline with the '
         'outline role, horizontal or vertical.',

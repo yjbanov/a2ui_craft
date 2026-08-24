@@ -424,11 +424,14 @@ const List<_Feature> _features = <_Feature>[
   ),
   _Feature(
     eyebrow: 'Design systems',
-    title: 'Re-skin it without touching the template',
-    blurb: 'Themes are W3C DTCG tokens delivered as data, resolved at runtime. '
-        'Primitives read semantic roles rather than hard-coded colours, so '
-        'switching the token set repaints this surface without one edit to the '
-        'template that drew it — same markup, four brands.',
+    title: 'Your brand, from the tokens you already have',
+    blurb: 'Themes are W3C DTCG token files — the format Figma, Tokens Studio, '
+        'and Style Dictionary already speak — adopted as-is rather than '
+        'reinvented. The roles primitives read carry the names Material 3 and '
+        'shadcn already use, so an existing export maps on without '
+        'translation. And they resolve at runtime rather than in a build step, '
+        'so a project carries its brand with it — the switcher here is four '
+        'token sets, and yours would be the fifth.',
     linkTo: '/primitives',
     linkLabel: 'Try the brands',
     demo: _themingDemo,

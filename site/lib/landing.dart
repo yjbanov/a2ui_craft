@@ -6,6 +6,10 @@ import 'package:jaspr/dom.dart';
 import 'package:jaspr/jaspr.dart';
 import 'package:jaspr_router/jaspr_router.dart';
 
+import 'package:a2ui_craft_examples/a2ui_craft_examples.dart';
+
+import 'code_block.dart';
+import 'engine_demo.dart';
 import 'site_chrome.dart';
 
 /// The landing page: what A2UI Craft is, and four things it does.
@@ -188,7 +192,7 @@ class LandingScreen extends StatelessComponent {
                 <Component>[_textLink(f.linkTo, f.linkLabel)],
               ),
             ]),
-            _demoSlot(f.demoNote),
+            f.demo?.call() ?? _demoSlot(f.demoNote),
           ],
         ),
       ],
@@ -236,7 +240,8 @@ class _Feature {
     required this.blurb,
     required this.linkTo,
     required this.linkLabel,
-    required this.demoNote,
+    this.demoNote = '',
+    this.demo,
   });
 
   final String eyebrow;
@@ -245,9 +250,45 @@ class _Feature {
   final String linkTo;
   final String linkLabel;
 
-  /// What will replace the placeholder, stated plainly.
+  /// What will replace the placeholder, stated plainly. Ignored once [demo] is
+  /// supplied.
   final String demoNote;
+
+  /// The section's live demo, or null while it is still a placeholder.
+  final Component Function()? demo;
 }
+
+/// The sample the templates section renders: the counter.
+///
+/// Chosen because it is *interactive* — a tap increments state — so flipping
+/// the engine and pressing again shows the same behaviour twice, which a static
+/// card could not. It also happens to demonstrate local template state and a
+/// standard function, since RFW has no `+` operator.
+RawSample get _counter =>
+    rawSamples.firstWhere((RawSample s) => s.id == 'counter');
+
+/// The counter's shipped source, minus its explanatory comments.
+///
+/// Read from the sample itself rather than retyped, so the code on the landing
+/// page cannot drift from the template the page is actually rendering beside
+/// it. Only comment lines are dropped — what is left is exactly what runs.
+String get _counterSource => _counter.template
+    .split('\n')
+    .where((String l) => !l.trimLeft().startsWith('//'))
+    .join('\n')
+    .replaceAll(RegExp(r'\n{3,}'), '\n\n')
+    .trim();
+
+Component _templatesDemo() => div(
+      styles: Styles(raw: <String, String>{
+        'display': 'grid',
+        'gap': '14px',
+      }),
+      <Component>[
+        CraftCode(source: _counterSource, label: 'template.craft'),
+        EngineDemo(sample: _counter),
+      ],
+    );
 
 /// The four claims, in the order they build on each other: a template needs
 /// primitives to be written over, a theme re-skins what those render, and logic
@@ -262,8 +303,7 @@ const List<_Feature> _features = <_Feature>[
         'neither one knows which it is.',
     linkTo: '/gallery',
     linkLabel: 'See the samples',
-    demoNote: 'Live: a template and its rendered surface, '
-        'with a switch between the Jaspr and Flutter engines.',
+    demo: _templatesDemo,
   ),
   _Feature(
     eyebrow: 'A standard catalog',

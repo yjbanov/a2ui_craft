@@ -222,6 +222,83 @@
         text-decoration: underline;
       }
 
+      /* ---- Code blocks + the engine demo (landing page) --------------------
+         Colours come from the same palette as the chrome, so a code block is
+         legible in both schemes without a second theme to maintain. */
+      .code-block {
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        overflow: hidden;
+        background: var(--panel);
+      }
+      .code-label {
+        padding: 8px 14px;
+        border-bottom: 1px solid var(--border);
+        font: 12px ui-monospace, SFMono-Regular, Menlo, monospace;
+        color: var(--subtle);
+      }
+      .code-pre {
+        margin: 0;
+        padding: 14px 16px;
+        /* Long lines scroll inside the block; the page never scrolls sideways. */
+        overflow-x: auto;
+        font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace;
+        color: var(--fg);
+        tab-size: 2;
+      }
+      /* Hue, not rainbow: keywords carry the accent, literals a second hue, and
+         comments recede. Anything the tokenizer does not classify inherits the
+         body colour, so a miss looks plain rather than wrong. */
+      .tok-kw {
+        color: light-dark(#8250df, #d2a8ff);
+      }
+      .tok-call {
+        color: light-dark(#0550ae, #79c0ff);
+      }
+      .tok-str {
+        color: light-dark(#0a7c42, #7ee787);
+      }
+      .tok-num {
+        color: light-dark(#953800, #ffa657);
+      }
+      .tok-com {
+        color: var(--subtle);
+        font-style: italic;
+      }
+
+      .engine-demo {
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        overflow: hidden;
+        background: var(--card);
+      }
+      .engine-demo-bar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--border);
+        background: var(--panel);
+      }
+      .engine-demo-caption {
+        font: 12px system-ui, -apple-system, sans-serif;
+        color: var(--subtle);
+      }
+      .engine-demo-surface {
+        padding: 8px;
+        /* Holds the surface's room across an engine swap so the page does not
+           jump when one unmounts and the other has not drawn yet. */
+        min-height: 140px;
+      }
+      .engine-demo-loading {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 124px;
+        font: 13px system-ui, -apple-system, sans-serif;
+        color: var(--subtle);
+      }
+
       /* ---- Toolbars -------------------------------------------------------
          Every screen's bar is a single flex row that may wrap. The title takes
          the slack (min-width:0 so it can actually shrink — a flex item's

@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 import 'package:jaspr/client.dart';
-import 'package:jaspr_flutter_embed/jaspr_flutter_embed.dart';
 import 'package:site/app.dart';
 import 'package:site/theme_mode.dart';
 
@@ -11,10 +10,12 @@ void main() {
   // Restore the persisted dark-light override (and start following the
   // system preference) before anything renders.
   SiteTheme.init();
-  // Warm the embedded Flutter engine at page load. The deferred Flutter library
-  // loads reliably when triggered eagerly here; triggering it lazily (only when
-  // a sample is first toggled to Flutter) fails to load. The cost is the engine
-  // boots up front even for visitors who never switch to Flutter.
-  FlutterEmbedView.preload();
+  // The embedded Flutter engine is **not** warmed here any more. It used to be,
+  // because a lazy first load was recorded as failing — but that was a load
+  // triggered implicitly, by mounting a view and letting the embed touch its
+  // deferred library. Screens now call `FlutterEmbedView.preload()` themselves
+  // when the user asks for Flutter, and hold a pending state until it resolves.
+  // The landing page is the reason: a visitor should not spend their first
+  // second downloading CanvasKit for an engine they may never switch to.
   runApp(const App());
 }

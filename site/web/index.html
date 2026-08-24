@@ -52,11 +52,11 @@
         color: var(--fg);
       }
 
-      /* The back-to-gallery button: an arrow in a circular badge. On hover the
-         badge lights up in the accent and the arrow nudges left — a "go back"
-         micro-interaction. The word "Gallery" used to sit beside it; the badge
-         alone says the same thing in a third of the width, and the screen title
-         next to it already names where you are. */
+      /* The back control: an arrow in a circular badge. On hover the badge
+         lights up in the accent and the arrow nudges left — a "go back"
+         micro-interaction. A word used to sit beside it; the badge alone says
+         the same thing in a third of the width, and the screen title next to
+         it already names where you are. */
       .back-btn {
         display: inline-flex;
         align-items: center;
@@ -100,16 +100,54 @@
         transform: translateX(-3px);
       }
 
-      /* ---- Site chrome (landing page + gallery) ---------------------------
-         The header and footer that wrap the site's *destination* pages. Working
-         screens keep their own toolbars, which carry controls this bar has
-         nowhere to put. Everything here is a class rather than an inline style
-         because it needs hover and focus states, which inline styles cannot
-         express. */
-      .site-header {
+      /* ---- Site chrome ----------------------------------------------------
+         One bar for every screen (lib/site_chrome.dart), plus the footer the
+         destination pages wear. There were four bars here once and they had
+         drifted apart; the zones are shared now, so back, the wordmark, and
+         the colour-scheme toggle keep their corners wherever you are. The band
+         spans the viewport; only the row inside it centres, on whatever column
+         the page below uses. Classes rather than inline styles because these
+         need hover and focus states, which inline styles cannot express. */
+      .site-bar {
         border-bottom: 1px solid var(--border);
+        /* Opaque so a sticky bar does not let scrolled content show through. */
+        background: var(--bg);
       }
-      .site-header-inner,
+      .site-bar.is-sticky {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+      }
+      .site-bar-inner {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        padding: 12px 20px;
+        /* The height of the back badge. Pinned so the one bar without a back
+           arrow — the landing page — is not 5px shorter than every other
+           screen, which is exactly the sort of drift this bar exists to end. */
+        min-height: 40px;
+        box-sizing: content-box;
+      }
+      /* The middle takes the slack, which is what pushes the actions to the
+         right edge without a spacer element. Elided rather than wrapped: a
+         long sample name must not be able to grow the bar to two rows. */
+      .site-bar-title {
+        flex: 1;
+        min-width: 0;
+        margin: 0;
+        font: 600 18px system-ui, -apple-system, sans-serif;
+        color: var(--fg);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      /* The same slack on a bar that names nothing, so the nav and the toggle
+         still land on the right edge. */
+      .site-bar-spacer {
+        flex: 1;
+      }
       .site-footer-inner {
         display: flex;
         align-items: center;
@@ -340,20 +378,6 @@
          the slack (min-width:0 so it can actually shrink — a flex item's
          default min-width:auto refuses to go below its content, which is what
          used to push the controls off a phone screen) and ellipsizes. */
-      .toolbar {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        flex-wrap: wrap;
-      }
-      .toolbar-title {
-        flex: 1;
-        min-width: 0;
-        margin: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
       /* The trailing controls, kept together so they wrap as one group. */
       .toolbar-actions {
         display: flex;

@@ -7,6 +7,7 @@ import 'package:jaspr/dom.dart';
 import 'package:jaspr/jaspr.dart';
 import 'package:jaspr_router/jaspr_router.dart';
 
+import 'back_link.dart';
 import 'icons.dart';
 import 'site_chrome.dart';
 
@@ -44,7 +45,15 @@ class _GalleryScreenState extends State<GalleryScreen> {
         'font-family': 'system-ui, -apple-system, sans-serif',
       }),
       [
-        const SiteHeader(current: '/gallery'),
+        // The gallery sits under the landing page, so it gets a back arrow
+        // like every other screen — it was the one page you could reach and
+        // not step out of.
+        const SiteBar(
+          back: BackLink(fallback: '/', fallbackLabel: 'home'),
+          maxWidth: 1100,
+          nav: true,
+          current: '/gallery',
+        ),
         div(
           styles: Styles(raw: <String, String>{
             'max-width': '1100px',

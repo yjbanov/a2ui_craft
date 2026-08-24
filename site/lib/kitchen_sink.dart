@@ -12,6 +12,7 @@ import 'package:web/web.dart' as web;
 import 'brand_themes.dart';
 import 'flutter_specimen.dart';
 import 'back_link.dart';
+import 'site_chrome.dart';
 import 'icons.dart';
 import 'menu.dart';
 import 'segmented.dart';
@@ -113,49 +114,38 @@ class _KitchenSinkScreenState extends State<KitchenSinkScreen> {
   Component build(BuildContext context) {
     return div(
       styles: Styles(raw: <String, String>{
-        'max-width': '860px',
-        'margin': '0 auto',
-        'padding': '32px 20px 64px',
         'font-family':
             'var(--brand-font, system-ui, -apple-system, sans-serif)',
       }),
       [
         _header(),
-        _hero(),
-        for (final _Section s in _sections) _sectionCard(s),
+        div(
+          styles: Styles(raw: <String, String>{
+            'max-width': '860px',
+            'margin': '0 auto',
+            'padding': '32px 20px 64px',
+          }),
+          [
+            _hero(),
+            for (final _Section s in _sections) _sectionCard(s),
+          ],
+        ),
       ],
     );
   }
 
   Component _header() {
-    return div(
-      classes: 'toolbar',
-      styles: Styles(raw: <String, String>{
-        'gap': '8px',
-        // Keep the adapter + mode controls reachable after scrolling. Stuck to
-        // the viewport top with the page background behind it; the negative
-        // side margin + matching padding stretch it to the column's edges (the
-        // container insets 20px), and the divider separates it from content
-        // that scrolls underneath.
-        'position': 'sticky',
-        'top': '0',
-        'z-index': '20',
-        'background': 'var(--bg)',
-        'margin': '-32px -20px 0',
-        'padding': '20px 20px 12px',
-        'border-bottom': '1px solid var(--border)',
-      }),
-      [
-        // The circled arrow alone — the same back affordance the sample screen
-        // uses, and the title beside it already says where you are. This page
-        // is a top-level destination rather than a sample, so a visitor who
-        // deep-linked here goes up to the site root, not into the gallery.
-        const BackLink(fallback: '/', fallbackLabel: 'home'),
-        h1(
-          classes: 'toolbar-title',
-          styles: Styles(raw: <String, String>{'font-size': '20px'}),
-          [Component.text('A2UI Craft')],
-        ),
+    return SiteBar(
+      // A top-level destination rather than a sample, so a visitor who
+      // deep-linked here goes up to the site root, not into the gallery.
+      back: const BackLink(fallback: '/', fallbackLabel: 'home'),
+      title: 'Core primitives',
+      maxWidth: 860,
+      // The brand and adapter controls stay relevant after you have scrolled
+      // past them — this page exists to be flipped between renderers.
+      sticky: true,
+      toggle: SiteBarToggle.wideOnly,
+      actions: <Component>[
         div(classes: 'toolbar-actions', <Component>[
           CraftMenu(
             className: 'wide-only',
@@ -171,7 +161,6 @@ class _KitchenSinkScreenState extends State<KitchenSinkScreen> {
             items: <MenuItem>[_highContrastItem()],
           ),
           _frameworkToggle(className: 'wide-only'),
-          const ThemeToggle(className: 'wide-only'),
           // Below the breakpoint the bar is back + title + this, and every
           // axis above folds in here — including the adapter switch. Keeping
           // that one out was tempting (swapping the renderer is the reason to

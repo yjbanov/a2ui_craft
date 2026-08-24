@@ -15,6 +15,7 @@ import 'package:jaspr_flutter_embed/jaspr_flutter_embed.dart';
 
 import 'flutter_host.dart';
 import 'back_link.dart';
+import 'site_chrome.dart';
 import 'icons.dart';
 import 'mini_app_screen.dart';
 import 'theme_mode.dart';
@@ -163,37 +164,34 @@ class _LoadScreenState extends State<LoadScreen> {
   }
 
   Component _bar(BuildContext context) {
-    return div(
-      classes: 'toolbar',
-      styles: Styles(raw: <String, String>{
-        'padding': '12px 20px',
-        'border-bottom': '1px solid var(--border)',
-      }),
-      <Component>[
-        // A top-level destination, so a deep link goes up to the site root
-        // rather than into the gallery.
-        const BackLink(fallback: '/', fallbackLabel: 'home'),
-        input(
-          type: InputType.url,
-          value: _url,
-          attributes: <String, String>{
-            'placeholder': 'https://your-project.web.app/',
-            'inputmode': 'url',
-          },
-          onInput: (dynamic v) => _url = '$v',
-          styles: Styles(raw: <String, String>{
-            // min-width:0 so the URL field can shrink below its intrinsic
-            // size instead of pushing Load and the scheme toggle off a phone.
-            'flex': '1',
-            'min-width': '0',
-            'padding': '8px 12px',
-            'border': '1px solid var(--border-strong)',
-            'border-radius': '8px',
-            'font': '14px ui-monospace, monospace',
-            'background': 'var(--card)',
-            'color': 'var(--fg)',
-          }),
-        ),
+    return SiteBar(
+      // A top-level destination, so a deep link goes up to the site root
+      // rather than into the gallery.
+      back: const BackLink(fallback: '/', fallbackLabel: 'home'),
+      // This bar *is* the screen's control: the URL field takes the middle a
+      // title would, so it gets the slack instead of being squeezed by one.
+      middle: input(
+        type: InputType.url,
+        value: _url,
+        attributes: <String, String>{
+          'placeholder': 'https://your-project.web.app/',
+          'inputmode': 'url',
+        },
+        onInput: (dynamic v) => _url = '$v',
+        styles: Styles(raw: <String, String>{
+          // min-width:0 so the URL field can shrink below its intrinsic
+          // size instead of pushing Load and the toggle off a phone.
+          'flex': '1',
+          'min-width': '0',
+          'padding': '8px 12px',
+          'border': '1px solid var(--border-strong)',
+          'border-radius': '8px',
+          'font': '14px ui-monospace, monospace',
+          'background': 'var(--card)',
+          'color': 'var(--fg)',
+        }),
+      ),
+      actions: <Component>[
         button(
           onClick: _loading ? null : _doLoad,
           styles: _btn(true),
@@ -202,7 +200,6 @@ class _LoadScreenState extends State<LoadScreen> {
             if (!_loading) playIcon(),
           ],
         ),
-        const ThemeToggle(),
       ],
     );
   }

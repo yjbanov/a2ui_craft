@@ -16,6 +16,7 @@ import 'package:web/web.dart' as web;
 import 'brand_themes.dart';
 import 'flutter_host.dart';
 import 'back_link.dart';
+import 'site_chrome.dart';
 import 'icons.dart';
 import 'menu.dart';
 import 'segmented.dart';
@@ -544,17 +545,13 @@ class _SampleScreenState extends State<SampleScreen> {
   /// *every* option lives in the menu. Above the breakpoint the axes spread
   /// back out and the overflow disappears.
   Component _toolbar(BuildContext context) {
-    return div(
-      classes: 'toolbar',
-      styles: Styles(raw: <String, String>{
-        'padding': '12px 20px',
-        'border-bottom': '1px solid var(--border)',
-      }),
-      [
-        // The circled arrow alone: "back" needs no gloss, and the title beside
-        // it already says where you are.
-        const BackLink(fallback: '/gallery', fallbackLabel: 'gallery'),
-        h2(classes: 'toolbar-title', [Component.text(_raw.label)]),
+    return SiteBar(
+      back: const BackLink(fallback: '/gallery', fallbackLabel: 'gallery'),
+      title: _raw.label,
+      // Every option-bearing control folds into the overflow menu on a phone,
+      // the colour-scheme toggle with them.
+      toggle: SiteBarToggle.wideOnly,
+      actions: <Component>[
         div(classes: 'toolbar-actions', <Component>[
           if (_usesResponsive)
             CraftMenu(
@@ -576,7 +573,6 @@ class _SampleScreenState extends State<SampleScreen> {
               label: (_mode ?? _project!.defaultMode).label,
               items: _modeItems(),
             ),
-          const ThemeToggle(className: 'wide-only'),
           button(
             classes: 'wide-only',
             onClick: _toggleEditor,

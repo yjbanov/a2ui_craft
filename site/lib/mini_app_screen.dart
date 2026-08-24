@@ -16,6 +16,7 @@ import 'package:jaspr_flutter_embed/jaspr_flutter_embed.dart';
 
 import 'flutter_host.dart';
 import 'back_link.dart';
+import 'site_chrome.dart';
 import 'theme_mode.dart';
 
 /// The library name the mini-app's own template is registered under.
@@ -89,36 +90,42 @@ class _MiniAppScreenState extends State<MiniAppScreen> {
 
     return div(
       styles: Styles(raw: <String, String>{
-        'max-width': '1100px',
-        'margin': '0 auto',
-        'padding': '24px 20px 48px',
         'font-family': 'system-ui, -apple-system, sans-serif',
       }),
       <Component>[
         _toolbar(app),
-        _explainer(logic),
         div(
           styles: Styles(raw: <String, String>{
-            'display': 'grid',
-            'grid-template-columns': 'repeat(auto-fit, minmax(340px, 1fr))',
-            'gap': '20px',
-            'align-items': 'start',
+            'max-width': '1100px',
+            'margin': '0 auto',
+            'padding': '24px 20px 48px',
           }),
           <Component>[
-            _pane(
-              'Jaspr · driver in a web worker · JavaScript',
-              JasprMiniAppPane(
-                template: app.template,
-                schema: _schema!,
-                coldBoot: () => _decodeMessages(app.messages),
-                // The shipped driver source, run as it ships. Nothing is
-                // compiled, nothing is bundled: the worker is started from
-                // the file the project publishes.
-                createTransport: () =>
-                    WorkerDriverRunner.fromSource(app.driverJs),
-              ),
+            _explainer(logic),
+            div(
+              styles: Styles(raw: <String, String>{
+                'display': 'grid',
+                'grid-template-columns': 'repeat(auto-fit, minmax(340px, 1fr))',
+                'gap': '20px',
+                'align-items': 'start',
+              }),
+              <Component>[
+                _pane(
+                  'Jaspr · driver in a web worker · JavaScript',
+                  JasprMiniAppPane(
+                    template: app.template,
+                    schema: _schema!,
+                    coldBoot: () => _decodeMessages(app.messages),
+                    // The shipped driver source, run as it ships. Nothing is
+                    // compiled, nothing is bundled: the worker is started from
+                    // the file the project publishes.
+                    createTransport: () =>
+                        WorkerDriverRunner.fromSource(app.driverJs),
+                  ),
+                ),
+                _pane('Flutter · driver in-process · Dart', _flutterPane(app)),
+              ],
             ),
-            _pane('Flutter · driver in-process · Dart', _flutterPane(app)),
           ],
         ),
       ],
@@ -126,27 +133,10 @@ class _MiniAppScreenState extends State<MiniAppScreen> {
   }
 
   Component _toolbar(RawMiniApp app) {
-    return div(
-      styles: Styles(raw: <String, String>{
-        'display': 'flex',
-        'align-items': 'center',
-        'gap': '12px',
-        'margin-bottom': '16px',
-      }),
-      <Component>[
-        // The same circled-arrow badge every other screen uses — this one had
-        // drifted to a bare icon, so "back" looked like a different control
-        // depending on which screen you were on.
-        const BackLink(fallback: '/gallery', fallbackLabel: 'gallery'),
-        h1(
-          styles: Styles(raw: <String, String>{
-            'font': '600 20px system-ui',
-            'margin': '0',
-            'color': 'var(--fg)',
-          }),
-          <Component>[Component.text('${app.label} — a mini-app')],
-        ),
-      ],
+    return SiteBar(
+      back: const BackLink(fallback: '/gallery', fallbackLabel: 'gallery'),
+      title: '${app.label} — a mini-app',
+      maxWidth: 1100,
     );
   }
 

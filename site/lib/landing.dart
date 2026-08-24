@@ -34,7 +34,7 @@ class LandingScreen extends StatelessComponent {
         'font-family': 'system-ui, -apple-system, sans-serif',
       }),
       <Component>[
-        const SiteHeader(),
+        const SiteBar(maxWidth: 1100, nav: true, current: '/'),
         _hero(),
         for (final _Feature f in _features) _section(f),
         _alsoInTheBox(),

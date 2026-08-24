@@ -6,6 +6,7 @@ import 'package:jaspr/dom.dart';
 import 'package:jaspr/jaspr.dart';
 import 'package:jaspr_router/jaspr_router.dart';
 
+import 'back_link.dart';
 import 'theme_mode.dart';
 
 /// Where the project actually lives. Only links that resolve belong here — a
@@ -26,48 +27,121 @@ const List<(String, String)> _navItems = <(String, String)>[
   ('/load', 'Load a project'),
 ];
 
-/// The site header: wordmark home, the top-level nav, and the colour-scheme
-/// toggle.
-///
-/// Shared by the pages that are *destinations* (the landing page, the gallery).
-/// The working screens — a sample, a mini-app, the primitives page — keep their
-/// own toolbars instead, because those carry screen-specific controls (the
-/// adapter switch, the brand and mode pickers) that have nowhere to live here,
-/// and because a second row of chrome above a working surface is exactly the
-/// vertical space the phone layout has least of.
-class SiteHeader extends StatelessComponent {
-  const SiteHeader({this.current, super.key});
+/// Which colour-scheme control the bar carries.
+enum SiteBarToggle {
+  /// Always visible. For screens with no overflow menu to fold it into.
+  always,
 
-  /// The path of the page being rendered, so its nav entry can mark itself —
-  /// or null on a page that is not one of [_navItems].
+  /// Wide screens only — below the breakpoint the screen's own overflow menu
+  /// carries it, along with every other option-bearing control.
+  wideOnly,
+}
+
+/// The one bar every screen wears.
+///
+/// There used to be four of these, and they had drifted: the mini-app screen's
+/// was not a toolbar at all (no border, its own padding, its own title
+/// element), two screens had no colour-scheme toggle, and only the destination
+/// pages offered a way home. Same zones everywhere now, so the back arrow, the
+/// wordmark, and the toggle are always in the corner you last left them.
+///
+/// Left to right: [back], the wordmark, then a flexible middle ([title], or
+/// [middle] for a screen whose bar *is* a control, or empty space), then
+/// [actions], then the colour-scheme toggle. The middle takes the slack, which
+/// is what pushes the actions to the right edge without a spacer.
+///
+/// [maxWidth] is about the content below rather than the bar: a screen that
+/// centres a column wants its bar centred on the same one, and a full-bleed
+/// screen wants the bar full-bleed too. Either way the border spans the
+/// viewport, so the bar reads as one band across every screen.
+class SiteBar extends StatelessComponent {
+  const SiteBar({
+    this.back,
+    this.title,
+    this.middle,
+    this.actions = const <Component>[],
+    this.toggle = SiteBarToggle.always,
+    this.maxWidth,
+    this.sticky = false,
+    this.current,
+    this.nav = false,
+    super.key,
+  }) : assert(title == null || middle == null,
+            'A bar has one middle: a title or a component, not both.');
+
+  /// The back affordance, or null on a page nothing is above.
+  final BackLink? back;
+
+  /// The screen's name, elided rather than wrapped when the bar is tight.
+  final String? title;
+
+  /// A screen whose bar *is* its control — the loader's URL field — supplies
+  /// the middle itself instead of a title.
+  final Component? middle;
+
+  /// Screen-specific controls, in the order they should read.
+  final List<Component> actions;
+
+  /// Whether the colour-scheme toggle folds away on a phone.
+  final SiteBarToggle toggle;
+
+  /// The content column to centre on, or null for a full-bleed screen.
+  final double? maxWidth;
+
+  /// Whether the bar stays put as the page scrolls — for screens whose
+  /// controls stay relevant after you have scrolled away from them.
+  final bool sticky;
+
+  /// The path being rendered, so its nav entry can mark itself.
   final String? current;
+
+  /// Whether to carry the top-level nav links.
+  final bool nav;
 
   @override
   Component build(BuildContext context) {
     return header(
-      classes: 'site-header',
+      classes: sticky ? 'site-bar is-sticky' : 'site-bar',
       <Component>[
         div(
-          classes: 'site-header-inner',
+          classes: 'site-bar-inner',
+          styles: maxWidth == null
+              ? null
+              : Styles(raw: <String, String>{
+                  'max-width': '${maxWidth!.toStringAsFixed(0)}px',
+                  'margin': '0 auto',
+                }),
           <Component>[
+            if (back != null) back!,
             Link(
               to: '/',
-              classes: 'site-wordmark',
+              // The wordmark folds away exactly when the bar also names a
+              // screen, because that is when the width is contested and the
+              // title is the half that has to survive.
+              classes: title == null && middle == null
+                  ? 'site-wordmark'
+                  : 'site-wordmark wide-only',
               child: Component.text('A2UI Craft'),
             ),
-            div(styles: Styles(raw: <String, String>{'flex': '1'}), const []),
-            // The nav folds away on a phone, following the convention the
-            // other toolbars already use: keeping "a favoured few" links
-            // visible only wraps the bar to a second row.
-            for (final (String to, String label) in _navItems)
-              Link(
-                to: to,
-                classes: to == current
-                    ? 'site-nav-link wide-only is-current'
-                    : 'site-nav-link wide-only',
-                child: Component.text(label),
-              ),
-            const ThemeToggle(),
+            if (middle != null)
+              middle!
+            else if (title != null)
+              h2(classes: 'site-bar-title', <Component>[Component.text(title!)])
+            else
+              div(classes: 'site-bar-spacer', const <Component>[]),
+            if (nav)
+              for (final (String to, String label) in _navItems)
+                Link(
+                  to: to,
+                  classes: to == current
+                      ? 'site-nav-link wide-only is-current'
+                      : 'site-nav-link wide-only',
+                  child: Component.text(label),
+                ),
+            ...actions,
+            ThemeToggle(
+              className: toggle == SiteBarToggle.wideOnly ? 'wide-only' : null,
+            ),
           ],
         ),
       ],

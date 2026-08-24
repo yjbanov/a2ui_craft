@@ -37,6 +37,7 @@ class LandingScreen extends StatelessComponent {
         const SiteHeader(),
         _hero(),
         for (final _Feature f in _features) _section(f),
+        _alsoInTheBox(),
         const SiteFooter(),
       ],
     );
@@ -201,6 +202,74 @@ class LandingScreen extends StatelessComponent {
     );
   }
 
+  /// The rest of the framework, one card each.
+  ///
+  /// Four sections is the page's budget for things that get a demo; these are
+  /// real capabilities that would each need one, and a landing page that gave
+  /// them all a section would be a changelog. Every card links somewhere it can
+  /// actually be seen — a card that only asserts is worse than no card.
+  Component _alsoInTheBox() {
+    return div(
+      styles: Styles(raw: <String, String>{
+        'border-top': '1px solid var(--border)',
+        'background': 'var(--panel)',
+      }),
+      <Component>[
+        div(
+          styles: Styles(raw: <String, String>{
+            'max-width': '1100px',
+            'margin': '0 auto',
+            'padding': '56px 20px',
+          }),
+          <Component>[
+            h2(
+              styles: Styles(raw: <String, String>{
+                'font': '700 clamp(22px, 3vw, 30px)/1.2 system-ui',
+                'letter-spacing': '-0.01em',
+                'margin': '0',
+                'color': 'var(--fg)',
+              }),
+              <Component>[Component.text('Also in the box')],
+            ),
+            div(
+              styles: Styles(raw: <String, String>{
+                'display': 'grid',
+                'grid-template-columns': 'repeat(auto-fit, minmax(260px, 1fr))',
+                'gap': '14px',
+                'margin-top': '28px',
+              }),
+              <Component>[for (final _Extra e in _extras) _extraCard(e)],
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Component _extraCard(_Extra e) {
+    return Link(
+      to: e.to,
+      classes: 'also-card',
+      child: div(<Component>[
+        div(
+          styles: Styles(raw: <String, String>{
+            'font': '600 15px system-ui',
+            'color': 'var(--fg)',
+          }),
+          <Component>[Component.text(e.title)],
+        ),
+        p(
+          styles: Styles(raw: <String, String>{
+            'font': '14px/1.6 system-ui',
+            'color': 'var(--muted)',
+            'margin': '8px 0 0',
+          }),
+          <Component>[Component.text(e.blurb)],
+        ),
+      ]),
+    );
+  }
+
   Component _textLink(String to, String label) {
     return Link(
       to: to,
@@ -209,6 +278,57 @@ class LandingScreen extends StatelessComponent {
     );
   }
 }
+
+/// One "also in the box" card: a capability, and somewhere to go see it.
+class _Extra {
+  const _Extra({required this.title, required this.blurb, required this.to});
+
+  final String title;
+  final String blurb;
+
+  /// Where the card goes. Every one of these resolves to a page that shows the
+  /// thing; none is a dead end.
+  final String to;
+}
+
+const List<_Extra> _extras = <_Extra>[
+  _Extra(
+    title: 'Responsive structure',
+    blurb: 'A quantized size class supplied at render time, never raw pixels — '
+        'plus intrinsic reflow that needs no breakpoints at all.',
+    to: '/sample/responsive',
+  ),
+  _Extra(
+    title: 'Motion',
+    blurb: 'Implicit animation: interpolate when a retained component\'s '
+        'property changes between rebuilds, with easing as a token.',
+    to: '/sample/motion',
+  ),
+  _Extra(
+    title: 'Normalized controls',
+    blurb: 'Every control specified once and painted per theme role, with a '
+        'platform idiom the host selects.',
+    to: '/sample/settings',
+  ),
+  _Extra(
+    title: 'Projects you can deploy',
+    blurb: 'A project is a folder of data files — template, schema, bootstrap, '
+        'manifest — publishable to a CDN with no build step.',
+    to: '/load',
+  ),
+  _Extra(
+    title: 'Template functions',
+    blurb: 'Math, comparison, logic, and strings, strict about types and total '
+        'on bad input — so agent data cannot crash the surface.',
+    to: '/sample/calculator',
+  ),
+  _Extra(
+    title: 'Cross-adapter conformance',
+    blurb: 'One suite asserting real geometry with tolerance on both engines, '
+        'against actual layout rather than a structural proxy.',
+    to: '/primitives',
+  ),
+];
 
 /// The copy for one landing-page section.
 class _Feature {

@@ -69,7 +69,6 @@
         font: 500 14px system-ui, -apple-system, sans-serif;
         text-decoration: none;
         cursor: pointer;
-        transition: background 0.15s ease, color 0.15s ease;
       }
       .back-btn:hover {
         background: var(--panel);
@@ -92,8 +91,7 @@
         border: 1px solid var(--border-strong);
         font-size: 15px;
         line-height: 1;
-        transition: border-color 0.15s ease, color 0.15s ease,
-          background 0.15s ease, transform 0.2s ease;
+        transition: transform 0.2s ease;
       }
       .back-btn:hover .back-badge {
         border-color: var(--accent);
@@ -129,6 +127,14 @@
         color: var(--fg);
         text-decoration: none;
       }
+      /* NOTE — do not transition a property whose value comes from
+         `light-dark()`. A CSS transition latches the property's resolved value,
+         and a colour-scheme flip does not re-resolve it: the property stays
+         frozen at whichever scheme was live when the page loaded. Measured on
+         this page — a transitioned `color` kept its light-mode grey in dark
+         mode while an untransitioned one beside it re-resolved correctly. So
+         hover feedback animates `transform` (scheme-independent) and lets the
+         colour change land instantly. */
       .site-nav-link {
         white-space: nowrap;
         padding: 6px 10px;
@@ -136,7 +142,6 @@
         font: 14px system-ui, -apple-system, sans-serif;
         color: var(--muted);
         text-decoration: none;
-        transition: background 0.15s ease, color 0.15s ease;
       }
       .site-nav-link:hover {
         background: var(--panel);
@@ -192,8 +197,7 @@
         color: var(--fg);
         font: 600 15px system-ui, -apple-system, sans-serif;
         text-decoration: none;
-        transition: background 0.15s ease, border-color 0.15s ease,
-          transform 0.1s ease;
+        transition: transform 0.1s ease;
       }
       .landing-cta:hover {
         background: var(--panel);
@@ -308,6 +312,27 @@
         min-height: 124px;
         font: 13px system-ui, -apple-system, sans-serif;
         color: var(--subtle);
+      }
+
+      /* The "also in the box" cards. Whole-card links, so the target is the
+         card rather than a few words of it — the difference between a tap that
+         lands and one that misses on a phone. */
+      .also-card {
+        display: block;
+        padding: 18px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--card);
+        text-decoration: none;
+        transition: transform 0.1s ease;
+      }
+      .also-card:hover {
+        border-color: var(--accent);
+        transform: translateY(-2px);
+      }
+      .also-card:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
       }
 
       /* ---- Toolbars -------------------------------------------------------

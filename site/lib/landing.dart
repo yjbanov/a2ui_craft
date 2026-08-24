@@ -410,12 +410,14 @@ const List<_Feature> _features = <_Feature>[
   ),
   _Feature(
     eyebrow: 'A standard catalog',
-    title: 'Primitives both engines agree on',
+    title: 'Primitives all engines agree on',
     blurb:
-        'Layout, text, images, and controls, specified once as a constrained '
-        'common model rather than hand-mirrored per framework. Conformance is '
-        'asserted against real layout on both adapters — actual geometry, with '
-        'tolerance, not a structural proxy.',
+        'Layout, text and Markdown, images and icons, and the controls a real '
+        'screen needs — text fields, checkboxes, radios, switches, selects, '
+        'sliders. Each is built on the platform\'s own control, a native input '
+        'on the web and an adaptive widget in Flutter, so focus, keyboard, and '
+        'screen readers behave the way people expect. And a Slider is the same '
+        'Slider wherever it renders.',
     linkTo: '/primitives',
     linkLabel: 'Browse the primitives',
     demo: _primitivesDemo,

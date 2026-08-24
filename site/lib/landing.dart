@@ -10,6 +10,7 @@ import 'package:a2ui_craft_examples/a2ui_craft_examples.dart';
 
 import 'code_block.dart';
 import 'engine_demo.dart';
+import 'landing_demos.dart';
 import 'site_chrome.dart';
 
 /// The landing page: what A2UI Craft is, and four things it does.
@@ -279,6 +280,13 @@ String get _counterSource => _counter.template
     .replaceAll(RegExp(r'\n{3,}'), '\n\n')
     .trim();
 
+Component _primitivesDemo() => const LandingSurface(
+      surfaceId: 'landing-primitives',
+      template: primitivesTemplate,
+    );
+
+Component _themingDemo() => const ThemingDemo();
+
 Component _templatesDemo() => div(
       styles: Styles(raw: <String, String>{
         'display': 'grid',
@@ -315,20 +323,18 @@ const List<_Feature> _features = <_Feature>[
         'tolerance, not a structural proxy.',
     linkTo: '/primitives',
     linkLabel: 'Browse the primitives',
-    demoNote: 'Live: a strip of primitive specimens, '
-        'rendered by the same catalog the conformance suite pins.',
+    demo: _primitivesDemo,
   ),
   _Feature(
     eyebrow: 'Design systems',
     title: 'Re-skin it without touching the template',
     blurb: 'Themes are W3C DTCG tokens delivered as data, resolved at runtime. '
-        'Primitives read semantic roles, so a new brand re-inks a live surface '
-        'in place — no remount, no reload, and not one edit to the template '
-        'that drew it.',
-    linkTo: '/gallery',
-    linkLabel: 'See a themed project',
-    demoNote: 'Live: a brand switcher re-inking one surface, '
-        'across light and dark.',
+        'Primitives read semantic roles rather than hard-coded colours, so '
+        'switching the token set repaints this surface without one edit to the '
+        'template that drew it — same markup, four brands.',
+    linkTo: '/primitives',
+    linkLabel: 'Try the brands',
+    demo: _themingDemo,
   ),
   _Feature(
     eyebrow: 'Mini-apps',

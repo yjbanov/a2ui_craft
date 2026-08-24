@@ -279,6 +279,17 @@
         padding: 8px 12px;
         border-bottom: 1px solid var(--border);
         background: var(--panel);
+        /* The four-brand switcher is wider than a phone once the caption is
+           beside it, and a clipped segment is an option the visitor cannot
+           reach. Wrapping costs one line and keeps every brand tappable. */
+        flex-wrap: wrap;
+      }
+      /* Even wrapped, four segments overrun a 375px card by a few pixels — and
+         the card clips (`overflow: hidden`, for its rounded corners), so the
+         last brand loses its edge. Let the group scroll itself instead. */
+      .engine-demo-bar .segmented {
+        max-width: 100%;
+        overflow-x: auto;
       }
       .engine-demo-caption {
         font: 12px system-ui, -apple-system, sans-serif;

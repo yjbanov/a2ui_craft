@@ -99,7 +99,9 @@ class _EngineDemoState extends State<EngineDemo> {
           classes: 'engine-demo-bar',
           <Component>[
             span(
-              classes: 'engine-demo-caption',
+              // Decorative once the segments are self-describing; on a phone
+              // the width it costs is width the control needs.
+              classes: 'engine-demo-caption wide-only',
               <Component>[Component.text('Rendered by')],
             ),
             CraftSegmented(

@@ -439,10 +439,13 @@ const List<_Feature> _features = <_Feature>[
   _Feature(
     eyebrow: 'Mini-apps',
     title: 'Logic that ships with the UI',
-    blurb: 'A project can bring its own business logic, sandboxed and speaking '
-        'the same protocol the UI does. The cart mini-app ships that logic '
-        'twice — JavaScript and Dart — and one conformance suite passes against '
-        'both, which is what proves the protocol is the only coupling.',
+    blurb: 'A project can bring its own business logic, written once in the '
+        'language you already use — the driver contract is JSON over an '
+        'asynchronous channel, so anything that can hold state and speak JSON '
+        'can implement it. That asynchrony is also what makes the packaging, '
+        'and the isolation, your choice: a web worker, an iframe, a webview, '
+        'or your own server. Below, the cart\'s own JavaScript runs in a '
+        'worker.',
     linkTo: '/mini-app/cart',
     linkLabel: 'Run it on both engines',
     demo: _logicDemo,

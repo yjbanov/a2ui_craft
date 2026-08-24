@@ -12,9 +12,9 @@ import 'package:a2ui_craft_logic/web.dart';
 import 'package:jaspr/dom.dart';
 import 'package:jaspr/jaspr.dart';
 import 'package:jaspr_flutter_embed/jaspr_flutter_embed.dart';
-import 'package:jaspr_router/jaspr_router.dart';
 
 import 'flutter_host.dart';
+import 'back_link.dart';
 import 'icons.dart';
 import 'mini_app_screen.dart';
 import 'theme_mode.dart';
@@ -170,17 +170,9 @@ class _LoadScreenState extends State<LoadScreen> {
         'border-bottom': '1px solid var(--border)',
       }),
       <Component>[
-        button(
-          classes: 'back-btn',
-          onClick: () => context.push('/gallery'),
-          attributes: const <String, String>{
-            'aria-label': 'Back to gallery',
-            'title': 'Back to gallery',
-          },
-          <Component>[
-            span(classes: 'back-badge', <Component>[backIcon()]),
-          ],
-        ),
+        // A top-level destination, so a deep link goes up to the site root
+        // rather than into the gallery.
+        const BackLink(fallback: '/', fallbackLabel: 'home'),
         input(
           type: InputType.url,
           value: _url,

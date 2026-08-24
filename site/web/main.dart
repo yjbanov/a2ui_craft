@@ -4,12 +4,17 @@
 
 import 'package:jaspr/client.dart';
 import 'package:site/app.dart';
+import 'package:site/back_link.dart';
 import 'package:site/theme_mode.dart';
 
 void main() {
   // Restore the persisted dark-light override (and start following the
   // system preference) before anything renders.
   SiteTheme.init();
+  // Records the URL this tab loaded with, so the back arrow can tell a step
+  // back through the site from a step off it. Must run before the first
+  // client-side navigation.
+  SiteNav.init();
   // The embedded Flutter engine is **not** warmed here any more. It used to be,
   // because a lazy first load was recorded as failing — but that was a load
   // triggered implicitly, by mounting a view and letting the embed touch its

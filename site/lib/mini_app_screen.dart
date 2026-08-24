@@ -13,10 +13,9 @@ import 'package:a2ui_craft_logic/web.dart';
 import 'package:jaspr/dom.dart';
 import 'package:jaspr/jaspr.dart';
 import 'package:jaspr_flutter_embed/jaspr_flutter_embed.dart';
-import 'package:jaspr_router/jaspr_router.dart';
 
 import 'flutter_host.dart';
-import 'icons.dart';
+import 'back_link.dart';
 import 'theme_mode.dart';
 
 /// The library name the mini-app's own template is registered under.
@@ -138,15 +137,7 @@ class _MiniAppScreenState extends State<MiniAppScreen> {
         // The same circled-arrow badge every other screen uses — this one had
         // drifted to a bare icon, so "back" looked like a different control
         // depending on which screen you were on.
-        Link(
-          to: '/gallery',
-          classes: 'back-btn',
-          attributes: const <String, String>{
-            'aria-label': 'Back to gallery',
-            'title': 'Back to gallery',
-          },
-          child: span(classes: 'back-badge', <Component>[backIcon()]),
-        ),
+        const BackLink(fallback: '/gallery', fallbackLabel: 'gallery'),
         h1(
           styles: Styles(raw: <String, String>{
             'font': '600 20px system-ui',

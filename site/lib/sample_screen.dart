@@ -11,11 +11,11 @@ import 'package:a2ui_craft_jaspr/a2ui_craft_jaspr.dart';
 import 'package:jaspr/dom.dart';
 import 'package:jaspr/jaspr.dart';
 import 'package:jaspr_flutter_embed/jaspr_flutter_embed.dart';
-import 'package:jaspr_router/jaspr_router.dart';
 import 'package:web/web.dart' as web;
 
 import 'brand_themes.dart';
 import 'flutter_host.dart';
+import 'back_link.dart';
 import 'icons.dart';
 import 'menu.dart';
 import 'segmented.dart';
@@ -553,17 +553,7 @@ class _SampleScreenState extends State<SampleScreen> {
       [
         // The circled arrow alone: "back" needs no gloss, and the title beside
         // it already says where you are.
-        button(
-          classes: 'back-btn',
-          onClick: () => context.push('/gallery'),
-          attributes: const <String, String>{
-            'aria-label': 'Back to gallery',
-            'title': 'Back to gallery',
-          },
-          [
-            span(classes: 'back-badge', <Component>[backIcon()]),
-          ],
-        ),
+        const BackLink(fallback: '/gallery', fallbackLabel: 'gallery'),
         h2(classes: 'toolbar-title', [Component.text(_raw.label)]),
         div(classes: 'toolbar-actions', <Component>[
           if (_usesResponsive)

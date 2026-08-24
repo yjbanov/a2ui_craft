@@ -7,11 +7,11 @@ import 'package:a2ui_craft/a2ui_craft.dart' show CraftTheme, CraftThemeMode;
 import 'package:a2ui_craft_jaspr/a2ui_craft_jaspr.dart' show SampleView;
 import 'package:jaspr/dom.dart';
 import 'package:jaspr/jaspr.dart';
-import 'package:jaspr_router/jaspr_router.dart';
 import 'package:web/web.dart' as web;
 
 import 'brand_themes.dart';
 import 'flutter_specimen.dart';
+import 'back_link.dart';
 import 'icons.dart';
 import 'menu.dart';
 import 'segmented.dart';
@@ -147,16 +147,10 @@ class _KitchenSinkScreenState extends State<KitchenSinkScreen> {
       }),
       [
         // The circled arrow alone — the same back affordance the sample screen
-        // uses, and the title beside it already says where you are.
-        Link(
-          to: '/gallery',
-          classes: 'back-btn',
-          attributes: const <String, String>{
-            'aria-label': 'Back to gallery',
-            'title': 'Back to gallery',
-          },
-          child: span(classes: 'back-badge', <Component>[backIcon()]),
-        ),
+        // uses, and the title beside it already says where you are. This page
+        // is a top-level destination rather than a sample, so a visitor who
+        // deep-linked here goes up to the site root, not into the gallery.
+        const BackLink(fallback: '/', fallbackLabel: 'home'),
         h1(
           classes: 'toolbar-title',
           styles: Styles(raw: <String, String>{'font-size': '20px'}),

@@ -19,10 +19,11 @@ import 'site_chrome.dart';
 /// the framework-site genre has settled on (hero, then one section per claim,
 /// each earning its claim with something that runs rather than an adjective).
 ///
-/// Slice 1 is the skeleton: the copy and the navigation are real, and each
-/// section reserves the space its live demo will occupy. Nothing here pretends
-/// to be a demo it isn't — a placeholder says what is coming, so a half-built
-/// page reads as half-built instead of as a broken one.
+/// Every section carries a demo that actually runs: the template section
+/// renders a real sample through either engine, the primitives section is
+/// interactive, the theming section repaints under four token sets, and the
+/// logic section runs a mini-app's published JavaScript in a worker. A claim
+/// here is backed by something running or it does not belong on the page.
 class LandingScreen extends StatelessComponent {
   const LandingScreen({super.key});
 
@@ -193,7 +194,7 @@ class LandingScreen extends StatelessComponent {
                 <Component>[_textLink(f.linkTo, f.linkLabel)],
               ),
             ]),
-            f.demo?.call() ?? _demoSlot(f.demoNote),
+            f.demo(),
           ],
         ),
       ],
@@ -207,30 +208,6 @@ class LandingScreen extends StatelessComponent {
       child: Component.text('$label →'),
     );
   }
-
-  /// The reserved space for a section's live demo.
-  ///
-  /// Dashed and explicitly labelled: an empty panel would read as a demo that
-  /// failed to load, which is exactly the impression a framework site cannot
-  /// afford. This disappears as each demo lands.
-  Component _demoSlot(String note) {
-    return div(
-      styles: Styles(raw: <String, String>{
-        'display': 'flex',
-        'align-items': 'center',
-        'justify-content': 'center',
-        'min-height': '260px',
-        'padding': '24px',
-        'border': '1px dashed var(--border-strong)',
-        'border-radius': '14px',
-        'background': 'var(--panel)',
-        'font': '13px/1.6 ui-monospace, monospace',
-        'color': 'var(--subtle)',
-        'text-align': 'center',
-      }),
-      <Component>[Component.text(note)],
-    );
-  }
 }
 
 /// The copy for one landing-page section.
@@ -241,8 +218,7 @@ class _Feature {
     required this.blurb,
     required this.linkTo,
     required this.linkLabel,
-    this.demoNote = '',
-    this.demo,
+    required this.demo,
   });
 
   final String eyebrow;
@@ -251,12 +227,9 @@ class _Feature {
   final String linkTo;
   final String linkLabel;
 
-  /// What will replace the placeholder, stated plainly. Ignored once [demo] is
-  /// supplied.
-  final String demoNote;
-
-  /// The section's live demo, or null while it is still a placeholder.
-  final Component Function()? demo;
+  /// The section's live demo. Every section has one — a claim on this page is
+  /// backed by something running or it does not belong here.
+  final Component Function() demo;
 }
 
 /// The sample the templates section renders: the counter.
@@ -286,6 +259,8 @@ Component _primitivesDemo() => const LandingSurface(
     );
 
 Component _themingDemo() => const ThemingDemo();
+
+Component _logicDemo() => const LogicDemo();
 
 Component _templatesDemo() => div(
       styles: Styles(raw: <String, String>{
@@ -344,8 +319,7 @@ const List<_Feature> _features = <_Feature>[
         'twice — JavaScript and Dart — and one conformance suite passes against '
         'both, which is what proves the protocol is the only coupling.',
     linkTo: '/mini-app/cart',
-    linkLabel: 'Run the cart mini-app',
-    demoNote: 'Live: a mini-app driven by its own published '
-        'JavaScript, running in a web worker.',
+    linkLabel: 'Run it on both engines',
+    demo: _logicDemo,
   ),
 ];

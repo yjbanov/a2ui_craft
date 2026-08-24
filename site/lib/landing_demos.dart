@@ -2,12 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:convert';
+
 import 'package:a2ui_core/a2ui_core.dart';
+import 'package:a2ui_craft_examples/a2ui_craft_examples.dart';
 import 'package:a2ui_craft_jaspr/a2ui_craft_jaspr.dart';
+import 'package:a2ui_craft_logic/web.dart';
 import 'package:jaspr/dom.dart';
 import 'package:jaspr/jaspr.dart';
 
 import 'brand_themes.dart';
+import 'code_block.dart';
+import 'mini_app_screen.dart';
 import 'segmented.dart';
 import 'theme_mode.dart';
 
@@ -220,6 +226,79 @@ class _ThemingDemoState extends State<ThemingDemo> {
               surfaceId: 'landing-theming',
               template: themingTemplate,
               theme: _brand.craftTheme(_mode),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+/// The cart mini-app: a project that ships its own business logic.
+RawMiniApp get _cart =>
+    rawMiniApps.firstWhere((RawMiniApp m) => m.id == 'cart');
+
+/// The opening of the shipped `cart.js`, down to the end of its first handler.
+///
+/// Sliced out of the real driver rather than retyped, so it cannot drift from
+/// the file the worker beside it is running. It *is* an excerpt — the label
+/// says so, and the ellipsis stands where the rest of the shop's rules were —
+/// because the whole driver is 169 lines and the point is the shape: an
+/// `onInit`, and handlers that answer events by writing to the data model.
+String get _cartDriverExcerpt {
+  final String src = _cart.driverJs;
+  final int start = src.indexOf('a2uiDriver({');
+  final int end = src.indexOf('    removeItem:', start);
+  if (start < 0 || end < 0) return src;
+  final String head = src.substring(start, end).trimRight();
+  return "$head\n\n    // …the rest of the shop's rules.\n  },\n});";
+}
+
+/// The logic section's demo: the cart mini-app, driven by its own JavaScript.
+///
+/// The driver runs in a **web worker** — no DOM, no access to anything the page
+/// holds — and talks to the surface over the session protocol. Nothing about
+/// this pane knows the logic is JavaScript; the Flutter pane on `/mini-app/cart`
+/// runs a Dart port of the same rules against the same conformance suite.
+class LogicDemo extends StatelessComponent {
+  const LogicDemo({super.key});
+
+  @override
+  Component build(BuildContext context) {
+    final RawMiniApp cart = _cart;
+    return div(
+      styles: Styles(raw: <String, String>{'display': 'grid', 'gap': '14px'}),
+      <Component>[
+        CraftCode(source: _cartDriverExcerpt, label: 'cart.js (excerpt)'),
+        div(
+          classes: 'engine-demo',
+          <Component>[
+            div(
+              classes: 'engine-demo-bar',
+              <Component>[
+                span(
+                  classes: 'engine-demo-caption',
+                  <Component>[Component.text('Driver in a web worker')],
+                ),
+              ],
+            ),
+            div(
+              classes: 'engine-demo-surface',
+              <Component>[
+                JasprMiniAppPane(
+                  template: cart.template,
+                  schema: jsonDecode(cart.schema) as Map<String, Object?>,
+                  coldBoot: () => <A2uiMessage>[
+                    for (final Object? m
+                        in jsonDecode(cart.messages) as List<Object?>)
+                      A2uiMessage.fromJson(m! as Map<String, dynamic>),
+                  ],
+                  // The file the project publishes, run as it ships: nothing
+                  // is compiled and nothing is bundled.
+                  createTransport: () =>
+                      WorkerDriverRunner.fromSource(cart.driverJs),
+                ),
+              ],
             ),
           ],
         ),

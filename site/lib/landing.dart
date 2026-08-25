@@ -61,7 +61,7 @@ class LandingScreen extends StatelessComponent {
             'color': 'var(--fg)',
           }),
           <Component>[
-            Component.text('Client-side templates and mini-apps for A2UI.'),
+            Component.text('Client-side templates and logic for A2UI.'),
           ],
         ),
         p(
@@ -90,7 +90,7 @@ class LandingScreen extends StatelessComponent {
           }),
           <Component>[
             _cta('/gallery', 'Browse the gallery', primary: true),
-            _cta('/mini-app/cart', 'Run a mini-app'),
+            _cta('/mini-app/cart', 'See logic running'),
           ],
         ),
       ],
@@ -437,15 +437,16 @@ const List<_Feature> _features = <_Feature>[
     demo: _themingDemo,
   ),
   _Feature(
-    eyebrow: 'Mini-apps',
-    title: 'Logic that ships with the UI',
-    blurb: 'A project can bring its own business logic, written once in the '
-        'language you already use — the driver contract is JSON over an '
-        'asynchronous channel, so anything that can hold state and speak JSON '
-        'can implement it. That asynchrony is also what makes the packaging, '
-        'and the isolation, your choice: a web worker, an iframe, a webview, '
-        'or your own server. Below, the cart\'s own JavaScript runs in a '
-        'worker.',
+    eyebrow: 'Logic',
+    title: 'When a template is not enough',
+    blurb: 'Templates render; they do not decide. When something has to — a '
+        'whole mini-app, or a single catalog component templates cannot '
+        'express — a project brings its own logic, in the language you '
+        'already use. The contract is JSON over an asynchronous channel, so '
+        'anything that can hold state and speak JSON can implement it, and '
+        'that asynchrony makes the packaging, and the isolation, your choice: '
+        'a web worker, an iframe, a webview, or your own server. Below, the '
+        'cart\'s own JavaScript runs in a worker.',
     linkTo: '/mini-app/cart',
     linkLabel: 'Run it on both engines',
     demo: _logicDemo,

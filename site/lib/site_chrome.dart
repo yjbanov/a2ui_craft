@@ -21,10 +21,16 @@ const String _designUrl =
     'https://github.com/yjbanov/a2ui_craft/blob/main/DESIGN.md';
 
 /// The top-level pages, in the order the landing page introduces them.
+///
+/// `/load` is deliberately absent. Bare in a nav bar it asks a first-time
+/// visitor for a URL they have no way of having yet — the page only makes
+/// sense once you know a project is a deployable folder of data files. It
+/// keeps the two entry points that say so: the landing page's "Projects you
+/// can deploy" card, and the gallery's own "Load a project from a URL" action,
+/// both of which arrive with that context attached.
 const List<(String, String)> _navItems = <(String, String)>[
   ('/gallery', 'Gallery'),
   ('/primitives', 'Primitives'),
-  ('/load', 'Load a project'),
 ];
 
 /// Which colour-scheme control the bar carries.

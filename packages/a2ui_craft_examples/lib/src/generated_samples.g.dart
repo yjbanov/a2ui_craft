@@ -141,14 +141,23 @@ import core;
 // to the standard `add` function. No host code, no data-model round-trip, and no
 // agent in the loop — the same behavior on every adapter (see DESIGN.md, the
 // template-functions slice).
-widget Counter { count: 0 } = Column(children: [
-  Text(text: args.label),
-  Text(text: state.count),
-  Button(
-    onPressed: set state.count = add(a: state.count, b: 1),
-    child: Text(text: args.buttonLabel),
-  ),
-]);
+//
+// The layout is deliberately still small — this template doubles as the site's
+// elevator-pitch code sample, so every line has to earn its place — but the
+// count is the thing you came to watch, so it is a heading rather than another
+// body line, and the label above it is a caption.
+widget Counter { count: 0 } = Column(
+  width: "fill",
+  gap: 16.0,
+  crossAxisAlignment: "center",
+  children: [
+    Text(text: args.label, variant: "caption"),
+    Heading(text: state.count, level: 1),
+    Button(
+      onPressed: set state.count = add(a: state.count, b: 1),
+      child: Text(text: args.buttonLabel),
+    ),
+  ]);
 ''',
     schema: r'''
 {
@@ -185,7 +194,7 @@ widget Counter { count: 0 } = Column(children: [
         {
           "id": "root",
           "component": "Counter",
-          "label": "You have pushed the button this many times:",
+          "label": "Times pushed",
           "buttonLabel": "Increment"
         }
       ]

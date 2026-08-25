@@ -15,7 +15,7 @@
         {
           "id": "root",
           "component": "Counter",
-          "label": "You have pushed the button this many times:",
+          "label": "Times pushed",
           "buttonLabel": "Increment"
         }
       ]

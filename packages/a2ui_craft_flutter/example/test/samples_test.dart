@@ -46,8 +46,7 @@ void main() {
   testWidgets('Counter counts up purely in-template (state + add)',
       (WidgetTester tester) async {
     await _pump(tester, counterSpec('Flutter'));
-    expect(find.text('You have pushed the button this many times:'),
-        findsOneWidget);
+    expect(find.text('Times pushed'), findsOneWidget);
     expect(find.text('0'), findsOneWidget);
     expect(find.text('Increment'), findsOneWidget);
 

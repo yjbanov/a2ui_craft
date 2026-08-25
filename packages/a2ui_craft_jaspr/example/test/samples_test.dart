@@ -39,8 +39,7 @@ void main() {
   testComponents('Counter counts up purely in-template (state + add)',
       (ComponentTester tester) async {
     await _pump(tester, counterSpec('Jaspr'));
-    expect(find.text('You have pushed the button this many times:'),
-        findsOneComponent);
+    expect(find.text('Times pushed'), findsOneComponent);
     expect(find.text('0'), findsOneComponent);
     expect(find.text('Increment'), findsOneComponent);
 

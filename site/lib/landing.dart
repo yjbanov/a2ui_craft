@@ -72,12 +72,26 @@ class LandingScreen extends StatelessComponent {
             'max-width': '62ch',
           }),
           <Component>[
+            // The one term a newcomer cannot infer gets glossed and linked on
+            // first use; everything after reads without prior context.
+            Component.text('In '),
+            a(
+              href: 'https://github.com/google/A2UI',
+              classes: 'inline-link',
+              attributes: const <String, String>{
+                'target': '_blank',
+                'rel': 'noopener noreferrer',
+              },
+              <Component>[Component.text('A2UI')],
+            ),
             Component.text(
-              'An agent composes UI from a catalog of components — but someone '
-              'has to implement that catalog, by hand, once per UI framework. '
-              'Craft makes the catalog data instead: templates over a standard '
-              'primitive set, authored once and rendered natively by every '
-              'adapter, with optional business logic that ships alongside.',
+              ', an agent drives real UI by composing a catalog of components '
+              'the client offers — as data, over a protocol. But someone has '
+              'to implement that catalog, by hand, once per UI framework. '
+              'Craft makes the catalog data too: templates over a standard '
+              'primitive set, authored once and rendered natively by an '
+              'adapter for each framework — Flutter and the web (via Jaspr) '
+              'today — with business logic that can ship alongside.',
             ),
           ],
         ),
@@ -401,9 +415,11 @@ const List<_Feature> _features = <_Feature>[
     eyebrow: 'Author once',
     title: 'One template, every renderer',
     blurb: 'A catalog component is a template over primitives — text, not code '
-        '— so it ships as data and every adapter renders it natively. The same '
-        'template, schema, and message stream drive the DOM and Flutter, and '
-        'neither one knows which it is.',
+        '— so it ships as data and every adapter renders it natively. The '
+        'counter\'s label and button text are not in the template: they '
+        'arrive in the message stream, the way an agent sends everything. The '
+        'same template and messages drive the DOM and Flutter, and neither '
+        'one knows which it is.',
     linkTo: '/gallery',
     linkLabel: 'See the samples',
     demo: _templatesDemo,
@@ -445,8 +461,8 @@ const List<_Feature> _features = <_Feature>[
         'already use. The contract is JSON over an asynchronous channel, so '
         'anything that can hold state and speak JSON can implement it, and '
         'that asynchrony makes the packaging, and the isolation, your choice: '
-        'a web worker, an iframe, a webview, or your own server. Below, the '
-        'cart\'s own JavaScript runs in a worker.',
+        'a web worker, an iframe, a webview, or your own server. In the '
+        'example, the cart\'s own JavaScript runs in a worker.',
     linkTo: '/mini-app/cart',
     linkLabel: 'Run it on both engines',
     demo: _logicDemo,

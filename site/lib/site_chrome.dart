@@ -135,7 +135,7 @@ class SiteBar extends StatelessComponent {
               h2(classes: 'site-bar-title', <Component>[Component.text(title!)])
             else
               div(classes: 'site-bar-spacer', const <Component>[]),
-            if (nav)
+            if (nav) ...<Component>[
               for (final (String to, String label) in _navItems)
                 Link(
                   to: to,
@@ -144,6 +144,19 @@ class SiteBar extends StatelessComponent {
                       : 'site-nav-link wide-only',
                   child: Component.text(label),
                 ),
+              // Engineers look for the repository top-right before they read
+              // anything. A plain <a>: it leaves the site. On a phone it folds
+              // with the rest of the nav — the footer keeps a copy.
+              a(
+                href: _repoUrl,
+                classes: 'site-nav-link wide-only',
+                attributes: const <String, String>{
+                  'target': '_blank',
+                  'rel': 'noopener noreferrer',
+                },
+                <Component>[Component.text('GitHub')],
+              ),
+            ],
             ...actions,
             ThemeToggle(
               className: toggle == SiteBarToggle.wideOnly ? 'wide-only' : null,

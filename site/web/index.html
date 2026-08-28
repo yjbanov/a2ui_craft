@@ -11,6 +11,13 @@
     <base href="/" />
 
     <title>A2UI Craft</title>
+    <meta
+      name="description"
+      content="Client-side templates and logic for A2UI: author a component
+               catalog once as data and render it natively on Flutter and the
+               web, themed by design tokens, with sandboxable business logic.
+               Experimental."
+    />
 
     <!-- Material Icons web font, so the Jaspr `Icon` ligatures (class
          "material-icons") render as glyphs instead of literal text. -->
@@ -211,6 +218,15 @@
         display: flex;
         flex-wrap: wrap;
         gap: 6px 18px;
+      }
+      /* An inline link inside prose: coloured like a link, underlined on
+         hover — the honest affordance for a word that leaves the page. */
+      .inline-link {
+        color: var(--accent);
+        text-decoration: none;
+      }
+      .inline-link:hover {
+        text-decoration: underline;
       }
       .site-footer-link {
         font: 14px system-ui, -apple-system, sans-serif;

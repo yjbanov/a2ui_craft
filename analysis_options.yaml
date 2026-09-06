@@ -9,6 +9,14 @@ analyzer:
     # Treat unused code as an error to keep the codebase tidy as it grows.
     unused_import: error
     unused_local_variable: error
+  exclude:
+    - build/**
+    - android/**
+    - ios/**
+    - web/**
+    - windows/**
+    - macos/**
+    - linux/**
 
 linter:
   rules:

@@ -150,6 +150,20 @@ otherwise be templatized: **`Modal`** (is an overlay a primitive, or a host-app
 concern the surface merely requests?), **`Tabs`**, **`ChoicePicker`**, and
 **`DateTimeInput`**. `AudioPlayer` belongs in `extended_primitives`, below.
 
+### Site information architecture — aligning landing page and gallery categories
+
+The landing page and the example gallery currently categorize the system's
+capabilities along different axes:
+
+- **Landing page sections:** the `*.craft` template language, primitives,
+  theming/design tokens, logic, and (after it lands) feature detection.
+- **Example gallery filters (`demo_properties.dart`):** layout, controls &
+  state, theming, functions, and A2UI integration.
+
+Harmonize the information architecture across both so the conceptual model
+taught on the landing page directly maps to the sample discovery filters in the
+gallery (e.g. aligning functions vs logic, layout + controls vs primitives).
+
 ### `extended_primitives` — keep the core dependency-light
 
 The **core primitive set is the universal, dependency-light vocabulary** every

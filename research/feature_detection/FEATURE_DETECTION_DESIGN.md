@@ -841,7 +841,7 @@ On Host v1:
 
 ## 9. Phased Implementation Roadmap
 
-This design can be delivered incrementally in 3 disciplined phases:
+This design can be delivered incrementally in 5 disciplined phases:
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
@@ -861,6 +861,14 @@ This design can be delivered incrementally in 3 disciplined phases:
 │ • Support SymbolReference in text parser (Location.args.latLong)       │
 │ • Implement dynamic meta(w: ..., path: ...) function                   │
 │ • Parity tests across Flutter and Jaspr                                │
+├────────────────────────────────────────────────────────────────────────┤
+│ Phase 4: Test & Example Scenario Coverage                              │
+│ • Add rich multi-scenario tests (e.g. Scenarios 1–4 from Section 8)    │
+│ • Add dedicated sample project(s) demonstrating feature detection      │
+├────────────────────────────────────────────────────────────────────────┤
+│ Phase 5: Landing Page Section on the Demo Site                         │
+│ • Add a Feature Detection section to the landing page                  │
+│ • Interactive side-by-side demo showcasing fallback and adaptation     │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 

@@ -1,6 +1,6 @@
 # Research: Feature Detection across Clients, Form Factors, and Versions
 
-Status: **research / proposal** (no code). The question: A2UI Craft templates are
+The question: A2UI Craft templates are
 authored once, deployed ephemerally (e.g. via CDN or dynamic services), and rendered
 across clients that differ along multiple dimensions:
 
@@ -14,9 +14,10 @@ across clients that differ along multiple dimensions:
 3. **Platform-specific ecosystems:** iOS provides `ApplePay`; Android provides
    `GooglePay`.
 
-Crucially, **a template must not crash on a client that lacks a widget or feature
-if it does not render that branch.** Furthermore, feature detection must **preserve
-dead code elimination (DCE) and minification** on both the host and the remote template.
+Crucially, in production **a template must not crash on a client that lacks a widget or feature
+if it does not render that branch.**. This can be strict during testing. Furthermore,
+feature detection must **preserve dead code elimination (DCE) and minification** on
+both the host and the remote template.
 
 Because A2UI Craft is in its pre-1.0 infancy and not yet published, we have the mandate
 and opportunity to get feature detection, metadata reflection, and host-side template

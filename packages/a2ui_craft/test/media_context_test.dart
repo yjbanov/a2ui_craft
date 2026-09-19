@@ -93,6 +93,34 @@ void main() {
     });
   });
 
+  group('DeviceFormFactor.decode (total)', () {
+    test('maps each id and falls back on unknown/absent', () {
+      for (final DeviceFormFactor f in DeviceFormFactor.values) {
+        expect(DeviceFormFactor.decode(f.id), f);
+      }
+      expect(DeviceFormFactor.decode(null), DeviceFormFactor.phone);
+      expect(DeviceFormFactor.decode('foldable'), DeviceFormFactor.phone);
+      expect(DeviceFormFactor.decode(42), DeviceFormFactor.phone);
+      expect(
+          DeviceFormFactor.decode('unknown',
+              fallback: DeviceFormFactor.desktop),
+          DeviceFormFactor.desktop);
+    });
+  });
+
+  group('HostPlatform.decode (total)', () {
+    test('maps each id and falls back on unknown/absent', () {
+      for (final HostPlatform p in HostPlatform.values) {
+        expect(HostPlatform.decode(p.id), p);
+      }
+      expect(HostPlatform.decode(null), HostPlatform.web);
+      expect(HostPlatform.decode('fuchsia'), HostPlatform.web);
+      expect(HostPlatform.decode(123), HostPlatform.web);
+      expect(HostPlatform.decode('unknown', fallback: HostPlatform.ios),
+          HostPlatform.ios);
+    });
+  });
+
   group('MediaContext value equality', () {
     test('equal fields are equal; a differing class is not', () {
       const MediaContext a = MediaContext(width: WindowSizeClass.expanded);
@@ -114,6 +142,44 @@ void main() {
       expect(motionOn, isNot(motionOff));
       expect(motionOn.hashCode, isNot(motionOff.hashCode));
     });
+
+    test('formFactor and platform participate in equality and hashCode', () {
+      const MediaContext defaultMedia =
+          MediaContext(width: WindowSizeClass.compact);
+      const MediaContext watchMedia = MediaContext(
+        width: WindowSizeClass.compact,
+        formFactor: DeviceFormFactor.watch,
+      );
+      const MediaContext iosMedia = MediaContext(
+        width: WindowSizeClass.compact,
+        platform: HostPlatform.ios,
+      );
+      expect(defaultMedia.formFactor, DeviceFormFactor.phone);
+      expect(defaultMedia.platform, HostPlatform.web);
+      expect(defaultMedia, isNot(watchMedia));
+      expect(defaultMedia.hashCode, isNot(watchMedia.hashCode));
+      expect(defaultMedia, isNot(iosMedia));
+      expect(defaultMedia.hashCode, isNot(iosMedia.hashCode));
+    });
+
+    test('capabilities participate in equality and hashCode unordered', () {
+      const MediaContext a = MediaContext(
+        width: WindowSizeClass.compact,
+        capabilities: <String>{'gps', 'camera'},
+      );
+      const MediaContext b = MediaContext(
+        width: WindowSizeClass.compact,
+        capabilities: <String>{'camera', 'gps'},
+      );
+      const MediaContext c = MediaContext(
+        width: WindowSizeClass.compact,
+        capabilities: <String>{'gps'},
+      );
+      expect(a, b);
+      expect(a.hashCode, b.hashCode);
+      expect(a, isNot(c));
+      expect(a.hashCode, isNot(c.hashCode));
+    });
   });
 
   group('MediaContext.toContent (the media. scope)', () {
@@ -127,10 +193,42 @@ void main() {
       expect(content.subscribe(<Object>['reducedMotion'], (_) {}), true);
     });
 
-    test('reducedMotion defaults to false in the scope', () {
+    test('defaults match specifications in the scope', () {
       final DynamicContent content =
           const MediaContext(width: WindowSizeClass.compact).toContent();
       expect(content.subscribe(<Object>['reducedMotion'], (_) {}), false);
+      expect(content.subscribe(<Object>['formFactor'], (_) {}), 'phone');
+      expect(content.subscribe(<Object>['platform'], (_) {}), 'web');
+      expect(content.subscribe(<Object>['hasGps'], (_) {}), false);
+      expect(content.subscribe(<Object>['hasCamera'], (_) {}), false);
+      expect(content.subscribe(<Object>['hasBiometrics'], (_) {}), false);
+      expect(content.subscribe(<Object>['hasNfc'], (_) {}), false);
+      expect(
+          content.subscribe(<Object>['capabilities', 'gps'], (_) {}), missing);
+    });
+
+    test('custom formFactor, platform, and capabilities are exposed in scope',
+        () {
+      const MediaContext media = MediaContext(
+        width: WindowSizeClass.compact,
+        formFactor: DeviceFormFactor.watch,
+        platform: HostPlatform.ios,
+        capabilities: <String>{'gps', 'nfc', 'customSensor'},
+      );
+      final DynamicContent content = media.toContent();
+      expect(content.subscribe(<Object>['formFactor'], (_) {}), 'watch');
+      expect(content.subscribe(<Object>['platform'], (_) {}), 'ios');
+      expect(content.subscribe(<Object>['hasGps'], (_) {}), true);
+      expect(content.subscribe(<Object>['hasNfc'], (_) {}), true);
+      expect(content.subscribe(<Object>['hasCamera'], (_) {}), false);
+      expect(content.subscribe(<Object>['hasBiometrics'], (_) {}), false);
+      expect(content.subscribe(<Object>['capabilities', 'gps'], (_) {}), true);
+      expect(content.subscribe(<Object>['capabilities', 'nfc'], (_) {}), true);
+      expect(
+          content.subscribe(<Object>['capabilities', 'customSensor'], (_) {}),
+          true);
+      expect(content.subscribe(<Object>['capabilities', 'camera'], (_) {}),
+          missing);
     });
   });
 }

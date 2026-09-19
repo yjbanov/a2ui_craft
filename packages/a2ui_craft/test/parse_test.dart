@@ -110,4 +110,21 @@ void main() {
     final MediaReference width = root.arguments['color']! as MediaReference;
     expect(width.parts, <Object>['width']);
   });
+
+  test('multi-part media references parse and round trip in binary', () {
+    final RemoteWidgetLibrary library = parseLibraryFile('''
+      widget root = Text(text: media.capabilities.gps);
+    ''');
+    final ConstructorCall root = library.widgets.single.root as ConstructorCall;
+    final MediaReference ref = root.arguments['text']! as MediaReference;
+    expect(ref.parts, <Object>['capabilities', 'gps']);
+
+    final RemoteWidgetLibrary decoded =
+        decodeLibraryBlob(encodeLibraryBlob(library));
+    final ConstructorCall decodedRoot =
+        decoded.widgets.single.root as ConstructorCall;
+    final MediaReference decodedRef =
+        decodedRoot.arguments['text']! as MediaReference;
+    expect(decodedRef.parts, <Object>['capabilities', 'gps']);
+  });
 }

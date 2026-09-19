@@ -139,9 +139,81 @@ enum ScreenOrientation {
   final String id;
 }
 
+/// The physical or device form factor of the client host.
+enum DeviceFormFactor {
+  /// Handheld mobile phones.
+  phone('phone'),
+
+  /// Smartwatches and wearable wrist displays.
+  watch('watch'),
+
+  /// Tablets and foldable devices in unfolded state.
+  tablet('tablet'),
+
+  /// Laptops and desktop workstations with pointer/keyboard.
+  desktop('desktop'),
+
+  /// Television and 10-foot interfaces driven by remote controls.
+  tv('tv'),
+
+  /// In-vehicle infotainment displays.
+  auto('auto');
+
+  const DeviceFormFactor(this.id);
+
+  /// The token string used in templates and data models.
+  final String id;
+
+  /// Decodes a form factor from its [id] string; unknown/absent yields [fallback]
+  /// (default [phone]). Total, like every value-type decoder.
+  static DeviceFormFactor decode(Object? raw,
+      {DeviceFormFactor fallback = DeviceFormFactor.phone}) {
+    for (final DeviceFormFactor f in values) {
+      if (f.id == raw) return f;
+    }
+    return fallback;
+  }
+}
+
+/// The host operating system or execution platform.
+enum HostPlatform {
+  /// Apple iOS.
+  ios('ios'),
+
+  /// Google Android.
+  android('android'),
+
+  /// Web browser (HTML DOM / CanvasKit / WebAssembly).
+  web('web'),
+
+  /// Apple macOS desktop.
+  macos('macos'),
+
+  /// Microsoft Windows desktop.
+  windows('windows'),
+
+  /// Linux desktop.
+  linux('linux');
+
+  const HostPlatform(this.id);
+
+  /// The token string used in templates and data models.
+  final String id;
+
+  /// Decodes a platform from its [id] string; unknown/absent yields [fallback]
+  /// (default [web]). Total, like every value-type decoder.
+  static HostPlatform decode(Object? raw,
+      {HostPlatform fallback = HostPlatform.web}) {
+    for (final HostPlatform p in values) {
+      if (p.id == raw) return p;
+    }
+    return fallback;
+  }
+}
+
 /// An immutable snapshot of the render-time environment. Value equality drives
-/// the reactivity model (a new snapshot with a different class re-renders the
-/// dependents), the same contract as `CraftTheme`.
+/// the reactivity model (a new snapshot with a different class or capability re-renders
+/// the dependents), the same contract as `CraftTheme`.
 @immutable
 class MediaContext {
   const MediaContext({
@@ -149,6 +221,9 @@ class MediaContext {
     this.height = WindowHeightClass.medium,
     this.orientation = ScreenOrientation.portrait,
     this.reducedMotion = false,
+    this.formFactor = DeviceFormFactor.phone,
+    this.platform = HostPlatform.web,
+    this.capabilities = const <String>{},
   });
 
   /// The width size class — the primary responsive axis.
@@ -172,25 +247,48 @@ class MediaContext {
   /// a *new* [MediaContext] and re-renders the dependents in place.
   final bool reducedMotion;
 
+  /// The physical or device form factor of the host.
+  final DeviceFormFactor formFactor;
+
+  /// The host operating system or runtime platform.
+  final HostPlatform platform;
+
+  /// Hardware sensors, modalities, and ecosystem capabilities currently
+  /// available on the device (e.g. `'gps'`, `'camera'`, `'biometrics'`, `'nfc'`).
+  final Set<String> capabilities;
+
   @override
   bool operator ==(Object other) =>
       other is MediaContext &&
       other.width == width &&
       other.height == height &&
       other.orientation == orientation &&
-      other.reducedMotion == reducedMotion;
+      other.reducedMotion == reducedMotion &&
+      other.formFactor == formFactor &&
+      other.platform == platform &&
+      other.capabilities.length == capabilities.length &&
+      capabilities.containsAll(other.capabilities);
 
   @override
-  int get hashCode => Object.hash(width, height, orientation, reducedMotion);
+  int get hashCode => Object.hash(
+        width,
+        height,
+        orientation,
+        reducedMotion,
+        formFactor,
+        platform,
+        Object.hashAllUnordered(capabilities),
+      );
 
   /// The template-facing view for the `media.` reference scope, parallel to
   /// [CraftTheme]'s `content`: the quantized **class ids** — `media.width` →
-  /// `"compact"`/`"medium"`/…, `media.height`, `media.orientation`, and the
-  /// boolean `media.reducedMotion` — as a [DynamicContent] that `media.<axis>`
-  /// references (and `switch media.width {…}`) resolve against. Only the enum ids
-  /// and the flag are exposed, never raw pixels
-  /// (research/responsive/RESPONSIVE_DESIGN.md §4.3): the scope is for
-  /// restructuring, not `@media (min-width: …)` magic numbers.
+  /// `"compact"`/`"medium"`/…, `media.height`, `media.orientation`, the
+  /// boolean `media.reducedMotion`, `media.formFactor` (`"phone"`, `"desktop"`, …),
+  /// `media.platform` (`"ios"`, `"android"`, `"web"`, …), nested capability map
+  /// `media.capabilities.<cap>` (`true` if present, missing/null if not), and
+  /// convenient boolean flags `media.hasGps`, `media.hasCamera`, `media.hasBiometrics`,
+  /// `media.hasNfc` — as a [DynamicContent] that `media.<axis>` references
+  /// (and `switch media.width {…}`) resolve against.
   ///
   /// Built fresh per call (unlike [CraftTheme]'s cached `late final`, since a
   /// [MediaContext] stays `const`); the runtime reads it once per subscription,
@@ -201,9 +299,20 @@ class MediaContext {
       'height': height.id,
       'orientation': orientation.id,
       'reducedMotion': reducedMotion,
+      'formFactor': formFactor.id,
+      'platform': platform.id,
+      'capabilities': <String, Object?>{
+        for (final String cap in capabilities) cap: true,
+      },
+      'hasGps': capabilities.contains('gps'),
+      'hasCamera': capabilities.contains('camera'),
+      'hasBiometrics': capabilities.contains('biometrics'),
+      'hasNfc': capabilities.contains('nfc'),
     });
 
   @override
   String toString() => 'MediaContext(width: ${width.id}, height: ${height.id}, '
-      'orientation: ${orientation.id}, reducedMotion: $reducedMotion)';
+      'orientation: ${orientation.id}, reducedMotion: $reducedMotion, '
+      'formFactor: ${formFactor.id}, platform: ${platform.id}, '
+      'capabilities: $capabilities)';
 }

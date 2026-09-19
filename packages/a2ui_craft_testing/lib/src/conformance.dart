@@ -1900,6 +1900,98 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
     },
   );
 
+  driver.defineTest(
+    'media.formFactor and media.platform branch props and re-render on change',
+    (CraftTester tester) async {
+      await tester.mount('''
+        import core;
+        widget root = Column(children: [
+          Text(text: switch media.formFactor {
+            "watch": "wrist",
+            "desktop": "workstation",
+            default: "handheld",
+          }),
+          Text(text: switch media.platform {
+            "ios": "apple",
+            "android": "google",
+            default: "other",
+          }),
+        ]);
+      ''', media: const MediaContext(width: WindowSizeClass.compact));
+
+      // Defaults: phone -> handheld, web -> other.
+      expect(tester.hasText('handheld'), isTrue);
+      expect(tester.hasText('other'), isTrue);
+
+      // Remedia to watch + ios.
+      await tester.remedia(const MediaContext(
+        width: WindowSizeClass.compact,
+        formFactor: DeviceFormFactor.watch,
+        platform: HostPlatform.ios,
+      ));
+      expect(tester.hasText('wrist'), isTrue);
+      expect(tester.hasText('apple'), isTrue);
+      expect(tester.hasText('handheld'), isFalse);
+      expect(tester.hasText('other'), isFalse);
+
+      // Remedia to desktop + android.
+      await tester.remedia(const MediaContext(
+        width: WindowSizeClass.compact,
+        formFactor: DeviceFormFactor.desktop,
+        platform: HostPlatform.android,
+      ));
+      expect(tester.hasText('workstation'), isTrue);
+      expect(tester.hasText('google'), isTrue);
+      expect(tester.hasText('wrist'), isFalse);
+      expect(tester.hasText('apple'), isFalse);
+    },
+  );
+
+  driver.defineTest(
+    'media.capabilities and direct capability flags branch props and re-render on change',
+    (CraftTester tester) async {
+      await tester.mount('''
+        import core;
+        widget root = Column(children: [
+          Text(text: switch media.capabilities.gps {
+            true: "live-map",
+            default: "search-box",
+          }),
+          Text(text: switch media.hasCamera {
+            true: "camera-capture",
+            default: "photo-picker",
+          }),
+        ]);
+      ''', media: const MediaContext(width: WindowSizeClass.compact));
+
+      // Default (no capabilities).
+      expect(tester.hasText('search-box'), isTrue);
+      expect(tester.hasText('photo-picker'), isTrue);
+      expect(tester.hasText('live-map'), isFalse);
+      expect(tester.hasText('camera-capture'), isFalse);
+
+      // Grant GPS permission / capability.
+      await tester.remedia(const MediaContext(
+        width: WindowSizeClass.compact,
+        capabilities: <String>{'gps'},
+      ));
+      expect(tester.hasText('live-map'), isTrue);
+      expect(tester.hasText('photo-picker'), isTrue);
+      expect(tester.hasText('search-box'), isFalse);
+      expect(tester.hasText('camera-capture'), isFalse);
+
+      // Add camera capability.
+      await tester.remedia(const MediaContext(
+        width: WindowSizeClass.compact,
+        capabilities: <String>{'gps', 'camera'},
+      ));
+      expect(tester.hasText('live-map'), isTrue);
+      expect(tester.hasText('camera-capture'), isTrue);
+      expect(tester.hasText('search-box'), isFalse);
+      expect(tester.hasText('photo-picker'), isFalse);
+    },
+  );
+
   // ---- Motion (Box(animate:)) — endpoint-and-envelope, never frame identity.
   // The band §7 already allows around a painted value is widened here along the
   // *time* axis: both adapters must declare the same motion (duration + the same

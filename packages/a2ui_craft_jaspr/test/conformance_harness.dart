@@ -63,6 +63,37 @@ class JasprCraftTester implements CraftTester {
   }
 
   @override
+  void registerFunctions(LocalFunctionLibrary functions) {
+    _runtime.registerFunctions(functions);
+  }
+
+  @override
+  void registerPrimitive(
+    String name, {
+    Map<String, Object?> meta = const <String, Object?>{},
+    String Function(Object? Function(String name) getArg)? textBuilder,
+  }) {
+    _runtime.update(
+      LibraryName(<String>[name]),
+      LocalWidgetLibrary(<String, Object>{
+        name: LocalWidget(
+          (BuildContext context, DataSource source) {
+            final String text = textBuilder != null
+                ? textBuilder((String arg) =>
+                    source.v<String>(<Object>[arg]) ??
+                    source.v<int>(<Object>[arg]) ??
+                    source.v<double>(<Object>[arg]) ??
+                    source.v<bool>(<Object>[arg]))
+                : name;
+            return Component.text(text);
+          },
+          meta: meta,
+        ),
+      }),
+    );
+  }
+
+  @override
   Future<void> retheme(CraftTheme? theme) async {
     _shellKey.currentState!.retheme(theme);
     await _tester.pump();

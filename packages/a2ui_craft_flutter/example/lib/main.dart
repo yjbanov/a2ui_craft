@@ -66,6 +66,7 @@ const List<IconData> _icons = <IconData>[
   Icons.login,
   Icons.dashboard_customize,
   Icons.fact_check,
+  Icons.devices_other,
 ];
 
 /// A simple gallery shell that shows one [Sample] at a time. Each sample is
@@ -108,7 +109,9 @@ class _GalleryAppState extends State<GalleryApp> {
                       destinations: <NavigationRailDestination>[
                         for (var i = 0; i < _specs.length; i++)
                           NavigationRailDestination(
-                            icon: Icon(_icons[i]),
+                            icon: Icon(i < _icons.length
+                                ? _icons[i]
+                                : Icons.extension),
                             label: Text(_specs[i].label),
                           ),
                       ],

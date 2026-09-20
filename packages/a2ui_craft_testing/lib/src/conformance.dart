@@ -137,6 +137,17 @@ abstract interface class CraftTester {
     CraftEventHandler? onEvent,
   });
 
+  /// Registers custom pure functions with the tester's runtime.
+  void registerFunctions(LocalFunctionLibrary functions);
+
+  /// Registers a mock primitive widget on the tester's runtime with the given [name],
+  /// optional static [meta] dictionary, and optional [textBuilder] to render text.
+  void registerPrimitive(
+    String name, {
+    Map<String, Object?> meta = const <String, Object?>{},
+    String Function(Object? Function(String name) getArg)? textBuilder,
+  });
+
   /// Replaces the ambient theme of the currently mounted surface with a new
   /// snapshot, exactly as a host flipping a mode would — **without
   /// remounting**: element state must survive and live `theme.` references

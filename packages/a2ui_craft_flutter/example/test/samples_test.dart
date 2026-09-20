@@ -495,6 +495,15 @@ void main() {
     expect(find.text('Submit Registration'), findsOneWidget);
   });
 
+  testWidgets('Feature Detection renders environment context and capabilities',
+      (WidgetTester tester) async {
+    await _pump(tester, featureDetectionSpec('Flutter'));
+    expect(find.text('Feature Detection in A2UI Craft'), findsOneWidget);
+    expect(find.text('Host & Runtime Context'), findsOneWidget);
+    expect(find.text('Hardware Capabilities'), findsOneWidget);
+    expect(find.text('Adaptive Payment Flow'), findsOneWidget);
+  });
+
   testWidgets('the gallery app mounts and shows the first sample',
       (WidgetTester tester) async {
     await tester.pumpWidget(const GalleryApp());

@@ -17,4 +17,5 @@ void main() {
   runCoreComponentConformance(jasprConformanceDriver());
   runA2uiConformance(jasprConformanceDriver());
   runDriverConformance(jasprConformanceDriver());
+  runFeatureDetectionConformance(jasprConformanceDriver());
 }

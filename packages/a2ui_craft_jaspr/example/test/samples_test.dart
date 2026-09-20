@@ -460,6 +460,16 @@ void main() {
     expect(find.text('Submit Registration'), findsOneComponent);
   });
 
+  testComponents(
+      'Feature Detection renders environment context and capabilities',
+      (ComponentTester tester) async {
+    await _pump(tester, featureDetectionSpec('Jaspr'));
+    expect(find.text('Feature Detection in A2UI Craft'), findsOneComponent);
+    expect(find.text('Host & Runtime Context'), findsOneComponent);
+    expect(find.text('Hardware Capabilities'), findsOneComponent);
+    expect(find.text('Adaptive Payment Flow'), findsOneComponent);
+  });
+
   testComponents('the gallery app mounts and shows the first sample',
       (ComponentTester tester) async {
     tester.pumpComponent(App());

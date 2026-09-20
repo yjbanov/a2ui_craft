@@ -4670,6 +4670,187 @@ widget FormValidator = Card(child: Column(crossAxisAlignment: "stretch",
 ''',
     demonstrates: <String>['controls'],
   ),
+  RawSample(
+    id: 'feature_detection',
+    label: 'Feature Detection',
+    template: r'''
+import core;
+
+// Feature Detection & Environmental Adaptation
+//
+// Demonstrates how an A2UI Craft template inspects host capabilities,
+// platforms, and primitive availability to render adaptive UI with graceful fallbacks.
+//
+// 1. `media.platform` & `media.formFactor` inspect the active host environment.
+// 2. `media.capabilities` (e.g. `media.hasGps`, `media.hasCamera`, `media.hasBiometrics`)
+//    guard hardware-dependent features.
+// 3. `hasWidget` & `hasFunction` detect available catalog symbols to guard branches.
+// 4. In-template state and button events provide an interactive payment flow simulation.
+
+widget CapabilityBadge = Card(
+  child: Row(
+    gap: 12.0,
+    children: [
+      Icon(icon: args.icon),
+      Expanded(
+        child: Column(
+          crossAxisAlignment: "start",
+          gap: 2.0,
+          children: [
+            Heading(text: args.title, level: 4),
+            Text(text: args.description, variant: "caption"),
+          ],
+        ),
+      ),
+      Text(
+        text: switch args.enabled {
+          true: "Supported",
+          default: "Unavailable",
+        },
+        variant: "caption",
+      ),
+    ],
+  ),
+);
+
+widget DeviceContextCard = Card(
+  child: Column(
+    crossAxisAlignment: "start",
+    gap: 8.0,
+    children: [
+      Heading(text: "Host & Runtime Context", level: 3),
+      Text(
+        text: concat(
+          a: "Platform: ",
+          b: concat(
+            a: media.platform,
+            b: concat(
+              a: " • Form factor: ",
+              b: concat(
+                a: media.formFactor,
+                b: concat(
+                  a: " • Engine: {{framework}} (v",
+                  b: concat(a: runtimeVersion(), b: ")"),
+                ),
+              ),
+            ),
+          ),
+        ),
+        variant: "caption",
+      ),
+    ],
+  ),
+);
+
+widget FeatureDetectionDemo { paymentMethod: "none" } = Column(
+  crossAxisAlignment: "start",
+  gap: 16.0,
+  children: [
+    Heading(text: "Feature Detection in A2UI Craft", level: 2),
+    Text(
+      text: "Templates adapt safely to device capabilities and host platforms, falling back gracefully without failing at compile or runtime.",
+    ),
+    DeviceContextCard(),
+    Heading(text: "Hardware Capabilities", level: 3),
+    Column(
+      gap: 8.0,
+      children: [
+        CapabilityBadge(
+          title: "Camera",
+          icon: "camera",
+          description: "Optical sensor for QR codes and image capture",
+          enabled: media.hasCamera,
+        ),
+        CapabilityBadge(
+          title: "Biometrics",
+          icon: "check",
+          description: "Hardware biometric authentication (FaceID / Fingerprint)",
+          enabled: media.hasBiometrics,
+        ),
+        CapabilityBadge(
+          title: "GPS Location",
+          icon: "location",
+          description: "High-accuracy geolocation hardware",
+          enabled: media.hasGps,
+        ),
+        CapabilityBadge(
+          title: "Push Notifications",
+          icon: "notifications",
+          description: "System notification push channel",
+          enabled: media.hasNotifications,
+        ),
+      ],
+    ),
+    Heading(text: "Adaptive Payment Flow", level: 3),
+    Card(
+      child: Column(
+        crossAxisAlignment: "start",
+        gap: 12.0,
+        children: [
+          Text(
+            text: switch equals(a: state.paymentMethod, b: "none") {
+              true: "Select a payment method adapted to this host:",
+              default: concat(a: "Payment initiated via: ", b: state.paymentMethod),
+            },
+          ),
+          switch and(a: media.hasBiometrics, b: equals(a: media.platform, b: "ios")) {
+            true: Button(
+              onPressed: set state.paymentMethod = "Apple Pay (Biometrics)",
+              child: Text(text: "Pay with Apple Pay"),
+            ),
+            default: switch and(a: media.hasNfc, b: equals(a: media.platform, b: "android")) {
+              true: Button(
+                onPressed: set state.paymentMethod = "Google Pay (NFC)",
+                child: Text(text: "Pay with Google Pay"),
+              ),
+              default: Button(
+                onPressed: set state.paymentMethod = "Credit Card (Standard Fallback)",
+                child: Text(text: "Pay with Credit Card"),
+              ),
+            },
+          },
+        ],
+      ),
+    ),
+  ],
+);
+''',
+    schema: r'''
+{
+  "catalogId": "demo",
+  "components": {
+    "FeatureDetectionDemo": {
+      "properties": {}
+    }
+  }
+}
+''',
+    messages: r'''
+[
+  {
+    "version": "v0.9",
+    "createSurface": {
+      "surfaceId": "demo",
+      "catalogId": "demo",
+      "sendDataModel": false
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateComponents": {
+      "surfaceId": "demo",
+      "components": [
+        {
+          "id": "root",
+          "component": "FeatureDetectionDemo"
+        }
+      ]
+    }
+  }
+]
+''',
+    demonstrates: <String>['controls', 'functions'],
+  ),
 ];
 
 // Named accessors (one per sample), kept for the example apps and tests.
@@ -4751,6 +4932,8 @@ SampleSpec incrementalDashboardSpec(String framework) =>
     rawSamples[47].toSpec(framework);
 SampleSpec formValidatorSpec(String framework) =>
     rawSamples[48].toSpec(framework);
+SampleSpec featureDetectionSpec(String framework) =>
+    rawSamples[49].toSpec(framework);
 
 /// One mini-app's project data: the same three files a sample
 /// has, plus the manifest `logic` slot naming the driver that

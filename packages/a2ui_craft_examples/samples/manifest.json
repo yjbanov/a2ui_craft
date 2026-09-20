@@ -47,5 +47,6 @@
   "calendar_day",
   "sign_in",
   "incremental_dashboard",
-  "form_validator"
+  "form_validator",
+  "feature_detection"
 ]

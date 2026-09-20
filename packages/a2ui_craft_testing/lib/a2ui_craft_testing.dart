@@ -12,5 +12,6 @@ library a2ui_craft_testing;
 
 export 'src/conformance.dart';
 export 'src/driver_conformance.dart';
+export 'src/feature_detection_conformance.dart';
 export 'src/geometry.dart';
 export 'src/primitives.dart';

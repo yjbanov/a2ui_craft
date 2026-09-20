@@ -44,6 +44,37 @@ class _FlutterCraftTester implements CraftTester {
   }
 
   @override
+  void registerFunctions(LocalFunctionLibrary functions) {
+    _runtime.registerFunctions(functions);
+  }
+
+  @override
+  void registerPrimitive(
+    String name, {
+    Map<String, Object?> meta = const <String, Object?>{},
+    String Function(Object? Function(String name) getArg)? textBuilder,
+  }) {
+    _runtime.update(
+      LibraryName(<String>[name]),
+      LocalWidgetLibrary(<String, Object>{
+        name: LocalWidget(
+          (BuildContext context, DataSource source) {
+            final String text = textBuilder != null
+                ? textBuilder((String arg) =>
+                    source.v<String>(<Object>[arg]) ??
+                    source.v<int>(<Object>[arg]) ??
+                    source.v<double>(<Object>[arg]) ??
+                    source.v<bool>(<Object>[arg]))
+                : name;
+            return Text(text);
+          },
+          meta: meta,
+        ),
+      }),
+    );
+  }
+
+  @override
   Future<void> retheme(CraftTheme? theme) {
     _mountedTheme = theme;
     return _pumpMounted();
@@ -437,4 +468,5 @@ void main() {
   runCoreComponentConformance(_FlutterConformanceDriver());
   runA2uiConformance(_FlutterConformanceDriver());
   runDriverConformance(_FlutterConformanceDriver());
+  runFeatureDetectionConformance(_FlutterConformanceDriver());
 }

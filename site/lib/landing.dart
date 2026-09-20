@@ -13,7 +13,7 @@ import 'engine_demo.dart';
 import 'landing_demos.dart';
 import 'site_chrome.dart';
 
-/// The landing page: what A2UI Craft is, and four things it does.
+/// The landing page: what A2UI Craft is, and five things it does.
 ///
 /// The gallery lives at `/gallery` — this page is the front door, in the shape
 /// the framework-site genre has settled on (hero, then one section per claim,
@@ -21,9 +21,10 @@ import 'site_chrome.dart';
 ///
 /// Every section carries a demo that actually runs: the template section
 /// renders a real sample through either engine, the primitives section is
-/// interactive, the theming section repaints under four token sets, and the
-/// logic section runs a mini-app's published JavaScript in a worker. A claim
-/// here is backed by something running or it does not belong on the page.
+/// interactive, the feature detection section adapts live across platforms and
+/// hardware capabilities, the theming section repaints under four token sets,
+/// and the logic section runs a mini-app's published JavaScript in a worker. A
+/// claim here is backed by something running or it does not belong on the page.
 class LandingScreen extends StatelessComponent {
   const LandingScreen({super.key});
 
@@ -392,6 +393,20 @@ Component _primitivesDemo() => const LandingSurface(
       template: primitivesTemplate,
     );
 
+Component _featureDetectionDemo() => div(
+      styles: Styles(raw: <String, String>{
+        'display': 'grid',
+        'gap': '14px',
+      }),
+      <Component>[
+        const CraftCode(
+          source: featureDetectionExcerpt,
+          label: 'template.craft (excerpt)',
+        ),
+        const FeatureDetectionDemo(),
+      ],
+    );
+
 Component _themingDemo() => const ThemingDemo();
 
 Component _logicDemo() => const LogicDemo();
@@ -407,9 +422,10 @@ Component _templatesDemo() => div(
       ],
     );
 
-/// The four claims, in the order they build on each other: a template needs
-/// primitives to be written over, a theme re-skins what those render, and logic
-/// is what turns the result into an app.
+/// The five claims, in the order they build on each other: a template needs
+/// primitives to be written over, feature detection adapts them across hosts,
+/// a theme re-skins what those render, and logic is what turns the result
+/// into an app.
 const List<_Feature> _features = <_Feature>[
   _Feature(
     eyebrow: 'Author once',
@@ -437,6 +453,18 @@ const List<_Feature> _features = <_Feature>[
     linkTo: '/primitives',
     linkLabel: 'Browse the primitives',
     demo: _primitivesDemo,
+  ),
+  _Feature(
+    eyebrow: 'Hardware & host awareness',
+    title: 'Adapt to every device, degrade with grace',
+    blurb: 'Templates never need to target a lowest common denominator. A2UI '
+        'Craft lets templates inspect host capabilities, platform environments, '
+        'and widget availability at runtime — or constant-fold them at compile '
+        'time. Hardware capabilities like GPS, biometrics, or NFC light up when '
+        'present, and unsupported features excise cleanly with no crashes.',
+    linkTo: '/sample/feature_detection',
+    linkLabel: 'Try feature detection',
+    demo: _featureDetectionDemo,
   ),
   _Feature(
     eyebrow: 'Design systems',

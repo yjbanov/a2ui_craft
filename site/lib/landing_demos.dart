@@ -28,18 +28,26 @@ class LandingSurface extends StatefulComponent {
   const LandingSurface({
     required this.surfaceId,
     required this.template,
+    this.rootComponent = 'Root',
     this.theme,
+    this.media,
     super.key,
   });
 
   /// Unique per demo: each surface must be unmistakably its own.
   final String surfaceId;
 
-  /// RFW source defining a `Root` widget.
+  /// RFW source defining a [rootComponent] widget.
   final String template;
+
+  /// The root component name. Defaults to 'Root'.
+  final String rootComponent;
 
   /// The theme to render under, or null to blend into the host.
   final CraftTheme? theme;
+
+  /// The media context (environment and capabilities).
+  final MediaContext? media;
 
   @override
   State<LandingSurface> createState() => _LandingSurfaceState();
@@ -52,7 +60,9 @@ class _LandingSurfaceState extends State<LandingSurface> {
   late final Map<String, Object?> _schema = <String, Object?>{
     'catalogId': component.surfaceId,
     'components': <String, Object?>{
-      'Root': <String, Object?>{'properties': <String, Object?>{}},
+      component.rootComponent: <String, Object?>{
+        'properties': <String, Object?>{}
+      },
     },
   };
 
@@ -70,7 +80,7 @@ class _LandingSurfaceState extends State<LandingSurface> {
       'updateComponents': <String, Object?>{
         'surfaceId': component.surfaceId,
         'components': <Object?>[
-          <String, Object?>{'id': 'root', 'component': 'Root'},
+          <String, Object?>{'id': 'root', 'component': component.rootComponent},
         ],
       },
     }),
@@ -87,6 +97,7 @@ class _LandingSurfaceState extends State<LandingSurface> {
       schema: _schema,
       messages: _messages,
       theme: component.theme,
+      media: component.media,
     );
   }
 }
@@ -299,6 +310,153 @@ class LogicDemo extends StatelessComponent {
                       WorkerDriverRunner.fromSource(cart.driverJs),
                 ),
               ],
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+/// The feature detection sample.
+RawSample get featureDetectionSample =>
+    rawSamples.firstWhere((RawSample s) => s.id == 'feature_detection');
+
+/// Excerpt from `packages/a2ui_craft_examples/samples/feature_detection/template.craft`.
+const String featureDetectionExcerpt = r'''
+// Branch on platform & hardware capabilities with graceful fallbacks:
+switch and(a: media.hasBiometrics, b: equals(a: media.platform, b: "ios")) {
+  true: Button(
+    onPressed: set state.paymentMethod = "Apple Pay (Biometrics)",
+    child: Text(text: "Pay with Apple Pay"),
+  ),
+  default: switch and(a: media.hasNfc, b: equals(a: media.platform, b: "android")) {
+    true: Button(
+      onPressed: set state.paymentMethod = "Google Pay (NFC)",
+      child: Text(text: "Pay with Google Pay"),
+    ),
+    default: Button(
+      onPressed: set state.paymentMethod = "Credit Card (Standard Fallback)",
+      child: Text(text: "Pay with Credit Card"),
+    ),
+  },
+}
+''';
+
+/// The feature detection section's demo: an interactive environment simulator.
+///
+/// Visitors can flip simulated host platforms (iOS, Android, Web) and toggle
+/// hardware capability flags (Biometrics, NFC, GPS, Camera) in the toolbar.
+/// The live Craft surface below re-renders reactively, adapting its payment
+/// actions, capability badges, and platform metadata in place.
+class FeatureDetectionDemo extends StatefulComponent {
+  const FeatureDetectionDemo({super.key});
+
+  @override
+  State<FeatureDetectionDemo> createState() => _FeatureDetectionDemoState();
+}
+
+class _FeatureDetectionDemoState extends State<FeatureDetectionDemo> {
+  String _platformLabel = 'iOS';
+  HostPlatform _platform = HostPlatform.ios;
+  final Set<String> _capabilities = <String>{'biometrics', 'camera', 'gps'};
+
+  static const Map<String, String> _capLabels = <String, String>{
+    'biometrics': 'FaceID',
+    'nfc': 'NFC',
+    'gps': 'GPS',
+    'camera': 'Camera',
+  };
+
+  void _setPlatform(String label) {
+    _platformLabel = label;
+    switch (label) {
+      case 'iOS':
+        _platform = HostPlatform.ios;
+        _capabilities
+          ..clear()
+          ..addAll(<String>['biometrics', 'camera', 'gps']);
+      case 'Android':
+        _platform = HostPlatform.android;
+        _capabilities
+          ..clear()
+          ..addAll(<String>['nfc', 'camera', 'gps']);
+      case 'Web':
+      default:
+        _platform = HostPlatform.web;
+        _capabilities
+          ..clear()
+          ..addAll(<String>['camera']);
+    }
+  }
+
+  void _toggleCapability(String cap) {
+    if (_capabilities.contains(cap)) {
+      _capabilities.remove(cap);
+    } else {
+      _capabilities.add(cap);
+    }
+  }
+
+  @override
+  Component build(BuildContext context) {
+    return div(
+      classes: 'engine-demo',
+      <Component>[
+        div(
+          classes: 'engine-demo-bar',
+          <Component>[
+            span(
+              classes: 'engine-demo-caption wide-only',
+              <Component>[Component.text('Platform')],
+            ),
+            CraftSegmented(
+              options: const <String>['iOS', 'Android', 'Web'],
+              selected: _platformLabel,
+              onSelect: (String label) => setState(() {
+                _setPlatform(label);
+              }),
+              ariaLabel: 'Simulated platform',
+            ),
+            span(
+              classes: 'engine-demo-caption wide-only',
+              styles: Styles(raw: <String, String>{'margin-left': '8px'}),
+              <Component>[Component.text('Hardware')],
+            ),
+            div(
+              classes: 'segmented',
+              attributes: const <String, String>{
+                'aria-label': 'Simulated hardware capabilities'
+              },
+              <Component>[
+                for (final String cap in _capLabels.keys)
+                  button(
+                    classes: 'segmented-item',
+                    onClick: () => setState(() => _toggleCapability(cap)),
+                    attributes: <String, String>{
+                      'role': 'checkbox',
+                      'aria-checked': '${_capabilities.contains(cap)}',
+                    },
+                    <Component>[
+                      Component.text(_capLabels[cap]!),
+                    ],
+                  ),
+              ],
+            ),
+          ],
+        ),
+        div(
+          classes: 'engine-demo-surface',
+          <Component>[
+            LandingSurface(
+              surfaceId: 'landing-feature-detection',
+              rootComponent: 'FeatureDetectionDemo',
+              template: featureDetectionSample.template,
+              media: MediaContext(
+                width: WindowSizeClass.compact,
+                platform: _platform,
+                capabilities: Set<String>.unmodifiable(_capabilities),
+              ),
             ),
           ],
         ),

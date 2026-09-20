@@ -23,34 +23,34 @@ Runtime _runtime() => Runtime()
   ..update(_core, createCoreComponents())
   ..registerFunctions(createCoreFunctions());
 
-/// A component whose build binds [composition] via `buildNode`, reporting any
-/// thrown exception through [onError].
+/// A component whose build binds [composition] via `buildNode`.
 class _Bind extends StatelessComponent {
-  const _Bind({required this.composition, required this.onError});
+  const _Bind({required this.composition});
   final ConstructorCall composition;
-  final void Function(Object) onError;
 
   @override
   Component build(BuildContext context) {
-    try {
-      return _runtime().buildNode(
-          context, composition, DynamicContent(), _noEvents,
-          scope: _core);
-    } catch (error) {
-      onError(error);
-      return Component.text('');
-    }
+    return _runtime().buildNode(
+        context, composition, DynamicContent(), _noEvents,
+        scope: _core);
   }
 }
 
-/// Binds [composition] and returns any exception it throws.
+/// Evaluates [composition] and returns any exception it throws.
 Future<Object?> _bindError(
     ComponentTester tester, ConstructorCall composition) async {
   Object? caught;
-  tester.pumpComponent(
-      _Bind(composition: composition, onError: (Object e) => caught = e));
-  await tester.pump();
-  return caught;
+  final previousHandler = FlutterError.onError;
+  FlutterError.onError = (details) => caught = details.exception;
+  try {
+    tester.pumpComponent(_Bind(composition: composition));
+    await tester.pump();
+    return caught;
+  } catch (error) {
+    return error;
+  } finally {
+    FlutterError.onError = previousHandler;
+  }
 }
 
 /// Wraps a function call in a `Text` so it sits in a value position.

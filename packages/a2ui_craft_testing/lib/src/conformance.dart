@@ -1014,6 +1014,84 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
   );
 
   driver.defineTest(
+    'hasWidget and hasFunction detect available symbols and guard unselected missing branches',
+    (CraftTester tester) async {
+      await tester.mount('''
+        import core;
+        widget root = Column(children: [
+          Text(text: switch hasWidget(name: "Text") {
+            true: "widget-found",
+            default: "widget-missing",
+          }),
+          Text(text: switch hasWidget(name: "NonExistentWidget") {
+            true: "unexpected-widget",
+            default: "widget-not-found",
+          }),
+          Text(text: switch hasFunction(name: "add") {
+            true: "function-found",
+            default: "function-missing",
+          }),
+          Text(text: switch hasFunction(name: "nonExistentFunction") {
+            true: "unexpected-function",
+            default: "function-not-found",
+          }),
+          Text(text: switch hasFunctionArg(function: "add", arg: "a") {
+            true: "arg-found",
+            default: "arg-missing",
+          }),
+          Text(text: switch hasFunctionArg(function: "add", arg: "nonExistentArg") {
+            true: "unexpected-arg",
+            default: "arg-not-found",
+          }),
+        ]);
+      ''');
+
+      expect(tester.hasText('widget-found'), isTrue);
+      expect(tester.hasText('widget-not-found'), isTrue);
+      expect(tester.hasText('function-found'), isTrue);
+      expect(tester.hasText('function-not-found'), isTrue);
+      expect(tester.hasText('arg-found'), isTrue);
+      expect(tester.hasText('arg-not-found'), isTrue);
+    },
+  );
+
+  driver.defineTest(
+    'deferred function argument validation does not throw in unselected switch branches',
+    (CraftTester tester) async {
+      // If add(a: "wrong_type", b: 1) threw eagerly during binding,
+      // this mount would crash before evaluating the switch condition.
+      await tester.mount('''
+        import core;
+        widget root = Column(children: [
+          Text(text: switch hasFunctionArg(function: "add", arg: "nonExistent") {
+            true: add(a: "wrong_type", b: 1),
+            default: "safe-fallback",
+          }),
+        ]);
+      ''');
+
+      expect(tester.hasText('safe-fallback'), isTrue);
+    },
+  );
+
+  driver.defineTest(
+    'runtimeVersion and appVersion expose version metadata to templates',
+    (CraftTester tester) async {
+      await tester.mount('''
+        import core;
+        widget root = Column(children: [
+          Text(text: switch greaterThanOrEqual(a: runtimeVersion(), b: 1) {
+            true: "v1-or-higher",
+            default: "legacy-runtime",
+          }),
+        ]);
+      ''');
+
+      expect(tester.hasText('v1-or-higher'), isTrue);
+    },
+  );
+
+  driver.defineTest(
     'theme references resolve design tokens to their canonical template values',
     (CraftTester tester) async {
       // A DTCG theme with a primitive→semantic alias, a dimension, and a

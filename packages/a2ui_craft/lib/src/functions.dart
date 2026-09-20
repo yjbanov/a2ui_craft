@@ -365,3 +365,84 @@ String _stringifyOperand(Object? value) {
   }
   return '';
 }
+
+// --- Introspection functions ------------------------------------------------
+
+/// The version of the A2UI Craft template runtime engine.
+const int currentRuntimeVersion = 1;
+
+/// Creates the standard runtime introspection functions:
+/// - `hasWidget(name: String) -> bool`
+/// - `hasWidgetArg(widget: String, arg: String) -> bool`
+/// - `hasFunction(name: String) -> bool`
+/// - `hasFunctionArg(function: String, arg: String) -> bool`
+/// - `runtimeVersion() -> int`
+/// - `appVersion() -> String`
+///
+/// Implementations are strictly total: missing or wrong-typed arguments return
+/// `false`, `0`, or `''` rather than throwing.
+Map<String, LocalFunction> createIntrospectionFunctions({
+  required bool Function(String name) hasWidget,
+  required bool Function(String name) hasFunction,
+  required bool Function(String function, String arg) hasFunctionArg,
+  bool Function(String widget, String arg)? hasWidgetArg,
+  String? appVersion,
+  int runtimeVersion = currentRuntimeVersion,
+}) {
+  return <String, LocalFunction>{
+    'hasWidget': LocalFunction(
+      arguments: const <String, FunctionArgType>{
+        'name': FunctionArgType.string
+      },
+      implementation: (DynamicMap arguments) {
+        final Object? name = arguments['name'];
+        return name is String ? hasWidget(name) : false;
+      },
+    ),
+    'hasWidgetArg': LocalFunction(
+      arguments: const <String, FunctionArgType>{
+        'widget': FunctionArgType.string,
+        'arg': FunctionArgType.string,
+      },
+      implementation: (DynamicMap arguments) {
+        final Object? widget = arguments['widget'];
+        final Object? arg = arguments['arg'];
+        if (widget is! String || arg is! String) {
+          return false;
+        }
+        return hasWidgetArg?.call(widget, arg) ?? false;
+      },
+    ),
+    'hasFunction': LocalFunction(
+      arguments: const <String, FunctionArgType>{
+        'name': FunctionArgType.string
+      },
+      implementation: (DynamicMap arguments) {
+        final Object? name = arguments['name'];
+        return name is String ? hasFunction(name) : false;
+      },
+    ),
+    'hasFunctionArg': LocalFunction(
+      arguments: const <String, FunctionArgType>{
+        'function': FunctionArgType.string,
+        'arg': FunctionArgType.string,
+      },
+      implementation: (DynamicMap arguments) {
+        final Object? function = arguments['function'];
+        final Object? arg = arguments['arg'];
+        if (function is! String || arg is! String) {
+          return false;
+        }
+        return hasFunctionArg(function, arg);
+      },
+    ),
+    'runtimeVersion': LocalFunction(
+      arguments: const <String, FunctionArgType>{},
+      implementation: (DynamicMap arguments) => runtimeVersion,
+    ),
+    'appVersion': LocalFunction(
+      arguments: const <String, FunctionArgType>{},
+      implementation: (DynamicMap arguments) => appVersion ?? '',
+    ),
+  };
+}

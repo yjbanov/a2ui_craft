@@ -240,12 +240,37 @@ class Runtime extends ChangeNotifier {
   /// Create a [Runtime] object.
   ///
   /// This object should be [dispose]d when it is no longer needed.
-  Runtime();
+  Runtime({String? appVersion}) : _appVersion = appVersion {
+    _initIntrospectionFunctions();
+  }
+
+  final String? _appVersion;
 
   final Map<LibraryName, WidgetLibrary> _libraries =
       <LibraryName, WidgetLibrary>{};
 
   final Map<String, LocalFunction> _functions = <String, LocalFunction>{};
+
+  bool _hasWidget(String name) {
+    for (final WidgetLibrary library in _libraries.values) {
+      if (library is LocalWidgetLibrary) {
+        if (library.widgets.containsKey(name)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  void _initIntrospectionFunctions() {
+    _functions.addAll(createIntrospectionFunctions(
+      hasWidget: _hasWidget,
+      hasFunction: (String name) => _functions.containsKey(name),
+      hasFunctionArg: (String fn, String arg) =>
+          _functions[fn]?.arguments.containsKey(arg) ?? false,
+      appVersion: _appVersion,
+    ));
+  }
 
   /// Registers pure value-functions callable from templates (see
   /// [LocalFunction]), merging them into any already registered.
@@ -641,12 +666,18 @@ class Runtime extends ChangeNotifier {
           _findConstructor(
                   FullyQualifiedWidgetName(context.library, node.name)) ==
               null) {
+        String? validationError;
         assert(() {
-          _debugValidateFunctionArguments(node.name, function, subArguments);
+          validationError = _debugValidateFunctionArguments(
+              node.name, function, subArguments);
           return true;
         }());
-        return _FunctionCall(node.name, function.implementation, subArguments)
-          ..propagateSource(node);
+        return _FunctionCall(
+          node.name,
+          function.implementation,
+          subArguments,
+          validationError,
+        )..propagateSource(node);
       }
       return _applyConstructorAndBindArguments(
         FullyQualifiedWidgetName(context.library, node.name),
@@ -775,31 +806,29 @@ class Runtime extends ChangeNotifier {
   /// be impossible (the value isn't known yet) and wrong (untrusted data must
   /// degrade via totality, not crash). This catches the author's mistakes while
   /// leaving the trust boundary intact. Compiled out in release builds.
-  void _debugValidateFunctionArguments(
+  String? _debugValidateFunctionArguments(
     String name,
     LocalFunction function,
     DynamicMap boundArguments,
   ) {
     for (final String argName in boundArguments.keys) {
       if (!function.arguments.containsKey(argName)) {
-        throw RemoteFlutterWidgetsException(
-            'Function "$name" does not accept an argument named "$argName". '
-            'Accepted: ${function.arguments.keys.join(", ")}.');
+        return 'Function "$name" does not accept an argument named "$argName". '
+            'Accepted: ${function.arguments.keys.join(", ")}.';
       }
     }
     for (final MapEntry<String, FunctionArgType> arg
         in function.arguments.entries) {
       if (!boundArguments.containsKey(arg.key)) {
-        throw RemoteFlutterWidgetsException(
-            'Function "$name" is missing required argument "${arg.key}".');
+        return 'Function "$name" is missing required argument "${arg.key}".';
       }
       final Object? value = boundArguments[arg.key];
       if (value is! BlobNode && !arg.value.accepts(value)) {
-        throw RemoteFlutterWidgetsException(
-            'Function "$name" argument "${arg.key}" expects ${arg.value.label}, '
-            'but got ${value.runtimeType} ($value).');
+        return 'Function "$name" argument "${arg.key}" expects ${arg.value.label}, '
+            'but got ${value.runtimeType} ($value).';
       }
     }
+    return null;
   }
 }
 
@@ -833,11 +862,13 @@ typedef _WidgetBuilderArgResolverCallback = Object Function(
 /// result. Resolving through the normal resolvers is what keeps a call reactive
 /// — e.g. `add(a: state.count, b: 1)` re-runs when `state.count` changes.
 class _FunctionCall extends BlobNode {
-  _FunctionCall(this.name, this.function, this.arguments);
+  _FunctionCall(this.name, this.function, this.arguments,
+      [this.validationError]);
 
   final String name;
   final LocalFunctionImplementation function;
   final DynamicMap arguments;
+  final String? validationError;
 
   @override
   String toString() => '$name($arguments)';
@@ -941,6 +972,7 @@ abstract class _CurriedWidget extends BlobNode {
         node.name,
         node.function,
         _bindLoopVariable(node.arguments, argument, depth) as DynamicMap,
+        node.validationError,
       )..propagateSource(node);
     }
     return node;
@@ -1126,6 +1158,9 @@ abstract class _CurriedWidget extends BlobNode {
         current = value;
         continue;
       } else if (current is _FunctionCall) {
+        if (current.validationError != null) {
+          throw RemoteFlutterWidgetsException(current.validationError!);
+        }
         // Resolve the call's arguments to concrete values (recursing through
         // these same resolvers, so nested calls and any state/data references
         // are evaluated and subscribed to), then invoke the function. A total
@@ -1920,16 +1955,26 @@ class _WidgetState extends State<_Widget> implements DataSource {
   @override
   Component build(BuildContext context) {
     // TODO(ianh): what if this creates some _dependencies?
-    return component.curriedWidget.buildChild(
-      context,
-      this,
-      component.data,
-      component.remoteEventTarget,
-      _states,
-      _stateResolver,
-      _dataResolver,
-      _widgetBuilderArgResolver,
-    );
+    try {
+      return component.curriedWidget.buildChild(
+        context,
+        this,
+        component.data,
+        component.remoteEventTarget,
+        _states,
+        _stateResolver,
+        _dataResolver,
+        _widgetBuilderArgResolver,
+      );
+    } on RemoteFlutterWidgetsException catch (e, stack) {
+      final detail = FlutterErrorDetails(
+        exception: e,
+        stack: stack,
+        library: 'Remote Flutter Widgets',
+      );
+      FlutterError.reportError(detail);
+      return ErrorWidget.builder(detail);
+    }
   }
 }
 
@@ -2112,9 +2157,18 @@ class FlutterErrorDetails {
       {required this.exception, required this.stack, required this.library});
 }
 
+typedef FlutterExceptionHandler = void Function(FlutterErrorDetails details);
+
 class FlutterError {
+  static FlutterExceptionHandler? onError;
+
   static void reportError(FlutterErrorDetails details) {
-    print('Error: ${details.exception}\n${details.stack}');
+    final handler = onError;
+    if (handler != null) {
+      handler(details);
+    } else {
+      print('Error: ${details.exception}\n${details.stack}');
+    }
   }
 }
 

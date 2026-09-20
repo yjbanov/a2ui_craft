@@ -40,7 +40,7 @@ Future<Object?> _bindError(
       }
     }),
   ));
-  return caught;
+  return caught ?? tester.takeException();
 }
 
 /// Wraps a function call in a `Text` so it sits in a value position.

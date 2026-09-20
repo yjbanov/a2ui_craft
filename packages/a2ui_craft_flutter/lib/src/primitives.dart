@@ -34,8 +34,18 @@ import 'runtime.dart';
 /// flat, diffable list (it must stay aligned with `corePrimitives` in
 /// package:a2ui_craft_testing).
 LocalWidgetLibrary createCoreComponents() {
-  return LocalWidgetLibrary(<String, LocalWidgetBuilder>{
-    'Text': buildText,
+  return LocalWidgetLibrary(<String, Object>{
+    'Text': LocalWidget(
+      buildText,
+      meta: const <String, Object?>{
+        'args': <String, Object?>{
+          'text': true,
+          'color': true,
+          'fontSize': true,
+          'family': true,
+        },
+      },
+    ),
     'Heading': buildHeading,
     'Markdown': buildMarkdown,
     'Flex': buildFlex,

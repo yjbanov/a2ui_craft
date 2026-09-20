@@ -20,5 +20,6 @@ export 'src/media_context.dart';
 export 'src/model.dart';
 export 'src/primitive_specs.dart';
 export 'src/semantic_contract.dart';
+export 'src/specialization.dart';
 export 'src/text.dart';
 export 'src/value_types.dart';

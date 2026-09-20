@@ -1092,6 +1092,87 @@ void runCoreComponentConformance(CraftConformanceDriver driver) {
   );
 
   driver.defineTest(
+    'meta function queries static widget and function metadata',
+    (CraftTester tester) async {
+      await tester.mount('''
+        import core;
+        widget root = Column(children: [
+          Text(text: switch meta(f: "add", path: "args.a") {
+            true: "add-a-arg-present",
+            default: "unexpected",
+          }),
+          Text(text: switch meta(w: "Text", path: "args.text") {
+            true: "text-arg-meta-present",
+            default: "unexpected",
+          }),
+          Text(text: switch meta(w: "Text", path: "args.nonExistent") {
+            true: "unexpected",
+            default: "missing-arg-meta-null",
+          }),
+          Text(text: switch meta(w: "NonExistent", path: "args.foo") {
+            true: "unexpected",
+            default: "missing-widget-meta-null",
+          }),
+        ]);
+      ''');
+
+      expect(tester.hasText('add-a-arg-present'), isTrue);
+      expect(tester.hasText('text-arg-meta-present'), isTrue);
+      expect(tester.hasText('missing-arg-meta-null'), isTrue);
+      expect(tester.hasText('missing-widget-meta-null'), isTrue);
+    },
+  );
+
+  driver.defineTest(
+    'first-class symbol references resolve and fold during template compilation',
+    (CraftTester tester) async {
+      await tester.mount('''
+        import core;
+        widget root = Column(children: [
+          Text(text: switch Text.args.text {
+            true: "first-class-text-found",
+            default: "unexpected",
+          }),
+          Text(text: switch Text.args.nonExistent {
+            true: "unexpected",
+            default: "first-class-arg-missing",
+          }),
+          Text(text: switch NonExistentWidget.args.foo {
+            true: "unexpected",
+            default: "first-class-widget-missing",
+          }),
+        ]);
+      ''');
+
+      expect(tester.hasText('first-class-text-found'), isTrue);
+      expect(tester.hasText('first-class-arg-missing'), isTrue);
+      expect(tester.hasText('first-class-widget-missing'), isTrue);
+    },
+  );
+
+  driver.defineTest(
+    'constant-folded switch excises dead branches containing unsupported widgets',
+    (CraftTester tester) async {
+      await tester.mount('''
+        import core;
+        widget root = Column(children: [
+          switch Text.args.text {
+            true: Text(text: "supported-branch-rendered"),
+            default: UnsupportedWidgetThatDoesNotExist(foo: "bar"),
+          },
+          switch NonExistentWidget.args.pos {
+            true: AnotherUnsupportedWidget(baz: "qux"),
+            default: Text(text: "fallback-branch-rendered"),
+          },
+        ]);
+      ''');
+
+      expect(tester.hasText('supported-branch-rendered'), isTrue);
+      expect(tester.hasText('fallback-branch-rendered'), isTrue);
+    },
+  );
+
+  driver.defineTest(
     'theme references resolve design tokens to their canonical template values',
     (CraftTester tester) async {
       // A DTCG theme with a primitive→semantic alias, a dimension, and a

@@ -70,15 +70,29 @@ enum FunctionArgType {
 /// values on all of them. See DESIGN.md (two-layer template-computation plan).
 class LocalFunction {
   /// Creates a function with the given [arguments] schema and [implementation].
-  const LocalFunction({required this.arguments, required this.implementation});
+  const LocalFunction({
+    required this.arguments,
+    required this.implementation,
+    this.requiredArguments,
+    this.meta = const <String, Object?>{},
+  });
 
-  /// The accepted arguments, keyed by name. Every listed argument is required;
-  /// declaring an argument both names it (so an unknown name is rejected) and
-  /// types it (so a wrong-typed literal is rejected) at bind time in debug.
+  /// The accepted arguments, keyed by name. Every listed argument is accepted;
+  /// by default all listed arguments are required unless [requiredArguments] is set.
   final Map<String, FunctionArgType> arguments;
+
+  /// Optional set of required argument names. If null, all entries in [arguments] are required.
+  final Set<String>? requiredArguments;
 
   /// The (total) computation. See [LocalFunctionImplementation].
   final LocalFunctionImplementation implementation;
+
+  /// Arbitrary static metadata dictionary describing this function.
+  final Map<String, Object?> meta;
+
+  /// Returns whether the argument [name] is required.
+  bool isArgumentRequired(String name) =>
+      requiredArguments == null || requiredArguments!.contains(name);
 }
 
 /// A named collection of pure [LocalFunction]s, registered on an adapter's
@@ -376,6 +390,7 @@ const int currentRuntimeVersion = 1;
 /// - `hasWidgetArg(widget: String, arg: String) -> bool`
 /// - `hasFunction(name: String) -> bool`
 /// - `hasFunctionArg(function: String, arg: String) -> bool`
+/// - `meta(w: String?, f: String?, path: String?) -> Object?`
 /// - `runtimeVersion() -> int`
 /// - `appVersion() -> String`
 ///
@@ -386,6 +401,7 @@ Map<String, LocalFunction> createIntrospectionFunctions({
   required bool Function(String name) hasFunction,
   required bool Function(String function, String arg) hasFunctionArg,
   bool Function(String widget, String arg)? hasWidgetArg,
+  Object? Function({String? widget, String? function, String? path})? getMeta,
   String? appVersion,
   int runtimeVersion = currentRuntimeVersion,
 }) {
@@ -410,7 +426,16 @@ Map<String, LocalFunction> createIntrospectionFunctions({
         if (widget is! String || arg is! String) {
           return false;
         }
-        return hasWidgetArg?.call(widget, arg) ?? false;
+        if (hasWidgetArg != null) {
+          return hasWidgetArg(widget, arg);
+        }
+        if (getMeta != null) {
+          final Object? val = getMeta(widget: widget, path: 'args.$arg');
+          if (val != null) {
+            return val == true || val is Map || val is String || val is num;
+          }
+        }
+        return false;
       },
     ),
     'hasFunction': LocalFunction(
@@ -434,6 +459,26 @@ Map<String, LocalFunction> createIntrospectionFunctions({
           return false;
         }
         return hasFunctionArg(function, arg);
+      },
+    ),
+    'meta': LocalFunction(
+      arguments: const <String, FunctionArgType>{
+        'w': FunctionArgType.string,
+        'f': FunctionArgType.string,
+        'path': FunctionArgType.string,
+      },
+      requiredArguments: const <String>{},
+      implementation: (DynamicMap arguments) {
+        final Object? w = arguments['w'];
+        final Object? f = arguments['f'];
+        final Object? path = arguments['path'];
+        final String? pathStr = path is String ? path : null;
+        if (w is String) {
+          return getMeta?.call(widget: w, path: pathStr);
+        } else if (f is String) {
+          return getMeta?.call(function: f, path: pathStr);
+        }
+        return null;
       },
     ),
     'runtimeVersion': LocalFunction(

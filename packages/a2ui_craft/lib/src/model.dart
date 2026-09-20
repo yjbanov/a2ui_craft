@@ -610,6 +610,45 @@ class MediaReference extends Reference {
   String toString() => 'media.${parts.join(".")}';
 }
 
+/// Reference to a named host symbol's static metadata (see `LocalWidget.meta` and [LocalFunction.meta]).
+///
+/// For example, `Location.args.latLong` is represented as a [SymbolReference]
+/// with [symbol] `"Location"` and [parts] `["args", "latLong"]`.
+///
+/// Symbol references are evaluated against registered widget and function metadata
+/// dictionaries either at host specialization time via `specializeLibrary`
+/// or at runtime during widget resolution.
+class SymbolReference extends Reference {
+  /// Wraps the given [symbol] and [parts] as a [SymbolReference].
+  ///
+  /// The [parts] must not be mutated after the object is created.
+  const SymbolReference(this.symbol, super.parts);
+
+  /// The name of the symbol (e.g. widget name or function name) whose metadata is being inspected.
+  final String symbol;
+
+  /// Creates a new [SymbolReference] that indexes even deeper than this one.
+  SymbolReference constructReference(List<Object> moreParts) {
+    return SymbolReference(symbol, parts + moreParts);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (other.runtimeType != SymbolReference) {
+      return false;
+    }
+    return other is SymbolReference &&
+        symbol == other.symbol &&
+        _listEquals<Object>(parts, other.parts);
+  }
+
+  @override
+  int get hashCode => Object.hash(symbol, Object.hashAll(parts));
+
+  @override
+  String toString() => '$symbol.${parts.join(".")}';
+}
+
 /// Reference to the single argument of type [DynamicMap] passed into the widget builder.
 ///
 /// This class is used to represent references to a function argument.

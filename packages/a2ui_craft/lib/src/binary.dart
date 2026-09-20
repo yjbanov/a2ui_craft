@@ -319,6 +319,7 @@ const int _msWidgetBuilder = 0x12;
 const int _msWidgetBuilderArgReference = 0x13;
 const int _msThemeReference = 0x14;
 const int _msMediaReference = 0x15;
+const int _msSymbolReference = 0x16;
 
 /// API for decoding Remote Flutter Widgets binary blobs.
 ///
@@ -491,6 +492,8 @@ class _BlobDecoder {
         return _readWidgetBuilder();
       case _msWidgetBuilderArgReference:
         return WidgetBuilderArgReference(_readString(), _readPartList());
+      case _msSymbolReference:
+        return SymbolReference(_readString(), _readPartList());
       default:
         return _parseValue(type, _readArgument);
     }
@@ -693,6 +696,11 @@ class _BlobEncoder {
     } else if (value is WidgetBuilderArgReference) {
       bytes.addByte(_msWidgetBuilderArgReference);
       _writeString(value.argumentName);
+      _writeInt64(value.parts.length);
+      value.parts.forEach(_writePart);
+    } else if (value is SymbolReference) {
+      bytes.addByte(_msSymbolReference);
+      _writeString(value.symbol);
       _writeInt64(value.parts.length);
       value.parts.forEach(_writePart);
     } else if (value is LoopReference) {

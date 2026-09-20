@@ -186,15 +186,55 @@ abstract class DataSource {
       List<Object> argsKey, HandlerGenerator<T> generator);
 }
 
+/// A local primitive widget descriptor with optional static metadata.
+///
+/// Wraps a [LocalWidgetBuilder] with an open metadata dictionary [meta] that can
+/// be queried by templates via symbol reflection (`Location.args.latLong`),
+/// dynamic reflection (`meta(w: "Location", path: "args.latLong")`), or introspection
+/// helpers (`hasWidgetArg`).
+class LocalWidget {
+  /// Creates a [LocalWidget] with the given [builder] and optional [meta] dictionary.
+  const LocalWidget(
+    this.builder, {
+    this.meta = const <String, Object?>{},
+  });
+
+  /// The builder that constructs the widget.
+  final LocalWidgetBuilder builder;
+
+  /// Arbitrary static metadata provided by the host developer.
+  final Map<String, Object?> meta;
+}
+
 /// Widgets defined by the client application. All remote widgets eventually
 /// bottom out in these widgets.
 class LocalWidgetLibrary extends WidgetLibrary {
   /// Create a [LocalWidgetLibrary].
   ///
-  /// The given map must not change once the object is created.
-  LocalWidgetLibrary(this._widgets);
+  /// The values in [widgets] must be either [LocalWidget] or [LocalWidgetBuilder] instances.
+  LocalWidgetLibrary(Map<String, Object> widgets) {
+    for (final MapEntry<String, Object> entry in widgets.entries) {
+      final Object val = entry.value;
+      if (val is LocalWidget) {
+        _widgets[entry.key] = val.builder;
+        _meta[entry.key] = val.meta;
+      } else if (val is LocalWidgetBuilder) {
+        _widgets[entry.key] = val;
+        _meta[entry.key] = const <String, Object?>{};
+      } else {
+        throw ArgumentError.value(
+          val,
+          'widgets["${entry.key}"]',
+          'Value must be either LocalWidget or LocalWidgetBuilder',
+        );
+      }
+    }
+  }
 
-  final Map<String, LocalWidgetBuilder> _widgets;
+  final Map<String, LocalWidgetBuilder> _widgets =
+      <String, LocalWidgetBuilder>{};
+  final Map<String, Map<String, Object?>> _meta =
+      <String, Map<String, Object?>>{};
 
   /// Returns the builder for the widget of the given name, if any.
   @protected
@@ -202,20 +242,22 @@ class LocalWidgetLibrary extends WidgetLibrary {
     return _widgets[name];
   }
 
+  /// Returns the metadata for the widget of the given name, if any.
+  @protected
+  Map<String, Object?>? findMeta(String name) {
+    return _meta[name];
+  }
+
   /// The widgets defined by this [LocalWidgetLibrary].
   ///
-  /// The returned map is an immutable view of the map provided to the constructor.
-  /// They keys are the unqualified widget names, and the values are the corresponding
-  /// [LocalWidgetBuilder]s.
-  ///
-  /// The map never changes during the lifetime of the [LocalWidgetLibrary], but a new
-  /// instance of an [UnmodifiableMapView] is returned each time this getter is used.
-  ///
-  /// See also:
-  ///
-  ///  * [createCoreWidgets], a function that creates a [Map] of local widgets.
+  /// The returned map is an immutable view of the widget builders.
   UnmodifiableMapView<String, LocalWidgetBuilder> get widgets {
     return UnmodifiableMapView<String, LocalWidgetBuilder>(_widgets);
+  }
+
+  /// The metadata associated with widgets defined by this [LocalWidgetLibrary].
+  Map<String, Map<String, Object?>> get widgetMeta {
+    return Map<String, Map<String, Object?>>.unmodifiable(_meta);
   }
 }
 
@@ -261,14 +303,120 @@ class Runtime extends ChangeNotifier {
     return false;
   }
 
+  Map<String, Object?>? _getWidgetMeta(String name) {
+    for (final WidgetLibrary library in _libraries.values) {
+      if (library is LocalWidgetLibrary) {
+        final Map<String, Object?>? meta = library.widgetMeta[name];
+        if (meta != null) {
+          return meta;
+        }
+      }
+    }
+    return null;
+  }
+
+  Object? _getMeta({String? widget, String? function, String? path}) {
+    Object? target;
+    if (widget != null) {
+      target = _getWidgetMeta(widget);
+    } else if (function != null) {
+      final LocalFunction? fn = _functions[function];
+      if (fn != null) {
+        if (path != null && path.startsWith('args.')) {
+          final String argName = path.substring('args.'.length);
+          if (fn.arguments.containsKey(argName)) {
+            return true;
+          }
+        }
+        target = fn.meta;
+      }
+    }
+    if (target == null) {
+      return null;
+    }
+    final List<Object> parts =
+        (path != null && path.isNotEmpty) ? path.split('.') : const <Object>[];
+    return lookupMetadataPath(target, parts);
+  }
+
+  Object _lookupSymbol(String symbol, List<Object> parts) {
+    final Map<String, Object?>? widgetMeta = _getWidgetMeta(symbol);
+    if (widgetMeta != null) {
+      final Object? value = lookupMetadataPath(widgetMeta, parts);
+      return value ?? missing;
+    }
+    final LocalFunction? fn = _functions[symbol];
+    if (fn != null) {
+      if (parts.isNotEmpty && parts.first == 'args' && parts.length == 2) {
+        if (fn.arguments.containsKey(parts[1].toString())) {
+          return true;
+        }
+      }
+      final Object? value = lookupMetadataPath(fn.meta, parts);
+      return value ?? missing;
+    }
+    return missing;
+  }
+
   void _initIntrospectionFunctions() {
     _functions.addAll(createIntrospectionFunctions(
       hasWidget: _hasWidget,
       hasFunction: (String name) => _functions.containsKey(name),
-      hasFunctionArg: (String fn, String arg) =>
-          _functions[fn]?.arguments.containsKey(arg) ?? false,
+      hasFunctionArg: (String fn, String arg) {
+        final LocalFunction? f = _functions[fn];
+        if (f == null) {
+          return false;
+        }
+        if (f.arguments.containsKey(arg)) {
+          return true;
+        }
+        if (f.meta['args'] is Map && (f.meta['args'] as Map).containsKey(arg)) {
+          return true;
+        }
+        return false;
+      },
+      hasWidgetArg: (String widget, String arg) {
+        final Map<String, Object?>? meta = _getWidgetMeta(widget);
+        if (meta != null && meta['args'] is Map) {
+          final Map<Object?, Object?> args =
+              meta['args'] as Map<Object?, Object?>;
+          return args.containsKey(arg) && args[arg] != false;
+        }
+        return false;
+      },
+      getMeta: ({String? widget, String? function, String? path}) =>
+          _getMeta(widget: widget, function: function, path: path),
       appVersion: _appVersion,
     ));
+  }
+
+  RemoteWidgetLibrary _specialize(RemoteWidgetLibrary library) {
+    final Set<String> known = <String>{};
+    final Map<String, Map<String, Object?>> widgetMeta =
+        <String, Map<String, Object?>>{};
+    for (final WidgetLibrary lib in _libraries.values) {
+      if (lib is LocalWidgetLibrary) {
+        known.addAll(lib.widgets.keys);
+        widgetMeta.addAll(lib.widgetMeta);
+      }
+    }
+    return specializeLibrary(
+      library,
+      widgetMetadata: widgetMeta,
+      functions: _functions,
+      knownWidgets: known,
+      runtimeVersion: currentRuntimeVersion,
+      appVersion: _appVersion,
+    );
+  }
+
+  void _respecializeRemoteLibraries() {
+    for (final MapEntry<LibraryName, WidgetLibrary> entry
+        in _libraries.entries.toList()) {
+      if (entry.value is RemoteWidgetLibrary) {
+        _libraries[entry.key] = _specialize(entry.value as RemoteWidgetLibrary);
+      }
+    }
   }
 
   /// Registers pure value-functions callable from templates (see
@@ -281,6 +429,7 @@ class Runtime extends ChangeNotifier {
   /// cache, mirroring [update].
   void registerFunctions(LocalFunctionLibrary library) {
     _functions.addAll(library.functions);
+    _respecializeRemoteLibraries();
     _clearCache();
   }
 
@@ -298,7 +447,12 @@ class Runtime extends ChangeNotifier {
   /// To remove a library, the libraries must be cleared using [clearLibraries]
   /// and then the libraries being retained must be readded.
   void update(LibraryName name, WidgetLibrary library) {
-    _libraries[name] = library;
+    if (library is RemoteWidgetLibrary) {
+      _libraries[name] = _specialize(library);
+    } else {
+      _libraries[name] = library;
+      _respecializeRemoteLibraries();
+    }
     _clearCache();
   }
 
@@ -394,6 +548,7 @@ class Runtime extends ChangeNotifier {
     if (theme != null) result = _ThemeScope(theme: theme, child: result);
     if (media != null) result = _MediaScope(media: media, child: result);
     if (fonts != null) result = _FontScope(fonts: fonts, child: result);
+    result = _RuntimeScope(runtime: this, child: result);
     return result;
   }
 
@@ -580,7 +735,7 @@ class Runtime extends ChangeNotifier {
         } else {
           newDepth = stateDepth;
         }
-        Object result = _bindArguments(
+        Object? result = _bindArguments(
           widget.fullName,
           constructor.root,
           arguments,
@@ -632,14 +787,17 @@ class Runtime extends ChangeNotifier {
       ..propagateSource(source);
   }
 
-  Object _bindArguments(
+  Object? _bindArguments(
     FullyQualifiedWidgetName context,
-    Object node,
+    Object? node,
     Object arguments,
     DynamicMap widgetBuilderScope,
     int stateDepth,
     Set<FullyQualifiedWidgetName> usedWidgets,
   ) {
+    if (node == null) {
+      return null;
+    }
     if (node is Widget) {
       // An already-built host widget injected via [buildNode] (e.g. a child
       // adapter). Wrap it so child/childList accept it; it is rendered as-is.
@@ -692,7 +850,7 @@ class Runtime extends ChangeNotifier {
           ...widgetBuilderScope,
           node.argumentName: widgetBuilderArg,
         };
-        final Object result = _bindArguments(
+        final Object? result = _bindArguments(
           context,
           node.widget,
           arguments,
@@ -716,17 +874,17 @@ class Runtime extends ChangeNotifier {
       return node.map<String, Object?>(
         (String name, Object? value) => MapEntry<String, Object?>(
           name,
-          _bindArguments(context, value!, arguments, widgetBuilderScope,
+          _bindArguments(context, value, arguments, widgetBuilderScope,
               stateDepth, usedWidgets),
         ),
       );
     }
     if (node is DynamicList) {
-      return List<Object>.generate(
+      return List<Object?>.generate(
         node.length,
         (int index) => _bindArguments(
           context,
-          node[index]!,
+          node[index],
           arguments,
           widgetBuilderScope,
           stateDepth,
@@ -737,15 +895,15 @@ class Runtime extends ChangeNotifier {
     }
     if (node is Loop) {
       final Object input = _bindArguments(context, node.input, arguments,
-          widgetBuilderScope, stateDepth, usedWidgets);
+          widgetBuilderScope, stateDepth, usedWidgets)!;
       final Object output = _bindArguments(context, node.output, arguments,
-          widgetBuilderScope, stateDepth, usedWidgets);
+          widgetBuilderScope, stateDepth, usedWidgets)!;
       return Loop(input, output)..propagateSource(node);
     }
     if (node is Switch) {
       return Switch(
         _bindArguments(context, node.input, arguments, widgetBuilderScope,
-            stateDepth, usedWidgets),
+            stateDepth, usedWidgets)!,
         node.outputs.map<Object?, Object>(
           (Object? key, Object value) {
             return MapEntry<Object?, Object>(
@@ -754,7 +912,7 @@ class Runtime extends ChangeNotifier {
                   : _bindArguments(context, key, arguments, widgetBuilderScope,
                       stateDepth, usedWidgets),
               _bindArguments(context, value, arguments, widgetBuilderScope,
-                  stateDepth, usedWidgets),
+                  stateDepth, usedWidgets)!,
             );
           },
         ),
@@ -786,7 +944,7 @@ class Runtime extends ChangeNotifier {
       return SetStateHandler(
         stateReference,
         _bindArguments(context, node.value, arguments, widgetBuilderScope,
-            stateDepth, usedWidgets),
+            stateDepth, usedWidgets)!,
       )..propagateSource(node);
     }
     assert(node is! WidgetDeclaration);
@@ -818,7 +976,10 @@ class Runtime extends ChangeNotifier {
     for (final MapEntry<String, FunctionArgType> arg
         in function.arguments.entries) {
       if (!boundArguments.containsKey(arg.key)) {
-        return 'Function "$name" is missing required argument "${arg.key}".';
+        if (function.isArgumentRequired(arg.key)) {
+          return 'Function "$name" is missing required argument "${arg.key}".';
+        }
+        continue;
       }
       final Object? value = boundArguments[arg.key];
       if (value is! BlobNode && !arg.value.accepts(value)) {
@@ -997,7 +1158,7 @@ abstract class _CurriedWidget extends BlobNode {
     while (
         (effectiveIndex <= targetEffectiveIndex || targetEffectiveIndex < 0) &&
             currentIndex < list.length) {
-      final Object node = list[currentIndex]!;
+      final Object? node = list[currentIndex];
       if (node is Loop) {
         Object inputList = node.input;
         while (inputList is! DynamicList) {
@@ -1017,6 +1178,9 @@ abstract class _CurriedWidget extends BlobNode {
           } else if (inputList is MediaReference) {
             inputList =
                 dataResolver(<Object>[_mediaMarker, ...inputList.parts]);
+          } else if (inputList is SymbolReference) {
+            inputList = dataResolver(
+                <Object>[_symbolMarker, inputList.symbol, ...inputList.parts]);
           } else if (inputList is WidgetBuilderArgReference) {
             inputList = widgetBuilderArgResolver(
               <Object>[inputList.argumentName, ...inputList.parts],
@@ -1073,7 +1237,7 @@ abstract class _CurriedWidget extends BlobNode {
   }
 
   static Object _resolveFrom(
-    Object root,
+    Object? root,
     List<Object> parts,
     _StateResolverCallback stateResolver,
     _DataResolverCallback dataResolver,
@@ -1082,6 +1246,9 @@ abstract class _CurriedWidget extends BlobNode {
     var index = 0;
     var current = root;
     while (true) {
+      if (current == null) {
+        return missing;
+      }
       if (current is DataReference) {
         if (index < parts.length) {
           current = current.constructReference(parts.sublist(index));
@@ -1108,6 +1275,14 @@ abstract class _CurriedWidget extends BlobNode {
         // Media lookups ride the data-resolver callback with the _mediaMarker,
         // exactly like the theme (see above).
         current = dataResolver(<Object>[_mediaMarker, ...current.parts]);
+        continue;
+      } else if (current is SymbolReference) {
+        if (index < parts.length) {
+          current = current.constructReference(parts.sublist(index));
+          index = parts.length;
+        }
+        current = dataResolver(
+            <Object>[_symbolMarker, current.symbol, ...current.parts]);
         continue;
       } else if (current is WidgetBuilderArgReference) {
         current = widgetBuilderArgResolver(
@@ -1184,7 +1359,7 @@ abstract class _CurriedWidget extends BlobNode {
           current = SetStateHandler(
             current.stateReference,
             _fix(current.value, stateResolver, dataResolver,
-                widgetBuilderArgResolver),
+                widgetBuilderArgResolver)!,
           );
         }
         // else `current` is nothing special, and we'll just return it below.
@@ -1196,7 +1371,7 @@ abstract class _CurriedWidget extends BlobNode {
         if (!current.containsKey(parts[index])) {
           return missing;
         }
-        current = current[parts[index]]!;
+        current = current[parts[index]] ?? missing;
       } else if (current is DynamicList) {
         if (parts[index] is! int) {
           return missing;
@@ -1224,18 +1399,20 @@ abstract class _CurriedWidget extends BlobNode {
     return current;
   }
 
-  static Object _fix(
-    Object root,
+  static Object? _fix(
+    Object? root,
     _StateResolverCallback stateResolver,
     _DataResolverCallback dataResolver,
     _WidgetBuilderArgResolverCallback widgetBuilderArgResolver,
   ) {
+    if (root == null) {
+      return null;
+    }
     if (root is DynamicMap) {
       return root.map(
         (String key, Object? value) => MapEntry<String, Object?>(
           key,
-          _fix(root[key]!, stateResolver, dataResolver,
-              widgetBuilderArgResolver),
+          _fix(value, stateResolver, dataResolver, widgetBuilderArgResolver),
         ),
       );
     } else if (root is DynamicList) {
@@ -1252,7 +1429,7 @@ abstract class _CurriedWidget extends BlobNode {
           (int index) => _fix(
             _listLookup(root, index, stateResolver, dataResolver,
                     widgetBuilderArgResolver)
-                .result!,
+                .result,
             stateResolver,
             dataResolver,
             widgetBuilderArgResolver,
@@ -1261,7 +1438,7 @@ abstract class _CurriedWidget extends BlobNode {
       } else {
         return DynamicList.generate(
           root.length,
-          (int index) => _fix(root[index]!, stateResolver, dataResolver,
+          (int index) => _fix(root[index], stateResolver, dataResolver,
               widgetBuilderArgResolver),
         );
       }
@@ -1856,6 +2033,16 @@ class _WidgetState extends State<_Widget> implements DataSource {
       _dependencies.add(subscription);
       return subscription.value;
     }
+    // A symbol metadata lookup, marked with _symbolMarker (see [SymbolReference]).
+    if (rawDataKey.isNotEmpty && identical(rawDataKey.first, _symbolMarker)) {
+      final String symbol = rawDataKey[1] as String;
+      final List<Object> symbolParts = rawDataKey.sublist(2);
+      final Runtime? runtime = ambientRuntime(context);
+      if (runtime == null) {
+        return missing;
+      }
+      return runtime._lookupSymbol(symbol, symbolParts);
+    }
     final dataKey = _Key(_kDataSection, rawDataKey);
     final _Subscription subscription;
     if (!_subscriptions.containsKey(dataKey)) {
@@ -1973,6 +2160,15 @@ class _MediaMarker {
 
 const Object _mediaMarker = _MediaMarker();
 
+/// The marker prepended to a key routed through the data-resolver callback to
+/// address symbol metadata (see [SymbolReference]) rather than [DynamicContent] data.
+/// A private non-string type, so no JSON transport key can forge it.
+class _SymbolMarker {
+  const _SymbolMarker();
+}
+
+const Object _symbolMarker = _SymbolMarker();
+
 /// Supplies the ambient [CraftTheme] to every remote widget below it — both
 /// the `theme.` reference scope (via [CraftTheme.content]) and the primitives'
 /// role defaults (via [ambientCraftTheme]). Installed by [Runtime.build] /
@@ -2057,6 +2253,22 @@ class _FontScope extends InheritedWidget {
 CraftFonts ambientCraftFonts(BuildContext context) =>
     context.dependOnInheritedWidgetOfExactType<_FontScope>()?.fonts ??
     CraftFonts.systemUi;
+
+/// Supplies the active [Runtime] to every remote widget below it.
+/// Installed by [Runtime._wrapAmbientScopes].
+class _RuntimeScope extends InheritedWidget {
+  const _RuntimeScope({required this.runtime, required super.child});
+
+  final Runtime runtime;
+
+  @override
+  bool updateShouldNotify(_RuntimeScope oldWidget) =>
+      runtime != oldWidget.runtime;
+}
+
+/// The active [Runtime] installed by [Runtime._wrapAmbientScopes].
+Runtime? ambientRuntime(BuildContext context) =>
+    context.dependOnInheritedWidgetOfExactType<_RuntimeScope>()?.runtime;
 
 @immutable
 class _Key {

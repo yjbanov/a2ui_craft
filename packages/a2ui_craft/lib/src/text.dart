@@ -2640,7 +2640,19 @@ class _Parser {
                 _loopIdentifiers.length - index, _readParts(optional: true)),
             start);
       }
-      return _readConstructorCall(widgetBuilderScope: widgetBuilderScope);
+      final SourceLocation? start = _getSourceLocation();
+      _advance();
+      if (_foundSymbol(_SymbolToken.dot)) {
+        return _withSourceRange(
+            SymbolReference(identifier, _readParts()), start);
+      }
+      _expectSymbol(_SymbolToken.openParen);
+      final DynamicMap arguments = _readMapBody(
+        extended: true,
+        widgetBuilderScope: widgetBuilderScope,
+      );
+      _expectSymbol(_SymbolToken.closeParen);
+      return _withSourceRange(ConstructorCall(identifier, arguments), start);
     }
     throw ParserException._unexpected(_source.current);
   }

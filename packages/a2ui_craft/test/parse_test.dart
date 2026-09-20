@@ -127,4 +127,37 @@ void main() {
         decodedRoot.arguments['text']! as MediaReference;
     expect(decodedRef.parts, <Object>['capabilities', 'gps']);
   });
+
+  test('symbol references parse in value positions', () {
+    final RemoteWidgetLibrary library = parseLibraryFile('''
+      widget root = Box(
+        hasLatLong: Location.args.latLong,
+        supported: ApplePay.meta.supported,
+      );
+    ''');
+    final ConstructorCall root = library.widgets.single.root as ConstructorCall;
+    final SymbolReference locationRef =
+        root.arguments['hasLatLong']! as SymbolReference;
+    expect(locationRef.symbol, 'Location');
+    expect(locationRef.parts, <Object>['args', 'latLong']);
+    expect(locationRef.toString(), 'Location.args.latLong');
+
+    final SymbolReference applePayRef =
+        root.arguments['supported']! as SymbolReference;
+    expect(applePayRef.symbol, 'ApplePay');
+    expect(applePayRef.parts, <Object>['meta', 'supported']);
+  });
+
+  test('symbol references survive a binary round trip (tag 0x16)', () {
+    final RemoteWidgetLibrary library = parseLibraryFile('''
+      widget root = Box(prop: Location.args.latLong);
+    ''');
+    final RemoteWidgetLibrary decoded =
+        decodeLibraryBlob(encodeLibraryBlob(library));
+
+    final ConstructorCall root = decoded.widgets.single.root as ConstructorCall;
+    final SymbolReference ref = root.arguments['prop']! as SymbolReference;
+    expect(ref.symbol, 'Location');
+    expect(ref.parts, <Object>['args', 'latLong']);
+  });
 }

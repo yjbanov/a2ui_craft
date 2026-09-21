@@ -26,6 +26,7 @@ void main() {
           'hasWidgetArg',
           'hasFunction',
           'hasFunctionArg',
+          'hasArg',
           'runtimeVersion',
           'appVersion',
         ]),
@@ -94,6 +95,71 @@ void main() {
       );
       expect(
         fn.implementation(<String, Object?>{'function': 'unknown', 'arg': 'a'}),
+        isFalse,
+      );
+    });
+
+    test('hasArg evaluates widget and function arguments and is total', () {
+      final LocalFunction fn = functions['hasArg']!;
+      expect(fn.arguments, hasLength(4));
+      expect(fn.arguments['widget'], FunctionArgType.string);
+      expect(fn.arguments['function'], FunctionArgType.string);
+      expect(fn.arguments['name'], FunctionArgType.string);
+      expect(fn.arguments['arg'], FunctionArgType.string);
+
+      // By widget
+      expect(
+        fn.implementation(<String, Object?>{'widget': 'Text', 'arg': 'text'}),
+        isTrue,
+      );
+      expect(
+        fn.implementation(<String, Object?>{'widget': 'Text', 'arg': 'foo'}),
+        isFalse,
+      );
+      expect(
+        fn.implementation(
+            <String, Object?>{'widget': 'Unknown', 'arg': 'text'}),
+        isFalse,
+      );
+
+      // By function
+      expect(
+        fn.implementation(<String, Object?>{'function': 'add', 'arg': 'a'}),
+        isTrue,
+      );
+      expect(
+        fn.implementation(<String, Object?>{'function': 'add', 'arg': 'c'}),
+        isFalse,
+      );
+      expect(
+        fn.implementation(<String, Object?>{'function': 'unknown', 'arg': 'a'}),
+        isFalse,
+      );
+
+      // By unified name
+      expect(
+        fn.implementation(<String, Object?>{'name': 'Text', 'arg': 'text'}),
+        isTrue,
+      );
+      expect(
+        fn.implementation(<String, Object?>{'name': 'add', 'arg': 'a'}),
+        isTrue,
+      );
+      expect(
+        fn.implementation(<String, Object?>{'name': 'Unknown', 'arg': 'a'}),
+        isFalse,
+      );
+
+      // Total with missing or invalid inputs
+      expect(fn.implementation(<String, Object?>{}), isFalse);
+      expect(fn.implementation(<String, Object?>{'arg': 'text'}), isFalse);
+      expect(fn.implementation(<String, Object?>{'widget': 'Text'}), isFalse);
+      expect(
+        fn.implementation(<String, Object?>{'widget': 42, 'arg': 'text'}),
+        isFalse,
+      );
+      expect(
+        fn.implementation(<String, Object?>{'widget': 'Text', 'arg': 42}),
         isFalse,
       );
     });

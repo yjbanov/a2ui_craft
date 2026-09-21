@@ -177,6 +177,7 @@ Object? specializeNode(
       'hasWidgetArg',
       'hasFunction',
       'hasFunctionArg',
+      'hasArg',
       'meta',
       'runtimeVersion',
       'appVersion',
@@ -265,6 +266,58 @@ Object? specializeNode(
               return true;
             }
           }
+          return false;
+        }
+      } else if (node.name == 'hasArg') {
+        final widget = specializedArgs['widget'];
+        final function = specializedArgs['function'];
+        final name = specializedArgs['name'];
+        final arg = specializedArgs['arg'];
+        final bool allConstants =
+            specializedArgs.values.every((v) => v is! BlobNode);
+
+        bool checkWidget(String w, String a) {
+          final meta = widgetMetadata[w];
+          if (meta != null && meta['args'] is Map) {
+            final Map<Object?, Object?> args =
+                meta['args'] as Map<Object?, Object?>;
+            return args.containsKey(a) && args[a] != false;
+          }
+          return false;
+        }
+
+        bool checkFunction(String f, String a) {
+          final fn = functions[f];
+          if (fn != null) {
+            if (fn.arguments.containsKey(a)) {
+              return true;
+            }
+            if (fn.meta['args'] is Map &&
+                (fn.meta['args'] as Map).containsKey(a)) {
+              return true;
+            }
+          }
+          return false;
+        }
+
+        if (arg is String) {
+          if (widget is String) {
+            return checkWidget(widget, arg);
+          }
+          if (function is String) {
+            return checkFunction(function, arg);
+          }
+          if (name is String) {
+            if (checkWidget(name, arg)) {
+              return true;
+            }
+            if (checkFunction(name, arg)) {
+              return true;
+            }
+            return false;
+          }
+        }
+        if (allConstants) {
           return false;
         }
       } else if (node.name == 'runtimeVersion') {

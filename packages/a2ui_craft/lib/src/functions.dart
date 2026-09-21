@@ -390,6 +390,7 @@ const int currentRuntimeVersion = 1;
 /// - `hasWidgetArg(widget: String, arg: String) -> bool`
 /// - `hasFunction(name: String) -> bool`
 /// - `hasFunctionArg(function: String, arg: String) -> bool`
+/// - `hasArg(widget: String?, function: String?, name: String?, arg: String) -> bool`
 /// - `meta(w: String?, f: String?, path: String?) -> Object?`
 /// - `runtimeVersion() -> int`
 /// - `appVersion() -> String`
@@ -405,6 +406,19 @@ Map<String, LocalFunction> createIntrospectionFunctions({
   String? appVersion,
   int runtimeVersion = currentRuntimeVersion,
 }) {
+  bool checkWidgetArg(String widget, String arg) {
+    if (hasWidgetArg != null) {
+      return hasWidgetArg(widget, arg);
+    }
+    if (getMeta != null) {
+      final Object? val = getMeta(widget: widget, path: 'args.$arg');
+      if (val != null) {
+        return val == true || val is Map || val is String || val is num;
+      }
+    }
+    return false;
+  }
+
   return <String, LocalFunction>{
     'hasWidget': LocalFunction(
       arguments: const <String, FunctionArgType>{
@@ -426,16 +440,7 @@ Map<String, LocalFunction> createIntrospectionFunctions({
         if (widget is! String || arg is! String) {
           return false;
         }
-        if (hasWidgetArg != null) {
-          return hasWidgetArg(widget, arg);
-        }
-        if (getMeta != null) {
-          final Object? val = getMeta(widget: widget, path: 'args.$arg');
-          if (val != null) {
-            return val == true || val is Map || val is String || val is num;
-          }
-        }
-        return false;
+        return checkWidgetArg(widget, arg);
       },
     ),
     'hasFunction': LocalFunction(
@@ -459,6 +464,40 @@ Map<String, LocalFunction> createIntrospectionFunctions({
           return false;
         }
         return hasFunctionArg(function, arg);
+      },
+    ),
+    'hasArg': LocalFunction(
+      arguments: const <String, FunctionArgType>{
+        'widget': FunctionArgType.string,
+        'function': FunctionArgType.string,
+        'name': FunctionArgType.string,
+        'arg': FunctionArgType.string,
+      },
+      requiredArguments: const <String>{},
+      implementation: (DynamicMap arguments) {
+        final Object? arg = arguments['arg'];
+        if (arg is! String) {
+          return false;
+        }
+        final Object? widget = arguments['widget'];
+        if (widget is String) {
+          return checkWidgetArg(widget, arg);
+        }
+        final Object? function = arguments['function'];
+        if (function is String) {
+          return hasFunctionArg(function, arg);
+        }
+        final Object? name = arguments['name'];
+        if (name is String) {
+          if (checkWidgetArg(name, arg)) {
+            return true;
+          }
+          if (hasFunctionArg(name, arg)) {
+            return true;
+          }
+          return false;
+        }
+        return false;
       },
     ),
     'meta': LocalFunction(

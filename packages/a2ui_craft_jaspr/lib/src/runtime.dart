@@ -389,8 +389,19 @@ class Runtime extends ChangeNotifier {
         return false;
       },
       hasFunction: (String name) => _functions.containsKey(name),
-      hasFunctionArg: (String fn, String arg) =>
-          _functions[fn]?.arguments.containsKey(arg) ?? false,
+      hasFunctionArg: (String fn, String arg) {
+        final LocalFunction? f = _functions[fn];
+        if (f == null) {
+          return false;
+        }
+        if (f.arguments.containsKey(arg)) {
+          return true;
+        }
+        if (f.meta['args'] is Map && (f.meta['args'] as Map).containsKey(arg)) {
+          return true;
+        }
+        return false;
+      },
       getMeta: ({String? widget, String? function, String? path}) =>
           _getMeta(widget: widget, function: function, path: path),
       appVersion: _appVersion,

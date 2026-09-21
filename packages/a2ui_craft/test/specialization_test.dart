@@ -61,6 +61,12 @@ void main() {
         widget root = Card(
           hasLoc: hasWidget(name: "Location"),
           hasArg: hasWidgetArg(widget: "Location", arg: "latLong"),
+          hasArgWidget: hasArg(widget: "Location", arg: "latLong"),
+          hasArgFn: hasArg(function: "add", arg: "a"),
+          hasArgNameW: hasArg(name: "Location", arg: "latLong"),
+          hasArgNameF: hasArg(name: "add", arg: "a"),
+          hasArgMissing: hasArg(widget: "Location", arg: "missing"),
+          hasArgFake: hasArg(name: "FakeWidget", arg: "latLong"),
           hasFake: hasWidget(name: "FakeWidget"),
           hasFn: hasFunction(name: "add"),
           runtimeVer: runtimeVersion(),
@@ -85,10 +91,40 @@ void main() {
           specialized.widgets.single.root as ConstructorCall;
       expect(root.arguments['hasLoc'], true);
       expect(root.arguments['hasArg'], true);
+      expect(root.arguments['hasArgWidget'], true);
+      expect(root.arguments['hasArgFn'], true);
+      expect(root.arguments['hasArgNameW'], true);
+      expect(root.arguments['hasArgNameF'], true);
+      expect(root.arguments['hasArgMissing'], false);
+      expect(root.arguments['hasArgFake'], false);
       expect(root.arguments['hasFake'], false);
       expect(root.arguments['hasFn'], true);
       expect(root.arguments['runtimeVer'], 42);
       expect(root.arguments['metaVal'], true);
+    });
+
+    test('prunes dead switch branch for hasArg', () {
+      final RemoteWidgetLibrary library = parseLibraryFile('''
+        widget root = switch hasArg(widget: "Location", arg: "latLong") {
+          true: Location(latLong: args.pos),
+          default: FallbackWidget(),
+        };
+      ''');
+
+      final RemoteWidgetLibrary specialized = specializeLibrary(
+        library,
+        widgetMetadata: <String, Map<String, Object?>>{
+          'Location': <String, Object?>{
+            'args': <String, Object?>{'latLong': true},
+          },
+        },
+      );
+
+      expect(specialized.widgets.single.root, isA<ConstructorCall>());
+      final ConstructorCall call =
+          specialized.widgets.single.root as ConstructorCall;
+      expect(call.name, 'Location');
+      expect(call.arguments.containsKey('latLong'), isTrue);
     });
 
     test('simplifies hybrid boolean expressions', () {

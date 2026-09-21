@@ -543,6 +543,8 @@ an anti-pattern when they cleanly desugar into metadata lookups:
   $\equiv$ `notEquals(a: meta(f: "foo", path: "args.bar"), b: null)`
   *(Note: because `LocalFunction` already carries an `arguments` schema in Dart, `hasFunctionArg`
   automatically inspects `LocalFunction.arguments.containsKey(arg)` by default even if `meta` is empty).*
+- **`hasArg(widget: "Foo", arg: "bar")`** / **`hasArg(function: "foo", arg: "bar")`** / **`hasArg(name: "Foo", arg: "bar")`**
+  Unified argument detection for either widgets or functions. When `name` is provided, queries widget argument support first, falling back to function arguments. Evaluates strictly total (returns `false` on missing or bad parameters).
 
 ---
 
@@ -755,7 +757,7 @@ class MediaContext {
 2. **Dynamic Meta Functions:**
    `meta(w: string?, f: string?, path: string?) -> any` &rarr; dynamic query supporting variable names.
 3. **Convenience Shorthands:**
-   `hasWidget(name)`, `hasWidgetArg(widget, arg)`, `hasFunction(name)`, `hasFunctionArg(function, arg)`.
+   `hasWidget(name)`, `hasWidgetArg(widget, arg)`, `hasFunction(name)`, `hasFunctionArg(function, arg)`, `hasArg(widget/function/name, arg)`.
 4. **App & Protocol Version:**
    `appVersion() -> string`, `runtimeVersion() -> number`.
 

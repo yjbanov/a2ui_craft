@@ -111,6 +111,43 @@ widget FeatureDetectionDemo { paymentMethod: "none" } = Column(
         ),
       ],
     ),
+    Heading(text: "Catalog & Argument Introspection", level: 3),
+    Card(
+      child: Column(
+        crossAxisAlignment: "start",
+        gap: 8.0,
+        children: [
+          Text(
+            text: switch hasArg(widget: "Text", arg: "fontSize") {
+              true: "• Text.fontSize: Supported",
+              default: "• Text.fontSize: Unavailable",
+            },
+            variant: "caption",
+          ),
+          Text(
+            text: switch hasArg(function: "concat", arg: "a") {
+              true: "• concat(a: ...): Supported",
+              default: "• concat(a: ...): Unavailable",
+            },
+            variant: "caption",
+          ),
+          Text(
+            text: switch hasArg(name: "Text", arg: "text") {
+              true: "• Text.text (via name): Supported",
+              default: "• Text.text (via name): Unavailable",
+            },
+            variant: "caption",
+          ),
+          Text(
+            text: switch hasArg(name: "Text", arg: "unsupportedArg") {
+              true: "• Text.unsupportedArg: Supported",
+              default: "• Text.unsupportedArg: Safely Handled (Absent)",
+            },
+            variant: "caption",
+          ),
+        ],
+      ),
+    ),
     Heading(text: "Adaptive Payment Flow", level: 3),
     Card(
       child: Column(

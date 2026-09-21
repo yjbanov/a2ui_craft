@@ -404,4 +404,120 @@ void runFeatureDetectionConformance(CraftConformanceDriver driver) {
       expect(tester.hasText('engine:${tester.engine.id}'), isTrue);
     },
   );
+
+  // ---------------------------------------------------------------------------
+  // Scenario 6: Unified Argument Detection (hasArg)
+  // ---------------------------------------------------------------------------
+  driver.defineTest(
+    'Scenario 6: selects branch when widget argument is supported via hasArg',
+    (CraftTester tester) async {
+      tester.registerPrimitive(
+        'Location',
+        meta: const <String, Object?>{
+          'args': <String, Object?>{'latLong': true},
+        },
+        textBuilder: (getArg) => 'Location: ${getArg("latLong")}',
+      );
+
+      await tester.mount(
+        '''
+        import core;
+        import Location;
+
+        widget root = switch hasArg(widget: "Location", arg: "latLong") {
+          true: Location(latLong: "37.7749,-122.4194"),
+          default: Text(text: "fallback-no-arg"),
+        };
+        ''',
+      );
+
+      expect(tester.hasText('Location: 37.7749,-122.4194'), isTrue);
+      expect(tester.hasText('fallback-no-arg'), isFalse);
+    },
+  );
+
+  driver.defineTest(
+    'Scenario 6: selects fallback when widget argument is absent via hasArg',
+    (CraftTester tester) async {
+      tester.registerPrimitive(
+        'Location',
+        meta: const <String, Object?>{
+          'args': <String, Object?>{'address': true},
+        },
+        textBuilder: (getArg) => 'Location: ${getArg("address")}',
+      );
+
+      await tester.mount(
+        '''
+        import core;
+        import Location;
+
+        widget root = switch hasArg(widget: "Location", arg: "latLong") {
+          true: Location(address: "invalid"),
+          default: Text(text: "fallback-no-arg"),
+        };
+        ''',
+      );
+
+      expect(tester.hasText('fallback-no-arg'), isTrue);
+    },
+  );
+
+  driver.defineTest(
+    'Scenario 6: inspects function argument via hasArg',
+    (CraftTester tester) async {
+      await tester.mount(
+        '''
+        import core;
+
+        widget root = switch hasArg(function: "add", arg: "a") {
+          true: Text(text: "has-add-a"),
+          default: Text(text: "no-add-a"),
+        };
+        ''',
+      );
+
+      expect(tester.hasText('has-add-a'), isTrue);
+      expect(tester.hasText('no-add-a'), isFalse);
+    },
+  );
+
+  driver.defineTest(
+    'Scenario 6: inspects unified symbol name via hasArg(name: ...)',
+    (CraftTester tester) async {
+      tester.registerPrimitive(
+        'Location',
+        meta: const <String, Object?>{
+          'args': <String, Object?>{'latLong': true},
+        },
+        textBuilder: (getArg) => 'Location: ${getArg("latLong")}',
+      );
+
+      await tester.mount(
+        '''
+        import core;
+        import Location;
+
+        widget root = Column(children: [
+          Text(text: switch hasArg(name: "Location", arg: "latLong") {
+            true: "widget-arg-found",
+            default: "widget-arg-missing",
+          }),
+          Text(text: switch hasArg(name: "add", arg: "a") {
+            true: "function-arg-found",
+            default: "function-arg-missing",
+          }),
+          Text(text: switch hasArg(name: "add", arg: "nonExistent") {
+            true: "unexpected",
+            default: "function-arg-absent",
+          }),
+        ]);
+        ''',
+      );
+
+      expect(tester.hasText('widget-arg-found'), isTrue);
+      expect(tester.hasText('function-arg-found'), isTrue);
+      expect(tester.hasText('function-arg-absent'), isTrue);
+    },
+  );
 }

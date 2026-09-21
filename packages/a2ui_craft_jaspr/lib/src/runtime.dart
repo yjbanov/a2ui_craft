@@ -2103,8 +2103,11 @@ class _WidgetState extends State<_Widget> implements DataSource {
   /// default). Read once per subscription; a new snapshot triggers
   /// [didChangeDependencies] → [_unsubscribe], re-subscribing into the new one.
   DynamicContent get _media =>
-      ambientMediaContext(context)?.toContent() ?? _emptyMedia;
-  static final DynamicContent _emptyMedia = DynamicContent();
+      ambientMediaContext(context)
+          ?.toContent(fallbackEngine: RenderEngine.jaspr) ??
+      _emptyMedia;
+  static final DynamicContent _emptyMedia = DynamicContent()
+    ..update('engine', RenderEngine.jaspr.id);
 
   Object _widgetBuilderArgResolver(List<Object> rawDataKey) {
     final widgetBuilderArgKey = _Key(_kWidgetBuilderArgSection, rawDataKey);

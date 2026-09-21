@@ -11,8 +11,8 @@ void main() {
   runApp(const GalleryApp());
 }
 
-/// The shared sample specs, labelled for this adapter.
-final List<SampleSpec> _specs = sampleSpecs('Flutter');
+/// The shared sample specs.
+final List<SampleSpec> _specs = sampleSpecs();
 
 /// Nav icons, parallel to [_specs].
 const List<IconData> _icons = <IconData>[

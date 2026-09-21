@@ -11,7 +11,6 @@ import 'sample_spec.dart';
 // `greetingSpec(...)` etc.
 export 'generated_samples.g.dart';
 
-/// All sample specs, in gallery order, labelled for the given [framework] (used
-/// where a sample shows which engine is rendering it, e.g. the greeting title).
-List<SampleSpec> sampleSpecs(String framework) =>
+/// All sample specs, in gallery order.
+List<SampleSpec> sampleSpecs([String? framework]) =>
     <SampleSpec>[for (final RawSample r in rawSamples) r.toSpec(framework)];

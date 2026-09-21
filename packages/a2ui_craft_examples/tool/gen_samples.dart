@@ -69,15 +69,14 @@ void main() {
     ..writeln('  /// of the tracked properties.')
     ..writeln('  final List<String> demonstrates;')
     ..writeln()
-    ..writeln('  /// Builds a [SampleSpec], substituting `{{framework}}`; the '
-        'host supplies')
-    ..writeln('  /// any action handling separately.')
-    ..writeln('  SampleSpec toSpec(String framework) => SampleSpec.fromData(')
+    ..writeln('  /// Builds a [SampleSpec]; the host supplies any action '
+        'handling separately.')
+    ..writeln(
+        '  SampleSpec toSpec([String? framework]) => SampleSpec.fromData(')
     ..writeln('        label: label,')
     ..writeln('        template: template,')
     ..writeln('        schemaJson: schema,')
     ..writeln('        messagesJson: messages,')
-    ..writeln('        framework: framework,')
     ..writeln('        themeJson: theme,')
     ..writeln('      );')
     ..writeln('}')
@@ -143,7 +142,7 @@ void main() {
         'and tests.');
   for (int i = 0; i < ids.length; i++) {
     final String name = _camel(ids[i]);
-    b.writeln('SampleSpec ${name}Spec(String framework) => '
+    b.writeln('SampleSpec ${name}Spec([String? framework]) => '
         'rawSamples[$i].toSpec(framework);');
   }
 

@@ -53,8 +53,14 @@ widget DeviceContextCard = Card(
               b: concat(
                 a: media.formFactor,
                 b: concat(
-                  a: " • Engine: {{framework}} (v",
-                  b: concat(a: runtimeVersion(), b: ")"),
+                  a: " • Engine: ",
+                  b: concat(
+                    a: media.engine,
+                    b: concat(
+                      a: " (v",
+                      b: concat(a: runtimeVersion(), b: ")"),
+                    ),
+                  ),
                 ),
               ),
             ),

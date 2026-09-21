@@ -220,7 +220,6 @@ class _SampleScreenState extends State<SampleScreen> {
         template: _dTemplate,
         schemaJson: _dSchema,
         messagesJson: _dMessages,
-        framework: _framework,
       );
       // ProjectTheme.tryParse is total (a broken theme silently unthemes), so
       // surface JSON syntax errors here where the author can see them. An
@@ -263,7 +262,6 @@ class _SampleScreenState extends State<SampleScreen> {
       template: _template,
       schemaJson: _schema,
       messagesJson: _messages,
-      framework: 'Flutter',
     );
     return flutterSampleApp(
       template: spec.catalogSource,
@@ -463,7 +461,6 @@ class _SampleScreenState extends State<SampleScreen> {
       template: _template,
       schemaJson: _schema,
       messagesJson: _messages,
-      framework: 'Jaspr',
     );
     return SampleView(
       key: _jasprKey,

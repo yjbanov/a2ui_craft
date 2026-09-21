@@ -386,4 +386,22 @@ void runFeatureDetectionConformance(CraftConformanceDriver driver) {
       expect(tester.hasText(r'$42'), isFalse);
     },
   );
+
+  // ---------------------------------------------------------------------------
+  // Scenario 5: Engine Introspection (media.engine)
+  // ---------------------------------------------------------------------------
+  driver.defineTest(
+    'Scenario 5: reports canonical engine name via media.engine',
+    (CraftTester tester) async {
+      await tester.mount(
+        '''
+        import core;
+
+        widget root = Text(text: concat(a: "engine:", b: media.engine));
+        ''',
+      );
+
+      expect(tester.hasText('engine:${tester.engine.id}'), isTrue);
+    },
+  );
 }

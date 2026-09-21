@@ -121,6 +121,19 @@ void main() {
     });
   });
 
+  group('RenderEngine.decode (total)', () {
+    test('maps each id and falls back on unknown/absent', () {
+      for (final RenderEngine e in RenderEngine.values) {
+        expect(RenderEngine.decode(e.id), e);
+      }
+      expect(RenderEngine.decode(null), RenderEngine.flutter);
+      expect(RenderEngine.decode('react'), RenderEngine.flutter);
+      expect(RenderEngine.decode(999), RenderEngine.flutter);
+      expect(RenderEngine.decode('unknown', fallback: RenderEngine.jaspr),
+          RenderEngine.jaspr);
+    });
+  });
+
   group('MediaContext value equality', () {
     test('equal fields are equal; a differing class is not', () {
       const MediaContext a = MediaContext(width: WindowSizeClass.expanded);
@@ -162,6 +175,18 @@ void main() {
       expect(defaultMedia.hashCode, isNot(iosMedia.hashCode));
     });
 
+    test('engine participates in equality and hashCode', () {
+      const MediaContext defaultMedia =
+          MediaContext(width: WindowSizeClass.compact);
+      const MediaContext jasprMedia = MediaContext(
+        width: WindowSizeClass.compact,
+        engine: RenderEngine.jaspr,
+      );
+      expect(defaultMedia.engine, isNull);
+      expect(defaultMedia, isNot(jasprMedia));
+      expect(defaultMedia.hashCode, isNot(jasprMedia.hashCode));
+    });
+
     test('capabilities participate in equality and hashCode unordered', () {
       const MediaContext a = MediaContext(
         width: WindowSizeClass.compact,
@@ -179,6 +204,21 @@ void main() {
       expect(a.hashCode, b.hashCode);
       expect(a, isNot(c));
       expect(a.hashCode, isNot(c.hashCode));
+    });
+
+    test('copyWith replaces specified fields and preserves others', () {
+      const MediaContext original = MediaContext(
+        width: WindowSizeClass.compact,
+        capabilities: <String>{'gps'},
+      );
+      final MediaContext modified = original.copyWith(
+        width: WindowSizeClass.expanded,
+        engine: RenderEngine.jaspr,
+      );
+      expect(modified.width, WindowSizeClass.expanded);
+      expect(modified.engine, RenderEngine.jaspr);
+      expect(modified.capabilities, <String>{'gps'});
+      expect(modified.formFactor, DeviceFormFactor.phone);
     });
   });
 
@@ -199,12 +239,39 @@ void main() {
       expect(content.subscribe(<Object>['reducedMotion'], (_) {}), false);
       expect(content.subscribe(<Object>['formFactor'], (_) {}), 'phone');
       expect(content.subscribe(<Object>['platform'], (_) {}), 'web');
+      expect(content.subscribe(<Object>['engine'], (_) {}), 'flutter');
       expect(content.subscribe(<Object>['hasGps'], (_) {}), false);
       expect(content.subscribe(<Object>['hasCamera'], (_) {}), false);
       expect(content.subscribe(<Object>['hasBiometrics'], (_) {}), false);
       expect(content.subscribe(<Object>['hasNfc'], (_) {}), false);
       expect(
           content.subscribe(<Object>['capabilities', 'gps'], (_) {}), missing);
+    });
+
+    test('engine honors explicit value or fallbackEngine', () {
+      const MediaContext jasprExplicit = MediaContext(
+        width: WindowSizeClass.compact,
+        engine: RenderEngine.jaspr,
+      );
+      expect(
+        jasprExplicit.toContent().subscribe(<Object>['engine'], (_) {}),
+        'jaspr',
+      );
+
+      const MediaContext unspecified =
+          MediaContext(width: WindowSizeClass.compact);
+      expect(
+        unspecified
+            .toContent(fallbackEngine: RenderEngine.jaspr)
+            .subscribe(<Object>['engine'], (_) {}),
+        'jaspr',
+      );
+      expect(
+        unspecified
+            .toContent(fallbackEngine: RenderEngine.flutter)
+            .subscribe(<Object>['engine'], (_) {}),
+        'flutter',
+      );
     });
 
     test('custom formFactor, platform, and capabilities are exposed in scope',

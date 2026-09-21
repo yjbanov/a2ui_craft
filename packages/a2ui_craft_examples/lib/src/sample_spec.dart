@@ -38,9 +38,6 @@ class SampleSpec {
   /// built-in sample this way, and the site's editor rebuilds an edited sample
   /// with it for live preview.
   ///
-  /// A `{{framework}}` token in any of the three strings is replaced with
-  /// [framework] when given (so a sample can show which engine renders it).
-  ///
   /// An optional [themeJson] is the project's 4th trio file (`theme.json`);
   /// when present and recognized it becomes [theme] (see [ProjectTheme]).
   factory SampleSpec.fromData({
@@ -48,20 +45,19 @@ class SampleSpec {
     required String template,
     required String schemaJson,
     required String messagesJson,
+    @Deprecated('Use media.engine instead of preprocessor substitution')
     String? framework,
     String? themeJson,
   }) {
-    String sub(String s) =>
-        framework == null ? s : s.replaceAll('{{framework}}', framework);
     final Map<String, Object?> schema =
-        jsonDecode(sub(schemaJson)) as Map<String, Object?>;
+        jsonDecode(schemaJson) as Map<String, Object?>;
     final List<A2uiMessage> messages = <A2uiMessage>[
-      for (final Object? m in jsonDecode(sub(messagesJson)) as List<Object?>)
+      for (final Object? m in jsonDecode(messagesJson) as List<Object?>)
         A2uiMessage.fromJson(m as Map<String, dynamic>),
     ];
     return SampleSpec(
       label: label,
-      catalogSource: sub(template),
+      catalogSource: template,
       catalogSchema: schema,
       messages: messages,
       theme: ProjectTheme.tryParse(themeJson),

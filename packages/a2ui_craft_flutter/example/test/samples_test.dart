@@ -37,8 +37,8 @@ Iterable<BoxDecoration> _cardDecorations(WidgetTester tester) => tester
 void main() {
   testWidgets('Greeting renders its title, bound message, and button',
       (WidgetTester tester) async {
-    await _pump(tester, greetingSpec('Flutter'));
-    expect(find.text('A2UI Craft × Flutter'), findsOneWidget);
+    await _pump(tester, greetingSpec());
+    expect(find.text('A2UI Craft'), findsOneWidget);
     expect(find.text('Press the button.'), findsOneWidget);
     expect(find.text('Say hi'), findsOneWidget);
   });
@@ -135,9 +135,9 @@ void main() {
   testWidgets('Profile Card renders a Column of ProfileCard templates',
       (WidgetTester tester) async {
     await mockNetworkImagesFor(() async {
-      await _pump(tester, profileCardSpec('Flutter'));
+      await _pump(tester, profileCardSpec());
       // Two ProfileCard templates, each expanding to its own card subtree.
-      expect(find.text('Flutter Framework'), findsOneWidget);
+      expect(find.text('A2UI Framework'), findsOneWidget);
       expect(find.text('Build apps for any screen.'), findsOneWidget);
       expect(find.text('Dart'), findsOneWidget);
       expect(_cardDecorations(tester).length, 2);
@@ -497,9 +497,10 @@ void main() {
 
   testWidgets('Feature Detection renders environment context and capabilities',
       (WidgetTester tester) async {
-    await _pump(tester, featureDetectionSpec('Flutter'));
+    await _pump(tester, featureDetectionSpec());
     expect(find.text('Feature Detection in A2UI Craft'), findsOneWidget);
     expect(find.text('Host & Runtime Context'), findsOneWidget);
+    expect(find.textContaining('Engine: flutter'), findsOneWidget);
     expect(find.text('Hardware Capabilities'), findsOneWidget);
     expect(find.text('Adaptive Payment Flow'), findsOneWidget);
   });
@@ -507,6 +508,6 @@ void main() {
   testWidgets('the gallery app mounts and shows the first sample',
       (WidgetTester tester) async {
     await tester.pumpWidget(const GalleryApp());
-    expect(find.text('A2UI Craft × Flutter'), findsOneWidget);
+    expect(find.text('A2UI Craft'), findsOneWidget);
   });
 }

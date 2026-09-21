@@ -17,6 +17,9 @@ class _FlutterCraftTester implements CraftTester {
 
   final WidgetTester _tester;
 
+  @override
+  RenderEngine get engine => RenderEngine.flutter;
+
   final Runtime _runtime = Runtime()
     ..update(const LibraryName(<String>['core']), createCoreComponents())
     ..registerFunctions(createCoreFunctions())

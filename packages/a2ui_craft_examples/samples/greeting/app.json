@@ -25,7 +25,7 @@
         {
           "id": "root",
           "component": "Greeting",
-          "title": "A2UI Craft × {{framework}}",
+          "title": "A2UI Craft",
           "message": {
             "path": "/greeting"
           },

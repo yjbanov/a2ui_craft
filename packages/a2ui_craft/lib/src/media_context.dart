@@ -211,6 +211,30 @@ enum HostPlatform {
   }
 }
 
+/// The rendering engine realizing the declarative UI templates.
+enum RenderEngine {
+  /// Flutter widget framework.
+  flutter('flutter'),
+
+  /// Jaspr HTML DOM framework.
+  jaspr('jaspr');
+
+  const RenderEngine(this.id);
+
+  /// The token string used in templates and data models.
+  final String id;
+
+  /// Decodes a rendering engine from its [id] string; unknown/absent yields [fallback]
+  /// (default [flutter]). Total, like every value-type decoder.
+  static RenderEngine decode(Object? raw,
+      {RenderEngine fallback = RenderEngine.flutter}) {
+    for (final RenderEngine e in values) {
+      if (e.id == raw) return e;
+    }
+    return fallback;
+  }
+}
+
 /// An immutable snapshot of the render-time environment. Value equality drives
 /// the reactivity model (a new snapshot with a different class or capability re-renders
 /// the dependents), the same contract as `CraftTheme`.
@@ -223,6 +247,7 @@ class MediaContext {
     this.reducedMotion = false,
     this.formFactor = DeviceFormFactor.phone,
     this.platform = HostPlatform.web,
+    this.engine,
     this.capabilities = const <String>{},
   });
 
@@ -253,9 +278,35 @@ class MediaContext {
   /// The host operating system or runtime platform.
   final HostPlatform platform;
 
+  /// The rendering engine realizing the templates (e.g. [RenderEngine.flutter]
+  /// or [RenderEngine.jaspr]), or null when inferred from the ambient adapter.
+  final RenderEngine? engine;
+
   /// Hardware sensors, modalities, and ecosystem capabilities currently
   /// available on the device (e.g. `'gps'`, `'camera'`, `'biometrics'`, `'nfc'`).
   final Set<String> capabilities;
+
+  /// Creates a copy of this [MediaContext] with the given fields replaced.
+  MediaContext copyWith({
+    WindowSizeClass? width,
+    WindowHeightClass? height,
+    ScreenOrientation? orientation,
+    bool? reducedMotion,
+    DeviceFormFactor? formFactor,
+    HostPlatform? platform,
+    RenderEngine? engine,
+    Set<String>? capabilities,
+  }) =>
+      MediaContext(
+        width: width ?? this.width,
+        height: height ?? this.height,
+        orientation: orientation ?? this.orientation,
+        reducedMotion: reducedMotion ?? this.reducedMotion,
+        formFactor: formFactor ?? this.formFactor,
+        platform: platform ?? this.platform,
+        engine: engine ?? this.engine,
+        capabilities: capabilities ?? this.capabilities,
+      );
 
   @override
   bool operator ==(Object other) =>
@@ -266,6 +317,7 @@ class MediaContext {
       other.reducedMotion == reducedMotion &&
       other.formFactor == formFactor &&
       other.platform == platform &&
+      other.engine == engine &&
       other.capabilities.length == capabilities.length &&
       capabilities.containsAll(other.capabilities);
 
@@ -277,6 +329,7 @@ class MediaContext {
         reducedMotion,
         formFactor,
         platform,
+        engine,
         Object.hashAllUnordered(capabilities),
       );
 
@@ -284,35 +337,38 @@ class MediaContext {
   /// [CraftTheme]'s `content`: the quantized **class ids** — `media.width` →
   /// `"compact"`/`"medium"`/…, `media.height`, `media.orientation`, the
   /// boolean `media.reducedMotion`, `media.formFactor` (`"phone"`, `"desktop"`, …),
-  /// `media.platform` (`"ios"`, `"android"`, `"web"`, …), nested capability map
-  /// `media.capabilities.<cap>` (`true` if present, missing/null if not), and
-  /// convenient boolean flags `media.hasGps`, `media.hasCamera`, `media.hasBiometrics`,
-  /// `media.hasNfc` — as a [DynamicContent] that `media.<axis>` references
-  /// (and `switch media.width {…}`) resolve against.
+  /// `media.platform` (`"ios"`, `"android"`, `"web"`, …), `media.engine` (`"flutter"`,
+  /// `"jaspr"`), nested capability map `media.capabilities.<cap>` (`true` if present,
+  /// missing/null if not), and convenient boolean flags `media.hasGps`, `media.hasCamera`,
+  /// `media.hasBiometrics`, `media.hasNfc` — as a [DynamicContent] that `media.<axis>`
+  /// references (and `switch media.width {…}`) resolve against.
   ///
   /// Built fresh per call (unlike [CraftTheme]'s cached `late final`, since a
   /// [MediaContext] stays `const`); the runtime reads it once per subscription,
   /// re-subscribing when the ambient snapshot changes — the re-theme contract.
-  DynamicContent toContent() => DynamicContent()
-    ..updateAll(<String, Object?>{
-      'width': width.id,
-      'height': height.id,
-      'orientation': orientation.id,
-      'reducedMotion': reducedMotion,
-      'formFactor': formFactor.id,
-      'platform': platform.id,
-      'capabilities': <String, Object?>{
-        for (final String cap in capabilities) cap: true,
-      },
-      'hasGps': capabilities.contains('gps'),
-      'hasCamera': capabilities.contains('camera'),
-      'hasBiometrics': capabilities.contains('biometrics'),
-      'hasNfc': capabilities.contains('nfc'),
-    });
+  DynamicContent toContent(
+          {RenderEngine fallbackEngine = RenderEngine.flutter}) =>
+      DynamicContent()
+        ..updateAll(<String, Object?>{
+          'width': width.id,
+          'height': height.id,
+          'orientation': orientation.id,
+          'reducedMotion': reducedMotion,
+          'formFactor': formFactor.id,
+          'platform': platform.id,
+          'engine': (engine ?? fallbackEngine).id,
+          'capabilities': <String, Object?>{
+            for (final String cap in capabilities) cap: true,
+          },
+          'hasGps': capabilities.contains('gps'),
+          'hasCamera': capabilities.contains('camera'),
+          'hasBiometrics': capabilities.contains('biometrics'),
+          'hasNfc': capabilities.contains('nfc'),
+        });
 
   @override
   String toString() => 'MediaContext(width: ${width.id}, height: ${height.id}, '
       'orientation: ${orientation.id}, reducedMotion: $reducedMotion, '
       'formFactor: ${formFactor.id}, platform: ${platform.id}, '
-      'capabilities: $capabilities)';
+      'engine: ${engine?.id}, capabilities: $capabilities)';
 }

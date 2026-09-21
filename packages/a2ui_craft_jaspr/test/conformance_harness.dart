@@ -27,6 +27,9 @@ class JasprCraftTester implements CraftTester {
 
   final ComponentTester _tester;
 
+  @override
+  RenderEngine get engine => RenderEngine.jaspr;
+
   final Runtime _runtime = Runtime()
     ..update(const LibraryName(<String>['core']), createCoreComponents())
     ..registerFunctions(createCoreFunctions())

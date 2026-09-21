@@ -9,8 +9,8 @@ import 'package:jaspr/jaspr.dart';
 import 'sample.dart';
 import 'system_dark.dart';
 
-/// The shared sample specs, labelled for this adapter.
-final List<SampleSpec> _specs = sampleSpecs('Jaspr');
+/// The shared sample specs.
+final List<SampleSpec> _specs = sampleSpecs();
 
 /// A simple gallery shell that shows one [Sample] at a time. Each sample is
 /// fully self-contained, so switching tabs tears the old one down and builds the

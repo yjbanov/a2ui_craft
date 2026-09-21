@@ -25,7 +25,7 @@
         {
           "id": "p1",
           "component": "ProfileCard",
-          "name": "{{framework}} Framework",
+          "name": "A2UI Framework",
           "avatarUrl": "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=50&h=50&fit=crop",
           "bio": "Build apps for any screen."
         },

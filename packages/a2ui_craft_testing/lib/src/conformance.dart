@@ -123,6 +123,9 @@ class MotionProbe {
 /// "is this text visible?", "did activating this control fire its event?".
 /// Behavioral identity across frameworks is the goal; pixel identity is not.
 abstract interface class CraftTester {
+  /// The rendering engine realizing this tester's components.
+  RenderEngine get engine;
+
   /// Renders [main]'s `root` component (with the core component library
   /// available as `core`), bound to [data], themed by [theme] (an immutable
   /// resolved-token snapshot), routing events to [onEvent].

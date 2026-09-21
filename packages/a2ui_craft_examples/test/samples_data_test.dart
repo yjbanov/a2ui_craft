@@ -2,14 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:convert';
-
 import 'package:a2ui_craft_examples/a2ui_craft_examples.dart';
 import 'package:test/test.dart';
 
 void main() {
   test('every code-free sample trio decodes into a usable SampleSpec', () {
-    final List<SampleSpec> specs = sampleSpecs('Jaspr');
+    final List<SampleSpec> specs = sampleSpecs();
     expect(specs, hasLength(rawSamples.length));
     expect(specs.length, greaterThanOrEqualTo(40));
     for (final SampleSpec spec in specs) {
@@ -21,13 +19,17 @@ void main() {
     }
   });
 
-  test('the {{framework}} token is substituted everywhere', () {
-    final SampleSpec greeting = greetingSpec('Jaspr');
-    final String json = jsonEncode(<Object?>[
-      for (final dynamic m in greeting.messages) m.toJson(),
-    ]);
-    expect(json.contains('{{framework}}'), isFalse);
-    expect(json.contains('A2UI Craft × Jaspr'), isTrue);
+  test(
+      'samples contain no {{framework}} tokens and use media.engine dynamically',
+      () {
+    for (final RawSample sample in rawSamples) {
+      expect(sample.template.contains('{{framework}}'), isFalse,
+          reason: '${sample.id} template has {{framework}}');
+      expect(sample.messages.contains('{{framework}}'), isFalse,
+          reason: '${sample.id} messages have {{framework}}');
+    }
+    final SampleSpec featureDetection = featureDetectionSpec();
+    expect(featureDetection.catalogSource.contains('media.engine'), isTrue);
   });
 
   test('SampleSpec.fromData parses a hand-written trio', () {

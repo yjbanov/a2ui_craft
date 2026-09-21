@@ -455,6 +455,7 @@ class _FeatureDetectionDemoState extends State<FeatureDetectionDemo> {
               media: MediaContext(
                 width: WindowSizeClass.compact,
                 platform: _platform,
+                engine: RenderEngine.jaspr,
                 capabilities: Set<String>.unmodifiable(_capabilities),
               ),
             ),

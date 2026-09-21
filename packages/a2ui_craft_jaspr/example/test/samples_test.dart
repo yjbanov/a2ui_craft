@@ -30,8 +30,8 @@ List<String> _styleValues(String property) => <String>[
 void main() {
   testComponents('Greeting renders its title, bound message, and button',
       (ComponentTester tester) async {
-    await _pump(tester, greetingSpec('Jaspr'));
-    expect(find.text('A2UI Craft × Jaspr'), findsOneComponent);
+    await _pump(tester, greetingSpec());
+    expect(find.text('A2UI Craft'), findsOneComponent);
     expect(find.text('Press the button.'), findsOneComponent);
     expect(find.text('Say hi'), findsOneComponent);
   });
@@ -130,9 +130,9 @@ void main() {
 
   testComponents('Profile Card renders a Column of ProfileCard templates',
       (ComponentTester tester) async {
-    await _pump(tester, profileCardSpec('Jaspr'));
+    await _pump(tester, profileCardSpec());
     // Two ProfileCard templates, each expanding to its own card subtree.
-    expect(find.text('Jaspr Framework'), findsOneComponent);
+    expect(find.text('A2UI Framework'), findsOneComponent);
     expect(find.text('Build apps for any screen.'), findsOneComponent);
     expect(find.text('Dart'), findsOneComponent);
   });
@@ -463,9 +463,10 @@ void main() {
   testComponents(
       'Feature Detection renders environment context and capabilities',
       (ComponentTester tester) async {
-    await _pump(tester, featureDetectionSpec('Jaspr'));
+    await _pump(tester, featureDetectionSpec());
     expect(find.text('Feature Detection in A2UI Craft'), findsOneComponent);
     expect(find.text('Host & Runtime Context'), findsOneComponent);
+    expect(find.textContaining('Engine: jaspr'), findsOneComponent);
     expect(find.text('Hardware Capabilities'), findsOneComponent);
     expect(find.text('Adaptive Payment Flow'), findsOneComponent);
   });
@@ -474,6 +475,6 @@ void main() {
       (ComponentTester tester) async {
     tester.pumpComponent(App());
     await tester.pump();
-    expect(find.text('A2UI Craft × Jaspr'), findsOneComponent);
+    expect(find.text('A2UI Craft'), findsOneComponent);
   });
 }

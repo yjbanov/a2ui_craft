@@ -520,4 +520,100 @@ void runFeatureDetectionConformance(CraftConformanceDriver driver) {
       expect(tester.hasText('function-arg-absent'), isTrue);
     },
   );
+
+  // ---------------------------------------------------------------------------
+  // Scenario 7: 3-Tier Version Skew Polyfills
+  // ---------------------------------------------------------------------------
+  driver.defineTest(
+    'Scenario 7: resolves 3-tier version skew with dead code elimination (v2 modern)',
+    (CraftTester tester) async {
+      // Modern client (v2): Scanner supports qr
+      tester.registerPrimitive(
+        'Scanner',
+        meta: const <String, Object?>{
+          'version': 2,
+          'capabilities': <String, Object?>{'qr': true, 'barcode': true},
+        },
+        textBuilder: (getArg) => 'NativeScanner(mode: ${getArg("mode")})',
+      );
+
+      const String template = '''
+        import core;
+        import Scanner;
+
+        widget ScannerPolyfill = Text(text: "ManualPolyfill");
+
+        widget root = switch Scanner.capabilities.qr {
+          true: Scanner(mode: "qr"),
+          default: switch Scanner.version {
+            1: Scanner(mode: "code128"),
+            default: ScannerPolyfill(),
+          },
+        };
+      ''';
+
+      await tester.mount(template);
+      expect(tester.hasText('NativeScanner(mode: qr)'), isTrue);
+      expect(tester.hasText('ManualPolyfill'), isFalse);
+    },
+  );
+
+  driver.defineTest(
+    'Scenario 7: legacy client (v1) selects 1D barcode scanner',
+    (CraftTester tester) async {
+      // Legacy client (v1): Scanner supports 1D barcode only
+      tester.registerPrimitive(
+        'Scanner',
+        meta: const <String, Object?>{
+          'version': 1,
+          'capabilities': <String, Object?>{'qr': false, 'barcode': true},
+        },
+        textBuilder: (getArg) => 'NativeScanner(mode: ${getArg("mode")})',
+      );
+
+      const String template = '''
+        import core;
+        import Scanner;
+
+        widget ScannerPolyfill = Text(text: "ManualPolyfill");
+
+        widget root = switch Scanner.capabilities.qr {
+          true: Scanner(mode: "qr"),
+          default: switch Scanner.version {
+            1: Scanner(mode: "code128"),
+            default: ScannerPolyfill(),
+          },
+        };
+      ''';
+
+      await tester.mount(template);
+      expect(tester.hasText('NativeScanner(mode: code128)'), isTrue);
+      expect(tester.hasText('ManualPolyfill'), isFalse);
+    },
+  );
+
+  driver.defineTest(
+    'Scenario 7: ancient client (v0) excises missing Scanner and renders polyfill',
+    (CraftTester tester) async {
+      // Ancient client (v0): Scanner primitive is NOT registered at all!
+      const String template = '''
+        import core;
+        import Scanner;
+
+        widget ScannerPolyfill = Text(text: "ManualPolyfill");
+
+        widget root = switch Scanner.capabilities.qr {
+          true: Scanner(mode: "qr"),
+          default: switch Scanner.version {
+            1: Scanner(mode: "code128"),
+            default: ScannerPolyfill(),
+          },
+        };
+      ''';
+
+      await tester.mount(template);
+      expect(tester.hasText('ManualPolyfill'), isTrue);
+      expect(tester.hasText('NativeScanner'), isFalse);
+    },
+  );
 }

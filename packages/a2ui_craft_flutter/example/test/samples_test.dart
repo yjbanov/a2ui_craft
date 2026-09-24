@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 import 'package:a2ui_craft_examples/a2ui_craft_examples.dart';
+import 'package:a2ui_craft_flutter/a2ui_craft_flutter.dart';
 import 'package:example/main.dart';
 import 'package:example/sample.dart';
 import 'package:flutter/material.dart';
@@ -14,13 +15,18 @@ import 'package:network_image_mock/network_image_mock.dart';
 /// Wrapped in [mockNetworkImagesFor] so the samples' `Image` URLs resolve to a
 /// stub instead of hitting the network during the pump (harmless for the
 /// image-free samples).
-Future<void> _pump(WidgetTester tester, SampleSpec spec) {
+Future<void> _pump(WidgetTester tester, SampleSpec spec,
+    {A2uiCraftSimulator? simulator}) {
   return mockNetworkImagesFor(
     // The scroll view hosts the sample the way the demo site embeds Flutter
     // (unbounded height, content sizes itself), so a sample taller than the
     // test viewport lays out instead of overflowing the 600px test surface.
     () => tester.pumpWidget(MaterialApp(
-      home: Scaffold(body: SingleChildScrollView(child: Sample(spec))),
+      home: Scaffold(
+        body: SingleChildScrollView(
+          child: Sample(spec, simulator: simulator),
+        ),
+      ),
     )),
   );
 }
@@ -503,6 +509,36 @@ void main() {
     expect(find.textContaining('Engine: flutter'), findsOneWidget);
     expect(find.text('Hardware Capabilities'), findsOneWidget);
     expect(find.text('Adaptive Payment Flow'), findsOneWidget);
+  });
+
+  testWidgets('Version Skew & Polyfills renders across v2, v1, and v0',
+      (WidgetTester tester) async {
+    final A2uiCraftSimulator simulator = A2uiCraftSimulator();
+    await _pump(tester, versionSkewPolyfillSpec(), simulator: simulator);
+    expect(find.text('Version Skew & Polyfills'), findsOneWidget);
+    expect(find.text('Native 2D QR Scanner (Active)'), findsOneWidget);
+
+    // Simulate scan in v2 Modern
+    await tester.tap(find.byKey(const Key('simulate_scan_button')));
+    await tester.pump();
+    expect(
+        find.text('Accepted Product Code: QR-PROD-2026-X99'), findsOneWidget);
+
+    // Switch to v1 Legacy
+    simulator.setClientProfile(ClientProfile.v1Legacy);
+    await tester.pump();
+    expect(find.text('Native 1D Barcode Scanner (Active)'), findsOneWidget);
+
+    // Simulate scan in v1 Legacy
+    await tester.tap(find.byKey(const Key('simulate_scan_button')));
+    await tester.pump();
+    expect(
+        find.text('Accepted Product Code: BARCODE-128-4455'), findsOneWidget);
+
+    // Switch to v0 Ancient
+    simulator.setClientProfile(ClientProfile.v0Ancient);
+    await tester.pump();
+    expect(find.text('Manual Barcode Entry (Polyfill)'), findsOneWidget);
   });
 
   testWidgets('the gallery app mounts and shows the first sample',

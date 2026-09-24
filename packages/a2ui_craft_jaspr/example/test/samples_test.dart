@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 import 'package:a2ui_craft_examples/a2ui_craft_examples.dart';
+import 'package:a2ui_craft_jaspr/a2ui_craft_jaspr.dart';
 import 'package:a2ui_craft_jaspr_example/app.dart';
 import 'package:a2ui_craft_jaspr_example/sample.dart';
 import 'package:jaspr/jaspr.dart';
@@ -11,9 +12,13 @@ import 'package:jaspr_test/jaspr_test.dart';
 /// Mounts a shared [SampleSpec] exactly as the gallery does. [dark] is the
 /// host's system dark-light preference (false on the test VM, matching the
 /// gallery's no-preference stub).
-Future<void> _pump(ComponentTester tester, SampleSpec spec,
-    {bool dark = false}) async {
-  tester.pumpComponent(Sample(spec, dark: dark));
+Future<void> _pump(
+  ComponentTester tester,
+  SampleSpec spec, {
+  bool dark = false,
+  A2uiCraftSimulator? simulator,
+}) async {
+  tester.pumpComponent(Sample(spec, dark: dark, simulator: simulator));
   await tester.pump();
 }
 
@@ -469,6 +474,36 @@ void main() {
     expect(find.textContaining('Engine: jaspr'), findsOneComponent);
     expect(find.text('Hardware Capabilities'), findsOneComponent);
     expect(find.text('Adaptive Payment Flow'), findsOneComponent);
+  });
+
+  testComponents('Version Skew & Polyfills renders across v2, v1, and v0',
+      (ComponentTester tester) async {
+    final A2uiCraftSimulator simulator = A2uiCraftSimulator();
+    await _pump(tester, versionSkewPolyfillSpec(), simulator: simulator);
+    expect(find.text('Version Skew & Polyfills'), findsOneComponent);
+    expect(find.text('Native 2D QR Scanner (Active)'), findsOneComponent);
+
+    // Simulate scan in v2 Modern
+    await tester.click(find.byKey(const Key('simulate_scan_button')));
+    await tester.pump();
+    expect(find.text('Accepted Product Code: QR-PROD-2026-X99'),
+        findsOneComponent);
+
+    // Switch to v1 Legacy
+    simulator.setClientProfile(ClientProfile.v1Legacy);
+    await tester.pump();
+    expect(find.text('Native 1D Barcode Scanner (Active)'), findsOneComponent);
+
+    // Simulate scan in v1 Legacy
+    await tester.click(find.byKey(const Key('simulate_scan_button')));
+    await tester.pump();
+    expect(find.text('Accepted Product Code: BARCODE-128-4455'),
+        findsOneComponent);
+
+    // Switch to v0 Ancient
+    simulator.setClientProfile(ClientProfile.v0Ancient);
+    await tester.pump();
+    expect(find.text('Manual Barcode Entry (Polyfill)'), findsOneComponent);
   });
 
   testComponents('the gallery app mounts and shows the first sample',

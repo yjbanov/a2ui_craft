@@ -25,3 +25,4 @@ export 'src/primitives.dart';
 export 'src/remote_component.dart';
 export 'src/runtime.dart';
 export 'src/sample_view.dart';
+export 'src/scanner_widget.dart';

@@ -12,22 +12,34 @@ import 'package:jaspr/jaspr.dart';
 /// A themed project opens in the mode matching [dark] — the host's system
 /// dark-light preference (render-time config, DESIGN.md §9.5), supplied by
 /// the gallery shell. Unthemed samples ignore it and blend into the host.
+/// When [simulator] is provided, theme brightness and responsive media are
+/// resolved from the simulator.
 class Sample extends StatelessComponent {
-  const Sample(this.spec, {this.dark = false, super.key});
+  const Sample(
+    this.spec, {
+    this.dark = false,
+    this.simulator,
+    super.key,
+  });
 
   final SampleSpec spec;
 
   /// Whether the host prefers dark mode.
   final bool dark;
 
+  /// The interactive simulator controller, or null for the real host environment.
+  final A2uiCraftSimulator? simulator;
+
   @override
   Component build(BuildContext context) {
     final ProjectTheme? theme = spec.theme;
+    final bool resolvedDark = simulator?.isDark(dark) ?? dark;
     return SampleView(
       template: spec.catalogSource,
       schema: spec.catalogSchema,
       messages: spec.messages,
-      theme: theme?.resolve(theme.modeFor(dark: dark)),
+      theme: theme?.resolve(theme.modeFor(dark: resolvedDark)),
+      simulator: simulator,
     );
   }
 }

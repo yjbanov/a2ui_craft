@@ -285,10 +285,22 @@ class Runtime extends ChangeNotifier {
     _initIntrospectionFunctions();
   }
 
-  final String? _appVersion;
+  String? _appVersion;
+
+  /// The version string reported to templates via `appVersion()`.
+  String? get appVersion => _appVersion;
+  set appVersion(String? value) {
+    if (_appVersion == value) return;
+    _appVersion = value;
+    _initIntrospectionFunctions();
+    _respecializeRemoteLibraries();
+    _clearCache();
+  }
 
   final Map<LibraryName, WidgetLibrary> _libraries =
       <LibraryName, WidgetLibrary>{};
+  final Map<LibraryName, RemoteWidgetLibrary> _rawRemoteLibraries =
+      <LibraryName, RemoteWidgetLibrary>{};
 
   final Map<String, LocalFunction> _functions = <String, LocalFunction>{};
 
@@ -411,11 +423,9 @@ class Runtime extends ChangeNotifier {
   }
 
   void _respecializeRemoteLibraries() {
-    for (final MapEntry<LibraryName, WidgetLibrary> entry
-        in _libraries.entries.toList()) {
-      if (entry.value is RemoteWidgetLibrary) {
-        _libraries[entry.key] = _specialize(entry.value as RemoteWidgetLibrary);
-      }
+    for (final MapEntry<LibraryName, RemoteWidgetLibrary> entry
+        in _rawRemoteLibraries.entries) {
+      _libraries[entry.key] = _specialize(entry.value);
     }
   }
 
@@ -444,16 +454,29 @@ class Runtime extends ChangeNotifier {
   /// [RemoteWidgetLibrary] instances are typically first obtained using
   /// [decodeLibraryBlob].
   ///
-  /// To remove a library, the libraries must be cleared using [clearLibraries]
-  /// and then the libraries being retained must be readded.
+  /// To remove a library, use [removeLibrary] or clear all libraries using
+  /// [clearLibraries] and readd the retained ones.
   void update(LibraryName name, WidgetLibrary library) {
     if (library is RemoteWidgetLibrary) {
+      _rawRemoteLibraries[name] = library;
       _libraries[name] = _specialize(library);
     } else {
       _libraries[name] = library;
       _respecializeRemoteLibraries();
     }
     _clearCache();
+  }
+
+  /// Removes the library with the given [name], if registered.
+  ///
+  /// If the library was a [LocalWidgetLibrary], remote libraries will be
+  /// re-specialized against the remaining local primitives and metadata.
+  void removeLibrary(LibraryName name) {
+    _rawRemoteLibraries.remove(name);
+    if (_libraries.remove(name) != null) {
+      _respecializeRemoteLibraries();
+      _clearCache();
+    }
   }
 
   /// Remove all the libraries and start afresh.
@@ -465,6 +488,7 @@ class Runtime extends ChangeNotifier {
   /// any widgets that they were configured to create. For this reason, this
   /// call should usually be immediately followed by calls to [update].
   void clearLibraries() {
+    _rawRemoteLibraries.clear();
     _libraries.clear();
     _clearCache();
   }

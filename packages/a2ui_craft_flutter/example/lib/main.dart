@@ -3,9 +3,11 @@
 // found in the LICENSE file.
 
 import 'package:a2ui_craft_examples/a2ui_craft_examples.dart';
+import 'package:a2ui_craft_flutter/a2ui_craft_flutter.dart';
 import 'package:flutter/material.dart';
 
 import 'sample.dart';
+import 'simulator_toolbar.dart';
 
 void main() {
   runApp(const GalleryApp());
@@ -67,6 +69,7 @@ const List<IconData> _icons = <IconData>[
   Icons.dashboard_customize,
   Icons.fact_check,
   Icons.devices_other,
+  Icons.qr_code_scanner,
 ];
 
 /// A simple gallery shell that shows one [Sample] at a time. Each sample is
@@ -81,57 +84,92 @@ class GalleryApp extends StatefulWidget {
 
 class _GalleryAppState extends State<GalleryApp> {
   int _index = 0;
+  final A2uiCraftSimulator _simulator = A2uiCraftSimulator();
+
+  @override
+  void initState() {
+    super.initState();
+    _simulator.addListener(_onSimulatorChanged);
+  }
+
+  void _onSimulatorChanged() => setState(() {});
+
+  @override
+  void dispose() {
+    _simulator.removeListener(_onSimulatorChanged);
+    _simulator.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final ThemeMode mode = switch (_simulator.themeMode) {
+      SimulatorThemeMode.system => ThemeMode.system,
+      SimulatorThemeMode.light => ThemeMode.light,
+      SimulatorThemeMode.dark => ThemeMode.dark,
+    };
+
     return MaterialApp(
       // Follow the platform dark-light setting; themed samples pick their
       // matching mode (see Sample), unthemed ones blend into the host theme.
       theme: ThemeData(useMaterial3: true),
       darkTheme: ThemeData(useMaterial3: true, brightness: Brightness.dark),
-      themeMode: ThemeMode.system,
+      themeMode: mode,
       home: Scaffold(
-        body: Row(
-          children: [
-            // The rail scrolls: with many samples the destinations exceed the
-            // viewport height, and NavigationRail does not scroll on its own.
-            LayoutBuilder(
-              builder: (BuildContext context, BoxConstraints constraints) =>
-                  SingleChildScrollView(
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                  child: IntrinsicHeight(
-                    child: NavigationRail(
-                      selectedIndex: _index,
-                      onDestinationSelected: (int index) =>
-                          setState(() => _index = index),
-                      labelType: NavigationRailLabelType.all,
-                      destinations: <NavigationRailDestination>[
-                        for (var i = 0; i < _specs.length; i++)
-                          NavigationRailDestination(
-                            icon: Icon(i < _icons.length
-                                ? _icons[i]
-                                : Icons.extension),
-                            label: Text(_specs[i].label),
+        body: Column(
+          children: <Widget>[
+            SimulatorToolbar(simulator: _simulator),
+            Expanded(
+              child: Row(
+                children: [
+                  // The rail scrolls: with many samples the destinations exceed the
+                  // viewport height, and NavigationRail does not scroll on its own.
+                  LayoutBuilder(
+                    builder:
+                        (BuildContext context, BoxConstraints constraints) =>
+                            SingleChildScrollView(
+                      child: ConstrainedBox(
+                        constraints:
+                            BoxConstraints(minHeight: constraints.maxHeight),
+                        child: IntrinsicHeight(
+                          child: NavigationRail(
+                            selectedIndex: _index,
+                            onDestinationSelected: (int index) =>
+                                setState(() => _index = index),
+                            labelType: NavigationRailLabelType.all,
+                            destinations: <NavigationRailDestination>[
+                              for (var i = 0; i < _specs.length; i++)
+                                NavigationRailDestination(
+                                  icon: Icon(i < _icons.length
+                                      ? _icons[i]
+                                      : Icons.extension),
+                                  label: Text(_specs[i].label),
+                                ),
+                            ],
                           ),
-                      ],
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ),
-            ),
-            const VerticalDivider(thickness: 1, width: 1),
-            Expanded(
-              child: Center(
-                child: Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.blue, width: 2),
-                    borderRadius: BorderRadius.circular(8),
+                  const VerticalDivider(thickness: 1, width: 1),
+                  Expanded(
+                    child: Center(
+                      child: Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.blue, width: 2),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        // The key ensures a fresh, isolated sample on every switch.
+                        child: Sample(
+                          _specs[_index],
+                          simulator: _simulator,
+                          key: ValueKey<int>(_index),
+                        ),
+                      ),
+                    ),
                   ),
-                  // The key ensures a fresh, isolated sample on every switch.
-                  child: Sample(_specs[_index], key: ValueKey<int>(_index)),
-                ),
+                ],
               ),
             ),
           ],

@@ -48,5 +48,6 @@
   "sign_in",
   "incremental_dashboard",
   "form_validator",
-  "feature_detection"
+  "feature_detection",
+  "version_skew_polyfill"
 ]

@@ -4892,6 +4892,153 @@ widget FeatureDetectionDemo { paymentMethod: "none" } = Column(
 ''',
     demonstrates: <String>['controls', 'functions'],
   ),
+  RawSample(
+    id: 'version_skew_polyfill',
+    label: 'Version Skew & Polyfills',
+    template: r'''
+import core;
+import Scanner;
+
+// In-template polyfill for clients lacking native QR scanner hardware/primitives.
+widget ScannerPolyfill = Card(
+  child: Column(
+    crossAxisAlignment: "start",
+    gap: 12.0,
+    children: [
+      Heading(text: "Manual Barcode Entry (Polyfill)", level: 4),
+      Text(
+        text: "Live camera scanning is unavailable in this app installation (v1.0). Please click below to enter the product code manually:",
+        variant: "caption",
+      ),
+      Row(
+        gap: 8.0,
+        children: [
+          Button(
+            child: Text(text: "Enter Manual Code: A2UI-778899"),
+            onPressed: set state.scannedCode = "A2UI-778899",
+          ),
+        ],
+      ),
+    ],
+  ),
+);
+
+widget ClientEnvironmentCard = Card(
+  child: Row(
+    gap: 12.0,
+    children: [
+      Icon(icon: "notifications"),
+      Expanded(
+        child: Column(
+          crossAxisAlignment: "start",
+          gap: 2.0,
+          children: [
+            Heading(text: "Host Client Environment", level: 4),
+            Text(
+              text: concat(
+                a: "Simulated App: v",
+                b: concat(
+                  a: appVersion(),
+                  b: concat(
+                    a: " • Platform: ",
+                    b: concat(a: media.platform, b: concat(a: " • Engine: ", b: media.engine)),
+                  ),
+                ),
+              ),
+              variant: "caption",
+            ),
+            Text(
+              text: switch Scanner.capabilities.qr {
+                true: "Status: Native 2D QR camera viewfinder active (v2 Modern).",
+                default: switch Scanner.version {
+                  1: "Status: Native 1D barcode laser scanner active (v1 Legacy).",
+                  default: "Status: Scanner primitive absent. Pure-template polyfill active (v0 Ancient).",
+                },
+              },
+            ),
+          ],
+        ),
+      ),
+    ],
+  ),
+);
+
+widget VersionSkewPolyfillDemo { scannedCode: "" } = Column(
+  crossAxisAlignment: "start",
+  gap: 16.0,
+  children: [
+    Heading(text: "Version Skew & Polyfills", level: 2),
+    Text(
+      text: "Demonstrates 3-tier version skew resolution across client generations using static host metadata and compile-time dead code elimination.",
+    ),
+    ClientEnvironmentCard(),
+    Heading(text: "Product Intake Scanner", level: 3),
+
+    switch Scanner.capabilities.qr {
+      true: Scanner(
+        mode: "qr",
+        onDetected: set state.scannedCode = "QR-PROD-2026-X99",
+      ),
+      default: switch Scanner.version {
+        1: Scanner(
+          mode: "code128",
+          onDetected: set state.scannedCode = "BARCODE-128-4455",
+        ),
+        default: ScannerPolyfill(),
+      },
+    },
+
+    switch equals(a: state.scannedCode, b: "") {
+      true: SizedBox(),
+      default: Card(
+        child: Row(
+          gap: 8.0,
+          children: [
+            Icon(icon: "check"),
+            Text(text: concat(a: "Accepted Product Code: ", b: state.scannedCode)),
+          ],
+        ),
+      ),
+    },
+  ],
+);
+''',
+    schema: r'''
+{
+  "catalogId": "demo",
+  "components": {
+    "VersionSkewPolyfillDemo": {
+      "properties": {}
+    }
+  }
+}
+''',
+    messages: r'''
+[
+  {
+    "version": "v0.9",
+    "createSurface": {
+      "surfaceId": "demo",
+      "catalogId": "demo",
+      "sendDataModel": false
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateComponents": {
+      "surfaceId": "demo",
+      "components": [
+        {
+          "id": "root",
+          "component": "VersionSkewPolyfillDemo"
+        }
+      ]
+    }
+  }
+]
+''',
+    demonstrates: <String>['controls', 'functions'],
+  ),
 ];
 
 // Named accessors (one per sample), kept for the example apps and tests.
@@ -4983,6 +5130,8 @@ SampleSpec formValidatorSpec([String? framework]) =>
     rawSamples[48].toSpec(framework);
 SampleSpec featureDetectionSpec([String? framework]) =>
     rawSamples[49].toSpec(framework);
+SampleSpec versionSkewPolyfillSpec([String? framework]) =>
+    rawSamples[50].toSpec(framework);
 
 /// One mini-app's project data: the same three files a sample
 /// has, plus the manifest `logic` slot naming the driver that

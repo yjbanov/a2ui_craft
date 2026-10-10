@@ -20,7 +20,7 @@ import 'package:jaspr/jaspr.dart';
 import 'a2ui_to_rfw_adapter.dart';
 import 'primitives.dart';
 import 'runtime.dart';
-import 'scanner_component.dart';
+import 'scanner_library.dart';
 
 const LibraryName _coreName = LibraryName(<String>['core']);
 const LibraryName _catalogName = LibraryName(<String>['catalog']);

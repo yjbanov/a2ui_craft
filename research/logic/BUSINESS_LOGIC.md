@@ -2,8 +2,7 @@
 
 > **Status: implemented (2026-08-13).** Phase 1 is built —
 > `packages/a2ui_craft_logic`, the `cart` reference mini-app, and both runners.
-> See [PHASE_1_PLAN.md](PHASE_1_PLAN.md) for the slices and
-> [DECISIONS.md](DECISIONS.md) for what building it changed. Originally a
+> See [PHASE_1_PLAN.md](PHASE_1_PLAN.md) for the slices. Originally a
 > proposal (2026-08-08). Fills in the "Later — ephemeral sandboxed
 > logic" slot in the template-computation arc (HISTORY.md), and the empty `logic`
 > manifest slot reserved in DESIGN.md §10. Workstream B (template functions /

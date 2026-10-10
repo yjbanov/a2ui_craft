@@ -165,5 +165,24 @@ void main() {
       expect(sw.input, isA<DataReference>());
       expect(sw.outputs.length, 2);
     });
+
+    test('preserves specialized BlobNode root when selected from Switch', () {
+      final RemoteWidgetLibrary library = parseLibraryFile('''
+        widget root = switch hasWidget(name: "Location") {
+          true: Location(name: "active"),
+          default: Text(text: "No location"),
+        };
+      ''');
+
+      final RemoteWidgetLibrary specialized = specializeLibrary(
+        library,
+        knownWidgets: const <String>{'Location'},
+      );
+      expect(specialized.widgets.single.root, isA<ConstructorCall>());
+      final ConstructorCall call =
+          specialized.widgets.single.root as ConstructorCall;
+      expect(call.name, 'Location');
+      expect(call.arguments['name'], 'active');
+    });
   });
 }

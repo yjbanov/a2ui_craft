@@ -337,53 +337,36 @@ class Runtime extends ChangeNotifier {
       if (fn != null) {
         if (path != null && path.startsWith('args.')) {
           final String argName = path.substring('args.'.length);
-          return fn.arguments.containsKey(argName);
+          if (fn.arguments.containsKey(argName)) {
+            return true;
+          }
         }
         target = fn.meta;
       }
     }
-    if (target == null) return null;
-    if (path == null || path.isEmpty) return target;
-
-    final List<String> segments = path.split('.');
-    Object? current = target;
-    for (final String seg in segments) {
-      if (current is Map) {
-        current = current[seg];
-      } else {
-        return null;
-      }
+    if (target == null) {
+      return null;
     }
-    return current;
+    final List<Object> parts =
+        (path != null && path.isNotEmpty) ? path.split('.') : const <Object>[];
+    return lookupMetadataPath(target, parts);
   }
 
   Object _lookupSymbol(String symbol, List<Object> parts) {
     final Map<String, Object?>? widgetMeta = _getWidgetMeta(symbol);
     if (widgetMeta != null) {
-      Object? current = widgetMeta;
-      for (final Object part in parts) {
-        if (current is Map && part is String) {
-          current = current[part];
-        } else {
-          return missing;
-        }
-      }
-      return current ?? missing;
+      final Object? value = lookupMetadataPath(widgetMeta, parts);
+      return value ?? missing;
     }
     final LocalFunction? fn = _functions[symbol];
     if (fn != null) {
-      if (parts.length >= 2 && parts[0] == 'args') {
-        return fn.arguments.containsKey(parts[1]);
-      }
-      Object? current = fn.meta;
-      for (final Object part in parts) {
-        if (current is Map && part is String) {
-          current = current[part];
-        } else {
-          return missing;
+      if (parts.isNotEmpty && parts.first == 'args' && parts.length == 2) {
+        if (fn.arguments.containsKey(parts[1].toString())) {
+          return true;
         }
       }
-      return current ?? missing;
+      final Object? value = lookupMetadataPath(fn.meta, parts);
+      return value ?? missing;
     }
     return missing;
   }

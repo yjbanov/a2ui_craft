@@ -874,9 +874,8 @@ Control-by-control slices, each spec → both adapters → conformance → sampl
 The "later, ephemeral sandboxed logic" half of the template-computation plan,
 built 2026-08-13 → 2026-08-21 and merged to `main`. The shape changed under
 construction: logic is **not** a function-registry backend but a *surface
-driver* speaking A2UI Transport behind a session envelope. Design in
-`research/logic/BUSINESS_LOGIC.md`, slices in `research/logic/PHASE_1_PLAN.md`,
-and what building it changed in `research/logic/DECISIONS.md`.
+driver* speaking A2UI Transport behind a session envelope. Design in `research/logic/BUSINESS_LOGIC.md` and slices in
+`research/logic/PHASE_1_PLAN.md`.
 
 - **`packages/a2ui_craft_logic`** — the session protocol (`hello`/`init`/
   `event`/`update`/`error`/`terminate`/`ping`/`pong` over gapless sequence
@@ -933,6 +932,34 @@ publishable to a CDN with no compile step.
   an optional canned-demo picker — demonstrating the edit → re-publish →
   reload cycle with the host untouched. (Site UI is analyzer-checked glue
   over the tested loader + SampleView theming; no live browser test.)
+
+## Feature detection and environmental adaptation (§14)
+
+Built 2026-09 to enable templates to adapt safely across clients, form factors,
+hardware capabilities, and version skew without crashing on unsupported branches.
+Design in `research/feature_detection/FEATURE_DETECTION_DESIGN.md`.
+
+- **Pillar 1 — Environmental capabilities (`MediaContext`):** Expanded `media.` scope
+  with quantized `media.formFactor` (`phone`, `tablet`, `desktop`, ...),
+  `media.platform` (`ios`, `android`, `web`, ...), `media.engine` (`flutter`, `jaspr`),
+  and hardware capability flags (`media.hasGps`, `media.hasCamera`, `media.hasBiometrics`,
+  `media.hasNfc`). Reactive re-rendering on ambient change.
+- **Pillar 2 — Runtime API introspection & metadata dictionaries:** Host-registered
+  widgets and functions accept open static metadata (`Map<String, Object?>`).
+  `SymbolReference` added to RFW text and binary formats (`0x16`), enabling direct member
+  access (`Widget.args.argName`). Total introspection helpers (`hasWidget`, `hasFunction`,
+  `hasArg`, `meta`, `runtimeVersion`, `appVersion`).
+- **Load-time AST specialization & constant folding:** `specializeLibrary` in the
+  core engine simplifies boolean logic, evaluates compile-time introspection calls, and
+  excises dead `Switch` branches before template binding. Deferred function validation
+  ensures unselected branches never throw validation errors.
+- **Simulator & version skew:** Pure-Dart `A2uiCraftSimulator` and `ClientProfile`
+  controller with interactive simulator toolbar added to both Flutter and Jaspr
+  sample galleries, demonstrating 3-tier version skew with automatic fallback polyfills.
+- **Conformance & demo site:** Multi-scenario cross-framework conformance suite
+  (`runFeatureDetectionConformance`, 7 scenarios) pinned across both adapters, sample
+  projects (`feature_detection`, `version_skew_polyfill`), and a live interactive
+  section on the landing page.
 
 ## Cross-cutting fixes
 

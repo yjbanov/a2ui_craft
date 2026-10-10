@@ -1572,3 +1572,58 @@ Flutter-free; only the workspace resolution involves the Flutter SDK.
   (whole-component rebuild) rather than per-binding. Open: is that granularity
   acceptable as catalogs grow (likely yes — small vetted widgets), or does some
   hot path eventually want per-binding updates back?
+
+## 14. Feature detection and environmental adaptation
+
+Templates authored once and deployed ephemerally (e.g. via CDN or dynamic
+services) render across clients that differ in form factors, OS platforms,
+hardware capabilities (sensors/modalities), and installed host engine versions.
+Crucially, **a template must never crash when encountering missing features if
+it does not render that branch**.
+
+### The two-pillar model
+
+Feature detection separates concerns cleanly between two distinct layers:
+
+1. **Physical & Ambient (`media.` scope):**
+   - Device form factor (`media.formFactor` → `"phone"`, `"tablet"`, `"desktop"`, `"watch"`, `"tv"`, `"auto"`).
+   - Host platform (`media.platform` → `"ios"`, `"android"`, `"web"`, `"macos"`, `"windows"`, `"linux"`).
+   - Rendering engine (`media.engine` → `"flutter"`, `"jaspr"`).
+   - Dynamic hardware capabilities (`media.capabilities.<cap>` and flags like `media.hasGps`, `media.hasCamera`, `media.hasBiometrics`, `media.hasNfc`).
+   - Carried by `MediaContext`, reactive, and automatically re-evaluating when host permissions or ambient states change.
+
+2. **Runtime Engine & Symbol Introspection:**
+   - Host-registered widgets and functions attach open metadata dictionaries (`Map<String, Object?>`).
+   - Static symbol member access (`Widget.args.argName`, `Widget.meta.property`) is represented as a first-class `SymbolReference` in the AST (binary tag `0x16`).
+   - Introspection helper functions (`hasWidget`, `hasWidgetArg`, `hasFunction`, `hasFunctionArg`, `hasArg`, `meta`, `runtimeVersion`, `appVersion`) query symbol tables and metadata.
+
+### Load-time AST specialization and constant folding
+
+Host metadata and registered capabilities are immutable per client profile.
+When a remote template is loaded (`Runtime.update`), the engine runs
+`specializeLibrary` to compile the AST against the host's symbol definitions:
+
+- Static `SymbolReference` queries are evaluated against registered metadata.
+- Compile-time introspection functions are evaluated to constants.
+- Boolean expressions (`and`, `or`, `equals`, `notEquals`) are simplified algebraically.
+- Constant-condition `Switch` expressions prune dead branches ahead of rendering.
+
+Dead branches containing unsupported widgets, unknown arguments, or missing
+functions are excised entirely before template binding, preventing unknown
+constructor or validation errors without requiring runtime fallbacks.
+
+### Deferred function validation
+
+When a function call cannot be constant-folded at load time (e.g., depends on
+dynamic `data.` or `state.`), validation errors (unknown function name or
+argument schema mismatches) are contained as deferred errors rather than throwing
+at bind time. If the containing `Switch` branch is not selected at runtime, the
+template renders without error.
+
+### The simulator
+
+Developer tools, preview panes, and test harnesses use `A2uiCraftSimulator` and
+`ClientProfile` (`v0Ancient`, `v1Legacy`, `v2Modern`) to simulate client version
+skew and hardware capabilities interactively. When the simulator changes, the
+runtime re-specializes pristine remote libraries in place without requiring a
+template reload.

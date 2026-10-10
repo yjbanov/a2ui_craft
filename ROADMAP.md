@@ -79,8 +79,7 @@ first**, because signals-as-bindings versus VDOM-diff is an empirical question,
 and building the framework first would turn it into a taste question defended
 after the fact.
 
-Also open from Phase 1, recorded in `research/logic/DECISIONS.md`: the mini-app
-panes bypass `SampleView`, so a themed logic project renders unthemed (the fix is
+Also open from Phase 1: the mini-app panes bypass `SampleView`, so a themed logic project renders unthemed (the fix is
 an externally-owned-surface mode on `SampleView`); the JS SDK reports faults the
 way the Dart machine does but does not yet validate frame bodies field by field;
 and multi-surface sessions remain deliberately unbuilt.

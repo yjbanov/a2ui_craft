@@ -456,8 +456,12 @@ RemoteWidgetLibrary specializeLibrary(
       runtimeVersion: runtimeVersion,
       appVersion: appVersion,
     );
-    final BlobNode finalRoot =
-        specializedRoot is BlobNode ? specializedRoot : decl.root;
+    final BlobNode finalRoot;
+    if (specializedRoot is ConstructorCall || specializedRoot is Switch) {
+      finalRoot = specializedRoot as BlobNode;
+    } else {
+      finalRoot = decl.root;
+    }
     final specializedDecl =
         WidgetDeclaration(decl.name, decl.initialState, finalRoot);
     specializedDecl.propagateSource(decl);

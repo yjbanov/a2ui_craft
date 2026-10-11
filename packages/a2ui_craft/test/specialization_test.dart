@@ -166,23 +166,30 @@ void main() {
       expect(sw.outputs.length, 2);
     });
 
-    test('preserves specialized BlobNode root when selected from Switch', () {
+    test(
+        'retains original Switch when specialized branch has no default (resolves to missing)',
+        () {
       final RemoteWidgetLibrary library = parseLibraryFile('''
-        widget root = switch hasWidget(name: "Location") {
-          true: Location(name: "active"),
-          default: Text(text: "No location"),
+        widget root = switch hasWidget(name: "Missing") {
+          true: Text(text: "Active"),
         };
       ''');
 
-      final RemoteWidgetLibrary specialized = specializeLibrary(
-        library,
-        knownWidgets: const <String>{'Location'},
-      );
-      expect(specialized.widgets.single.root, isA<ConstructorCall>());
-      final ConstructorCall call =
-          specialized.widgets.single.root as ConstructorCall;
-      expect(call.name, 'Location');
-      expect(call.arguments['name'], 'active');
+      final RemoteWidgetLibrary specialized = specializeLibrary(library);
+      expect(specialized.widgets.single.root, isA<Switch>());
+    });
+
+    test('retains original Switch when specialized branch is args reference',
+        () {
+      final RemoteWidgetLibrary library = parseLibraryFile('''
+        widget root = switch hasWidget(name: "Missing") {
+          true: Text(text: "Active"),
+          default: args.child,
+        };
+      ''');
+
+      final RemoteWidgetLibrary specialized = specializeLibrary(library);
+      expect(specialized.widgets.single.root, isA<Switch>());
     });
   });
 }

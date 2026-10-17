@@ -54,7 +54,8 @@ Design questions to resolve explicitly:
   adapters' `runtime.dart`. Every new language construct means two
   implementations held together only by the conformance suite — the central
   architectural risk for this thread. This may deserve its own slice ahead of any
-  syntax work.
+  syntax work. The load-time specialization pass is a third copy of these
+  semantics; see the next thread.
 - **Cheapest first step, before designing:** empirically verify whether a second
   `set` observes the first's write today. One test; it answers the open question
   and pins current behaviour before anything changes it.
@@ -71,6 +72,20 @@ Two facts already verified that shape the design:
   which supports the instinct that `set state.*` belongs to widget scope rather
   than to arbitrary functions.
 
+### Load-time specialization — a dedicated rework
+
+`specializeLibrary` (feature detection's load-time folding pass) was added in
+passing and has needed a run of point fixes. It re-implements function,
+introspection, and symbol-lookup semantics a third time, folds `and`/`or` by
+name regardless of what is registered under that name, and has no single
+representation for an absent value. Open questions, known weaknesses, and a
+proposed order of work are in
+[`research/feature_detection/SPECIALIZATION.md`](research/feature_detection/SPECIALIZATION.md).
+The first decision is whether it is an optimization (semantics-preserving,
+checked by rendering with it on and off) or a correctness mechanism; the
+second is whether it waits for evaluation to move into the core (above), which
+would remove most of the drift by construction.
+
 ### Business-logic drivers — Phase 2, the reactive driver framework
 
 Planned and shovel-ready: `research/logic/PHASE_2_PLAN.md`, over the research in
@@ -79,10 +94,11 @@ first**, because signals-as-bindings versus VDOM-diff is an empirical question,
 and building the framework first would turn it into a taste question defended
 after the fact.
 
-Also open from Phase 1: the mini-app panes bypass `SampleView`, so a themed logic project renders unthemed (the fix is
-an externally-owned-surface mode on `SampleView`); the JS SDK reports faults the
-way the Dart machine does but does not yet validate frame bodies field by field;
-and multi-surface sessions remain deliberately unbuilt.
+Also open from Phase 1: the mini-app panes bypass `SampleView`, so a themed
+logic project renders unthemed (the fix is an externally-owned-surface mode on
+`SampleView`); the JS SDK reports faults the way the Dart machine does but does
+not yet validate frame bodies field by field; and multi-surface sessions remain
+deliberately unbuilt.
 
 ### Agent semantics
 
@@ -155,7 +171,7 @@ The landing page and the example gallery currently categorize the system's
 capabilities along different axes:
 
 - **Landing page sections:** the `*.craft` template language, primitives,
-  theming/design tokens, logic, and (after it lands) feature detection.
+  theming/design tokens, logic, and feature detection.
 - **Example gallery filters (`demo_properties.dart`):** layout, controls &
   state, theming, functions, and A2UI integration.
 

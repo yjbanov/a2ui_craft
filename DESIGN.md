@@ -1609,8 +1609,12 @@ When a remote template is loaded (`Runtime.update`), the engine runs
 - Constant-condition `Switch` expressions prune dead branches ahead of rendering.
 
 Dead branches containing unsupported widgets, unknown arguments, or missing
-functions are excised entirely before template binding, preventing unknown
-constructor or validation errors without requiring runtime fallbacks.
+functions are excised before template binding where the condition folds to a
+constant. This is best-effort: a non-constant `Switch`, or a constant one whose
+selected branch is not a widget (e.g. `args.child`, or no match), is kept as
+is. The runtime remains the safety net: every `Switch` branch is bound, but
+binding never throws (unsupported widgets and functions bind to deferred
+errors), and only the selected branch is evaluated and built.
 
 ### Deferred function validation
 

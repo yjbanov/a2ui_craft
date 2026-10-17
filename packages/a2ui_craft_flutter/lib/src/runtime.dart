@@ -412,11 +412,17 @@ class Runtime extends ChangeNotifier {
         widgetMeta.addAll(lib.widgetMeta);
       }
     }
+    // Remote widgets shadow same-named functions at bind time too.
+    final Set<String> remote = <String>{
+      for (final RemoteWidgetLibrary lib in _rawRemoteLibraries.values)
+        for (final WidgetDeclaration decl in lib.widgets) decl.name,
+    };
     return specializeLibrary(
       library,
       widgetMetadata: widgetMeta,
       functions: _functions,
       knownWidgets: known,
+      remoteWidgets: remote,
       runtimeVersion: currentRuntimeVersion,
       appVersion: _appVersion,
     );

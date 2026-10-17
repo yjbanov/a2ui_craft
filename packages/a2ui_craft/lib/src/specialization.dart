@@ -34,6 +34,10 @@ Object? lookupMetadataPath(Object? target, Iterable<Object> parts) {
 ///
 /// Folds static [SymbolReference] queries, evaluates pure compile-time functions,
 /// simplifies boolean expressions, and eliminates dead [Switch] branches ahead of render.
+///
+/// [remoteWidgets] names remote widgets in scope: like [knownWidgets], a call
+/// with one of these names is never folded as a function, but they do not count
+/// as host-provided for `hasWidget`.
 Object? specializeNode(
   Object? node, {
   required Map<String, Map<String, Object?>> widgetMetadata,
@@ -41,6 +45,7 @@ Object? specializeNode(
   required Set<String> knownWidgets,
   required int runtimeVersion,
   required String? appVersion,
+  Set<String> remoteWidgets = const <String>{},
 }) {
   if (node == null || node is num || node is String || node is bool) {
     return node;
@@ -54,6 +59,7 @@ Object? specializeNode(
         widgetMetadata: widgetMetadata,
         functions: functions,
         knownWidgets: knownWidgets,
+        remoteWidgets: remoteWidgets,
         runtimeVersion: runtimeVersion,
         appVersion: appVersion,
       );
@@ -68,6 +74,7 @@ Object? specializeNode(
               widgetMetadata: widgetMetadata,
               functions: functions,
               knownWidgets: knownWidgets,
+              remoteWidgets: remoteWidgets,
               runtimeVersion: runtimeVersion,
               appVersion: appVersion,
             ))
@@ -106,6 +113,7 @@ Object? specializeNode(
       widgetMetadata: widgetMetadata,
       functions: functions,
       knownWidgets: knownWidgets,
+      remoteWidgets: remoteWidgets,
       runtimeVersion: runtimeVersion,
       appVersion: appVersion,
     );
@@ -119,6 +127,7 @@ Object? specializeNode(
               widgetMetadata: widgetMetadata,
               functions: functions,
               knownWidgets: knownWidgets,
+              remoteWidgets: remoteWidgets,
               runtimeVersion: runtimeVersion,
               appVersion: appVersion,
             );
@@ -127,6 +136,7 @@ Object? specializeNode(
         widgetMetadata: widgetMetadata,
         functions: functions,
         knownWidgets: knownWidgets,
+        remoteWidgets: remoteWidgets,
         runtimeVersion: runtimeVersion,
         appVersion: appVersion,
       );
@@ -167,6 +177,7 @@ Object? specializeNode(
         widgetMetadata: widgetMetadata,
         functions: functions,
         knownWidgets: knownWidgets,
+        remoteWidgets: remoteWidgets,
         runtimeVersion: runtimeVersion,
         appVersion: appVersion,
       );
@@ -184,12 +195,17 @@ Object? specializeNode(
     };
 
     if (!knownWidgets.contains(node.name) &&
+        !remoteWidgets.contains(node.name) &&
         (functions.containsKey(node.name) ||
             introspectionNames.contains(node.name))) {
       // Algebraic boolean simplifications
       if (node.name == 'and') {
         final a = specializedArgs['a'];
         final b = specializedArgs['b'];
+        // Mirror the runtime: a constant non-boolean operand yields null.
+        if (!_isBoolOrDynamic(a) || !_isBoolOrDynamic(b)) {
+          return null;
+        }
         if (a == false || b == false) {
           return false;
         }
@@ -205,6 +221,9 @@ Object? specializeNode(
       } else if (node.name == 'or') {
         final a = specializedArgs['a'];
         final b = specializedArgs['b'];
+        if (!_isBoolOrDynamic(a) || !_isBoolOrDynamic(b)) {
+          return null;
+        }
         if (a == true || b == true) {
           return true;
         }
@@ -365,37 +384,48 @@ Object? specializeNode(
   }
 
   if (node is Loop) {
+    // A child that folds to null keeps its original node.
     return Loop(
       specializeNode(
-        node.input,
-        widgetMetadata: widgetMetadata,
-        functions: functions,
-        knownWidgets: knownWidgets,
-        runtimeVersion: runtimeVersion,
-        appVersion: appVersion,
-      ) as Object,
+            node.input,
+            widgetMetadata: widgetMetadata,
+            functions: functions,
+            knownWidgets: knownWidgets,
+            remoteWidgets: remoteWidgets,
+            runtimeVersion: runtimeVersion,
+            appVersion: appVersion,
+          ) ??
+          node.input,
       specializeNode(
-        node.output,
-        widgetMetadata: widgetMetadata,
-        functions: functions,
-        knownWidgets: knownWidgets,
-        runtimeVersion: runtimeVersion,
-        appVersion: appVersion,
-      ) as Object,
+            node.output,
+            widgetMetadata: widgetMetadata,
+            functions: functions,
+            knownWidgets: knownWidgets,
+            remoteWidgets: remoteWidgets,
+            runtimeVersion: runtimeVersion,
+            appVersion: appVersion,
+          ) ??
+          node.output,
     )..propagateSource(node);
   }
 
   if (node is WidgetBuilderDeclaration) {
+    final Object? specializedWidget = specializeNode(
+      node.widget,
+      widgetMetadata: widgetMetadata,
+      functions: functions,
+      knownWidgets: knownWidgets,
+      remoteWidgets: remoteWidgets,
+      runtimeVersion: runtimeVersion,
+      appVersion: appVersion,
+    );
+    // As for a widget declaration's root, keep the original body unless the
+    // specialized one is still a widget or a switch.
     return WidgetBuilderDeclaration(
       node.argumentName,
-      specializeNode(
-        node.widget,
-        widgetMetadata: widgetMetadata,
-        functions: functions,
-        knownWidgets: knownWidgets,
-        runtimeVersion: runtimeVersion,
-        appVersion: appVersion,
-      ) as BlobNode,
+      specializedWidget is ConstructorCall || specializedWidget is Switch
+          ? specializedWidget as BlobNode
+          : node.widget,
     )..propagateSource(node);
   }
 
@@ -407,6 +437,7 @@ Object? specializeNode(
         widgetMetadata: widgetMetadata,
         functions: functions,
         knownWidgets: knownWidgets,
+        remoteWidgets: remoteWidgets,
         runtimeVersion: runtimeVersion,
         appVersion: appVersion,
       ) as DynamicMap,
@@ -417,13 +448,15 @@ Object? specializeNode(
     return SetStateHandler(
       node.stateReference,
       specializeNode(
-        node.value,
-        widgetMetadata: widgetMetadata,
-        functions: functions,
-        knownWidgets: knownWidgets,
-        runtimeVersion: runtimeVersion,
-        appVersion: appVersion,
-      ) as Object,
+            node.value,
+            widgetMetadata: widgetMetadata,
+            functions: functions,
+            knownWidgets: knownWidgets,
+            remoteWidgets: remoteWidgets,
+            runtimeVersion: runtimeVersion,
+            appVersion: appVersion,
+          ) ??
+          node.value,
     )..propagateSource(node);
   }
 
@@ -436,16 +469,24 @@ Object? specializeNode(
 /// calls, and simplified boolean expressions with their resolved values.
 /// Prunes dead branches from [Switch] constructs when the switch input evaluates
 /// to a known compile-time constant.
+///
+/// A call whose name is in [knownWidgets], [remoteWidgets], or is declared by
+/// [library] itself is treated as a widget, never folded as a function.
 RemoteWidgetLibrary specializeLibrary(
   RemoteWidgetLibrary library, {
   Map<String, Map<String, Object?>> widgetMetadata =
       const <String, Map<String, Object?>>{},
   Map<String, LocalFunction> functions = const <String, LocalFunction>{},
   Set<String> knownWidgets = const <String>{},
+  Set<String> remoteWidgets = const <String>{},
   int runtimeVersion = currentRuntimeVersion,
   String? appVersion,
 }) {
   final allKnownWidgets = <String>{...knownWidgets, ...widgetMetadata.keys};
+  final allRemoteWidgets = <String>{
+    ...remoteWidgets,
+    for (final WidgetDeclaration decl in library.widgets) decl.name,
+  };
   final specializedWidgets = <WidgetDeclaration>[];
   for (final WidgetDeclaration decl in library.widgets) {
     final Object? specializedRoot = specializeNode(
@@ -453,6 +494,7 @@ RemoteWidgetLibrary specializeLibrary(
       widgetMetadata: widgetMetadata,
       functions: functions,
       knownWidgets: allKnownWidgets,
+      remoteWidgets: allRemoteWidgets,
       runtimeVersion: runtimeVersion,
       appVersion: appVersion,
     );
@@ -469,3 +511,6 @@ RemoteWidgetLibrary specializeLibrary(
   }
   return RemoteWidgetLibrary(library.imports, specializedWidgets);
 }
+
+/// Whether [value] is a boolean or a node still resolved at runtime.
+bool _isBoolOrDynamic(Object? value) => value is bool || value is BlobNode;

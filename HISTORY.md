@@ -874,7 +874,8 @@ Control-by-control slices, each spec → both adapters → conformance → sampl
 The "later, ephemeral sandboxed logic" half of the template-computation plan,
 built 2026-08-13 → 2026-08-21 and merged to `main`. The shape changed under
 construction: logic is **not** a function-registry backend but a *surface
-driver* speaking A2UI Transport behind a session envelope. Design in `research/logic/BUSINESS_LOGIC.md` and slices in
+driver* speaking A2UI Transport behind a session envelope. Design in
+`research/logic/BUSINESS_LOGIC.md` and slices in
 `research/logic/PHASE_1_PLAN.md`.
 
 - **`packages/a2ui_craft_logic`** — the session protocol (`hello`/`init`/

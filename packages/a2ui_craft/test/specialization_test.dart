@@ -191,5 +191,88 @@ void main() {
       final RemoteWidgetLibrary specialized = specializeLibrary(library);
       expect(specialized.widgets.single.root, isA<Switch>());
     });
+
+    test('retains set-state value and loop output that fold to null', () {
+      final RemoteWidgetLibrary library = parseLibraryFile('''
+        widget root { x: 1 } = Column(
+          onTap: set state.x = Foo.meta.label,
+          children: [ ...for i in data.items: Foo.meta.x ],
+        );
+      ''');
+
+      final RemoteWidgetLibrary specialized = specializeLibrary(library);
+      final ConstructorCall root =
+          specialized.widgets.single.root as ConstructorCall;
+      expect((root.arguments['onTap'] as SetStateHandler).value,
+          isA<SymbolReference>());
+      final Loop loop =
+          (root.arguments['children'] as List<Object?>).single as Loop;
+      expect(loop.output, isA<SymbolReference>());
+    });
+
+    test('retains builder body when specialized branch is not a widget', () {
+      final RemoteWidgetLibrary library = parseLibraryFile('''
+        widget root = Builder(
+          builder: (scope) => switch hasWidget(name: "Missing") {
+            true: Text(text: "a"),
+            default: "x",
+          },
+        );
+      ''');
+
+      final RemoteWidgetLibrary specialized = specializeLibrary(library);
+      final ConstructorCall root =
+          specialized.widgets.single.root as ConstructorCall;
+      expect((root.arguments['builder'] as WidgetBuilderDeclaration).widget,
+          isA<Switch>());
+    });
+
+    test('folds and/or with a non-boolean constant operand to null', () {
+      final RemoteWidgetLibrary library = parseLibraryFile('''
+        widget root = Box(
+          trueAndString: and(a: true, b: "yes"),
+          falseAndString: and(a: false, b: "yes"),
+          trueOrString: or(a: true, b: "yes"),
+          falseOrString: or(a: false, b: "yes"),
+        );
+      ''');
+
+      final RemoteWidgetLibrary specialized = specializeLibrary(
+        library,
+        functions: createCoreFunctions().functions,
+      );
+      final ConstructorCall root =
+          specialized.widgets.single.root as ConstructorCall;
+      expect(root.arguments['trueAndString'], isNull);
+      expect(root.arguments['falseAndString'], isNull);
+      expect(root.arguments['trueOrString'], isNull);
+      expect(root.arguments['falseOrString'], isNull);
+    });
+
+    test('does not fold a function call shadowed by a remote widget', () {
+      final RemoteWidgetLibrary library = parseLibraryFile('''
+        widget badge = Text(text: "remote");
+        widget root = Column(children: [badge(), other()]);
+      ''');
+      final LocalFunction constant = LocalFunction(
+        arguments: const <String, FunctionArgType>{},
+        implementation: (DynamicMap arguments) => 'folded',
+      );
+
+      final RemoteWidgetLibrary specialized = specializeLibrary(
+        library,
+        functions: <String, LocalFunction>{
+          'badge': constant,
+          'other': constant,
+        },
+      );
+      final ConstructorCall root = specialized.widgets
+          .singleWhere((WidgetDeclaration w) => w.name == 'root')
+          .root as ConstructorCall;
+      final List<Object?> children =
+          root.arguments['children'] as List<Object?>;
+      expect(children[0], isA<ConstructorCall>());
+      expect(children[1], 'folded');
+    });
   });
 }
